@@ -222,6 +222,33 @@
   onMount(async () => {
     await loadQuestions()
     await loadRecentSubmissions()
+    
+    // Listen for storage events to detect when questions are restored from archive
+    function handleStorageChange(event) {
+      if (event.key === 'questions-updated') {
+        loadQuestions()
+        // Clear the flag
+        localStorage.removeItem('questions-updated')
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Also check on focus (when returning to tab)
+    function handleFocus() {
+      if (localStorage.getItem('questions-updated')) {
+        loadQuestions()
+        localStorage.removeItem('questions-updated')
+      }
+    }
+    
+    window.addEventListener('focus', handleFocus)
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('focus', handleFocus)
+    }
   })
 </script>
 
@@ -366,12 +393,21 @@
   <div class="card mb-8">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-xl font-semibold">Generated Questions ({questions.length})</h2>
-      <a 
-        href="/teacher/archive" 
-        class="text-sm text-blue-600 hover:underline flex items-center gap-1"
-      >
-        📦 View Archive
-      </a>
+      <div class="flex items-center gap-3">
+        <button 
+          onclick={loadQuestions}
+          class="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
+          title="Refresh questions"
+        >
+          🔄 Refresh
+        </button>
+        <a 
+          href="/teacher/archive" 
+          class="text-sm text-blue-600 hover:underline flex items-center gap-1"
+        >
+          📦 View Archive
+        </a>
+      </div>
     </div>
     
     {#if questions.length === 0}

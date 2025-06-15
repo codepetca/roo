@@ -100,6 +100,9 @@
       selectedQuestions = []
       selectAll = false
       
+      // Signal to dashboard that questions were updated
+      localStorage.setItem('questions-updated', 'true')
+      
       addToast(`${restoredCount} question(s) restored`, 'success')
     } catch (error) {
       addToast('Error restoring questions: ' + error.message, 'error')
