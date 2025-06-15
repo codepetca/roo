@@ -19,7 +19,8 @@ export async function POST({ request }) {
         question_text: questionData.question,
         rubric: questionData.rubric,
         solution: questionData.solution,
-        java_concepts: concepts
+        java_concepts: concepts,
+        archived: false
       })
       .select()
       .single()
@@ -41,7 +42,7 @@ export async function GET() {
     const { data: questions, error } = await supabase
       .from('java_questions')
       .select('*')
-      .eq('archived', false)
+      .or('archived.eq.false,archived.is.null')
       .order('created_at', { ascending: false })
 
     if (error) throw error
