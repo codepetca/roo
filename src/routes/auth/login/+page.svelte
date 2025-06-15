@@ -1,6 +1,7 @@
 <script lang="ts">
   import { signInWithEmail } from '$lib/stores/auth.js'
   import { goto } from '$app/navigation'
+  import { addToast } from '$lib/stores/toast.js'
   
   let email = $state('')
   let password = $state('')
@@ -18,6 +19,7 @@
 
     try {
       await signInWithEmail(email, password)
+      addToast('Welcome back!', 'success')
       goto('/')
     } catch (err: any) {
       error = err.message || 'Failed to sign in'

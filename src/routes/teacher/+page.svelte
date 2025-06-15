@@ -3,6 +3,7 @@
   import { user, profile } from '$lib/stores/auth.js'
   import { goto } from '$app/navigation'
   import Markdown from '$lib/components/Markdown.svelte'
+  import { addToast } from '$lib/stores/toast.js'
   
   // Use Svelte 5 runes for state management
   let questions = $state([])
@@ -43,9 +44,9 @@
       questions = [data.question, ...questions]
       
       // Show success message
-      alert('Question generated successfully!')
+      addToast('Question generated successfully!', 'success')
     } catch (error) {
-      alert('Error generating question: ' + error.message)
+      addToast('Error generating question: ' + error.message, 'error')
     } finally {
       generatingQuestion = false
     }
@@ -84,7 +85,7 @@
       // Clear file input
       event.target.value = ''
     } catch (error) {
-      alert('Error grading submission: ' + error.message)
+      addToast('Error grading submission: ' + error.message, 'error')
     } finally {
       uploadingImage = false
     }
@@ -135,7 +136,7 @@
         selectedQuestion = null
       }
     } catch (error) {
-      alert('Error deleting question: ' + error.message)
+      addToast('Error deleting question: ' + error.message, 'error')
     }
   }
 

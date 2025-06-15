@@ -5,6 +5,7 @@
   import { supabase } from '$lib/supabase.js'
   import { signOut } from '$lib/stores/auth.js'
   import { goto } from '$app/navigation'
+  import Toast from '$lib/components/Toast.svelte'
 
   onMount(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -49,4 +50,7 @@
   <main class="{$user ? 'pt-4' : ''}">
     <slot />
   </main>
+  
+  <!-- Toast notifications -->
+  <Toast />
 </div>

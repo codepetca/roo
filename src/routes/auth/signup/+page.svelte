@@ -1,6 +1,7 @@
 <script lang="ts">
   import { signUpWithEmail } from '$lib/stores/auth.js'
   import { goto } from '$app/navigation'
+  import { addToast } from '$lib/stores/toast.js'
   
   let email = $state('')
   let password = $state('')
@@ -27,7 +28,7 @@
 
     try {
       await signUpWithEmail(email, password, fullName, role)
-      success = 'Account created! Please check your email to verify your account.'
+      addToast('Account created! Please check your email to verify your account.', 'success', 5000)
       
       // Redirect to login after a delay
       setTimeout(() => {
