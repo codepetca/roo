@@ -1,116 +1,56 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { addToast } from '$lib/stores/toast.js'
+  import { archivedQuestionsStore } from '$lib/stores/archived-questions.js'
+  import { questionsStore } from '$lib/stores/questions.js'
   import Markdown from '$lib/components/Markdown.svelte'
-  
-  let archivedQuestions = $state([])
-  let selectedQuestions = $state([])
-  let loading = $state(false)
-  let selectAll = $state(false)
-
-  async function loadArchivedQuestions() {
-    loading = true
-    try {
-      const response = await fetch('/api/questions/archived')
-      const data = await response.json()
-      archivedQuestions = data.questions || []
-    } catch (error) {
-      console.error('Failed to load archived questions:', error)
-      addToast('Failed to load archived questions', 'error')
-    } finally {
-      loading = false
-    }
-  }
 
   function toggleQuestion(questionId) {
-    if (selectedQuestions.includes(questionId)) {
-      selectedQuestions = selectedQuestions.filter(id => id !== questionId)
-    } else {
-      selectedQuestions = [...selectedQuestions, questionId]
-    }
-    
-    // Update selectAll state
-    selectAll = selectedQuestions.length === archivedQuestions.length && archivedQuestions.length > 0
+    archivedQuestionsStore.toggleQuestionSelection(questionId)
   }
 
   function toggleSelectAll() {
-    if (selectAll) {
-      selectedQuestions = []
-    } else {
-      selectedQuestions = archivedQuestions.map(q => q.id)
-    }
-    selectAll = !selectAll
+    archivedQuestionsStore.toggleSelectAll()
   }
 
   async function deleteSelectedQuestions() {
-    if (selectedQuestions.length === 0) {
+    if (archivedQuestionsStore.selectedCount === 0) {
       addToast('No questions selected', 'error')
       return
     }
 
-    if (!confirm(`Are you sure you want to permanently delete ${selectedQuestions.length} question(s)? This action cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to permanently delete ${archivedQuestionsStore.selectedCount} question(s)? This action cannot be undone.`)) {
       return
     }
 
     try {
-      const response = await fetch('/api/questions/archive/delete', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionIds: selectedQuestions })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to delete questions')
-      }
-
-      // Remove deleted questions from local state
-      const deletedCount = selectedQuestions.length
-      archivedQuestions = archivedQuestions.filter(q => !selectedQuestions.includes(q.id))
-      selectedQuestions = []
-      selectAll = false
-      
-      addToast(`${deletedCount} question(s) deleted permanently`, 'success')
+      const result = await archivedQuestionsStore.deleteSelectedQuestions()
+      addToast(`${result.deletedCount} question(s) deleted permanently`, 'success')
     } catch (error) {
       addToast('Error deleting questions: ' + error.message, 'error')
     }
   }
 
   async function restoreSelectedQuestions() {
-    if (selectedQuestions.length === 0) {
+    if (archivedQuestionsStore.selectedCount === 0) {
       addToast('No questions selected', 'error')
       return
     }
 
     try {
-      const response = await fetch('/api/questions/archive/restore', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionIds: selectedQuestions })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to restore questions')
-      }
-
-      // Remove restored questions from archive
-      const restoredCount = selectedQuestions.length
-      archivedQuestions = archivedQuestions.filter(q => !selectedQuestions.includes(q.id))
-      selectedQuestions = []
-      selectAll = false
+      const result = await archivedQuestionsStore.restoreSelectedQuestions()
       
       // Signal to dashboard that questions were updated
       localStorage.setItem('questions-updated', 'true')
       
-      addToast(`${restoredCount} question(s) restored`, 'success')
+      addToast(`${result.restoredCount} question(s) restored`, 'success')
     } catch (error) {
       addToast('Error restoring questions: ' + error.message, 'error')
     }
   }
 
   onMount(() => {
-    loadArchivedQuestions()
+    archivedQuestionsStore.loadArchivedQuestions()
   })
 </script>
 
@@ -121,31 +61,31 @@
   </div>
 
   <!-- Action Controls -->
-  {#if archivedQuestions.length > 0}
+  {#if archivedQuestionsStore.hasQuestions}
     <div class="bg-white p-4 rounded-lg shadow mb-6">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
           <label class="flex items-center">
             <input 
               type="checkbox" 
-              bind:checked={selectAll}
+              bind:checked={archivedQuestionsStore.allSelected}
               onchange={toggleSelectAll}
               class="mr-2"
             />
             <span class="text-sm font-medium">
-              Select All ({archivedQuestions.length} questions)
+              Select All ({archivedQuestionsStore.totalCount} questions)
             </span>
           </label>
           
           <span class="text-sm text-gray-500">
-            {selectedQuestions.length} selected
+            {archivedQuestionsStore.selectedCount} selected
           </span>
         </div>
 
         <div class="flex gap-2">
           <button
             onclick={restoreSelectedQuestions}
-            disabled={selectedQuestions.length === 0}
+            disabled={archivedQuestionsStore.selectedCount === 0}
             class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Restore Selected
@@ -153,7 +93,7 @@
           
           <button
             onclick={deleteSelectedQuestions}
-            disabled={selectedQuestions.length === 0}
+            disabled={archivedQuestionsStore.selectedCount === 0}
             class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Delete Permanently
@@ -166,14 +106,14 @@
   <!-- Archived Questions List -->
   <div class="bg-white rounded-lg shadow">
     <div class="p-6">
-      <h2 class="text-xl font-semibold mb-4">Archived Questions ({archivedQuestions.length})</h2>
+      <h2 class="text-xl font-semibold mb-4">Archived Questions ({archivedQuestionsStore.totalCount})</h2>
       
-      {#if loading}
+      {#if archivedQuestionsStore.loading}
         <div class="text-center py-8">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
           <p class="text-gray-600">Loading archived questions...</p>
         </div>
-      {:else if archivedQuestions.length === 0}
+      {:else if !archivedQuestionsStore.hasQuestions}
         <div class="text-center py-8">
           <p class="text-gray-500 mb-4">No archived questions found.</p>
           <a href="/teacher" class="text-blue-600 hover:underline">
@@ -182,12 +122,12 @@
         </div>
       {:else}
         <div class="space-y-4">
-          {#each archivedQuestions as question}
+          {#each archivedQuestionsStore.questions as question}
             <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 relative">
               <div class="flex items-start gap-3">
                 <input 
                   type="checkbox" 
-                  checked={selectedQuestions.includes(question.id)}
+                  checked={archivedQuestionsStore.selectedQuestionIds.includes(question.id)}
                   onchange={() => toggleQuestion(question.id)}
                   class="mt-1"
                 />

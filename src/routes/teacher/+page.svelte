@@ -4,9 +4,9 @@
   import { goto } from '$app/navigation'
   import Markdown from '$lib/components/Markdown.svelte'
   import { addToast } from '$lib/stores/toast.js'
+  import { questionsStore } from '$lib/stores/questions.js'
   
   // Use Svelte 5 runes for state management
-  let questions = $state([])
   let selectedConcepts = $state(['variables', 'conditionals'])
   let generatingQuestion = $state(false)
   let uploadingImage = $state(false)
@@ -47,7 +47,7 @@
       }
       
       const data = await response.json()
-      questions = [data.question, ...questions]
+      questionsStore.addQuestion(data.question)
       
       // Show success message
       addToast('Question generated successfully!', 'success')
@@ -97,15 +97,6 @@
     }
   }
 
-  async function loadQuestions() {
-    try {
-      const response = await fetch('/api/questions')
-      const data = await response.json()
-      questions = data.questions || []
-    } catch (error) {
-      console.error('Failed to load questions:', error)
-    }
-  }
 
   async function loadRecentSubmissions() {
     if (!$user?.id) return
@@ -121,19 +112,7 @@
 
   async function archiveQuestion(questionId) {
     try {
-      const response = await fetch('/api/questions', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questionId })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to archive question')
-      }
-
-      // Remove from local list
-      questions = questions.filter(q => q.id !== questionId)
+      await questionsStore.archiveQuestion(questionId)
       
       // Also remove from selected question if it was selected
       if (selectedQuestion?.id === questionId) {
@@ -179,7 +158,7 @@
       const data = await response.json()
       
       // Add the modified question to the top of the list
-      questions = [data.question, ...questions]
+      questionsStore.addQuestion(data.question)
       
       addToast('Question modified successfully!', 'success')
       cancelModifyQuestion()
@@ -220,13 +199,13 @@
   }
 
   onMount(async () => {
-    await loadQuestions()
+    // Store handles loading questions automatically
     await loadRecentSubmissions()
     
     // Listen for storage events to detect when questions are restored from archive
     function handleStorageChange(event) {
       if (event.key === 'questions-updated') {
-        loadQuestions()
+        questionsStore.loadQuestions()
         // Clear the flag
         localStorage.removeItem('questions-updated')
       }
@@ -237,7 +216,7 @@
     // Also check on focus (when returning to tab)
     function handleFocus() {
       if (localStorage.getItem('questions-updated')) {
-        loadQuestions()
+        questionsStore.loadQuestions()
         localStorage.removeItem('questions-updated')
       }
     }
@@ -392,10 +371,10 @@
   <!-- Generated Questions List -->
   <div class="card mb-8">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-semibold">Generated Questions ({questions.length})</h2>
+      <h2 class="text-xl font-semibold">Generated Questions ({questionsStore.activeCount})</h2>
       <div class="flex items-center gap-3">
         <button 
-          onclick={loadQuestions}
+          onclick={() => questionsStore.loadQuestions()}
           class="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
           title="Refresh questions"
         >
@@ -410,13 +389,18 @@
       </div>
     </div>
     
-    {#if questions.length === 0}
+    {#if questionsStore.loading}
+      <div class="text-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+        <p class="text-gray-600">Loading questions...</p>
+      </div>
+    {:else if questionsStore.activeQuestions.length === 0}
       <p class="text-gray-500 text-center py-8">
         No questions generated yet. Create your first question above!
       </p>
     {:else}
       <div class="space-y-4">
-        {#each questions as question}
+        {#each questionsStore.activeQuestions as question}
           <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 relative group">
             <!-- Action buttons -->
             <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
