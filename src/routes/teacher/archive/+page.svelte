@@ -39,10 +39,6 @@
 
     try {
       const result = await archivedQuestionsStore.restoreSelectedQuestions()
-      
-      // Signal to dashboard that questions were updated
-      localStorage.setItem('questions-updated', 'true')
-      
       addToast(`${result.restoredCount} question(s) restored`, 'success')
     } catch (error) {
       addToast('Error restoring questions: ' + error.message, 'error')

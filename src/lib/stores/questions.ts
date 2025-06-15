@@ -10,6 +10,13 @@ class QuestionsStore {
   constructor() {
     // Auto-load questions when store is created
     this.loadQuestions()
+    
+    // Listen for questions being restored from archive
+    if (typeof window !== 'undefined') {
+      window.addEventListener('question-restored', (event: CustomEvent) => {
+        this.addQuestion(event.detail)
+      })
+    }
   }
 
   async loadQuestions() {
@@ -49,8 +56,16 @@ class QuestionsStore {
         throw new Error(errorData.error || 'Failed to archive question')
       }
 
-      // Remove the question from the active list (it's now archived)
+      // Update the question's archived status and remove from active list
+      const archivedQuestion = { ...question, archived: true }
       this.questions = this.questions.filter(q => q.id !== questionId)
+      
+      // Notify archived questions store if it exists
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('question-archived', { 
+          detail: archivedQuestion 
+        }))
+      }
       
       return { success: true }
     } catch (err) {

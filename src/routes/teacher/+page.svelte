@@ -201,33 +201,6 @@
   onMount(async () => {
     // Store handles loading questions automatically
     await loadRecentSubmissions()
-    
-    // Listen for storage events to detect when questions are restored from archive
-    function handleStorageChange(event) {
-      if (event.key === 'questions-updated') {
-        questionsStore.loadQuestions()
-        // Clear the flag
-        localStorage.removeItem('questions-updated')
-      }
-    }
-    
-    window.addEventListener('storage', handleStorageChange)
-    
-    // Also check on focus (when returning to tab)
-    function handleFocus() {
-      if (localStorage.getItem('questions-updated')) {
-        questionsStore.loadQuestions()
-        localStorage.removeItem('questions-updated')
-      }
-    }
-    
-    window.addEventListener('focus', handleFocus)
-    
-    // Cleanup
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('focus', handleFocus)
-    }
   })
 </script>
 

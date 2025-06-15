@@ -8,6 +8,20 @@ class ArchivedQuestionsStore {
   loading = $state(false)
   error = $state<string | null>(null)
 
+  constructor() {
+    // Listen for questions being archived from the main store
+    if (typeof window !== 'undefined') {
+      window.addEventListener('question-archived', (event: CustomEvent) => {
+        this.addArchivedQuestion(event.detail)
+      })
+    }
+  }
+
+  addArchivedQuestion(question: Question) {
+    // Add the archived question to the beginning of the list
+    this.questions = [question, ...this.questions]
+  }
+
   async loadArchivedQuestions() {
     this.loading = true
     this.error = null
@@ -64,8 +78,18 @@ class ArchivedQuestionsStore {
 
       // Remove restored questions from the archive list reactively
       const restoredIds = this.selectedQuestionIds
+      const restoredQuestions = this.questions.filter(q => restoredIds.includes(q.id))
       this.questions = this.questions.filter(q => !restoredIds.includes(q.id))
       this.selectedQuestionIds = []
+
+      // Notify main questions store about restored questions
+      if (typeof window !== 'undefined') {
+        restoredQuestions.forEach(question => {
+          window.dispatchEvent(new CustomEvent('question-restored', { 
+            detail: { ...question, archived: false }
+          }))
+        })
+      }
 
       return { success: true, restoredCount: restoredIds.length }
     } catch (err) {
