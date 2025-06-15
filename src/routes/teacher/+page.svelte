@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation'
   import Markdown from '$lib/components/Markdown.svelte'
   import { addToast } from '$lib/stores/toast.js'
-  import { questionsStore } from '$lib/stores/questions.js'
+  import { questionsStore } from '$lib/stores/questions.svelte.js'
   
   // Use Svelte 5 runes for state management
   let selectedConcepts = $state(['variables', 'conditionals'])

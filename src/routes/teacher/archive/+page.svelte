@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { addToast } from '$lib/stores/toast.js'
-  import { archivedQuestionsStore } from '$lib/stores/archived-questions.js'
-  import { questionsStore } from '$lib/stores/questions.js'
+  import { archivedQuestionsStore } from '$lib/stores/archived-questions.svelte.js'
+  import { questionsStore } from '$lib/stores/questions.svelte.js'
   import Markdown from '$lib/components/Markdown.svelte'
 
   function toggleQuestion(questionId) {

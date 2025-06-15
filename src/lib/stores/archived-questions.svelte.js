@@ -1,23 +1,19 @@
-import type { Tables } from '$lib/types/supabase.js'
-
-type Question = Tables<'java_questions'>
-
 class ArchivedQuestionsStore {
-  questions = $state<Question[]>([])
-  selectedQuestionIds = $state<string[]>([])
+  questions = $state([])
+  selectedQuestionIds = $state([])
   loading = $state(false)
-  error = $state<string | null>(null)
+  error = $state(null)
 
   constructor() {
     // Listen for questions being archived from the main store
     if (typeof window !== 'undefined') {
-      window.addEventListener('question-archived', (event: CustomEvent) => {
+      window.addEventListener('question-archived', (event) => {
         this.addArchivedQuestion(event.detail)
       })
     }
   }
 
-  addArchivedQuestion(question: Question) {
+  addArchivedQuestion(question) {
     // Add the archived question to the beginning of the list
     this.questions = [question, ...this.questions]
   }
@@ -43,7 +39,7 @@ class ArchivedQuestionsStore {
     }
   }
 
-  toggleQuestionSelection(questionId: string) {
+  toggleQuestionSelection(questionId) {
     if (this.selectedQuestionIds.includes(questionId)) {
       this.selectedQuestionIds = this.selectedQuestionIds.filter(id => id !== questionId)
     } else {

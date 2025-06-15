@@ -1,11 +1,7 @@
-import type { Tables } from '$lib/types/supabase.js'
-
-type Question = Tables<'java_questions'>
-
 class QuestionsStore {
-  questions = $state<Question[]>([])
+  questions = $state([])
   loading = $state(false)
-  error = $state<string | null>(null)
+  error = $state(null)
 
   constructor() {
     // Auto-load questions when store is created
@@ -40,7 +36,7 @@ class QuestionsStore {
     }
   }
 
-  async archiveQuestion(questionId: string) {
+  async archiveQuestion(questionId) {
     const question = this.questions.find(q => q.id === questionId)
     if (!question) return
 
@@ -75,7 +71,7 @@ class QuestionsStore {
     }
   }
 
-  async restoreQuestion(questionId: string) {
+  async restoreQuestion(questionId) {
     try {
       const response = await fetch('/api/questions/archive/restore', {
         method: 'POST',
@@ -99,7 +95,7 @@ class QuestionsStore {
     }
   }
 
-  addQuestion(question: Question) {
+  addQuestion(question) {
     this.questions = [question, ...this.questions]
   }
 
