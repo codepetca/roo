@@ -70,7 +70,7 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
 
     console.log('Calling Claude API...')
     const message = await getAnthropic().messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     })
@@ -161,7 +161,7 @@ Return ONLY valid JSON in this exact format:
 }`
 
     const message = await getAnthropic().messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 2000,
       messages: [{
         role: 'user',
