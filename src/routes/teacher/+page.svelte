@@ -16,6 +16,9 @@
   let modifyingQuestion = $state(null)
   let modificationPrompt = $state('')
   let isModifying = $state(false)
+  let viewingSolution = $state(null)
+  let currentSolution = $state(null)
+  let loadingSolution = $state(false)
   
   const javaConcepts = [
     'variables', 'data-types', 'conditionals', 'loops', 
@@ -187,6 +190,35 @@
     }
   }
 
+  async function viewSolution(question) {
+    viewingSolution = question
+    currentSolution = null
+    loadingSolution = true
+
+    try {
+      const response = await fetch(`/api/questions/${question.id}/solution`)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to generate solution')
+      }
+
+      const data = await response.json()
+      currentSolution = data.solution
+    } catch (error) {
+      addToast('Error generating solution: ' + error.message, 'error')
+      closeSolution()
+    } finally {
+      loadingSolution = false
+    }
+  }
+
+  function closeSolution() {
+    viewingSolution = null
+    currentSolution = null
+    loadingSolution = false
+  }
+
   onMount(async () => {
     await loadQuestions()
     await loadRecentSubmissions()
@@ -345,6 +377,13 @@
             <!-- Action buttons -->
             <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <button 
+                onclick={() => viewSolution(question)}
+                class="w-6 h-6 rounded-full bg-green-500 text-white text-xs hover:bg-green-600 flex items-center justify-center"
+                title="View solution"
+              >
+                💡
+              </button>
+              <button 
                 onclick={() => startModifyQuestion(question)}
                 class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs hover:bg-blue-600 flex items-center justify-center"
                 title="Modify question"
@@ -360,7 +399,7 @@
               </button>
             </div>
             
-            <div class="font-medium text-gray-900 mb-2 pr-16">
+            <div class="font-medium text-gray-900 mb-2 pr-24">
               <Markdown content={question.question_text} />
             </div>
             <div class="flex items-center justify-between text-sm text-gray-600">
@@ -430,6 +469,75 @@
               {:else}
                 Generate Modified Question
               {/if}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
+
+  <!-- Solution Viewing Modal -->
+  {#if viewingSolution}
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-semibold text-gray-900">Expected Solution</h3>
+            <button 
+              onclick={closeSolution}
+              class="text-gray-400 hover:text-gray-600"
+            >
+              ×
+            </button>
+          </div>
+          
+          <div class="mb-4">
+            <h4 class="font-medium text-gray-700 mb-2">Question:</h4>
+            <div class="bg-gray-50 p-3 rounded border text-sm">
+              <Markdown content={viewingSolution.question_text} />
+            </div>
+          </div>
+          
+          {#if loadingSolution}
+            <div class="text-center py-8">
+              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-2"></div>
+              <p class="text-green-600">Generating solution...</p>
+            </div>
+          {:else if currentSolution}
+            <div class="mb-4">
+              <h4 class="font-medium text-gray-700 mb-2">Expected Solution:</h4>
+              <div class="bg-gray-900 text-gray-100 p-4 rounded border font-mono text-sm overflow-x-auto">
+                <pre><code>{currentSolution.code}</code></pre>
+              </div>
+              
+              {#if currentSolution.explanation}
+                <div class="mt-4">
+                  <h4 class="font-medium text-gray-700 mb-2">Explanation:</h4>
+                  <div class="bg-blue-50 p-3 rounded border text-sm">
+                    <Markdown content={currentSolution.explanation} />
+                  </div>
+                </div>
+              {/if}
+              
+              {#if currentSolution.keyPoints && currentSolution.keyPoints.length > 0}
+                <div class="mt-4">
+                  <h4 class="font-medium text-gray-700 mb-2">Key Points for Grading:</h4>
+                  <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
+                    {#each currentSolution.keyPoints as point}
+                      <li>{point}</li>
+                    {/each}
+                  </ul>
+                </div>
+              {/if}
+            </div>
+          {/if}
+          
+          <div class="flex justify-end">
+            <button
+              onclick={closeSolution}
+              class="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-md"
+            >
+              Close
             </button>
           </div>
         </div>
