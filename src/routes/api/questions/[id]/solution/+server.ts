@@ -10,10 +10,10 @@ export async function GET({ params }) {
       return json({ error: 'Question ID required' }, { status: 400 })
     }
 
-    // Get the question
+    // Get the question with stored solution
     const { data: question, error: fetchError } = await supabase
       .from('java_questions')
-      .select('*')
+      .select('solution, question_text, java_concepts')
       .eq('id', id)
       .single()
 
@@ -21,13 +21,24 @@ export async function GET({ params }) {
       return json({ error: 'Question not found' }, { status: 404 })
     }
 
-    // Generate solution using AI
+    // If solution exists in database, return it
+    if (question.solution) {
+      return json({ solution: question.solution })
+    }
+
+    // Fallback: generate solution for older questions that don't have stored solutions
     const solution = await generateSolution(question.question_text, question.java_concepts)
+    
+    // Store the generated solution for future use
+    await supabase
+      .from('java_questions')
+      .update({ solution })
+      .eq('id', id)
     
     return json({ solution })
   } catch (error) {
-    console.error('Solution generation error:', error)
-    return json({ error: 'Failed to generate solution' }, { status: 500 })
+    console.error('Solution retrieval error:', error)
+    return json({ error: 'Failed to get solution' }, { status: 500 })
   }
 }
 

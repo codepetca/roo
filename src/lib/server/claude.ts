@@ -65,6 +65,11 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
       "criteria": ["solves the problem", "efficient approach", "handles edge cases"]
     }
   },
+  "solution": {
+    "code": "public boolean methodName(int param) {\\n    // Implementation here\\n    return result;\\n}",
+    "explanation": "This method works by...",
+    "keyPoints": ["Correct method signature", "Proper variable naming", "Handles logic correctly"]
+  },
   "concepts": ["variables", "loops", "conditionals"]
 }`
 

@@ -18,6 +18,7 @@ export async function POST({ request }) {
       .insert({
         question_text: questionData.question,
         rubric: questionData.rubric,
+        solution: questionData.solution,
         java_concepts: concepts
       })
       .select()

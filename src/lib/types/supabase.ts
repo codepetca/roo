@@ -17,6 +17,7 @@ export type Database = {
           java_concepts: string[]
           question_text: string
           rubric: Json
+          solution: Json | null
         }
         Insert: {
           created_at?: string | null
@@ -25,6 +26,7 @@ export type Database = {
           java_concepts: string[]
           question_text: string
           rubric: Json
+          solution?: Json | null
         }
         Update: {
           created_at?: string | null
@@ -33,6 +35,7 @@ export type Database = {
           java_concepts?: string[]
           question_text?: string
           rubric?: Json
+          solution?: Json | null
         }
         Relationships: [
           {
