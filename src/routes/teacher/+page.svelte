@@ -119,19 +119,17 @@
     }
   }
 
-  async function deleteQuestion(questionId) {
-    if (!confirm('Are you sure you want to delete this question?')) {
-      return
-    }
-
+  async function archiveQuestion(questionId) {
     try {
-      const response = await fetch(`/api/questions/${questionId}`, {
-        method: 'DELETE'
+      const response = await fetch('/api/questions', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questionId })
       })
 
       if (!response.ok) {
         const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to delete question')
+        throw new Error(errorData.error || 'Failed to archive question')
       }
 
       // Remove from local list
@@ -141,8 +139,10 @@
       if (selectedQuestion?.id === questionId) {
         selectedQuestion = null
       }
+      
+      addToast('Question archived successfully', 'success')
     } catch (error) {
-      addToast('Error deleting question: ' + error.message, 'error')
+      addToast('Error archiving question: ' + error.message, 'error')
     }
   }
 
@@ -364,7 +364,15 @@
 
   <!-- Generated Questions List -->
   <div class="card mb-8">
-    <h2 class="text-xl font-semibold mb-4">Generated Questions ({questions.length})</h2>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold">Generated Questions ({questions.length})</h2>
+      <a 
+        href="/teacher/archive" 
+        class="text-sm text-blue-600 hover:underline flex items-center gap-1"
+      >
+        📦 View Archive
+      </a>
+    </div>
     
     {#if questions.length === 0}
       <p class="text-gray-500 text-center py-8">
@@ -391,11 +399,11 @@
                 ✏
               </button>
               <button 
-                onclick={() => deleteQuestion(question.id)}
-                class="w-6 h-6 rounded-full bg-red-500 text-white text-xs hover:bg-red-600 flex items-center justify-center"
-                title="Delete question"
+                onclick={() => archiveQuestion(question.id)}
+                class="w-6 h-6 rounded-full bg-orange-500 text-white text-xs hover:bg-orange-600 flex items-center justify-center"
+                title="Archive question"
               >
-                ×
+                📦
               </button>
             </div>
             

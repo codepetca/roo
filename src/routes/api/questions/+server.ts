@@ -41,6 +41,7 @@ export async function GET() {
     const { data: questions, error } = await supabase
       .from('java_questions')
       .select('*')
+      .eq('archived', false)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -49,5 +50,31 @@ export async function GET() {
   } catch (error) {
     console.error('Fetch questions error:', error)
     return json({ error: 'Failed to fetch questions' }, { status: 500 })
+  }
+}
+
+export async function DELETE({ request }) {
+  try {
+    const { questionId } = await request.json()
+    
+    if (!questionId) {
+      return json({ error: 'Question ID required' }, { status: 400 })
+    }
+
+    // Archive the question instead of deleting
+    const { error } = await supabase
+      .from('java_questions')
+      .update({ archived: true })
+      .eq('id', questionId)
+
+    if (error) {
+      console.error('Archive question error:', error)
+      throw error
+    }
+
+    return json({ success: true })
+  } catch (error) {
+    console.error('Archive question error:', error)
+    return json({ error: 'Failed to archive question' }, { status: 500 })
   }
 }

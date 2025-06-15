@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       java_questions: {
         Row: {
+          archived: boolean | null
           created_at: string | null
           created_by: string | null
           id: string
@@ -20,6 +21,7 @@ export type Database = {
           solution: Json | null
         }
         Insert: {
+          archived?: boolean | null
           created_at?: string | null
           created_by?: string | null
           id?: string
@@ -29,6 +31,7 @@ export type Database = {
           solution?: Json | null
         }
         Update: {
+          archived?: boolean | null
           created_at?: string | null
           created_by?: string | null
           id?: string
