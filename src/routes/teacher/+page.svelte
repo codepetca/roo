@@ -13,6 +13,9 @@
   let selectedQuestion = $state(null)
   let gradingResult = $state(null)
   let recentSubmissions = $state([])
+  let modifyingQuestion = $state(null)
+  let modificationPrompt = $state('')
+  let isModifying = $state(false)
   
   const javaConcepts = [
     'variables', 'data-types', 'conditionals', 'loops', 
@@ -137,6 +140,50 @@
       }
     } catch (error) {
       addToast('Error deleting question: ' + error.message, 'error')
+    }
+  }
+
+  function startModifyQuestion(question) {
+    modifyingQuestion = question
+    modificationPrompt = ''
+  }
+
+  function cancelModifyQuestion() {
+    modifyingQuestion = null
+    modificationPrompt = ''
+    isModifying = false
+  }
+
+  async function submitModifyQuestion() {
+    if (!modificationPrompt.trim()) {
+      addToast('Please enter a modification request', 'error')
+      return
+    }
+
+    isModifying = true
+    try {
+      const response = await fetch(`/api/questions/${modifyingQuestion.id}/modify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ modificationPrompt })
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to modify question')
+      }
+
+      const data = await response.json()
+      
+      // Add the modified question to the top of the list
+      questions = [data.question, ...questions]
+      
+      addToast('Question modified successfully!', 'success')
+      cancelModifyQuestion()
+    } catch (error) {
+      addToast('Error modifying question: ' + error.message, 'error')
+    } finally {
+      isModifying = false
     }
   }
 
@@ -295,16 +342,25 @@
       <div class="space-y-4">
         {#each questions as question}
           <div class="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 relative group">
-            <!-- Delete button -->
-            <button 
-              onclick={() => deleteQuestion(question.id)}
-              class="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white text-xs hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-              title="Delete question"
-            >
-              ×
-            </button>
+            <!-- Action buttons -->
+            <div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button 
+                onclick={() => startModifyQuestion(question)}
+                class="w-6 h-6 rounded-full bg-blue-500 text-white text-xs hover:bg-blue-600 flex items-center justify-center"
+                title="Modify question"
+              >
+                ✏
+              </button>
+              <button 
+                onclick={() => deleteQuestion(question.id)}
+                class="w-6 h-6 rounded-full bg-red-500 text-white text-xs hover:bg-red-600 flex items-center justify-center"
+                title="Delete question"
+              >
+                ×
+              </button>
+            </div>
             
-            <div class="font-medium text-gray-900 mb-2 pr-8">
+            <div class="font-medium text-gray-900 mb-2 pr-16">
               <Markdown content={question.question_text} />
             </div>
             <div class="flex items-center justify-between text-sm text-gray-600">
@@ -316,6 +372,70 @@
       </div>
     {/if}
   </div>
+
+  <!-- Question Modification Modal -->
+  {#if modifyingQuestion}
+    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-semibold text-gray-900">Modify Question</h3>
+            <button 
+              onclick={cancelModifyQuestion}
+              class="text-gray-400 hover:text-gray-600"
+            >
+              ×
+            </button>
+          </div>
+          
+          <div class="mb-4">
+            <h4 class="font-medium text-gray-700 mb-2">Original Question:</h4>
+            <div class="bg-gray-50 p-3 rounded border text-sm">
+              <Markdown content={modifyingQuestion.question_text} />
+            </div>
+          </div>
+          
+          <div class="mb-6">
+            <label for="modification-prompt" class="block text-sm font-medium text-gray-700 mb-2">
+              Modification Request:
+            </label>
+            <textarea
+              id="modification-prompt"
+              bind:value={modificationPrompt}
+              placeholder="Describe how you'd like to modify this question. For example: 'for full marks use 1 line boolean' or 'make it focus more on loops' or 'simplify for beginners'"
+              class="w-full h-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              disabled={isModifying}
+            ></textarea>
+            <p class="text-xs text-gray-500 mt-1">
+              Be specific about what changes you want to see in the question.
+            </p>
+          </div>
+          
+          <div class="flex gap-3 justify-end">
+            <button
+              onclick={cancelModifyQuestion}
+              disabled={isModifying}
+              class="px-4 py-2 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              onclick={submitModifyQuestion}
+              disabled={isModifying || !modificationPrompt.trim()}
+              class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md disabled:opacity-50 flex items-center gap-2"
+            >
+              {#if isModifying}
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Generating...
+              {:else}
+                Generate Modified Question
+              {/if}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Recent Submissions -->
   <div class="card">

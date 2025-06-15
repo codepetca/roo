@@ -3,7 +3,7 @@ import { env } from '$env/dynamic/private'
 
 let _anthropic: Anthropic | null = null
 
-function getAnthropic() {
+export function getAnthropic() {
   if (_anthropic) return _anthropic
 
   const apiKey = env.ANTHROPIC_API_KEY
