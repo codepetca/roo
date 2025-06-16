@@ -21,7 +21,10 @@
   let showQuestionList = $state(false)
 
   async function startTest(): Promise<void> {
+    console.log('startTest called with user:', $user?.id, 'testId:', testId)
+    
     if (!$user?.id || !testId) {
+      console.error('Missing user or testId')
       alert('Authentication required')
       goto('/auth/login')
       return
@@ -29,7 +32,9 @@
 
     startingTest = true
     try {
+      console.log('Calling testAttemptStore.startTest...')
       const result = await testAttemptStore.startTest(testId, $user.id)
+      console.log('testAttemptStore.startTest result:', result)
       
       if (result.success) {
         showInstructions = false
@@ -108,7 +113,27 @@
     }
   }
 
-  onMount(() => {
+  onMount(async () => {
+    // Load basic test information for the instructions screen
+    if (testId) {
+      console.log('Loading test info for:', testId)
+      try {
+        const response = await fetch(`/api/tests/${testId}`)
+        const result = await response.json()
+        
+        if (response.ok) {
+          testAttemptStore.test = result.test
+          console.log('Test info loaded:', result.test)
+        } else {
+          console.error('Failed to load test info:', result.error)
+          testAttemptStore.error = result.error || 'Failed to load test'
+        }
+      } catch (error) {
+        console.error('Error loading test info:', error)
+        testAttemptStore.error = 'Failed to load test'
+      }
+    }
+    
     // Set up security event listeners
     window.addEventListener('beforeunload', handleBeforeUnload)
     document.addEventListener('fullscreenchange', handleFullscreenChange)
@@ -332,7 +357,22 @@
           </div>
         {:else}
           <div class="flex items-center justify-center h-64">
-            <p class="text-gray-500">No question selected</p>
+            <div class="text-center">
+              <p class="text-gray-500 mb-4">No question selected</p>
+              <div class="text-xs text-left bg-gray-100 p-3 rounded max-w-md">
+                <strong>Debug Info:</strong><br/>
+                Questions: {testAttemptStore.questions.length}<br/>
+                Current Index: {testAttemptStore.currentQuestionIndex}<br/>
+                Current Question: {testAttemptStore.currentQuestion ? 'exists' : 'null'}<br/>
+                {#if testAttemptStore.questions.length > 0}
+                  Sample: {JSON.stringify({
+                    id: testAttemptStore.questions[0].id,
+                    question_id: testAttemptStore.questions[0].question_id,
+                    text: testAttemptStore.questions[0].question_text?.slice(0, 50) + '...'
+                  })}
+                {/if}
+              </div>
+            </div>
           </div>
         {/if}
       </div>
@@ -360,6 +400,7 @@
             value={testAttemptStore.currentCode}
             fontSize={testAttemptStore.fontSize}
             theme="light"
+            readonly={false}
             placeholder="Write your Java code here..."
             onUpdate={handleCodeChange}
           />

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types.js'
-import { supabase } from '$lib/server/supabase.js'
+import { supabase } from '$lib/server/supabase.ts'
 
 export const GET: RequestHandler = async ({ params, url }) => {
   try {
@@ -21,6 +21,17 @@ export const GET: RequestHandler = async ({ params, url }) => {
 
     if (attemptError || !attempt) {
       return json({ error: 'No active attempt found' }, { status: 404 })
+    }
+
+    // Get test details
+    const { data: test, error: testError } = await supabase
+      .from('coding_tests')
+      .select('*')
+      .eq('id', testId)
+      .single()
+
+    if (testError || !test) {
+      return json({ error: 'Test not found' }, { status: 404 })
     }
 
     // Get test questions with their details
@@ -57,11 +68,27 @@ export const GET: RequestHandler = async ({ params, url }) => {
     // Combine questions with their answers
     const questionsWithAnswers = testQuestions.map(tq => ({
       ...tq,
+      // Flatten java_questions data for easier access
+      question_text: tq.java_questions?.question_text || '',
+      java_concepts: tq.java_questions?.java_concepts || [],
+      rubric: tq.java_questions?.rubric || null,
       answer: answers.find(a => a.question_id === tq.question_id) || null
     }))
 
+    console.log('Test questions processed:', {
+      testId,
+      questionsCount: questionsWithAnswers.length,
+      sampleQuestion: questionsWithAnswers[0] ? {
+        id: questionsWithAnswers[0].id,
+        question_id: questionsWithAnswers[0].question_id,
+        question_text: questionsWithAnswers[0].question_text,
+        java_concepts: questionsWithAnswers[0].java_concepts
+      } : null
+    })
+
     return json({
       success: true,
+      test,
       questions: questionsWithAnswers,
       attempt
     })

@@ -2,15 +2,17 @@
   import { onMount } from 'svelte'
   import { user, profile, loading } from '$lib/stores/auth.js'
   import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   
   let loadingTimeout = $state(false)
   let debugInfo = $state('')
   
   // Auto-redirect authenticated users to their dashboard
   $effect(() => {
-    console.log('Effect triggered:', { user: $user?.id, profile: $profile?.role, loading: $loading })
+    console.log('Effect triggered:', { user: $user?.id, profile: $profile?.role, loading: $loading, url: $page.url.pathname })
     
-    if (!$loading && $user && $profile) {
+    // Only redirect if we're on the landing page (/)
+    if (!$loading && $user && $profile && $page.url.pathname === '/') {
       console.log('Redirecting to dashboard:', $profile.role)
       if ($profile.role === 'teacher') {
         goto('/teacher')

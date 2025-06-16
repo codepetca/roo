@@ -60,6 +60,8 @@ class TestAttemptStore {
     this.error = null
 
     try {
+      console.log('Starting test:', testId, 'for student:', studentId)
+      
       // Start the test attempt
       const startResponse = await fetch(`/api/tests/${testId}/start`, {
         method: 'POST',
@@ -69,7 +71,9 @@ class TestAttemptStore {
         body: JSON.stringify({ studentId })
       })
 
+      console.log('Start response status:', startResponse.status)
       const startResult = await startResponse.json()
+      console.log('Start result:', startResult)
 
       if (!startResponse.ok) {
         return { success: false, error: startResult.error || 'Failed to start test' }
@@ -78,8 +82,11 @@ class TestAttemptStore {
       this.attempt = startResult.attempt
 
       // Load test questions
+      console.log('Loading questions for test:', testId)
       const questionsResponse = await fetch(`/api/tests/${testId}/questions?studentId=${studentId}`)
+      console.log('Questions response status:', questionsResponse.status)
       const questionsResult = await questionsResponse.json()
+      console.log('Questions result:', questionsResult)
 
       if (!questionsResponse.ok) {
         return { success: false, error: questionsResult.error || 'Failed to load questions' }
@@ -87,6 +94,16 @@ class TestAttemptStore {
 
       this.test = questionsResult.test
       this.questions = questionsResult.questions || []
+      
+      console.log('Questions loaded:', {
+        count: this.questions.length,
+        sampleQuestion: this.questions[0] ? {
+          id: this.questions[0].id,
+          question_id: this.questions[0].question_id,
+          question_text: this.questions[0].question_text?.slice(0, 100),
+          java_concepts: this.questions[0].java_concepts
+        } : null
+      })
       
       // Initialize answers map
       this.answers = {}
@@ -124,18 +141,38 @@ class TestAttemptStore {
   }
 
   private initializeTimer(): void {
-    if (!this.attempt || !this.test) return
+    console.log('Initializing timer with:', { 
+      attempt: this.attempt, 
+      test: this.test?.time_limit_minutes,
+      started_at: this.attempt?.started_at 
+    })
+    
+    if (!this.attempt || !this.test) {
+      console.log('Timer init failed: missing attempt or test')
+      return
+    }
 
     const startTime = new Date(this.attempt.started_at!)
     const timeLimit = this.test.time_limit_minutes * 60 * 1000 // Convert to milliseconds
     const elapsed = Date.now() - startTime.getTime()
     const remaining = Math.max(0, timeLimit - elapsed)
 
+    console.log('Timer calculation:', { 
+      startTime, 
+      timeLimit, 
+      elapsed, 
+      remaining,
+      remainingSeconds: Math.floor(remaining / 1000)
+    })
+
     this.timer.timeRemaining = Math.floor(remaining / 1000) // Convert to seconds
     this.timer.isExpired = remaining <= 0
     this.timer.isRunning = !this.timer.isExpired && this.attempt.status === 'in_progress'
 
+    console.log('Timer state after init:', this.timer)
+
     if (this.timer.isRunning) {
+      console.log('Starting timer countdown')
       this.startTimerCountdown()
     }
   }
