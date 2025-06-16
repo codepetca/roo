@@ -4,7 +4,7 @@
   import { goto } from '$app/navigation'
   import Markdown from '$lib/components/Markdown.svelte'
   import { addToast } from '$lib/stores/toast.js'
-  import { questionsStore } from '$lib/stores/questions.svelte.js'
+  import { questionsStore } from '$lib/stores/questions.svelte.ts'
   
   // Use Svelte 5 runes for state management
   let selectedConcepts = $state(['variables', 'conditionals'])
@@ -259,7 +259,7 @@
         </label>
         <select bind:value={selectedQuestion} class="input" id="question-select">
           <option value={null}>Choose a question...</option>
-          {#each questions as question}
+          {#each questionsStore.activeQuestions as question}
             <option value={question}>
               {question.question_text.slice(0, 80)}...
             </option>

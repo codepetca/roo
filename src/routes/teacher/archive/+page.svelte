@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { addToast } from '$lib/stores/toast.js'
-  import { archivedQuestionsStore } from '$lib/stores/archived-questions.svelte.js'
-  import { questionsStore } from '$lib/stores/questions.svelte.js'
+  import { archivedQuestionsStore } from '$lib/stores/archived-questions.svelte.ts'
+  import { questionsStore } from '$lib/stores/questions.svelte.ts'
   import Markdown from '$lib/components/Markdown.svelte'
 
   function toggleQuestion(questionId) {
@@ -46,6 +46,7 @@
   }
 
   onMount(() => {
+    // Always reload archived questions to get latest from database
     archivedQuestionsStore.loadArchivedQuestions()
   })
 </script>
@@ -64,7 +65,7 @@
           <label class="flex items-center">
             <input 
               type="checkbox" 
-              bind:checked={archivedQuestionsStore.allSelected}
+              checked={archivedQuestionsStore.allSelected}
               onchange={toggleSelectAll}
               class="mr-2"
             />

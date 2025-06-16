@@ -1,17 +1,21 @@
+import type { Tables } from '$lib/types/supabase.js'
+
+type Question = Tables<'java_questions'>
+
 class QuestionsStore {
-  questions = $state([])
+  questions = $state<Question[]>([])
   loading = $state(false)
-  error = $state(null)
+  error = $state<string | null>(null)
 
   constructor() {
-    // Auto-load questions when store is created
-    this.loadQuestions()
-    
     // Listen for questions being restored from archive
     if (typeof window !== 'undefined') {
       window.addEventListener('question-restored', (event: CustomEvent) => {
         this.addQuestion(event.detail)
       })
+      
+      // Auto-load questions only on client side
+      this.loadQuestions()
     }
   }
 
@@ -36,7 +40,7 @@ class QuestionsStore {
     }
   }
 
-  async archiveQuestion(questionId) {
+  async archiveQuestion(questionId: string) {
     const question = this.questions.find(q => q.id === questionId)
     if (!question) return
 
@@ -49,10 +53,11 @@ class QuestionsStore {
 
       if (!response.ok) {
         const errorData = await response.json()
+        console.error('Archive API error:', errorData)
         throw new Error(errorData.error || 'Failed to archive question')
       }
 
-      // Update the question's archived status and remove from active list
+      // Only update local state if API call succeeded
       const archivedQuestion = { ...question, archived: true }
       this.questions = this.questions.filter(q => q.id !== questionId)
       
@@ -63,15 +68,17 @@ class QuestionsStore {
         }))
       }
       
+      console.log('Question archived successfully:', questionId)
       return { success: true }
     } catch (err) {
       const error = err instanceof Error ? err.message : 'Unknown error'
       this.error = error
+      console.error('Archive question failed:', err)
       throw err
     }
   }
 
-  async restoreQuestion(questionId) {
+  async restoreQuestion(questionId: string) {
     try {
       const response = await fetch('/api/questions/archive/restore', {
         method: 'POST',
@@ -95,30 +102,16 @@ class QuestionsStore {
     }
   }
 
-  addQuestion(question) {
+  addQuestion(question: Question) {
     this.questions = [question, ...this.questions]
   }
 
-  // Derived reactive states  
-  get activeQuestions() {
-    return this.questions.filter(q => !q.archived)
-  }
-
-  get archivedQuestions() {
-    return this.questions.filter(q => q.archived)
-  }
-
-  get totalCount() {
-    return this.questions.length
-  }
-
-  get activeCount() {
-    return this.activeQuestions.length
-  }
-
-  get archivedCount() {
-    return this.archivedQuestions.length
-  }
+  // Derived reactive states using $derived runes
+  activeQuestions = $derived(this.questions.filter(q => !q.archived))
+  archivedQuestions = $derived(this.questions.filter(q => q.archived))
+  totalCount = $derived(this.questions.length)
+  activeCount = $derived(this.activeQuestions.length)
+  archivedCount = $derived(this.archivedQuestions.length)
 }
 
 // Create a singleton instance

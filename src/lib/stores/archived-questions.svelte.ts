@@ -1,21 +1,28 @@
+import type { Tables } from '$lib/types/supabase.js'
+
+type Question = Tables<'java_questions'>
+
 class ArchivedQuestionsStore {
-  questions = $state([])
-  selectedQuestionIds = $state([])
+  questions = $state<Question[]>([])
+  selectedQuestionIds = $state<string[]>([])
   loading = $state(false)
-  error = $state(null)
+  error = $state<string | null>(null)
 
   constructor() {
     // Listen for questions being archived from the main store
     if (typeof window !== 'undefined') {
-      window.addEventListener('question-archived', (event) => {
+      window.addEventListener('question-archived', (event: CustomEvent) => {
         this.addArchivedQuestion(event.detail)
       })
     }
   }
 
-  addArchivedQuestion(question) {
-    // Add the archived question to the beginning of the list
-    this.questions = [question, ...this.questions]
+  addArchivedQuestion(question: Question) {
+    // Check if question already exists to avoid duplicates
+    if (!this.questions.find(q => q.id === question.id)) {
+      // Add the archived question to the beginning of the list
+      this.questions = [question, ...this.questions]
+    }
   }
 
   async loadArchivedQuestions() {
@@ -39,7 +46,7 @@ class ArchivedQuestionsStore {
     }
   }
 
-  toggleQuestionSelection(questionId) {
+  toggleQuestionSelection(questionId: string) {
     if (this.selectedQuestionIds.includes(questionId)) {
       this.selectedQuestionIds = this.selectedQuestionIds.filter(id => id !== questionId)
     } else {
@@ -125,26 +132,12 @@ class ArchivedQuestionsStore {
     }
   }
 
-  // Derived reactive states
-  get allSelected() {
-    return this.questions.length > 0 && this.selectedQuestionIds.length === this.questions.length
-  }
-
-  get selectedCount() {
-    return this.selectedQuestionIds.length
-  }
-
-  get totalCount() {
-    return this.questions.length
-  }
-
-  get hasQuestions() {
-    return this.questions.length > 0
-  }
-
-  get selectedQuestions() {
-    return this.questions.filter(q => this.selectedQuestionIds.includes(q.id))
-  }
+  // Derived reactive states using $derived runes
+  allSelected = $derived(this.questions.length > 0 && this.selectedQuestionIds.length === this.questions.length)
+  selectedCount = $derived(this.selectedQuestionIds.length)
+  totalCount = $derived(this.questions.length)
+  hasQuestions = $derived(this.questions.length > 0)
+  selectedQuestions = $derived(this.questions.filter(q => this.selectedQuestionIds.includes(q.id)))
 }
 
 // Create a singleton instance
