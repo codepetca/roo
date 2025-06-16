@@ -221,9 +221,12 @@
     <h1 class="text-3xl font-bold text-gray-900">Teacher Dashboard</h1>
     <p class="text-gray-600 mt-2">Generate questions and grade student submissions</p>
     
-    <div class="mt-4">
+    <div class="mt-4 flex gap-4">
       <a href="/teacher/print" class="btn btn-secondary">
         📄 Print Question & Answer Sheets
+      </a>
+      <a href="/teacher/test-samples" class="btn btn-secondary">
+        🖋️ Generate Test Handwriting Samples
       </a>
     </div>
   </div>
