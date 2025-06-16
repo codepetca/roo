@@ -16,20 +16,67 @@ export function getAnthropic(): Anthropic {
   return _anthropic
 }
 
+function countCodeLines(code: string): number {
+  return code.trim().split('\n').filter(line => line.trim().length > 0).length
+}
+
+function validateSolutionLength(solution: any): boolean {
+  if (!solution || !solution.code) return false
+  const lineCount = countCodeLines(solution.code)
+  console.log(`Solution has ${lineCount} lines`)
+  return lineCount <= 12
+}
+
 export async function generateQuestion(concepts: JavaConcept[]): Promise<QuestionData> {
+  const maxAttempts = 3
+  
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      console.log(`Generating question for concepts: ${concepts.join(', ')} (attempt ${attempt}/${maxAttempts})`)
+      
+      const questionData = await generateQuestionAttempt(concepts, attempt)
+      
+      // Validate solution length
+      if (validateSolutionLength(questionData.solution)) {
+        console.log('✅ Question generated with valid solution length')
+        return questionData
+      } else {
+        console.log(`❌ Solution too long (attempt ${attempt}), regenerating simpler version...`)
+        if (attempt === maxAttempts) {
+          console.log('⚠️ All attempts failed, using last generated question anyway')
+          return questionData
+        }
+      }
+    } catch (error) {
+      console.error(`Question generation attempt ${attempt} failed:`, error)
+      if (attempt === maxAttempts) {
+        throw error
+      }
+    }
+  }
+  
+  throw new Error('Failed to generate question after all attempts')
+}
+
+async function generateQuestionAttempt(concepts: JavaConcept[], attempt: number): Promise<QuestionData> {
   try {
-    console.log('Generating question for concepts:', concepts)
+    const simplificationLevel = attempt > 1 ? `\n\nSIMPLIFICATION LEVEL ${attempt}: Make this problem even simpler than usual. Use fewer variables, simpler logic, and more basic operations. Priority is fitting in 12 lines or less.` : ''
     
     const prompt = `Generate a Java coding question for high school students (grades 9-12) covering these concepts: ${concepts.join(', ')}. 
 
-Requirements:
+CRITICAL REQUIREMENTS:
 - Format like CodingBat.com problems - focus on writing a single method
-- Method should be 5-10 lines of handwritten code  
+- Solution MUST be 12 lines or fewer (including method signature and closing brace)
+- Method body should be 8-10 lines maximum to fit handwritten answer sheets
 - Include method signature and clear description
 - Focus on CodeHS Java Unit 1 fundamentals
 - Appropriate difficulty for beginners
+- Keep the problem simple enough that the solution fits in 12 lines total
 
-IMPORTANT: Format the question text using simple markdown syntax. Use backticks for inline code and **bold** for headers. Do NOT use code blocks (\`\`\`). Keep it simple to avoid JSON parsing issues.
+SOLUTION LENGTH CONSTRAINT:
+The solution you generate MUST fit within 12 lines when properly formatted. If a problem would require more than 12 lines, simplify it or choose a different approach. This is a hard constraint for answer sheet formatting.${simplificationLevel}
+
+IMPORTANT: Format the question text using simple markdown syntax. Use backticks for inline code and **bold** for headers. Do NOT use code blocks (triple backticks). Keep it simple to avoid JSON parsing issues.
 
 Example format:
 Write a method called \`methodName\` that does something. The method should handle specific requirements.

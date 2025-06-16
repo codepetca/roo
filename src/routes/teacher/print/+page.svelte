@@ -50,6 +50,23 @@
     showAnswerSheet = false
   }
 
+  function extractMethodSignature(questionText: string): string {
+    // Look for method signature patterns like `public type methodName(params)`
+    const signatureMatch = questionText.match(/`([^`]*public[^`]*\([^)]*\))`/)
+    if (signatureMatch) {
+      return signatureMatch[1]
+    }
+    
+    // Fallback: look for any text between backticks that looks like a method
+    const methodMatch = questionText.match(/`([^`]*\([^)]*\))`/)
+    if (methodMatch) {
+      return methodMatch[1]
+    }
+    
+    // Last resort: return empty string
+    return ''
+  }
+
   onMount(() => {
     loadQuestions()
   })
@@ -237,7 +254,12 @@
         <div class="mb-4">
           <!-- Question header -->
           <div class="bg-gray-100 border-2 border-black p-2 mb-2">
-            <h2 class="text-lg font-bold text-center">QUESTION {index + 1}</h2>
+            <div class="flex justify-between items-center">
+              <div class="text-sm font-mono text-gray-700 flex-1">
+                {extractMethodSignature(question.question_text)}
+              </div>
+              <h2 class="text-lg font-bold text-right">QUESTION {index + 1}</h2>
+            </div>
           </div>
 
           <!-- Ruled writing area -->
