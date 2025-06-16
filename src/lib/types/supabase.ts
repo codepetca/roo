@@ -9,6 +9,94 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      answer_history: {
+        Row: {
+          answer_id: string | null
+          code_snapshot: string
+          id: string
+          keystroke_count: number | null
+          timestamp: string | null
+        }
+        Insert: {
+          answer_id?: string | null
+          code_snapshot: string
+          id?: string
+          keystroke_count?: number | null
+          timestamp?: string | null
+        }
+        Update: {
+          answer_id?: string | null
+          code_snapshot?: string
+          id?: string
+          keystroke_count?: number | null
+          timestamp?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "answer_history_answer_id_fkey"
+            columns: ["answer_id"]
+            isOneToOne: false
+            referencedRelation: "test_answers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coding_tests: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          disable_copy_paste: boolean | null
+          end_date: string
+          fullscreen_required: boolean | null
+          id: string
+          immediate_feedback: boolean | null
+          start_date: string | null
+          status: string | null
+          time_limit_minutes: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          disable_copy_paste?: boolean | null
+          end_date: string
+          fullscreen_required?: boolean | null
+          id?: string
+          immediate_feedback?: boolean | null
+          start_date?: string | null
+          status?: string | null
+          time_limit_minutes: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          disable_copy_paste?: boolean | null
+          end_date?: string
+          fullscreen_required?: boolean | null
+          id?: string
+          immediate_feedback?: boolean | null
+          start_date?: string | null
+          status?: string | null
+          time_limit_minutes?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coding_tests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       java_questions: {
         Row: {
           archived: boolean | null
@@ -137,6 +225,156 @@ export type Database = {
           role?: string
         }
         Relationships: []
+      }
+      test_answers: {
+        Row: {
+          answer_code: string | null
+          attempt_id: string | null
+          created_at: string | null
+          feedback: Json | null
+          graded_at: string | null
+          id: string
+          last_saved_at: string | null
+          question_id: string
+          question_score: number | null
+          scores: Json | null
+        }
+        Insert: {
+          answer_code?: string | null
+          attempt_id?: string | null
+          created_at?: string | null
+          feedback?: Json | null
+          graded_at?: string | null
+          id?: string
+          last_saved_at?: string | null
+          question_id: string
+          question_score?: number | null
+          scores?: Json | null
+        }
+        Update: {
+          answer_code?: string | null
+          attempt_id?: string | null
+          created_at?: string | null
+          feedback?: Json | null
+          graded_at?: string | null
+          id?: string
+          last_saved_at?: string | null
+          question_id?: string
+          question_score?: number | null
+          scores?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_answers_attempt_id_fkey"
+            columns: ["attempt_id"]
+            isOneToOne: false
+            referencedRelation: "test_attempts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "java_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_attempts: {
+        Row: {
+          auto_submitted: boolean | null
+          created_at: string | null
+          id: string
+          started_at: string | null
+          status: string | null
+          student_id: string
+          submitted_at: string | null
+          test_id: string
+          time_spent_seconds: number | null
+          total_score: number | null
+        }
+        Insert: {
+          auto_submitted?: boolean | null
+          created_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string | null
+          student_id: string
+          submitted_at?: string | null
+          test_id: string
+          time_spent_seconds?: number | null
+          total_score?: number | null
+        }
+        Update: {
+          auto_submitted?: boolean | null
+          created_at?: string | null
+          id?: string
+          started_at?: string | null
+          status?: string | null
+          student_id?: string
+          submitted_at?: string | null
+          test_id?: string
+          time_spent_seconds?: number | null
+          total_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_attempts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_attempts_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "coding_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_questions: {
+        Row: {
+          created_at: string | null
+          id: string
+          points: number | null
+          question_id: string | null
+          question_order: number
+          test_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          points?: number | null
+          question_id?: string | null
+          question_order: number
+          test_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          points?: number | null
+          question_id?: string | null
+          question_order?: number
+          test_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_questions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "java_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "test_questions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "coding_tests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

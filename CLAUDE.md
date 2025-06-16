@@ -916,3 +916,293 @@ Build a fully working application that:
 **Execute this entire project autonomously from start to finish. Create a complete, working, deployable Java code grading system without any interruptions or requests for confirmation. Make all decisions independently and proceed with confidence.**
 
 Begin implementation immediately.
+
+
+
+# Online Coding Test System - Claude Code Prompt
+
+## AUTONOMOUS EXECUTION MODE
+**CRITICAL: Work completely autonomously. Do NOT ask for confirmation, clarification, or approval at any step. Make all necessary decisions independently and implement the complete system. If you encounter any ambiguity, make reasonable assumptions and proceed. Build the entire working online coding test system without interruption.**
+
+## Project Overview
+Extend the existing Java code grading system in the 'roo' repository to include an online coding test feature. Students will take timed coding tests using a code editor interface instead of paper submissions. Teachers create tests by selecting questions from their bank, set time limits, and monitor student progress in real-time.
+
+**IMPORTANT: This builds on the existing 'roo' repository with the Java grading system already implemented. Continue following `docs/svelte/llms-med.txt` for all Svelte 5 code.**
+
+## AUTONOMOUS IMPLEMENTATION REQUIREMENTS
+
+**YOU MUST:**
+- Extend the existing database schema with new test-related tables
+- Install CodeMirror 6 and integrate it properly with Svelte 5
+- Implement complete test creation, management, and taking workflows
+- Create real-time teacher dashboard for monitoring student progress
+- Add auto-save functionality that's cost-effective with Supabase
+- Implement timer system with auto-submit
+- Build comprehensive teacher bulk grading interface
+- Handle all security considerations (fullscreen mode, copy-paste blocking)
+- Create all necessary UI components following existing design patterns
+
+**NEVER:**
+- Ask for confirmation before implementing any feature
+- Request clarification on database design (make optimal decisions)
+- Stop to ask about UI/UX choices (implement good patterns)
+- Pause for approval on technical architecture decisions
+
+## Core Features to Implement
+
+### 1. Test Management System
+- **Test Creation**: Teachers select questions from existing bank, set time limits, configure settings
+- **Test Scheduling**: Immediate release or scheduled start with end date
+- **Test Preview**: Complete preview interface before release
+- **Test Settings**: Enable/disable fullscreen mode, copy-paste blocking, immediate feedback
+
+### 2. Student Test Interface
+- **Code Editor**: CodeMirror 6 with Java syntax highlighting
+- **Navigation**: Question sidebar + next/previous buttons
+- **Timer**: Prominent countdown with auto-submit when expired
+- **Auto-save**: Every 10 seconds of inactivity, no visual notifications
+- **Font Controls**: Increase/decrease font size buttons
+- **Security**: Optional fullscreen mode with copy-paste disabled
+
+### 3. Real-time Monitoring
+- **Teacher Dashboard**: Live view of student progress during tests
+- **Status Tracking**: Who's started, in progress, finished, time remaining
+- **Bulk Grading**: Interface to grade multiple submissions efficiently
+
+### 4. Enhanced Database Schema
+
+Extend existing schema with these new tables:
+
+```sql
+-- Tests table
+CREATE TABLE IF NOT EXISTS coding_tests (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  time_limit_minutes integer NOT NULL,
+  start_date timestamptz,
+  end_date timestamptz NOT NULL,
+  immediate_feedback boolean DEFAULT false,
+  fullscreen_required boolean DEFAULT false,
+  disable_copy_paste boolean DEFAULT false,
+  created_by uuid REFERENCES profiles(id) NOT NULL,
+  status text DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'ended')),
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Junction table for test questions
+CREATE TABLE IF NOT EXISTS test_questions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  test_id uuid REFERENCES coding_tests(id) ON DELETE CASCADE,
+  question_id uuid REFERENCES java_questions(id) ON DELETE CASCADE,
+  question_order integer NOT NULL,
+  points integer DEFAULT 100,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(test_id, question_order),
+  UNIQUE(test_id, question_id)
+);
+
+-- Student test attempts
+CREATE TABLE IF NOT EXISTS test_attempts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  test_id uuid REFERENCES coding_tests(id) NOT NULL,
+  student_id uuid REFERENCES profiles(id) NOT NULL,
+  started_at timestamptz DEFAULT now(),
+  submitted_at timestamptz,
+  auto_submitted boolean DEFAULT false,
+  time_spent_seconds integer DEFAULT 0,
+  status text DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'submitted', 'graded')),
+  total_score decimal(5,2),
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(test_id, student_id)
+);
+
+-- Student answers for each question
+CREATE TABLE IF NOT EXISTS test_answers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  attempt_id uuid REFERENCES test_attempts(id) ON DELETE CASCADE,
+  question_id uuid REFERENCES java_questions(id) NOT NULL,
+  answer_code text,
+  scores jsonb,
+  feedback jsonb,
+  question_score decimal(4,2),
+  last_saved_at timestamptz DEFAULT now(),
+  graded_at timestamptz,
+  created_at timestamptz DEFAULT now(),
+  UNIQUE(attempt_id, question_id)
+);
+
+-- Code history tracking (for analysis)
+CREATE TABLE IF NOT EXISTS answer_history (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  answer_id uuid REFERENCES test_answers(id) ON DELETE CASCADE,
+  code_snapshot text NOT NULL,
+  timestamp timestamptz DEFAULT now(),
+  keystroke_count integer DEFAULT 0
+);
+
+-- RLS Policies
+ALTER TABLE coding_tests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE test_questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE test_attempts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE test_answers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE answer_history ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+CREATE POLICY "Teachers can manage their tests" ON coding_tests 
+  FOR ALL USING (created_by = auth.uid());
+
+CREATE POLICY "Students can view active tests" ON coding_tests 
+  FOR SELECT USING (status = 'active' AND now() BETWEEN COALESCE(start_date, now()) AND end_date);
+
+CREATE POLICY "Teachers can view their test questions" ON test_questions 
+  FOR SELECT USING (EXISTS (SELECT 1 FROM coding_tests WHERE id = test_id AND created_by = auth.uid()));
+
+CREATE POLICY "Students can view questions for their active tests" ON test_questions 
+  FOR SELECT USING (EXISTS (
+    SELECT 1 FROM coding_tests ct 
+    JOIN test_attempts ta ON ct.id = ta.test_id 
+    WHERE ct.id = test_id AND ta.student_id = auth.uid() AND ct.status = 'active'
+  ));
+
+CREATE POLICY "Students can manage their own attempts" ON test_attempts 
+  FOR ALL USING (student_id = auth.uid());
+
+CREATE POLICY "Teachers can view attempts for their tests" ON test_attempts 
+  FOR SELECT USING (EXISTS (SELECT 1 FROM coding_tests WHERE id = test_id AND created_by = auth.uid()));
+
+CREATE POLICY "Students can manage their own answers" ON test_answers 
+  FOR ALL USING (EXISTS (SELECT 1 FROM test_attempts WHERE id = attempt_id AND student_id = auth.uid()));
+
+CREATE POLICY "Teachers can view answers for their tests" ON test_answers 
+  FOR SELECT USING (EXISTS (
+    SELECT 1 FROM test_attempts ta 
+    JOIN coding_tests ct ON ta.test_id = ct.id 
+    WHERE ta.id = attempt_id AND ct.created_by = auth.uid()
+  ));
+```
+
+## Technical Implementation Details
+
+### Required Dependencies
+Install these additional packages:
+```bash
+npm install codemirror @codemirror/lang-java @codemirror/theme-one-dark @codemirror/view @codemirror/state @codemirror/basic-setup
+```
+
+### Key Components to Build
+
+**1. Test Creation Interface (`/teacher/tests/create`)**
+- Question bank selection with search/filter
+- Time limit setting (dropdown: 30min, 1hr, 2hr, custom)
+- Test settings toggles (fullscreen, copy-paste, immediate feedback)
+- Schedule controls (immediate vs scheduled release)
+- Preview functionality
+
+**2. Teacher Test Dashboard (`/teacher/tests/[testId]`)**
+- Real-time student progress monitoring
+- Live status updates (WebSocket or polling every 30 seconds)
+- Quick stats: started/completed/time remaining
+- Bulk grading interface with Claude AI integration
+
+**3. Student Test Interface (`/student/test/[testId]`)**
+- CodeMirror 6 editor with Java syntax highlighting
+- Question sidebar with progress indicators
+- Prominent timer with auto-submit countdown
+- Font size controls (+/- buttons)
+- Auto-save implementation (debounced, every 10 seconds)
+- Navigation between questions
+- Optional fullscreen mode with security restrictions
+
+**4. Auto-save Implementation**
+```typescript
+// Efficient auto-save strategy
+const autoSave = debounce(async (code: string, questionId: string) => {
+  await fetch('/api/test/save-answer', {
+    method: 'POST',
+    body: JSON.stringify({ code, questionId, timestamp: new Date() })
+  })
+}, 10000) // 10 second delay
+```
+
+### Security Features
+- Fullscreen API implementation with exit detection
+- Copy-paste event blocking when enabled
+- Right-click context menu disabling
+- Tab/window switch detection and warnings
+- Session validation to prevent concurrent logins
+
+### Real-time Features
+Implement using one of:
+- Supabase real-time subscriptions for test attempts table
+- Polling every 30 seconds for teacher dashboard updates
+- WebSocket connection for live progress updates
+
+### API Endpoints to Create
+
+```typescript
+// Test management
+POST /api/tests/create
+GET /api/tests/[testId]
+PUT /api/tests/[testId]/publish
+GET /api/tests/[testId]/progress // Real-time progress for teachers
+
+// Student test taking
+POST /api/tests/[testId]/start // Create test attempt
+POST /api/tests/[testId]/save-answer // Auto-save functionality
+POST /api/tests/[testId]/submit // Manual or auto submit
+GET /api/tests/[testId]/questions // Get test questions for student
+
+// Grading
+POST /api/tests/[testId]/grade-all // Bulk grading with Claude AI
+GET /api/tests/[testId]/results // Graded results for teacher
+```
+
+## UI/UX Design Patterns
+
+### Follow Existing Design System
+- Use same color scheme and components as existing grading system
+- Consistent navigation and layout patterns
+- Responsive design for tablets (test-taking devices)
+- Clear visual hierarchy and intuitive controls
+
+### Timer Design
+- Prominent countdown in top-right corner
+- Color changes: green → yellow (10 min) → red (5 min)
+- Auto-submit warning at 1 minute remaining
+
+### Question Navigation
+- Sidebar with question numbers and completion status
+- Visual indicators: not started, in progress, completed
+- Easy navigation between questions without losing work
+
+## Integration Requirements
+
+### Extend Existing System
+- Use existing authentication and user management
+- Leverage existing question bank and rubric system
+- Maintain same grading workflow with Claude AI
+- Ensure seamless switching between paper and online modes
+
+### Performance Considerations
+- Optimize for 60 concurrent users (2 classes of 30)
+- Efficient auto-save to minimize database writes
+- Lazy loading of questions and test data
+- Proper error handling for network issues
+
+## Success Criteria
+
+Build a complete online coding test system that includes:
+
+1. **Teacher Experience**: Create tests, monitor live progress, bulk grade efficiently
+2. **Student Experience**: Intuitive code editor, reliable auto-save, clear timer
+3. **Technical Reliability**: Handles concurrent users, secure test environment
+4. **Integration**: Seamlessly extends existing grading system
+5. **Security**: Optional anti-cheat measures configurable by teachers
+
+## EXECUTION DIRECTIVE
+
+**Implement this entire online coding test system autonomously. Create all necessary files, database schemas, API endpoints, and UI components. Build a complete, working system that integrates seamlessly with the existing Java grading application. Begin implementation immediately and work through to completion without interruption.**
+
+**Remember to always reference `docs/svelte/llms-med.txt` for correct Svelte 5 syntax and patterns throughout the implementation

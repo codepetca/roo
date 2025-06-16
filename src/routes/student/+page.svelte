@@ -1,260 +1,406 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { user, profile } from '$lib/stores/auth.js'
   import { goto } from '$app/navigation'
-  import type { SubmissionWithRelations } from '$lib/types/index.js'
-  
-  // Use Svelte 5 runes for state management
-  let submissions = $state<SubmissionWithRelations[]>([])
-  let loading = $state<boolean>(true)
-  let selectedSubmission = $state<SubmissionWithRelations | null>(null)
+  import { user } from '$lib/stores/auth.js'
+  import type { CodingTest, TestAttempt } from '$lib/types/index.js'
 
-  // Redirect if not a student
-  $effect(() => {
-    if ($profile && $profile.role !== 'student') {
-      goto('/teacher')
-    }
-  })
+  let availableTests = $state<CodingTest[]>([])
+  let pastAttempts = $state<TestAttempt[]>([])
+  let loading = $state(true)
+  let error = $state<string | null>(null)
 
-  async function loadSubmissions(): Promise<void> {
+  async function loadStudentData(): Promise<void> {
     if (!$user?.id) return
-    
+
     loading = true
+    error = null
+
     try {
-      const response = await fetch(`/api/submissions?studentId=${$user.id}`)
-      const data = await response.json()
-      submissions = data.submissions || []
-    } catch (error: unknown) {
-      console.error('Failed to load submissions:', error)
-      submissions = []
+      // Load available tests
+      const testsResponse = await fetch(`/api/student/available-tests?studentId=${$user.id}`)
+      const testsResult = await testsResponse.json()
+
+      if (testsResponse.ok) {
+        availableTests = testsResult.tests || []
+      } else {
+        throw new Error(testsResult.error || 'Failed to load available tests')
+      }
+
+      // Load past attempts
+      const attemptsResponse = await fetch(`/api/student/attempts?studentId=${$user.id}`)
+      const attemptsResult = await attemptsResponse.json()
+
+      if (attemptsResponse.ok) {
+        pastAttempts = attemptsResult.attempts || []
+      } else {
+        console.error('Failed to load past attempts:', attemptsResult.error)
+        // Don't throw error for past attempts - it's not critical
+      }
+    } catch (err) {
+      console.error('Error loading student data:', err)
+      error = err instanceof Error ? err.message : 'Failed to load student data'
     } finally {
       loading = false
     }
   }
 
-  function viewSubmissionDetails(submission: SubmissionWithRelations): void {
-    selectedSubmission = submission
+  function getStatusColor(status: string): string {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800'
+      case 'ended': return 'bg-red-100 text-red-800'
+      case 'in_progress': return 'bg-blue-100 text-blue-800'
+      case 'submitted': return 'bg-purple-100 text-purple-800'
+      case 'graded': return 'bg-green-100 text-green-800'
+      default: return 'bg-gray-100 text-gray-800'
+    }
   }
 
-  function closeDetails(): void {
-    selectedSubmission = null
+  function formatDate(dateString: string | null): string {
+    if (!dateString) return 'N/A'
+    return new Date(dateString).toLocaleDateString()
   }
 
-  function getScoreColor(score: number): string {
-    if (score >= 3.5) return 'text-green-600'
-    if (score >= 2.5) return 'text-yellow-600'
-    return 'text-red-600'
+  function formatDateTime(dateString: string | null): string {
+    if (!dateString) return 'N/A'
+    return new Date(dateString).toLocaleString()
   }
 
-  function getScoreLabel(score: number): string {
-    if (score >= 3.5) return 'Excellent'
-    if (score >= 2.5) return 'Good'
-    if (score >= 1.5) return 'Fair'
-    return 'Needs Improvement'
+  function formatDuration(minutes: number): string {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    
+    if (hours > 0) {
+      return `${hours}h ${mins}m`
+    }
+    return `${mins}m`
+  }
+
+  function canTakeTest(test: CodingTest): boolean {
+    if (test.status !== 'active') return false
+    
+    // Check if already completed
+    const existingAttempt = pastAttempts.find(attempt => 
+      attempt.test_id === test.id && 
+      (attempt.status === 'submitted' || attempt.status === 'graded')
+    )
+    if (existingAttempt) return false
+
+    // Check if currently in progress
+    const inProgressAttempt = pastAttempts.find(attempt => 
+      attempt.test_id === test.id && attempt.status === 'in_progress'
+    )
+    
+    // Check dates
+    const now = new Date()
+    if (test.start_date && new Date(test.start_date) > now) return false
+    if (test.end_date && new Date(test.end_date) < now) return false
+
+    return true
+  }
+
+  function canResumeTest(test: CodingTest): boolean {
+    const inProgressAttempt = pastAttempts.find(attempt => 
+      attempt.test_id === test.id && attempt.status === 'in_progress'
+    )
+    return !!inProgressAttempt
+  }
+
+  function getTestAction(test: CodingTest): { text: string; action: () => void; disabled: boolean } {
+    const existingAttempt = pastAttempts.find(attempt => 
+      attempt.test_id === test.id && 
+      (attempt.status === 'submitted' || attempt.status === 'graded')
+    )
+    
+    if (existingAttempt) {
+      return {
+        text: 'View Results',
+        action: () => goto(`/student/results/${existingAttempt.id}`),
+        disabled: false
+      }
+    }
+
+    if (canResumeTest(test)) {
+      return {
+        text: 'Resume Test',
+        action: () => goto(`/student/test/${test.id}`),
+        disabled: false
+      }
+    }
+
+    if (canTakeTest(test)) {
+      return {
+        text: 'Start Test',
+        action: () => goto(`/student/test/${test.id}`),
+        disabled: false
+      }
+    }
+
+    if (test.status !== 'active') {
+      return {
+        text: 'Not Available',
+        action: () => {},
+        disabled: true
+      }
+    }
+
+    const now = new Date()
+    if (test.start_date && new Date(test.start_date) > now) {
+      return {
+        text: `Available ${formatDate(test.start_date)}`,
+        action: () => {},
+        disabled: true
+      }
+    }
+
+    if (test.end_date && new Date(test.end_date) < now) {
+      return {
+        text: 'Expired',
+        action: () => {},
+        disabled: true
+      }
+    }
+
+    return {
+      text: 'Not Available',
+      action: () => {},
+      disabled: true
+    }
   }
 
   onMount(() => {
-    loadSubmissions()
+    if ($user) {
+      loadStudentData()
+    } else {
+      goto('/auth/login')
+    }
   })
 </script>
 
-<div class="max-w-4xl mx-auto p-6">
+<svelte:head>
+  <title>Student Dashboard - Online Tests</title>
+</svelte:head>
+
+<div class="max-w-6xl mx-auto p-6">
+  <!-- Header -->
   <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900">My Submissions</h1>
-    <p class="text-gray-600 mt-2">View your Java code submissions and feedback</p>
+    <h1 class="text-3xl font-bold text-gray-900">Student Dashboard</h1>
+    <p class="text-gray-600 mt-1">
+      Welcome back! Here are your available tests and past results.
+    </p>
   </div>
 
   {#if loading}
     <div class="text-center py-12">
       <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-      <p class="text-gray-600">Loading your submissions...</p>
+      <p class="text-gray-600">Loading your tests...</p>
     </div>
-  {:else if submissions.length === 0}
-    <div class="card text-center py-12">
-      <div class="mb-4">
-        <svg class="mx-auto h-16 w-16 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      </div>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">No submissions yet</h3>
-      <p class="text-gray-600">
-        Your teacher hasn't graded any of your work yet. Check back later!
-      </p>
+  {:else if error}
+    <div class="bg-red-50 border border-red-200 rounded-lg p-6">
+      <p class="text-red-800">{error}</p>
+      <button
+        onclick={loadStudentData}
+        class="mt-4 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+      >
+        Retry
+      </button>
     </div>
   {:else}
-    <div class="space-y-6">
-      {#each submissions as submission}
-        <button class="card hover:shadow-lg transition-shadow cursor-pointer w-full text-left" onclick={() => viewSubmissionDetails(submission)}>
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="text-lg font-semibold text-gray-900">
-                Java Assignment
-              </h3>
-              <p class="text-sm text-gray-600">
-                Submitted: {submission.created_at ? new Date(submission.created_at).toLocaleDateString() : 'N/A'}
-              </p>
-            </div>
-            
-            {#if submission.overall_score}
-              <div class="text-right">
-                <div class="text-2xl font-bold {getScoreColor(submission.overall_score)}">
-                  {submission.overall_score}/4.0
-                </div>
-                <div class="text-sm {getScoreColor(submission.overall_score)}">
-                  {getScoreLabel(submission.overall_score)}
-                </div>
-              </div>
-            {:else}
-              <div class="text-right">
-                <div class="text-lg font-medium text-gray-500">Pending</div>
-                <div class="text-sm text-gray-500">Not graded yet</div>
-              </div>
-            {/if}
-          </div>
+    <!-- Quick Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="bg-white rounded-lg border p-4">
+        <div class="text-sm text-gray-500">Available Tests</div>
+        <div class="text-2xl font-semibold text-blue-600">
+          {availableTests.filter(test => canTakeTest(test) || canResumeTest(test)).length}
+        </div>
+      </div>
+      <div class="bg-white rounded-lg border p-4">
+        <div class="text-sm text-gray-500">Completed</div>
+        <div class="text-2xl font-semibold text-green-600">
+          {pastAttempts.filter(attempt => attempt.status === 'submitted' || attempt.status === 'graded').length}
+        </div>
+      </div>
+      <div class="bg-white rounded-lg border p-4">
+        <div class="text-sm text-gray-500">In Progress</div>
+        <div class="text-2xl font-semibold text-yellow-600">
+          {pastAttempts.filter(attempt => attempt.status === 'in_progress').length}
+        </div>
+      </div>
+      <div class="bg-white rounded-lg border p-4">
+        <div class="text-sm text-gray-500">Average Score</div>
+        <div class="text-2xl font-semibold text-gray-900">
+          {pastAttempts.filter(a => a.final_score !== null).length > 0
+            ? Math.round(
+                pastAttempts
+                  .filter(a => a.final_score !== null)
+                  .reduce((sum, a) => sum + (a.final_score || 0), 0) / 
+                pastAttempts.filter(a => a.final_score !== null).length
+              ) + '%'
+            : 'N/A'
+          }
+        </div>
+      </div>
+    </div>
 
-          <div class="border-t pt-4">
-            <p class="text-gray-700 mb-2">
-              <span class="font-medium">Question:</span>
-              {submission.java_questions?.question_text?.slice(0, 150)}
-              {(submission.java_questions?.question_text?.length ?? 0) > 150 ? '...' : ''}
-            </p>
-            
-            {#if submission.java_questions?.java_concepts}
-              <div class="flex flex-wrap gap-2">
-                {#each submission.java_questions.java_concepts as concept}
-                  <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    {concept}
+    <!-- Available Tests -->
+    <div class="mb-8">
+      <h2 class="text-2xl font-semibold text-gray-900 mb-4">Available Tests</h2>
+      
+      {#if availableTests.length === 0}
+        <div class="bg-white rounded-lg border p-8 text-center">
+          <div class="text-4xl mb-4">📝</div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No tests available</h3>
+          <p class="text-gray-600">Check back later for new assignments from your teacher.</p>
+        </div>
+      {:else}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {#each availableTests as test}
+            {@const action = getTestAction(test)}
+            <div class="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow">
+              <div class="p-6">
+                <div class="flex items-start justify-between mb-3">
+                  <h3 class="text-lg font-semibold text-gray-900">{test.title}</h3>
+                  <span class="px-2 py-1 text-xs font-medium rounded-full {getStatusColor(test.status)}">
+                    {test.status}
                   </span>
-                {/each}
+                </div>
+                
+                {#if test.description}
+                  <p class="text-gray-600 text-sm mb-4">{test.description}</p>
+                {/if}
+                
+                <div class="space-y-2 text-sm text-gray-500 mb-4">
+                  <div class="flex justify-between">
+                    <span>Duration:</span>
+                    <span>{formatDuration(test.time_limit_minutes)}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span>Questions:</span>
+                    <span>{test.question_count || 0}</span>
+                  </div>
+                  {#if test.end_date}
+                    <div class="flex justify-between">
+                      <span>Due:</span>
+                      <span>{formatDate(test.end_date)}</span>
+                    </div>
+                  {/if}
+                </div>
+                
+                <button
+                  onclick={action.action}
+                  disabled={action.disabled}
+                  class="w-full py-2 px-4 rounded font-medium transition-colors {
+                    action.disabled
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : action.text === 'Start Test' || action.text === 'Resume Test'
+                        ? 'bg-blue-500 hover:bg-blue-600 text-white'
+                        : 'bg-green-500 hover:bg-green-600 text-white'
+                  }"
+                >
+                  {action.text}
+                </button>
               </div>
-            {/if}
-          </div>
+            </div>
+          {/each}
+        </div>
+      {/if}
+    </div>
 
-          <div class="mt-4 text-right">
-            <span class="text-blue-600 text-sm hover:text-blue-800">
-              Click to view details →
-            </span>
+    <!-- Past Attempts -->
+    <div>
+      <h2 class="text-2xl font-semibold text-gray-900 mb-4">Past Attempts</h2>
+      
+      {#if pastAttempts.length === 0}
+        <div class="bg-white rounded-lg border p-8 text-center">
+          <div class="text-4xl mb-4">📊</div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No attempts yet</h3>
+          <p class="text-gray-600">Your test results will appear here after you complete tests.</p>
+        </div>
+      {:else}
+        <div class="bg-white rounded-lg border overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Test
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Started
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Submitted
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Score
+                  </th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                {#each pastAttempts as attempt}
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <div class="text-sm font-medium text-gray-900">
+                        {attempt.test_title || 'Test'}
+                      </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                      <span class="px-2 py-1 text-xs font-medium rounded-full {getStatusColor(attempt.status)}">
+                        {attempt.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDateTime(attempt.started_at)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDateTime(attempt.submitted_at)}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                      {#if attempt.final_score !== null}
+                        <span class="font-medium {
+                          attempt.final_score >= 80 ? 'text-green-600' :
+                          attempt.final_score >= 60 ? 'text-yellow-600' :
+                          'text-red-600'
+                        }">
+                          {attempt.final_score}%
+                        </span>
+                      {:else}
+                        <span class="text-gray-400">
+                          {attempt.status === 'in_progress' ? 'In progress' : 'Pending'}
+                        </span>
+                      {/if}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {#if attempt.status === 'in_progress'}
+                        <button
+                          onclick={() => goto(`/student/test/${attempt.test_id}`)}
+                          class="text-blue-600 hover:text-blue-800"
+                        >
+                          Resume
+                        </button>
+                      {:else if attempt.status === 'submitted' || attempt.status === 'graded'}
+                        <button
+                          onclick={() => goto(`/student/results/${attempt.id}`)}
+                          class="text-green-600 hover:text-green-800"
+                        >
+                          View Results
+                        </button>
+                      {:else}
+                        <span class="text-gray-400">N/A</span>
+                      {/if}
+                    </td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
           </div>
-        </button>
-      {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>
-
-<!-- Submission Details Modal -->
-{#if selectedSubmission}
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" tabindex="-1" onclick={closeDetails} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeDetails(); } } } >
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto" onclick={(e: Event) => e.stopPropagation()}>
-      <div class="p-6">
-        <div class="flex justify-between items-start mb-6">
-          <div>
-            <h2 class="text-2xl font-bold text-gray-900">Submission Details</h2>
-            <p class="text-gray-600">
-              Submitted: {selectedSubmission.created_at ? new Date(selectedSubmission.created_at).toLocaleDateString() : 'N/A'}
-            </p>
-          </div>
-          <button onclick={closeDetails} class="text-gray-400 hover:text-gray-600" aria-label="Close modal">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-            </svg>
-          </button>
-        </div>
-
-        <!-- Question -->
-        <div class="mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-2">Question</h3>
-          <div class="bg-gray-50 p-4 rounded-lg">
-            <p class="text-gray-800">{selectedSubmission.java_questions?.question_text}</p>
-            {#if selectedSubmission.java_questions?.java_concepts}
-              <div class="flex flex-wrap gap-2 mt-3">
-                {#each selectedSubmission.java_questions.java_concepts as concept}
-                  <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    {concept}
-                  </span>
-                {/each}
-              </div>
-            {/if}
-          </div>
-        </div>
-
-        {#if selectedSubmission.overall_score}
-          <!-- Overall Score -->
-          <div class="mb-6">
-            <h3 class="text-lg font-semibold text-gray-900 mb-2">Overall Score</h3>
-            <div class="bg-white border-2 border-gray-200 rounded-lg p-4 text-center">
-              <div class="text-4xl font-bold {getScoreColor(selectedSubmission.overall_score)} mb-2">
-                {selectedSubmission.overall_score}/4.0
-              </div>
-              <div class="text-lg {getScoreColor(selectedSubmission.overall_score)}">
-                {getScoreLabel(selectedSubmission.overall_score)}
-              </div>
-            </div>
-          </div>
-
-          <!-- Detailed Scores -->
-          {#if selectedSubmission.scores}
-            <div class="mb-6">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">Detailed Scores</h3>
-              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {#each Object.entries(selectedSubmission.scores as Record<string, number>) as [category, score]}
-                  <div class="bg-gray-50 p-4 rounded-lg">
-                    <div class="text-center mb-2">
-                      <div class="text-2xl font-bold text-gray-900">{score}/4</div>
-                      <div class="text-sm text-gray-600 capitalize">{category}</div>
-                    </div>
-                    {#if selectedSubmission.feedback && (selectedSubmission.feedback as Record<string, string>)[category]}
-                      <p class="text-xs text-gray-600 text-center">
-                        {(selectedSubmission.feedback as Record<string, string>)[category]}
-                      </p>
-                    {/if}
-                  </div>
-                {/each}
-              </div>
-            </div>
-          {/if}
-
-          <!-- Extracted Code -->
-          {#if selectedSubmission.extracted_code}
-            <div class="mb-6">
-              <h3 class="text-lg font-semibold text-gray-900 mb-2">Your Code (As Read by AI)</h3>
-              <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm">
-                <code>{selectedSubmission.extracted_code}</code>
-              </pre>
-            </div>
-          {/if}
-
-          <!-- Detailed Feedback -->
-          {#if selectedSubmission.feedback}
-            <div class="mb-6">
-              <h3 class="text-lg font-semibold text-gray-900 mb-4">Detailed Feedback</h3>
-              <div class="space-y-4">
-                {#each Object.entries(selectedSubmission.feedback as Record<string, string>) as [category, feedback]}
-                  <div class="border-l-4 border-blue-500 pl-4">
-                    <h4 class="font-medium text-gray-900 capitalize mb-1">{category}</h4>
-                    <p class="text-gray-700">{feedback}</p>
-                  </div>
-                {/each}
-              </div>
-            </div>
-          {/if}
-        {:else}
-          <div class="text-center py-8">
-            <div class="text-yellow-600 mb-2">
-              <svg class="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-            </div>
-            <h3 class="text-lg font-medium text-gray-900 mb-1">Grading in Progress</h3>
-            <p class="text-gray-600">Your teacher is reviewing this submission.</p>
-          </div>
-        {/if}
-
-        <div class="mt-6 flex justify-end">
-          <button onclick={closeDetails} class="btn btn-secondary">
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-{/if}

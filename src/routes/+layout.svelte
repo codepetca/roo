@@ -29,16 +29,25 @@
             <h1 class="text-xl font-semibold text-gray-900">Java Code Grader</h1>
           </div>
           <div class="flex items-center space-x-4">
+            {#if $profile?.role === 'teacher'}
+              <div class="flex items-center space-x-3">
+                <a href="/teacher" class="text-blue-600 hover:text-blue-800">Dashboard</a>
+                <a href="/teacher/generate" class="text-blue-600 hover:text-blue-800">Generate</a>
+                <a href="/teacher/grade" class="text-blue-600 hover:text-blue-800">Grade</a>
+                <a href="/teacher/tests" class="text-blue-600 hover:text-blue-800">Online Tests</a>
+              </div>
+            {:else if $profile?.role === 'student'}
+              <div class="flex items-center space-x-3">
+                <a href="/student" class="text-blue-600 hover:text-blue-800">Dashboard</a>
+              </div>
+            {/if}
+            
             {#if $profile}
-              <span class="text-sm text-gray-700">
+              <span class="text-sm text-gray-700 border-l border-gray-300 pl-4">
                 {$profile.full_name} ({$profile.role})
               </span>
             {/if}
-            {#if $profile?.role === 'teacher'}
-              <a href="/teacher" class="text-blue-600 hover:text-blue-800">Dashboard</a>
-            {:else if $profile?.role === 'student'}
-              <a href="/student" class="text-blue-600 hover:text-blue-800">My Submissions</a>
-            {/if}
+            
             <button onclick={handleSignOut} class="btn btn-secondary">Sign Out</button>
           </div>
         </div>
