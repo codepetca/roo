@@ -1,6 +1,4 @@
-import type { Tables } from '$lib/types/supabase.js'
-
-type Question = Tables<'java_questions'>
+import type { Question, QuestionArchivedEvent, QuestionRestoredEvent, ApiResponse } from '$lib/types/index.js'
 
 class ArchivedQuestionsStore {
   questions = $state<Question[]>([])
@@ -11,13 +9,13 @@ class ArchivedQuestionsStore {
   constructor() {
     // Listen for questions being archived from the main store
     if (typeof window !== 'undefined') {
-      window.addEventListener('question-archived', (event: CustomEvent) => {
+      window.addEventListener('question-archived', (event: QuestionArchivedEvent) => {
         this.addArchivedQuestion(event.detail)
       })
     }
   }
 
-  addArchivedQuestion(question: Question) {
+  addArchivedQuestion(question: Question): void {
     // Check if question already exists to avoid duplicates
     if (!this.questions.find(q => q.id === question.id)) {
       // Add the archived question to the beginning of the list
@@ -25,13 +23,13 @@ class ArchivedQuestionsStore {
     }
   }
 
-  async loadArchivedQuestions() {
+  async loadArchivedQuestions(): Promise<void> {
     this.loading = true
     this.error = null
     
     try {
       const response = await fetch('/api/questions/archived')
-      const data = await response.json()
+      const data: ApiResponse<Question[]> = await response.json()
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch archived questions')
@@ -46,7 +44,7 @@ class ArchivedQuestionsStore {
     }
   }
 
-  toggleQuestionSelection(questionId: string) {
+  toggleQuestionSelection(questionId: string): void {
     if (this.selectedQuestionIds.includes(questionId)) {
       this.selectedQuestionIds = this.selectedQuestionIds.filter(id => id !== questionId)
     } else {
@@ -54,7 +52,7 @@ class ArchivedQuestionsStore {
     }
   }
 
-  toggleSelectAll() {
+  toggleSelectAll(): void {
     if (this.allSelected) {
       this.selectedQuestionIds = []
     } else {
@@ -62,7 +60,7 @@ class ArchivedQuestionsStore {
     }
   }
 
-  async restoreSelectedQuestions() {
+  async restoreSelectedQuestions(): Promise<{ success: boolean; restoredCount: number }> {
     if (this.selectedQuestionIds.length === 0) {
       throw new Error('No questions selected')
     }
@@ -75,7 +73,7 @@ class ArchivedQuestionsStore {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData: ApiResponse = await response.json()
         throw new Error(errorData.error || 'Failed to restore questions')
       }
 
@@ -88,9 +86,10 @@ class ArchivedQuestionsStore {
       // Notify main questions store about restored questions
       if (typeof window !== 'undefined') {
         restoredQuestions.forEach(question => {
-          window.dispatchEvent(new CustomEvent('question-restored', { 
+          const event: QuestionRestoredEvent = new CustomEvent('question-restored', { 
             detail: { ...question, archived: false }
-          }))
+          }) as QuestionRestoredEvent
+          window.dispatchEvent(event)
         })
       }
 
@@ -102,7 +101,7 @@ class ArchivedQuestionsStore {
     }
   }
 
-  async deleteSelectedQuestions() {
+  async deleteSelectedQuestions(): Promise<{ success: boolean; deletedCount: number }> {
     if (this.selectedQuestionIds.length === 0) {
       throw new Error('No questions selected')
     }
@@ -115,7 +114,7 @@ class ArchivedQuestionsStore {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData: ApiResponse = await response.json()
         throw new Error(errorData.error || 'Failed to delete questions')
       }
 

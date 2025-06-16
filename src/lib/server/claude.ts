@@ -1,9 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { env } from '$env/dynamic/private'
+import type { QuestionData, GradingResult, JavaConcept } from '$lib/types/index.js'
 
 let _anthropic: Anthropic | null = null
 
-export function getAnthropic() {
+export function getAnthropic(): Anthropic {
   if (_anthropic) return _anthropic
 
   const apiKey = env.ANTHROPIC_API_KEY
@@ -15,7 +16,7 @@ export function getAnthropic() {
   return _anthropic
 }
 
-export async function generateQuestion(concepts: string[]) {
+export async function generateQuestion(concepts: JavaConcept[]): Promise<QuestionData> {
   try {
     console.log('Generating question for concepts:', concepts)
     
@@ -134,7 +135,7 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
   }
 }
 
-export async function gradeCode(imageBase64: string, question: string, rubric: any) {
+export async function gradeCode(imageBase64: string, question: string, rubric: any): Promise<GradingResult> {
   try {
     const prompt = `You are grading handwritten Java code for a high school student.
 

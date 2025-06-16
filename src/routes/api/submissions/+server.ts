@@ -1,7 +1,8 @@
-import { json } from '@sveltejs/kit'
+import { json, type RequestHandler } from '@sveltejs/kit'
 import { supabase } from '$lib/server/supabase.js'
+import type { SubmissionsResponse, ApiResponse } from '$lib/types/index.js'
 
-export async function GET({ url }) {
+export const GET: RequestHandler = async ({ url }) => {
   try {
     const studentId = url.searchParams.get('studentId')
     const teacherId = url.searchParams.get('teacherId')
@@ -20,16 +21,19 @@ export async function GET({ url }) {
     } else if (teacherId) {
       query = query.eq('teacher_id', teacherId)
     } else {
-      return json({ error: 'Missing studentId or teacherId parameter' }, { status: 400 })
+      const response: ApiResponse = { error: 'Missing studentId or teacherId parameter' }
+      return json(response, { status: 400 })
     }
 
     const { data: submissions, error } = await query
 
     if (error) throw error
 
-    return json({ submissions })
+    const response: SubmissionsResponse = { submissions }
+    return json(response)
   } catch (error) {
     console.error('Fetch submissions error:', error)
-    return json({ error: 'Failed to fetch submissions' }, { status: 500 })
+    const response: ApiResponse = { error: 'Failed to fetch submissions' }
+    return json(response, { status: 500 })
   }
 }

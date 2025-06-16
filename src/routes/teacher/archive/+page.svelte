@@ -1,19 +1,19 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { addToast } from '$lib/stores/toast.js'
-  import { archivedQuestionsStore } from '$lib/stores/archived-questions.svelte.ts'
-  import { questionsStore } from '$lib/stores/questions.svelte.ts'
+  import { addToast } from '$lib/stores/toast'
+  import { archivedQuestionsStore } from '$lib/stores/archived-questions.svelte'
+  import { questionsStore } from '$lib/stores/questions.svelte'
   import Markdown from '$lib/components/Markdown.svelte'
 
-  function toggleQuestion(questionId) {
+  function toggleQuestion(questionId: string): void {
     archivedQuestionsStore.toggleQuestionSelection(questionId)
   }
 
-  function toggleSelectAll() {
+  function toggleSelectAll(): void {
     archivedQuestionsStore.toggleSelectAll()
   }
 
-  async function deleteSelectedQuestions() {
+  async function deleteSelectedQuestions(): Promise<void> {
     if (archivedQuestionsStore.selectedCount === 0) {
       addToast('No questions selected', 'error')
       return
@@ -26,12 +26,13 @@
     try {
       const result = await archivedQuestionsStore.deleteSelectedQuestions()
       addToast(`${result.deletedCount} question(s) deleted permanently`, 'success')
-    } catch (error) {
-      addToast('Error deleting questions: ' + error.message, 'error')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast('Error deleting questions: ' + errorMessage, 'error')
     }
   }
 
-  async function restoreSelectedQuestions() {
+  async function restoreSelectedQuestions(): Promise<void> {
     if (archivedQuestionsStore.selectedCount === 0) {
       addToast('No questions selected', 'error')
       return
@@ -40,8 +41,9 @@
     try {
       const result = await archivedQuestionsStore.restoreSelectedQuestions()
       addToast(`${result.restoredCount} question(s) restored`, 'success')
-    } catch (error) {
-      addToast('Error restoring questions: ' + error.message, 'error')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast('Error restoring questions: ' + errorMessage, 'error')
     }
   }
 
@@ -135,7 +137,7 @@
                   </div>
                   <div class="flex items-center justify-between text-sm text-gray-600">
                     <span>Concepts: {question.java_concepts?.join(', ') || 'N/A'}</span>
-                    <span>Archived: {new Date(question.created_at).toLocaleDateString()}</span>
+                    <span>Archived: {question.created_at ? new Date(question.created_at).toLocaleDateString() : 'N/A'}</span>
                   </div>
                 </div>
               </div>

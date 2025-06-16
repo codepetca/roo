@@ -1,13 +1,16 @@
-import { json } from '@sveltejs/kit'
+import { json, type RequestHandler } from '@sveltejs/kit'
 import { supabase } from '$lib/server/supabase.js'
 import { generateQuestion } from '$lib/server/claude.js'
+import type { QuestionGenerationRequest, QuestionResponse, QuestionsResponse, ArchiveRequest, ApiResponse } from '$lib/types/index.js'
 
-export async function POST({ request }) {
+export const POST: RequestHandler = async ({ request }) => {
   try {
-    const { concepts } = await request.json()
+    const body: QuestionGenerationRequest = await request.json()
+    const { concepts } = body
     
     if (!concepts || !Array.isArray(concepts)) {
-      return json({ error: 'Concepts array required' }, { status: 400 })
+      const response: ApiResponse = { error: 'Concepts array required' }
+      return json(response, { status: 400 })
     }
 
     const questionData = await generateQuestion(concepts)
@@ -17,8 +20,8 @@ export async function POST({ request }) {
       .from('java_questions')
       .insert({
         question_text: questionData.question,
-        rubric: questionData.rubric,
-        solution: questionData.solution,
+        rubric: JSON.parse(JSON.stringify(questionData.rubric)),
+        solution: JSON.parse(JSON.stringify(questionData.solution)),
         java_concepts: concepts,
         archived: false
       })
@@ -30,14 +33,16 @@ export async function POST({ request }) {
       throw error
     }
 
-    return json({ question })
+    const response: QuestionResponse = { question }
+    return json(response)
   } catch (error) {
     console.error('Question generation error:', error)
-    return json({ error: 'Failed to generate question' }, { status: 500 })
+    const response: ApiResponse = { error: 'Failed to generate question' }
+    return json(response, { status: 500 })
   }
 }
 
-export async function GET() {
+export const GET: RequestHandler = async () => {
   try {
     const { data: questions, error } = await supabase
       .from('java_questions')
@@ -47,19 +52,23 @@ export async function GET() {
 
     if (error) throw error
 
-    return json({ questions })
+    const response: QuestionsResponse = { questions }
+    return json(response)
   } catch (error) {
     console.error('Fetch questions error:', error)
-    return json({ error: 'Failed to fetch questions' }, { status: 500 })
+    const response: ApiResponse = { error: 'Failed to fetch questions' }
+    return json(response, { status: 500 })
   }
 }
 
-export async function DELETE({ request }) {
+export const DELETE: RequestHandler = async ({ request }) => {
   try {
-    const { questionId } = await request.json()
+    const body: ArchiveRequest = await request.json()
+    const { questionId } = body
     
     if (!questionId) {
-      return json({ error: 'Question ID required' }, { status: 400 })
+      const response: ApiResponse = { error: 'Question ID required' }
+      return json(response, { status: 400 })
     }
 
     // Archive the question instead of deleting
@@ -73,9 +82,11 @@ export async function DELETE({ request }) {
       throw error
     }
 
-    return json({ success: true })
+    const response: ApiResponse = { success: true }
+    return json(response)
   } catch (error) {
     console.error('Archive question error:', error)
-    return json({ error: 'Failed to archive question' }, { status: 500 })
+    const response: ApiResponse = { error: 'Failed to archive question' }
+    return json(response, { status: 500 })
   }
 }

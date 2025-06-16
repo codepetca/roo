@@ -1,14 +1,17 @@
-import { json } from '@sveltejs/kit'
+import { json, type RequestHandler } from '@sveltejs/kit'
 import { supabase } from '$lib/server/supabase.js'
 import { generateQuestion } from '$lib/server/claude.js'
+import type { QuestionModificationRequest, QuestionResponse, ApiResponse } from '$lib/types/index.js'
 
-export async function POST({ params, request }) {
+export const POST: RequestHandler = async ({ params, request }) => {
   try {
     const { id } = params
-    const { modificationPrompt } = await request.json()
+    const body: QuestionModificationRequest = await request.json()
+    const { modificationPrompt } = body
     
     if (!id || !modificationPrompt) {
-      return json({ error: 'Question ID and modification prompt required' }, { status: 400 })
+      const response: ApiResponse = { error: 'Question ID and modification prompt required' }
+      return json(response, { status: 400 })
     }
 
     // Get the original question
@@ -19,7 +22,8 @@ export async function POST({ params, request }) {
       .single()
 
     if (fetchError || !originalQuestion) {
-      return json({ error: 'Original question not found' }, { status: 404 })
+      const response: ApiResponse = { error: 'Original question not found' }
+      return json(response, { status: 404 })
     }
 
     // Generate modified question using AI
@@ -46,14 +50,16 @@ export async function POST({ params, request }) {
       throw createError
     }
 
-    return json({ question: newQuestion, originalId: id })
+    const response: QuestionResponse = { question: newQuestion }
+    return json(response)
   } catch (error) {
     console.error('Question modification error:', error)
-    return json({ error: 'Failed to modify question' }, { status: 500 })
+    const response: ApiResponse = { error: 'Failed to modify question' }
+    return json(response, { status: 500 })
   }
 }
 
-async function generateModifiedQuestion(originalQuestion: string, concepts: string[], modificationPrompt: string) {
+async function generateModifiedQuestion(originalQuestion: string, concepts: string[], modificationPrompt: string): Promise<any> {
   const { getAnthropic } = await import('$lib/server/claude.js')
   
   const prompt = `You are modifying an existing Java coding question based on teacher feedback.
@@ -123,7 +129,7 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
     const parsedResponse = JSON.parse(responseText)
     console.log('Successfully parsed modified question JSON')
     return parsedResponse
-  } catch (firstError) {
+  } catch (firstError: unknown) {
     console.log('Direct JSON parse failed, attempting cleanup...')
     
     // Find JSON content between curly braces
@@ -146,13 +152,16 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
       const parsedResponse = JSON.parse(cleanedJsonText)
       console.log('Successfully parsed cleaned modified question JSON')
       return parsedResponse
-    } catch (secondError) {
+    } catch (secondError: unknown) {
+      const firstErrorMessage = firstError instanceof Error ? firstError.message : 'Unknown error'
+      const secondErrorMessage = secondError instanceof Error ? secondError.message : 'Unknown error'
+      
       console.error('Modified question JSON parsing failed:', { 
-        originalError: firstError.message, 
-        cleanupError: secondError.message,
+        originalError: firstErrorMessage, 
+        cleanupError: secondErrorMessage,
         jsonText: jsonText.substring(0, 500)
       })
-      throw new Error(`Failed to parse modified question JSON: ${secondError.message}`)
+      throw new Error(`Failed to parse modified question JSON: ${secondErrorMessage}`)
     }
   }
 }

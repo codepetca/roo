@@ -3,24 +3,25 @@
   import { user, profile } from '$lib/stores/auth.js'
   import { goto } from '$app/navigation'
   import Markdown from '$lib/components/Markdown.svelte'
-  import { addToast } from '$lib/stores/toast.js'
-  import { questionsStore } from '$lib/stores/questions.svelte.ts'
+  import { addToast } from '$lib/stores/toast'
+  import { questionsStore } from '$lib/stores/questions.svelte'
+  import type { Question, JavaConcept, GradingResult, Submission, SubmissionWithRelations, Solution } from '$lib/types/index.js'
   
   // Use Svelte 5 runes for state management
-  let selectedConcepts = $state(['variables', 'conditionals'])
-  let generatingQuestion = $state(false)
-  let uploadingImage = $state(false)
-  let selectedQuestion = $state(null)
-  let gradingResult = $state(null)
-  let recentSubmissions = $state([])
-  let modifyingQuestion = $state(null)
-  let modificationPrompt = $state('')
-  let isModifying = $state(false)
-  let viewingSolution = $state(null)
-  let currentSolution = $state(null)
-  let loadingSolution = $state(false)
+  let selectedConcepts = $state<JavaConcept[]>(['variables', 'conditionals'])
+  let generatingQuestion = $state<boolean>(false)
+  let uploadingImage = $state<boolean>(false)
+  let selectedQuestion = $state<Question | null>(null)
+  let gradingResult = $state<GradingResult | null>(null)
+  let recentSubmissions = $state<SubmissionWithRelations[]>([])
+  let modifyingQuestion = $state<Question | null>(null)
+  let modificationPrompt = $state<string>('')
+  let isModifying = $state<boolean>(false)
+  let viewingSolution = $state<Question | null>(null)
+  let currentSolution = $state<Solution | null>(null)
+  let loadingSolution = $state<boolean>(false)
   
-  const javaConcepts = [
+  const javaConcepts: JavaConcept[] = [
     'variables', 'data-types', 'conditionals', 'loops', 
     'methods', 'arrays', 'strings', 'input-output'
   ]
@@ -32,7 +33,7 @@
     }
   })
 
-  async function generateQuestion() {
+  async function generateQuestion(): Promise<void> {
     generatingQuestion = true
     try {
       const response = await fetch('/api/questions', {
@@ -51,15 +52,17 @@
       
       // Show success message
       addToast('Question generated successfully!', 'success')
-    } catch (error) {
-      addToast('Error generating question: ' + error.message, 'error')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast('Error generating question: ' + errorMessage, 'error')
     } finally {
       generatingQuestion = false
     }
   }
 
-  async function handleImageUpload(event) {
-    const file = event.target.files[0]
+  async function handleImageUpload(event: Event): Promise<void> {
+    const target = event.target as HTMLInputElement
+    const file = target.files?.[0]
     if (!file || !selectedQuestion) return
 
     uploadingImage = true
@@ -89,28 +92,29 @@
       await loadRecentSubmissions()
       
       // Clear file input
-      event.target.value = ''
-    } catch (error) {
-      addToast('Error grading submission: ' + error.message, 'error')
+      target.value = ''
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast('Error grading submission: ' + errorMessage, 'error')
     } finally {
       uploadingImage = false
     }
   }
 
 
-  async function loadRecentSubmissions() {
+  async function loadRecentSubmissions(): Promise<void> {
     if (!$user?.id) return
     
     try {
       const response = await fetch(`/api/submissions?teacherId=${$user.id}`)
       const data = await response.json()
       recentSubmissions = data.submissions || []
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load submissions:', error)
     }
   }
 
-  async function archiveQuestion(questionId) {
+  async function archiveQuestion(questionId: string): Promise<void> {
     try {
       await questionsStore.archiveQuestion(questionId)
       
@@ -120,25 +124,31 @@
       }
       
       addToast('Question archived successfully', 'success')
-    } catch (error) {
-      addToast('Error archiving question: ' + error.message, 'error')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast('Error archiving question: ' + errorMessage, 'error')
     }
   }
 
-  function startModifyQuestion(question) {
+  function startModifyQuestion(question: Question): void {
     modifyingQuestion = question
     modificationPrompt = ''
   }
 
-  function cancelModifyQuestion() {
+  function cancelModifyQuestion(): void {
     modifyingQuestion = null
     modificationPrompt = ''
     isModifying = false
   }
 
-  async function submitModifyQuestion() {
+  async function submitModifyQuestion(): Promise<void> {
     if (!modificationPrompt.trim()) {
       addToast('Please enter a modification request', 'error')
+      return
+    }
+
+    if (!modifyingQuestion) {
+      addToast('No question selected for modification', 'error')
       return
     }
 
@@ -162,14 +172,15 @@
       
       addToast('Question modified successfully!', 'success')
       cancelModifyQuestion()
-    } catch (error) {
-      addToast('Error modifying question: ' + error.message, 'error')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast('Error modifying question: ' + errorMessage, 'error')
     } finally {
       isModifying = false
     }
   }
 
-  async function viewSolution(question) {
+  async function viewSolution(question: Question): Promise<void> {
     viewingSolution = question
     currentSolution = null
     loadingSolution = true
@@ -184,15 +195,16 @@
 
       const data = await response.json()
       currentSolution = data.solution
-    } catch (error) {
-      addToast('Error generating solution: ' + error.message, 'error')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      addToast('Error generating solution: ' + errorMessage, 'error')
       closeSolution()
     } finally {
       loadingSolution = false
     }
   }
 
-  function closeSolution() {
+  function closeSolution(): void {
     viewingSolution = null
     currentSolution = null
     loadingSolution = false
@@ -405,7 +417,7 @@
             </div>
             <div class="flex items-center justify-between text-sm text-gray-600">
               <span>Concepts: {question.java_concepts?.join(', ') || 'N/A'}</span>
-              <span>Created: {new Date(question.created_at).toLocaleDateString()}</span>
+              <span>Created: {question.created_at ? new Date(question.created_at).toLocaleDateString() : 'N/A'}</span>
             </div>
           </div>
         {/each}
@@ -563,11 +575,11 @@
                 Student: {submission.profiles?.full_name || 'Demo Student'}
               </span>
               <span class="text-sm text-gray-600">
-                {new Date(submission.created_at).toLocaleDateString()}
+                {submission.created_at ? new Date(submission.created_at).toLocaleDateString() : 'N/A'}
               </span>
             </div>
             <p class="text-sm text-gray-600 mb-2">
-              Question: {submission.java_questions?.question_text?.slice(0, 100)}...
+              Question: {submission.java_questions?.question_text ? submission.java_questions.question_text.slice(0, 100) + '...' : 'N/A'}
             </p>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">

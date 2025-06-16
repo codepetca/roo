@@ -1,8 +1,9 @@
-import { json } from '@sveltejs/kit'
+import { json, type RequestHandler } from '@sveltejs/kit'
 import { supabase } from '$lib/server/supabase.js'
 import { gradeCode } from '$lib/server/claude.js'
+import type { SubmissionResponse, ApiResponse } from '$lib/types/index.js'
 
-export async function POST({ request }) {
+export const POST: RequestHandler = async ({ request }) => {
   try {
     const formData = await request.formData()
     const image = formData.get('image') as File
@@ -11,16 +12,19 @@ export async function POST({ request }) {
     const teacherId = formData.get('teacherId') as string
 
     if (!image || !questionId || !studentId || !teacherId) {
-      return json({ error: 'Missing required fields' }, { status: 400 })
+      const response: ApiResponse = { error: 'Missing required fields' }
+      return json(response, { status: 400 })
     }
 
     // Validate file type and size
     if (!image.type.startsWith('image/')) {
-      return json({ error: 'File must be an image' }, { status: 400 })
+      const response: ApiResponse = { error: 'File must be an image' }
+      return json(response, { status: 400 })
     }
     
     if (image.size > 10 * 1024 * 1024) { // 10MB limit
-      return json({ error: 'Image too large (max 10MB)' }, { status: 400 })
+      const response: ApiResponse = { error: 'Image too large (max 10MB)' }
+      return json(response, { status: 400 })
     }
 
     // Upload image to Supabase Storage
@@ -83,17 +87,19 @@ export async function POST({ request }) {
       throw new Error('Failed to save submission')
     }
 
-    return json({ 
+    const response: SubmissionResponse = { 
       success: true, 
       submission: {
         ...submission,
         gradingResult
       }
-    })
+    }
+    return json(response)
   } catch (error) {
     console.error('Grading error:', error)
-    return json({ 
+    const response: ApiResponse = { 
       error: error instanceof Error ? error.message : 'Grading failed' 
-    }, { status: 500 })
+    }
+    return json(response, { status: 500 })
   }
 }

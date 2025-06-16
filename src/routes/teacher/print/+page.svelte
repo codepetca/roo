@@ -3,11 +3,12 @@
   import { user, profile } from '$lib/stores/auth.js'
   import { goto } from '$app/navigation'
   import Markdown from '$lib/components/Markdown.svelte'
+  import type { Question } from '$lib/types/index.js'
   
-  let questions = $state([])
-  let selectedQuestions = $state([])
-  let showQuestionSheet = $state(false)
-  let showAnswerSheet = $state(false)
+  let questions = $state<Question[]>([])
+  let selectedQuestions = $state<Question[]>([])
+  let showQuestionSheet = $state<boolean>(false)
+  let showAnswerSheet = $state<boolean>(false)
   
   // Redirect if not a teacher
   $effect(() => {
@@ -16,17 +17,17 @@
     }
   })
 
-  async function loadQuestions() {
+  async function loadQuestions(): Promise<void> {
     try {
       const response = await fetch('/api/questions')
       const data = await response.json()
       questions = data.questions || []
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load questions:', error)
     }
   }
 
-  function toggleQuestion(question) {
+  function toggleQuestion(question: Question): void {
     if (selectedQuestions.find(q => q.id === question.id)) {
       selectedQuestions = selectedQuestions.filter(q => q.id !== question.id)
     } else if (selectedQuestions.length < 2) {
@@ -34,17 +35,17 @@
     }
   }
 
-  function printQuestionSheet() {
+  function printQuestionSheet(): void {
     showQuestionSheet = true
     setTimeout(() => window.print(), 100)
   }
 
-  function printAnswerSheet() {
+  function printAnswerSheet(): void {
     showAnswerSheet = true
     setTimeout(() => window.print(), 100)
   }
 
-  function closePrintView() {
+  function closePrintView(): void {
     showQuestionSheet = false
     showAnswerSheet = false
   }
@@ -102,7 +103,7 @@
               <label class="flex items-start space-x-3 p-3 border rounded hover:bg-gray-50 cursor-pointer">
                 <input 
                   type="checkbox" 
-                  checked={selectedQuestions.find(q => q.id === question.id)}
+                  checked={!!selectedQuestions.find(q => q.id === question.id)}
                   onchange={() => toggleQuestion(question)}
                   disabled={selectedQuestions.length >= 2 && !selectedQuestions.find(q => q.id === question.id)}
                   class="mt-1"

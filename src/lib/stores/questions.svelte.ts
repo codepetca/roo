@@ -1,6 +1,4 @@
-import type { Tables } from '$lib/types/supabase.js'
-
-type Question = Tables<'java_questions'>
+import type { Question, QuestionArchivedEvent, QuestionRestoredEvent, ApiResponse } from '$lib/types/index.js'
 
 class QuestionsStore {
   questions = $state<Question[]>([])
@@ -10,7 +8,7 @@ class QuestionsStore {
   constructor() {
     // Listen for questions being restored from archive
     if (typeof window !== 'undefined') {
-      window.addEventListener('question-restored', (event: CustomEvent) => {
+      window.addEventListener('question-restored', (event: QuestionRestoredEvent) => {
         this.addQuestion(event.detail)
       })
       
@@ -19,13 +17,13 @@ class QuestionsStore {
     }
   }
 
-  async loadQuestions() {
+  async loadQuestions(): Promise<void> {
     this.loading = true
     this.error = null
     
     try {
       const response = await fetch('/api/questions')
-      const data = await response.json()
+      const data: ApiResponse<Question[]> = await response.json()
       
       if (!response.ok) {
         throw new Error(data.error || 'Failed to fetch questions')
@@ -40,9 +38,9 @@ class QuestionsStore {
     }
   }
 
-  async archiveQuestion(questionId: string) {
+  async archiveQuestion(questionId: string): Promise<{ success: boolean }> {
     const question = this.questions.find(q => q.id === questionId)
-    if (!question) return
+    if (!question) return { success: false }
 
     try {
       const response = await fetch('/api/questions', {
@@ -52,20 +50,21 @@ class QuestionsStore {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData: ApiResponse = await response.json()
         console.error('Archive API error:', errorData)
         throw new Error(errorData.error || 'Failed to archive question')
       }
 
       // Only update local state if API call succeeded
-      const archivedQuestion = { ...question, archived: true }
+      const archivedQuestion: Question = { ...question, archived: true }
       this.questions = this.questions.filter(q => q.id !== questionId)
       
       // Notify archived questions store if it exists
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('question-archived', { 
+        const event: QuestionArchivedEvent = new CustomEvent('question-archived', { 
           detail: archivedQuestion 
-        }))
+        }) as QuestionArchivedEvent
+        window.dispatchEvent(event)
       }
       
       console.log('Question archived successfully:', questionId)
@@ -78,7 +77,7 @@ class QuestionsStore {
     }
   }
 
-  async restoreQuestion(questionId: string) {
+  async restoreQuestion(questionId: string): Promise<{ success: boolean }> {
     try {
       const response = await fetch('/api/questions/archive/restore', {
         method: 'POST',
@@ -87,7 +86,7 @@ class QuestionsStore {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
+        const errorData: ApiResponse = await response.json()
         throw new Error(errorData.error || 'Failed to restore question')
       }
 
@@ -102,7 +101,7 @@ class QuestionsStore {
     }
   }
 
-  addQuestion(question: Question) {
+  addQuestion(question: Question): void {
     this.questions = [question, ...this.questions]
   }
 

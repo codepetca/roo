@@ -2,11 +2,12 @@
   import { onMount } from 'svelte'
   import { user, profile } from '$lib/stores/auth.js'
   import { goto } from '$app/navigation'
+  import type { SubmissionWithRelations } from '$lib/types/index.js'
   
   // Use Svelte 5 runes for state management
-  let submissions = $state([])
-  let loading = $state(true)
-  let selectedSubmission = $state(null)
+  let submissions = $state<SubmissionWithRelations[]>([])
+  let loading = $state<boolean>(true)
+  let selectedSubmission = $state<SubmissionWithRelations | null>(null)
 
   // Redirect if not a student
   $effect(() => {
@@ -15,7 +16,7 @@
     }
   })
 
-  async function loadSubmissions() {
+  async function loadSubmissions(): Promise<void> {
     if (!$user?.id) return
     
     loading = true
@@ -23,7 +24,7 @@
       const response = await fetch(`/api/submissions?studentId=${$user.id}`)
       const data = await response.json()
       submissions = data.submissions || []
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load submissions:', error)
       submissions = []
     } finally {
@@ -31,21 +32,21 @@
     }
   }
 
-  function viewSubmissionDetails(submission) {
+  function viewSubmissionDetails(submission: SubmissionWithRelations): void {
     selectedSubmission = submission
   }
 
-  function closeDetails() {
+  function closeDetails(): void {
     selectedSubmission = null
   }
 
-  function getScoreColor(score) {
+  function getScoreColor(score: number): string {
     if (score >= 3.5) return 'text-green-600'
     if (score >= 2.5) return 'text-yellow-600'
     return 'text-red-600'
   }
 
-  function getScoreLabel(score) {
+  function getScoreLabel(score: number): string {
     if (score >= 3.5) return 'Excellent'
     if (score >= 2.5) return 'Good'
     if (score >= 1.5) return 'Fair'
@@ -90,7 +91,7 @@
                 Java Assignment
               </h3>
               <p class="text-sm text-gray-600">
-                Submitted: {new Date(submission.created_at).toLocaleDateString()}
+                Submitted: {submission.created_at ? new Date(submission.created_at).toLocaleDateString() : 'N/A'}
               </p>
             </div>
             
@@ -115,7 +116,7 @@
             <p class="text-gray-700 mb-2">
               <span class="font-medium">Question:</span>
               {submission.java_questions?.question_text?.slice(0, 150)}
-              {submission.java_questions?.question_text?.length > 150 ? '...' : ''}
+              {(submission.java_questions?.question_text?.length ?? 0) > 150 ? '...' : ''}
             </p>
             
             {#if submission.java_questions?.java_concepts}
@@ -142,14 +143,14 @@
 
 <!-- Submission Details Modal -->
 {#if selectedSubmission}
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" onclick={closeDetails}>
-    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto" onclick={(e) => e.stopPropagation()}>
+  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" role="dialog" aria-modal="true" tabindex="-1" onclick={closeDetails} onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { closeDetails(); } } } >
+    <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto" onclick={(e: Event) => e.stopPropagation()}>
       <div class="p-6">
         <div class="flex justify-between items-start mb-6">
           <div>
             <h2 class="text-2xl font-bold text-gray-900">Submission Details</h2>
             <p class="text-gray-600">
-              Submitted: {new Date(selectedSubmission.created_at).toLocaleDateString()}
+              Submitted: {selectedSubmission.created_at ? new Date(selectedSubmission.created_at).toLocaleDateString() : 'N/A'}
             </p>
           </div>
           <button onclick={closeDetails} class="text-gray-400 hover:text-gray-600" aria-label="Close modal">
@@ -195,15 +196,15 @@
             <div class="mb-6">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Detailed Scores</h3>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {#each Object.entries(selectedSubmission.scores) as [category, score]}
+                {#each Object.entries(selectedSubmission.scores as Record<string, number>) as [category, score]}
                   <div class="bg-gray-50 p-4 rounded-lg">
                     <div class="text-center mb-2">
                       <div class="text-2xl font-bold text-gray-900">{score}/4</div>
                       <div class="text-sm text-gray-600 capitalize">{category}</div>
                     </div>
-                    {#if selectedSubmission.feedback && selectedSubmission.feedback[category]}
+                    {#if selectedSubmission.feedback && (selectedSubmission.feedback as Record<string, string>)[category]}
                       <p class="text-xs text-gray-600 text-center">
-                        {selectedSubmission.feedback[category]}
+                        {(selectedSubmission.feedback as Record<string, string>)[category]}
                       </p>
                     {/if}
                   </div>
@@ -227,7 +228,7 @@
             <div class="mb-6">
               <h3 class="text-lg font-semibold text-gray-900 mb-4">Detailed Feedback</h3>
               <div class="space-y-4">
-                {#each Object.entries(selectedSubmission.feedback) as [category, feedback]}
+                {#each Object.entries(selectedSubmission.feedback as Record<string, string>) as [category, feedback]}
                   <div class="border-l-4 border-blue-500 pl-4">
                     <h4 class="font-medium text-gray-900 capitalize mb-1">{category}</h4>
                     <p class="text-gray-700">{feedback}</p>
