@@ -280,8 +280,8 @@
                     </div>
                     <div>
                       <span class="font-medium">Score:</span>
-                      <span class="{getScoreColor(submission.final_score)}">
-                        {submission.final_score !== null ? `${submission.final_score}%` : 'Not graded'}
+                      <span class="{getScoreColor(submission.total_score)}">
+                        {submission.total_score !== null ? `${submission.total_score}%` : 'Not graded'}
                       </span>
                     </div>
                   </div>
@@ -336,10 +336,10 @@
                     Status: <span class="font-medium">{submissionDetails.attempt.status}</span>
                   </p>
                 </div>
-                {#if submissionDetails.attempt.final_score !== null}
+                {#if submissionDetails.attempt.total_score !== null}
                   <div class="text-right">
-                    <div class="text-2xl font-bold {getScoreColor(submissionDetails.attempt.final_score)}">
-                      {submissionDetails.attempt.final_score}%
+                    <div class="text-2xl font-bold {getScoreColor(submissionDetails.attempt.total_score)}">
+                      {submissionDetails.attempt.total_score}%
                     </div>
                     <div class="text-sm text-gray-600">Final Score</div>
                   </div>
@@ -357,9 +357,9 @@
                       Question {index + 1}
                     </h4>
                     <div class="flex items-center space-x-2">
-                      {#if answer.java_concepts && answer.java_concepts.length > 0}
+                      {#if answer.concepts && answer.concepts.length > 0}
                         <div class="flex flex-wrap gap-1">
-                          {#each answer.java_concepts as concept}
+                          {#each answer.concepts as concept}
                             <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
                               {concept}
                             </span>

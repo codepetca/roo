@@ -130,7 +130,7 @@
                     {question.question_text.slice(0, 100)}...
                   </p>
                   <p class="text-xs text-gray-500">
-                    Concepts: {question.java_concepts?.join(', ') || 'N/A'}
+                    Concepts: {question.concepts?.join(', ') || 'N/A'}
                   </p>
                 </div>
               </label>
@@ -216,9 +216,9 @@
             <Markdown content={question.question_text} />
           </div>
           
-          {#if question.java_concepts}
+          {#if question.concepts}
             <div class="text-sm text-gray-600">
-              <strong>Concepts:</strong> {question.java_concepts.join(', ')}
+              <strong>Concepts:</strong> {question.concepts.join(', ')}
             </div>
           {/if}
         </div>

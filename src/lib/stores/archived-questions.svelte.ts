@@ -9,9 +9,9 @@ class ArchivedQuestionsStore {
   constructor() {
     // Listen for questions being archived from the main store
     if (typeof window !== 'undefined') {
-      window.addEventListener('question-archived', (event: QuestionArchivedEvent) => {
+      window.addEventListener('question-archived', ((event: QuestionArchivedEvent) => {
         this.addArchivedQuestion(event.detail)
-      })
+      }) as EventListener)
     }
   }
 
@@ -35,7 +35,7 @@ class ArchivedQuestionsStore {
         throw new Error(data.error || 'Failed to fetch archived questions')
       }
       
-      this.questions = data.questions || []
+      this.questions = data.data || []
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Unknown error'
       console.error('Failed to load archived questions:', err)

@@ -228,12 +228,12 @@
       <div class="bg-white rounded-lg border p-4">
         <div class="text-sm text-gray-500">Average Score</div>
         <div class="text-2xl font-semibold text-gray-900">
-          {pastAttempts.filter(a => a.final_score !== null).length > 0
+          {pastAttempts.filter(a => a.total_score !== null).length > 0
             ? Math.round(
                 pastAttempts
-                  .filter(a => a.final_score !== null)
-                  .reduce((sum, a) => sum + (a.final_score || 0), 0) / 
-                pastAttempts.filter(a => a.final_score !== null).length
+                  .filter(a => a.total_score !== null)
+                  .reduce((sum, a) => sum + (a.total_score || 0), 0) / 
+                pastAttempts.filter(a => a.total_score !== null).length
               ) + '%'
             : 'N/A'
           }
@@ -361,13 +361,13 @@
                       {formatDateTime(attempt.submitted_at)}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                      {#if attempt.final_score !== null}
+                      {#if attempt.total_score !== null}
                         <span class="font-medium {
-                          attempt.final_score >= 80 ? 'text-green-600' :
-                          attempt.final_score >= 60 ? 'text-yellow-600' :
+                          attempt.total_score >= 80 ? 'text-green-600' :
+                          attempt.total_score >= 60 ? 'text-yellow-600' :
                           'text-red-600'
                         }">
-                          {attempt.final_score}%
+                          {attempt.total_score}%
                         </span>
                       {:else}
                         <span class="text-gray-400">

@@ -11,7 +11,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export async function getAuthenticatedUser(event: RequestEvent) {
   // Create client with anon key to verify session
-  const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey!)
+  const supabase = createClient<Database>(supabaseUrl!, supabaseAnonKey!)
   
   // Get session from request headers
   const authHeader = event.request.headers.get('authorization')

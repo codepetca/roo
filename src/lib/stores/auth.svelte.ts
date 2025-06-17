@@ -74,10 +74,11 @@ class AuthStore {
   private async loadProfileInBackground(userId: string) {
     try {
       console.log('Loading profile in background for:', userId)
-      const { data, error } = await this.withTimeout(
+      const result = await this.withTimeout(
         supabase.from('profiles').select('*').eq('id', userId).single(),
         2000 // Shorter timeout for background load
       )
+      const { data, error } = result
 
       if (!error && data) {
         const userProfileData: UserProfile = {

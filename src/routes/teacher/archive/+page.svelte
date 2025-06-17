@@ -136,7 +136,7 @@
                     <Markdown content={question.question_text} />
                   </div>
                   <div class="flex items-center justify-between text-sm text-gray-600">
-                    <span>Concepts: {question.java_concepts?.join(', ') || 'N/A'}</span>
+                    <span>Concepts: {question.concepts?.join(', ') || 'N/A'}</span>
                     <span>Archived: {question.created_at ? new Date(question.created_at).toLocaleDateString() : 'N/A'}</span>
                   </div>
                 </div>

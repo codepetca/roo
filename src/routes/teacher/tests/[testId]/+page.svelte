@@ -331,7 +331,7 @@
                     Question {index + 1}
                   </span>
                   <span class="text-xs text-gray-500">
-                    {question.java_concepts?.join(', ') || 'N/A'}
+                    {question.concepts?.join(', ') || 'N/A'}
                   </span>
                 </div>
                 <div class="text-sm prose prose-sm max-w-none">

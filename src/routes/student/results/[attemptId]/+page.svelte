@@ -10,7 +10,7 @@
   
   let attempt = $state<TestAttempt | null>(null)
   let test = $state<CodingTest | null>(null)
-  let answers = $state<(TestAnswer & { question_text?: string; java_concepts?: string[] })[]>([])
+  let answers = $state<(TestAnswer & { question_text?: string; concepts?: string[] })[]>([])
   let loading = $state(true)
   let error = $state<string | null>(null)
 
@@ -116,11 +116,11 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
           <!-- Final Score -->
           <div class="text-center">
-            <div class="text-4xl font-bold {getScoreColor(attempt.final_score)} mb-2">
-              {attempt.final_score !== null ? `${attempt.final_score}%` : 'Pending'}
+            <div class="text-4xl font-bold {getScoreColor(attempt.total_score)} mb-2">
+              {attempt.total_score !== null ? `${attempt.total_score}%` : 'Pending'}
             </div>
-            <div class="text-lg font-medium {getScoreColor(attempt.final_score)}">
-              Grade: {getGradeLetter(attempt.final_score)}
+            <div class="text-lg font-medium {getScoreColor(attempt.total_score)}">
+              Grade: {getGradeLetter(attempt.total_score)}
             </div>
           </div>
 
@@ -181,9 +181,9 @@
                   Question {index + 1}
                 </h3>
                 <div class="flex items-center space-x-4">
-                  {#if answer.java_concepts && answer.java_concepts.length > 0}
+                  {#if answer.concepts && answer.concepts.length > 0}
                     <div class="flex flex-wrap gap-1">
-                      {#each answer.java_concepts as concept}
+                      {#each answer.concepts as concept}
                         <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
                           {concept}
                         </span>
