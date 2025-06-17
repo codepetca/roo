@@ -485,6 +485,12 @@
             <h2 class="text-xl font-semibold">Results & Grading</h2>
             <div class="flex items-center space-x-3">
               <button
+                onclick={() => goto(`/teacher/tests/${testId}/submissions`)}
+                class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded text-sm"
+              >
+                View Submissions
+              </button>
+              <button
                 onclick={exportResults}
                 class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm"
               >

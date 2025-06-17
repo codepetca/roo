@@ -202,8 +202,18 @@ class TestAttemptStore {
 
   async saveAnswer(questionId: string, code: string): Promise<{ success: boolean; error?: string }> {
     if (!this.attempt || this.attempt.status !== 'in_progress') {
+      console.error('Save attempt failed: Test not in progress', { 
+        attempt: this.attempt?.id, 
+        status: this.attempt?.status 
+      })
       return { success: false, error: 'Test not in progress' }
     }
+
+    console.log('Attempting to save answer:', { 
+      questionId, 
+      codeLength: code.length, 
+      attemptId: this.attempt.id 
+    })
 
     this.autoSave.isSaving = true
 
@@ -223,7 +233,25 @@ class TestAttemptStore {
 
       const result = await response.json()
 
+      console.log('Save answer response:', { 
+        status: response.status, 
+        success: response.ok, 
+        result 
+      })
+
       if (!response.ok) {
+        console.error('Save answer failed:', { 
+          status: response.status, 
+          error: result.error,
+          questionId,
+          codeLength: code.length
+        })
+        
+        // Show user-visible error for critical save failures
+        if (response.status >= 500) {
+          alert(`Warning: Failed to save your answer. Please try typing again or contact your teacher. Error: ${result.error}`)
+        }
+        
         return { success: false, error: result.error || 'Failed to save answer' }
       }
 
@@ -232,10 +260,19 @@ class TestAttemptStore {
       this.autoSave.lastSaved = new Date()
       this.autoSave.isDirty = false
 
+      console.log('Answer saved successfully:', { 
+        questionId, 
+        savedAt: this.autoSave.lastSaved.toISOString() 
+      })
+
       return { success: true }
 
     } catch (error) {
-      console.error('Error saving answer:', error)
+      console.error('Network error saving answer:', error)
+      
+      // Show user-visible error for network failures
+      alert(`Warning: Network error while saving your answer. Please check your connection and try typing again. Your work may not be saved!`)
+      
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to save answer' 

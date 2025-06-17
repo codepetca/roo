@@ -384,13 +384,25 @@
           
           <div class="flex items-center space-x-2">
             {#if testAttemptStore.autoSave.isSaving}
-              <span class="text-xs text-blue-600">Saving...</span>
+              <span class="text-xs text-blue-600 font-medium">⏳ Saving...</span>
             {:else if testAttemptStore.autoSave.lastSaved}
-              <span class="text-xs text-green-600">
-                Saved {new Date(testAttemptStore.autoSave.lastSaved).toLocaleTimeString()}
+              <span class="text-xs text-green-600 font-medium">
+                ✅ Saved {new Date(testAttemptStore.autoSave.lastSaved).toLocaleTimeString()}
               </span>
             {:else if testAttemptStore.autoSave.isDirty}
-              <span class="text-xs text-yellow-600">Unsaved changes</span>
+              <span class="text-xs text-red-600 font-medium">⚠️ Unsaved changes</span>
+            {:else}
+              <span class="text-xs text-gray-400">Ready to save</span>
+            {/if}
+            
+            {#if testAttemptStore.autoSave.isDirty && testAttemptStore.currentQuestion}
+              <button
+                onclick={() => testAttemptStore.saveAnswer(testAttemptStore.currentQuestion.question_id, testAttemptStore.currentCode)}
+                disabled={testAttemptStore.autoSave.isSaving}
+                class="text-xs bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white px-2 py-1 rounded"
+              >
+                Save Now
+              </button>
             {/if}
           </div>
         </div>

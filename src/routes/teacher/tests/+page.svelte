@@ -10,8 +10,15 @@
   let sortOrder = $state<'asc' | 'desc'>('desc')
 
   // Computed filtered and sorted tests
-  const filteredTests = $derived(() => {
-    let tests = testsStore.tests
+  const filteredTests = $derived.by(() => {
+    let tests = [...testsStore.tests] // Create a copy to avoid mutation
+
+    console.log('Filtering tests:', { 
+      totalTests: tests.length, 
+      searchTerm, 
+      statusFilter,
+      sampleTest: tests[0] ? { id: tests[0].id, title: tests[0].title, status: tests[0].status } : null
+    })
 
     // Filter by search term
     if (searchTerm.trim()) {
@@ -28,7 +35,7 @@
     }
 
     // Sort tests
-    tests = [...tests].sort((a, b) => {
+    tests = tests.sort((a, b) => {
       let comparison = 0
 
       switch (sortBy) {
@@ -47,6 +54,7 @@
       return sortOrder === 'asc' ? comparison : -comparison
     })
 
+    console.log('Filtered tests result:', tests.length)
     return tests
   })
 
@@ -120,9 +128,7 @@
 
     const result = await testsStore.deleteTest(test.id)
     
-    if (result.success) {
-      alert('Test deleted successfully!')
-    } else {
+    if (!result.success) {
       alert(`Failed to delete test: ${result.error}`)
     }
   }
@@ -173,6 +179,7 @@
       <div class="bg-white rounded-lg border p-4">
         <div class="text-sm text-gray-500">Total Tests</div>
         <div class="text-2xl font-semibold text-gray-900">{testsStore.tests.length}</div>
+        <div class="text-xs text-gray-400 mt-1">Filtered: {filteredTests.length}</div>
       </div>
       <div class="bg-white rounded-lg border p-4">
         <div class="text-sm text-gray-500">Draft Tests</div>
@@ -364,6 +371,14 @@
                       title="View details"
                     >
                       View
+                    </button>
+                    
+                    <button
+                      onclick={() => goto(`/teacher/tests/${test.id}/submissions`)}
+                      class="text-purple-600 hover:text-purple-800"
+                      title="View submissions"
+                    >
+                      Submissions
                     </button>
                     
                     {#if test.status === 'draft'}
