@@ -1,5 +1,5 @@
 import { supabase } from '$lib/supabase.js'
-import type { CodingTest, CodingTestWithQuestions } from '$lib/types/index.js'
+import type { CodingTest, CodingTestWithQuestions, APIResponse } from '$lib/types/index.js'
 
 class TestsStore {
   tests = $state<CodingTest[]>([])
@@ -67,16 +67,16 @@ class TestsStore {
         body: JSON.stringify(testData)
       })
 
-      const result = await response.json()
+      const result: APIResponse<CodingTestWithQuestions> = await response.json()
 
-      if (!response.ok) {
-        return { success: false, error: result.error || 'Failed to create test' }
+      if (!response.ok || !result.success) {
+        return { success: false, error: result.error?.message || 'Failed to create test' }
       }
 
       // Reload tests to get the updated list
       await this.loadTests()
 
-      return { success: true, test: result.test }
+      return { success: true, test: result.data }
     } catch (error) {
       console.error('Error creating test:', error)
       return { 
@@ -92,10 +92,10 @@ class TestsStore {
         method: 'PUT'
       })
 
-      const result = await response.json()
+      const result: APIResponse = await response.json()
 
-      if (!response.ok) {
-        return { success: false, error: result.error || 'Failed to publish test' }
+      if (!response.ok || !result.success) {
+        return { success: false, error: result.error?.message || 'Failed to publish test' }
       }
 
       // Update local state
@@ -120,10 +120,10 @@ class TestsStore {
         method: 'DELETE'
       })
 
-      const result = await response.json()
+      const result: APIResponse = await response.json()
 
-      if (!response.ok) {
-        return { success: false, error: result.error || 'Failed to delete test' }
+      if (!response.ok || !result.success) {
+        return { success: false, error: result.error?.message || 'Failed to delete test' }
       }
 
       // Remove from local state

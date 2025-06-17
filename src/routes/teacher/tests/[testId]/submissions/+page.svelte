@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
-  import { user } from '$lib/stores/auth.svelte.js'
+  import { authStore } from '$lib/stores/auth.svelte.js'
   import type { TestAttempt, TestAnswer, CodingTest } from '$lib/types/index.js'
   
   const testId = $derived($page.params.testId)
@@ -30,7 +30,7 @@
     error = null
 
     try {
-      console.log('Loading submissions for test:', testId, 'teacher:', $user?.id)
+      console.log('Loading submissions for test:', testId, 'teacher:', authStore.user?.id)
       
       // Load test details
       const testResponse = await fetch(`/api/tests/${testId}`)
@@ -43,7 +43,7 @@
       }
 
       // Load submissions
-      const response = await fetch(`/api/tests/${testId}/submissions?teacherId=${$user.id}`)
+      const response = await fetch(`/api/tests/${testId}/submissions?teacherId=${authStore.user.id}`)
       const result = await response.json()
 
       console.log('Submissions response:', response.status, result)
@@ -176,7 +176,7 @@
   }
 
   onMount(() => {
-    if ($user) {
+    if (authStore.user) {
       loadSubmissions()
     } else {
       goto('/auth/login')

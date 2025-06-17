@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { user, profile, loading } from '$lib/stores/auth.svelte.js'
+  import { authStore } from '$lib/stores/auth.svelte.js'
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   
@@ -9,14 +9,20 @@
   
   // Auto-redirect authenticated users to their dashboard
   $effect(() => {
-    console.log('Effect triggered:', { user: $user?.id, profile: $profile?.role, loading: $loading, url: $page.url.pathname })
+    console.log('Effect triggered:', { 
+      user: authStore.user?.id, 
+      profile: authStore.profile?.role, 
+      profileFull: authStore.profile,
+      loading: authStore.loading, 
+      url: $page.url.pathname 
+    })
     
     // Only redirect if we're on the landing page (/)
-    if (!$loading && $user && $profile && $page.url.pathname === '/') {
-      console.log('Redirecting to dashboard:', $profile.role)
-      if ($profile.role === 'teacher') {
+    if (!authStore.loading && authStore.user && authStore.profile && $page.url.pathname === '/') {
+      console.log('Redirecting to dashboard:', authStore.profile.role)
+      if (authStore.profile.role === 'teacher') {
         goto('/teacher')
-      } else if ($profile.role === 'student') {
+      } else if (authStore.profile.role === 'student') {
         goto('/student')
       }
     }
@@ -25,9 +31,9 @@
   // Set timeout for loading state to prevent infinite loading
   onMount(() => {
     const timeout = setTimeout(() => {
-      if ($user && !$profile) {
+      if (authStore.user && !authStore.profile) {
         loadingTimeout = true
-        debugInfo = `User: ${$user.id}, Profile: ${$profile}, Loading: ${$loading}`
+        debugInfo = `User: ${authStore.user.id}, Profile: ${authStore.profile}, Loading: ${authStore.loading}`
       }
     }, 8000) // 8 second timeout
     
@@ -55,7 +61,7 @@
         AI-powered grading for handwritten Java code submissions
       </p>
       
-      {#if !$user}
+      {#if !authStore.user}
         <div class="space-y-4">
           <a href="/auth/login" class="block w-full btn btn-primary text-center">
             Sign In
@@ -82,10 +88,10 @@
         </div>
       {:else}
         <div class="text-center">
-          {#if $loading && !loadingTimeout}
+          {#if authStore.loading && !loadingTimeout}
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
             <p class="mt-2 text-gray-600">Loading...</p>
-            <p class="mt-1 text-xs text-gray-400">User: {$user ? 'Yes' : 'No'} | Profile: {$profile ? 'Yes' : 'No'}</p>
+            <p class="mt-1 text-xs text-gray-400">User: {authStore.user ? 'Yes' : 'No'} | Profile: {authStore.profile ? 'Yes' : 'No'}</p>
           {:else}
             <div class="space-y-4">
               <p class="text-gray-600">Authentication issue detected</p>

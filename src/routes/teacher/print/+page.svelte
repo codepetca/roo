@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { user, profile } from '$lib/stores/auth.svelte.js'
+  import { authStore } from '$lib/stores/auth.svelte.js'
   import { goto } from '$app/navigation'
   import Markdown from '$lib/components/Markdown.svelte'
   import type { Question } from '$lib/types/index.js'
@@ -12,7 +12,7 @@
   
   // Redirect if not a teacher
   $effect(() => {
-    if ($profile && $profile.role !== 'teacher') {
+    if (authStore.profile && authStore.profile.role !== 'teacher') {
       goto('/student')
     }
   })

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { user, profile } from '$lib/stores/auth.svelte.js'
+  import { authStore } from '$lib/stores/auth.svelte.js'
   import { goto } from '$app/navigation'
   import Markdown from '$lib/components/Markdown.svelte'
   import { toastStore } from '$lib/stores/toast.svelte.js'
@@ -36,7 +36,7 @@
 
   // Redirect if not a teacher
   $effect(() => {
-    if ($profile && $profile.role !== 'teacher') {
+    if (authStore.profile && authStore.profile.role !== 'teacher') {
       goto('/student')
     }
   })
@@ -81,24 +81,24 @@
       formData.append('image', file)
       formData.append('questionId', selectedQuestion.id)
       formData.append('studentId', 'demo-student-' + Date.now()) // Demo student ID
-      formData.append('teacherId', $user?.id || 'demo-teacher')
+      formData.append('teacherId', authStore.user?.id || 'demo-teacher')
 
       const response = await fetch('/api/grade', {
         method: 'POST',
         body: formData
       })
 
-      if (!fetchResponse.ok) { // Check fetchResponse.ok for network/HTTP errors first
-        const errorText = await fetchResponse.text(); // Get raw text if JSON parsing might fail
+      if (!response.ok) { // Check response.ok for network/HTTP errors first
+        const errorText = await response.text(); // Get raw text if JSON parsing might fail
         try {
           const errorData: APIResponse<never> = JSON.parse(errorText);
           throw new Error(errorData.error?.message || 'Failed to grade submission - HTTP error');
         } catch (e) {
-          throw new Error(`Failed to grade submission: ${fetchResponse.statusText} - ${errorText}`);
+          throw new Error(`Failed to grade submission: ${response.statusText} - ${errorText}`);
         }
       }
 
-      const responseData: APIResponse<Submission> = await fetchResponse.json()
+      const responseData: APIResponse<Submission> = await response.json()
 
       if (!responseData.success || !responseData.data) {
         throw new Error(responseData.error?.message || 'Failed to grade submission - API error')
@@ -125,22 +125,26 @@
 
 
   async function loadRecentSubmissions(): Promise<void> {
-    if (!$user?.id) return
+    console.log('Loading submissions for user:', authStore.user?.id)
+    if (!authStore.user?.id) {
+      console.log('No user ID, skipping submissions load')
+      return
+    }
     
     try {
-      const fetchResponse = await fetch(`/api/submissions?teacherId=${$user.id}`) // Assuming this API also uses APIResponse
+      const url = `/api/submissions?teacherId=${authStore.user.id}`
+      console.log('Fetching submissions from:', url)
+      const fetchResponse = await fetch(url)
       const responseData: APIResponse<SubmissionWithRelations[]> = await fetchResponse.json()
 
-      if (!fetchResponse.ok || !responseData.success || !responseData.data) {
-        // Handle case where responseData.data might be undefined even if success is true (e.g. empty list)
-        if (fetchResponse.ok && responseData.success && responseData.data === undefined) {
-          recentSubmissions = [];
-        } else {
-          throw new Error(responseData.error?.message || 'Failed to load submissions')
-        }
-      } else {
-        recentSubmissions = responseData.data || []
+      console.log('Submissions API response:', { ok: fetchResponse.ok, responseData })
+
+      if (!fetchResponse.ok || !responseData.success) {
+        throw new Error(responseData.error?.message || 'Failed to load submissions')
       }
+
+      recentSubmissions = responseData.data || []
+      console.log('Loaded submissions:', recentSubmissions.length)
     } catch (error: unknown) {
       console.error('Failed to load submissions:', error)
       // Optionally add a toast message here for the user
@@ -193,14 +197,14 @@
         body: JSON.stringify({ modificationPrompt })
       })
 
-      if (!fetchResponse.ok) {
+      if (!response.ok) {
         // Assuming this endpoint does not use APIResponse yet, old error handling
-        const errorData = await fetchResponse.json()
+        const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to modify question')
       }
 
       // Assuming this endpoint returns { question: Question } directly
-      const data: { question: Question } = await fetchResponse.json()
+      const data: { question: Question } = await response.json()
       
       // Add the modified question to the top of the list
       questionsStore.addQuestion(data.question)
@@ -221,16 +225,16 @@
     loadingSolution = true
 
     try {
-      const fetchResponse = await fetch(`/api/questions/${question.id}/solution`)
+      const response = await fetch(`/api/questions/${question.id}/solution`)
       
-      if (!fetchResponse.ok) {
+      if (!response.ok) {
         // Assuming this endpoint does not use APIResponse yet, old error handling
-        const errorData = await fetchResponse.json()
+        const errorData = await response.json()
         throw new Error(errorData.error || 'Failed to generate solution')
       }
 
       // Assuming this endpoint returns { solution: Solution } directly
-      const data: { solution: Solution } = await fetchResponse.json()
+      const data: { solution: Solution } = await response.json()
       currentSolution = data.solution
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -248,6 +252,12 @@
   }
 
   onMount(async () => {
+    console.log('Teacher page mounted, auth state:', {
+      user: authStore.user?.id,
+      profile: authStore.profile?.role,
+      loading: authStore.loading
+    })
+    
     // Store handles loading questions automatically
     await loadRecentSubmissions()
   })
@@ -318,6 +328,19 @@
           {/each}
         </select>
       </div>
+      
+      <!-- Selected Question Preview -->
+      {#if selectedQuestion}
+        <div class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 class="font-medium text-blue-900 mb-2">Selected Question Preview:</h4>
+          <div class="text-sm text-blue-800">
+            <Markdown content={selectedQuestion.question_text} />
+          </div>
+          <div class="mt-2 text-xs text-blue-600">
+            Concepts: {selectedQuestion.concepts?.join(', ') || 'N/A'}
+          </div>
+        </div>
+      {/if}
       
       <div class="mb-4">
         <label for="image-upload" class="block text-sm font-medium text-gray-700 mb-2">
@@ -456,7 +479,7 @@
               <Markdown content={question.question_text} />
             </div>
             <div class="flex items-center justify-between text-sm text-gray-600">
-              <span>Concepts: {question.java_concepts?.join(', ') || 'N/A'}</span>
+              <span>Concepts: {question.concepts?.join(', ') || 'N/A'}</span>
               <span>Created: {question.created_at ? new Date(question.created_at).toLocaleDateString() : 'N/A'}</span>
             </div>
           </div>
@@ -619,7 +642,7 @@
               </span>
             </div>
             <p class="text-sm text-gray-600 mb-2">
-              Question: {submission.java_questions?.question_text ? submission.java_questions.question_text.slice(0, 100) + '...' : 'N/A'}
+              Question: {submission.questions?.question_text ? submission.questions.question_text.slice(0, 100) + '...' : 'N/A'}
             </p>
             <div class="flex items-center justify-between">
               <span class="text-sm text-gray-600">

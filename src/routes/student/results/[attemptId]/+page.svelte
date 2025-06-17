@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
-  import { user } from '$lib/stores/auth.svelte.js'
+  import { authStore } from '$lib/stores/auth.svelte.js'
   import Markdown from '$lib/components/Markdown.svelte'
   import type { TestAttempt, TestAnswer, CodingTest } from '$lib/types/index.js'
 
@@ -15,13 +15,13 @@
   let error = $state<string | null>(null)
 
   async function loadResults(): Promise<void> {
-    if (!attemptId || !$user?.id) return
+    if (!attemptId || !authStore.user?.id) return
 
     loading = true
     error = null
 
     try {
-      const response = await fetch(`/api/student/results/${attemptId}?studentId=${$user.id}`)
+      const response = await fetch(`/api/student/results/${attemptId}?studentId=${authStore.user.id}`)
       const result = await response.json()
 
       if (response.ok) {
@@ -61,7 +61,7 @@
   }
 
   onMount(() => {
-    if ($user) {
+    if (authStore.user) {
       loadResults()
     } else {
       goto('/auth/login')

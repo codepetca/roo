@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation'
   import { questionsStore } from '$lib/stores/questions.svelte.js'
   import { testsStore } from '$lib/stores/tests.svelte.js'
-  import { user } from '$lib/stores/auth.svelte.js'
+  import { authStore } from '$lib/stores/auth.svelte.js'
   import Markdown from '$lib/components/Markdown.svelte'
   import type { Question, TestSettings } from '$lib/types/index.js'
 
@@ -132,7 +132,8 @@
     creating = true
 
     try {
-      if (!$user?.id) {
+      console.log('Creating test with user:', authStore.user?.id)
+      if (!authStore.user?.id) {
         alert('You must be logged in to create a test')
         return
       }
@@ -144,7 +145,7 @@
         timeLimitMinutes: formData.timeLimitMinutes,
         startDate: formData.startDate || undefined,
         endDate: formData.endDate,
-        createdBy: $user.id,
+        createdBy: authStore.user.id,
         settings: {
           immediateeFeedback: settings.immediateeFeedback,
           fullscreenRequired: settings.fullscreenRequired,
@@ -501,7 +502,7 @@
                     Question {index + 1}
                   </span>
                   <span class="text-xs text-gray-500">
-                    {question.java_concepts.join(', ')}
+                    {question.concepts.join(', ')}
                   </span>
                 </div>
                 <div class="text-sm">

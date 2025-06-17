@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
-  import { user } from '$lib/stores/auth.svelte.js'
+  import { authStore } from '$lib/stores/auth.svelte.js'
   import type { CodingTest, TestAttempt } from '$lib/types/index.js'
 
   let availableTests = $state<CodingTest[]>([])
@@ -10,14 +10,14 @@
   let error = $state<string | null>(null)
 
   async function loadStudentData(): Promise<void> {
-    if (!$user?.id) return
+    if (!authStore.user?.id) return
 
     loading = true
     error = null
 
     try {
       // Load available tests
-      const testsResponse = await fetch(`/api/student/available-tests?studentId=${$user.id}`)
+      const testsResponse = await fetch(`/api/student/available-tests?studentId=${authStore.user.id}`)
       const testsResult = await testsResponse.json()
 
       if (testsResponse.ok) {
@@ -27,7 +27,7 @@
       }
 
       // Load past attempts
-      const attemptsResponse = await fetch(`/api/student/attempts?studentId=${$user.id}`)
+      const attemptsResponse = await fetch(`/api/student/attempts?studentId=${authStore.user.id}`)
       const attemptsResult = await attemptsResponse.json()
 
       if (attemptsResponse.ok) {
@@ -168,7 +168,7 @@
   }
 
   onMount(() => {
-    if ($user) {
+    if (authStore.user) {
       loadStudentData()
     } else {
       goto('/auth/login')

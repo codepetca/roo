@@ -1,11 +1,13 @@
 import { json, type RequestHandler } from '@sveltejs/kit'
 import { supabase } from '$lib/server/supabase.js'
-import type { SubmissionsResponse, ApiResponse } from '$lib/types/index.js'
+import type { SubmissionWithRelations, APIResponse } from '$lib/types/index.js'
 
 export const GET: RequestHandler = async ({ url }) => {
   try {
     const studentId = url.searchParams.get('studentId')
     const teacherId = url.searchParams.get('teacherId')
+
+    console.log('Submissions API called with:', { studentId, teacherId })
 
     let query = supabase
       .from('submissions')
@@ -21,19 +23,34 @@ export const GET: RequestHandler = async ({ url }) => {
     } else if (teacherId) {
       query = query.eq('teacher_id', teacherId)
     } else {
-      const response: ApiResponse = { error: 'Missing studentId or teacherId parameter' }
+      const response: APIResponse = { 
+        success: false, 
+        error: { message: 'Missing studentId or teacherId parameter' }
+      }
       return json(response, { status: 400 })
     }
 
+    console.log('Executing submissions query...')
     const { data: submissions, error } = await query
 
-    if (error) throw error
+    console.log('Submissions query result:', { submissions: submissions?.length, error })
 
-    const response: SubmissionsResponse = { submissions }
+    if (error) {
+      console.error('Submissions query error:', error)
+      throw error
+    }
+
+    const response: APIResponse<SubmissionWithRelations[]> = { 
+      success: true, 
+      data: submissions || []
+    }
     return json(response)
   } catch (error) {
     console.error('Fetch submissions error:', error)
-    const response: ApiResponse = { error: 'Failed to fetch submissions' }
+    const response: APIResponse = { 
+      success: false, 
+      error: { message: 'Failed to fetch submissions' }
+    }
     return json(response, { status: 500 })
   }
 }

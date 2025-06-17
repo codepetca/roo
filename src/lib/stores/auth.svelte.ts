@@ -96,6 +96,7 @@ class AuthStore {
   }
 
   private createFallbackProfile(user: User) {
+    console.log('Creating fallback profile with user metadata:', user.user_metadata)
     const fallbackProfile: UserProfile = {
       id: user.id,
       full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',

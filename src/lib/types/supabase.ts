@@ -97,114 +97,6 @@ export type Database = {
           },
         ]
       }
-      java_questions: {
-        Row: {
-          archived: boolean | null
-          created_at: string | null
-          created_by: string | null
-          id: string
-          java_concepts: string[]
-          question_text: string
-          rubric: Json
-          solution: Json | null
-        }
-        Insert: {
-          archived?: boolean | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          java_concepts: string[]
-          question_text: string
-          rubric: Json
-          solution?: Json | null
-        }
-        Update: {
-          archived?: boolean | null
-          created_at?: string | null
-          created_by?: string | null
-          id?: string
-          java_concepts?: string[]
-          question_text?: string
-          rubric?: Json
-          solution?: Json | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "java_questions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      java_submissions: {
-        Row: {
-          created_at: string | null
-          extracted_code: string | null
-          feedback: Json | null
-          graded_at: string | null
-          id: string
-          image_url: string | null
-          overall_score: number | null
-          question_id: string
-          scores: Json | null
-          status: string | null
-          student_id: string
-          teacher_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          extracted_code?: string | null
-          feedback?: Json | null
-          graded_at?: string | null
-          id?: string
-          image_url?: string | null
-          overall_score?: number | null
-          question_id: string
-          scores?: Json | null
-          status?: string | null
-          student_id: string
-          teacher_id: string
-        }
-        Update: {
-          created_at?: string | null
-          extracted_code?: string | null
-          feedback?: Json | null
-          graded_at?: string | null
-          id?: string
-          image_url?: string | null
-          overall_score?: number | null
-          question_id?: string
-          scores?: Json | null
-          status?: string | null
-          student_id?: string
-          teacher_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "java_submissions_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "java_questions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "java_submissions_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "java_submissions_teacher_id_fkey"
-            columns: ["teacher_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       profiles: {
         Row: {
           created_at: string | null
@@ -236,6 +128,7 @@ export type Database = {
           language: string
           question_text: string
           rubric: Json
+          solution: Json | null
         }
         Insert: {
           archived?: boolean | null
@@ -246,6 +139,7 @@ export type Database = {
           language?: string
           question_text: string
           rubric: Json
+          solution?: Json | null
         }
         Update: {
           archived?: boolean | null
@@ -256,6 +150,7 @@ export type Database = {
           language?: string
           question_text?: string
           rubric?: Json
+          solution?: Json | null
         }
         Relationships: [
           {

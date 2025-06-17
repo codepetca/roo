@@ -3,7 +3,7 @@
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
   import { testAttemptStore } from '$lib/stores/test-attempt.svelte.js'
-  import { user } from '$lib/stores/auth.svelte.js'
+  import { authStore } from '$lib/stores/auth.svelte.js'
   import CodeEditor from '$lib/components/CodeEditor.svelte'
   import TestTimer from '$lib/components/TestTimer.svelte'
   import Markdown from '$lib/components/Markdown.svelte'
@@ -21,9 +21,9 @@
   let showQuestionList = $state(false)
 
   async function startTest(): Promise<void> {
-    console.log('startTest called with user:', $user?.id, 'testId:', testId)
+    console.log('startTest called with user:', authStore.user?.id, 'testId:', testId)
     
-    if (!$user?.id || !testId) {
+    if (!authStore.user?.id || !testId) {
       console.error('Missing user or testId')
       alert('Authentication required')
       goto('/auth/login')
@@ -33,7 +33,7 @@
     startingTest = true
     try {
       console.log('Calling testAttemptStore.startTest...')
-      const result = await testAttemptStore.startTest(testId, $user.id)
+      const result = await testAttemptStore.startTest(testId, authStore.user.id)
       console.log('testAttemptStore.startTest result:', result)
       
       if (result.success) {

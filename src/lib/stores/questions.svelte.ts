@@ -1,4 +1,4 @@
-import type { Question, QuestionArchivedEvent, QuestionRestoredEvent, ApiResponse } from '$lib/types/index.js'
+import type { Question, QuestionArchivedEvent, QuestionRestoredEvent, APIResponse } from '$lib/types/index.js'
 
 class QuestionsStore {
   questions = $state<Question[]>([])
@@ -18,18 +18,22 @@ class QuestionsStore {
   }
 
   async loadQuestions(): Promise<void> {
+    console.log('Loading questions...')
     this.loading = true
     this.error = null
     
     try {
       const response = await fetch('/api/questions')
-      const data: ApiResponse<Question[]> = await response.json()
+      console.log('Questions fetch response:', response.ok, response.status)
+      const data: APIResponse<Question[]> = await response.json()
+      console.log('Questions API response:', data)
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch questions')
+      if (!response.ok || !data.success) {
+        throw new Error(data.error?.message || 'Failed to fetch questions')
       }
       
-      this.questions = data.questions || []
+      this.questions = data.data || []
+      console.log('Loaded questions count:', this.questions.length)
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Unknown error'
       console.error('Failed to load questions:', err)
@@ -50,9 +54,9 @@ class QuestionsStore {
       })
 
       if (!response.ok) {
-        const errorData: ApiResponse = await response.json()
+        const errorData: APIResponse = await response.json()
         console.error('Archive API error:', errorData)
-        throw new Error(errorData.error || 'Failed to archive question')
+        throw new Error(errorData.error?.message || 'Failed to archive question')
       }
 
       // Only update local state if API call succeeded
@@ -86,8 +90,8 @@ class QuestionsStore {
       })
 
       if (!response.ok) {
-        const errorData: ApiResponse = await response.json()
-        throw new Error(errorData.error || 'Failed to restore question')
+        const errorData: APIResponse = await response.json()
+        throw new Error(errorData.error?.message || 'Failed to restore question')
       }
 
       // Reload questions to get the restored question back

@@ -16,8 +16,7 @@ export const GET: RequestHandler = async ({ params }) => {
             id,
             question_text,
             concepts,
-            rubric,
-            solution
+            rubric
           )
         )
       `)
