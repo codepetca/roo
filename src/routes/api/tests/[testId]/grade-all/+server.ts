@@ -83,15 +83,15 @@ export const POST: RequestHandler = async ({ params, request }) => {
         // Get question details for each answer
         const answersWithQuestions = []
         for (const answer of answers) {
-          const { data: javaQuestion } = await supabase
-            .from('java_questions')
-            .select('question_text, java_concepts, rubric')
+          const { data: question } = await supabase
+            .from('questions')
+            .select('question_text, concepts, rubric')
             .eq('id', answer.question_id)
             .single()
 
           answersWithQuestions.push({
             ...answer,
-            java_questions: javaQuestion
+            questions: question
           })
         }
 
@@ -101,7 +101,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
         // Grade each answer
         for (const answer of answersWithQuestions) {
-          if (!answer.answer_code || !answer.java_questions) {
+          if (!answer.answer_code || !answer.questions) {
             gradedAnswers.push({
               answerId: answer.id,
               questionId: answer.question_id,
@@ -122,12 +122,12 @@ export const POST: RequestHandler = async ({ params, request }) => {
             // Use the text grading function instead of image grading
             const gradingResult = await gradeCodeText(
               answer.answer_code,
-              answer.java_questions?.question_text || '',
-              answer.java_questions?.rubric || {}
+              answer.questions?.question_text || '',
+              answer.questions?.rubric || {}
             )
 
             // Calculate weighted score for this question
-            const rubric = answer.java_questions?.rubric || {}
+            const rubric = answer.questions?.rubric || {}
             const weights = {
               communication: rubric.communication?.weight || 0.25,
               correctness: rubric.correctness?.weight || 0.50,

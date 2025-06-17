@@ -39,10 +39,10 @@ export const GET: RequestHandler = async ({ params, url }) => {
       .from('test_questions')
       .select(`
         *,
-        java_questions (
+        questions (
           id,
           question_text,
-          java_concepts,
+          concepts,
           rubric
         )
       `)
@@ -68,10 +68,10 @@ export const GET: RequestHandler = async ({ params, url }) => {
     // Combine questions with their answers
     const questionsWithAnswers = testQuestions.map(tq => ({
       ...tq,
-      // Flatten java_questions data for easier access
-      question_text: tq.java_questions?.question_text || '',
-      java_concepts: tq.java_questions?.java_concepts || [],
-      rubric: tq.java_questions?.rubric || null,
+      // Flatten questions data for easier access
+      question_text: tq.questions?.question_text || '',
+      concepts: tq.questions?.concepts || [],
+      rubric: tq.questions?.rubric || null,
       answer: answers.find(a => a.question_id === tq.question_id) || null
     }))
 
@@ -82,7 +82,7 @@ export const GET: RequestHandler = async ({ params, url }) => {
         id: questionsWithAnswers[0].id,
         question_id: questionsWithAnswers[0].question_id,
         question_text: questionsWithAnswers[0].question_text,
-        java_concepts: questionsWithAnswers[0].java_concepts
+        concepts: questionsWithAnswers[0].concepts
       } : null
     })
 

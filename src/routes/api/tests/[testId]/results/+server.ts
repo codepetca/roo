@@ -13,10 +13,10 @@ export const GET: RequestHandler = async ({ params }) => {
         *,
         test_questions (
           *,
-          java_questions (
+          questions (
             id,
             question_text,
-            java_concepts
+            concepts
           )
         )
       `)
@@ -38,9 +38,9 @@ export const GET: RequestHandler = async ({ params }) => {
         ),
         test_answers (
           *,
-          java_questions (
+          questions (
             question_text,
-            java_concepts
+            concepts
           )
         )
       `)
@@ -76,8 +76,8 @@ export const GET: RequestHandler = async ({ params }) => {
 
       return {
         questionId: tq.question_id,
-        questionText: tq.java_questions?.question_text || 'Unknown Question',
-        concepts: tq.java_questions?.java_concepts || [],
+        questionText: tq.questions?.question_text || 'Unknown Question',
+        concepts: tq.questions?.concepts || [],
         points: tq.points || 100,
         totalAnswers: questionAnswers.length,
         averageScore: questionScores.length > 0 
@@ -99,7 +99,7 @@ export const GET: RequestHandler = async ({ params }) => {
       autoSubmitted: attempt.auto_submitted || false,
       answers: attempt.test_answers?.map(answer => ({
         questionId: answer.question_id,
-        questionText: answer.java_questions?.question_text || 'Unknown Question',
+        questionText: answer.questions?.question_text || 'Unknown Question',
         answerCode: answer.answer_code,
         scores: answer.scores,
         feedback: answer.feedback,

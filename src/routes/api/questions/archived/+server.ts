@@ -4,7 +4,7 @@ import { supabase } from '$lib/server/supabase.js'
 export async function GET() {
   try {
     const { data: questions, error } = await supabase
-      .from('java_questions')
+      .from('questions')
       .select('*')
       .eq('archived', true)
       .order('created_at', { ascending: false })

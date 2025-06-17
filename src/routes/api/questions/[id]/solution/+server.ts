@@ -12,8 +12,8 @@ export async function GET({ params }) {
 
     // Get the question with stored solution
     const { data: question, error: fetchError } = await supabase
-      .from('java_questions')
-      .select('solution, question_text, java_concepts')
+      .from('questions')
+      .select('solution, question_text, concepts')
       .eq('id', id)
       .single()
 
@@ -27,11 +27,11 @@ export async function GET({ params }) {
     }
 
     // Fallback: generate solution for older questions that don't have stored solutions
-    const solution = await generateSolution(question.question_text, question.java_concepts)
+    const solution = await generateSolution(question.question_text, question.concepts)
     
     // Store the generated solution for future use
     await supabase
-      .from('java_questions')
+      .from('questions')
       .update({ solution })
       .eq('id', id)
     

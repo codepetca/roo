@@ -11,7 +11,7 @@ export async function DELETE({ request }) {
 
     // Permanently delete the questions
     const { error } = await supabase
-      .from('java_questions')
+      .from('questions')
       .delete()
       .in('id', questionIds)
 

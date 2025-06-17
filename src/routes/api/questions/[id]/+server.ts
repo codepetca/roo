@@ -12,7 +12,7 @@ export async function DELETE({ params }) {
     }
 
     const { data, error } = await supabase
-      .from('java_questions')
+      .from('questions')
       .delete()
       .eq('id', id)
       .select()

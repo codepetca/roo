@@ -8,11 +8,11 @@ export const GET: RequestHandler = async ({ url }) => {
     const teacherId = url.searchParams.get('teacherId')
 
     let query = supabase
-      .from('java_submissions')
+      .from('submissions')
       .select(`
         *,
-        java_questions(question_text, java_concepts),
-        profiles!java_submissions_student_id_fkey(full_name)
+        questions(question_text, concepts),
+        profiles!submissions_student_id_fkey(full_name)
       `)
       .order('created_at', { ascending: false })
 

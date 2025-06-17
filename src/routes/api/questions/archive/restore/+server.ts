@@ -11,7 +11,7 @@ export async function POST({ request }) {
 
     // Restore questions by setting archived to false
     const { error } = await supabase
-      .from('java_questions')
+      .from('questions')
       .update({ archived: false })
       .in('id', questionIds)
 

@@ -55,9 +55,9 @@ export const POST: RequestHandler = async ({ request }) => {
       return json(errorResponse, { status: 500 })
     }
 
-    // Get question details from java_questions table
+    // Get question details from questions table
     const { data: question, error: questionError } = await supabase
-      .from('java_questions')
+      .from('questions')
       .select('question_text, rubric')
       .eq('id', questionId)
       .single<DbQuestionData>() // Use the defined type
@@ -92,13 +92,14 @@ export const POST: RequestHandler = async ({ request }) => {
       rubricForClaude // Pass the parsed/verified rubric
     )
 
-    // Save submission to java_submissions table
+    // Save submission to submissions table
     const { data: submissionRecord, error: submissionError } = await supabase
-      .from('java_submissions')
+      .from('submissions')
       .insert({
         question_id: questionId,
         student_id: studentId,
         teacher_id: teacherId,
+        language: 'java',
         image_url: uploadData.path,
         extracted_code: gradingResult.extractedCode,
         scores: gradingResult.scores,

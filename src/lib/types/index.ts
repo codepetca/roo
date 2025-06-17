@@ -1,22 +1,22 @@
 import type { Tables, TablesInsert, TablesUpdate } from './supabase.js'
 
 // Domain type aliases for better readability
-export type Question = Tables<'java_questions'>
-export type QuestionInsert = TablesInsert<'java_questions'>
-export type QuestionUpdate = TablesUpdate<'java_questions'>
+export type Question = Tables<'questions'>
+export type QuestionInsert = TablesInsert<'questions'>
+export type QuestionUpdate = TablesUpdate<'questions'>
 
-export type Submission = Tables<'java_submissions'>
-export type SubmissionInsert = TablesInsert<'java_submissions'>
-export type SubmissionUpdate = TablesUpdate<'java_submissions'>
+export type Submission = Tables<'submissions'>
+export type SubmissionInsert = TablesInsert<'submissions'>
+export type SubmissionUpdate = TablesUpdate<'submissions'>
 
 // Extended submission type with joined relations for display
 export interface SubmissionWithRelations extends Submission {
   profiles?: {
     full_name: string | null
   } | null
-  java_questions?: {
+  questions?: {
     question_text: string
-    java_concepts: string[]
+    concepts: string[]
   } | null
 }
 
@@ -92,11 +92,12 @@ export interface Solution {
 // New Question Interface (as per issue requirements)
 // This coexists with `export type Question = Tables<'java_questions'>;`
 // The new interface is for specific use-cases like Claude integration.
-export interface Question {
+export interface QuestionData {
   id: string
   question_text: string
   rubric: RubricStructure
-  java_concepts: string[]
+  concepts: string[]
+  language: string
   created_at: string
   created_by?: string
 }
@@ -239,7 +240,7 @@ export type AnswerHistoryInsert = TablesInsert<'answer_history'>
 
 export interface CodingTestWithQuestions extends CodingTest {
   test_questions?: (TestQuestion & {
-    java_questions?: Question
+    questions?: Question
   })[]
 }
 
@@ -250,7 +251,7 @@ export interface TestAttemptWithDetails extends TestAttempt {
 }
 
 export interface TestAnswerWithQuestion extends TestAnswer {
-  java_questions?: Question
+  questions?: Question
 }
 
 export interface TestProgress {
@@ -308,7 +309,7 @@ export interface TestCreationRequest {
 }
 
 export interface TestQuestionWithDetails extends TestQuestion {
-  java_questions?: Question
+  questions?: Question
 }
 
 // Timer types

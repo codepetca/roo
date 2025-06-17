@@ -15,14 +15,14 @@ export const POST: RequestHandler = async ({ request }) => {
 
     const questionData = await generateQuestion(concepts)
     
-    // Insert into java_questions table
+    // Insert into questions table
     const { data: question, error } = await supabase
-      .from('java_questions')
+      .from('questions')
       .insert({
         question_text: questionData.question,
         rubric: JSON.parse(JSON.stringify(questionData.rubric)),
-        solution: JSON.parse(JSON.stringify(questionData.solution)),
-        java_concepts: concepts,
+        concepts: concepts,
+        language: 'java',
         archived: false
       })
       .select()
@@ -49,7 +49,7 @@ export const POST: RequestHandler = async ({ request }) => {
 export const GET: RequestHandler = async () => {
   try {
     const { data: questionsData, error } = await supabase
-      .from('java_questions')
+      .from('questions')
       .select('*')
       .or('archived.eq.false,archived.is.null')
       .order('created_at', { ascending: false })
@@ -88,7 +88,7 @@ export const DELETE: RequestHandler = async ({ request }) => {
 
     // Archive the question instead of deleting
     const { error } = await supabase
-      .from('java_questions')
+      .from('questions')
       .update({ archived: true })
       .eq('id', questionId)
 

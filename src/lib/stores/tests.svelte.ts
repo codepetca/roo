@@ -24,10 +24,10 @@ class TestsStore {
             id,
             question_order,
             points,
-            java_questions (
+            questions (
               id,
               question_text,
-              java_concepts
+              concepts
             )
           )
         `)

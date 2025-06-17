@@ -58,17 +58,17 @@
       // Check if question matches search term
       const matchesSearch = !searchTerm || 
         question.question_text?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (question.java_concepts && Array.isArray(question.java_concepts) && 
-         question.java_concepts.some(concept => 
+        (question.concepts && Array.isArray(question.concepts) && 
+         question.concepts.some(concept => 
            concept.toLowerCase().includes(searchTerm.toLowerCase())
          ))
 
       // Check if question matches selected concepts (if any concepts are selected)
       const matchesConcepts = selectedConcepts.length === 0 ||
-        (question.java_concepts && Array.isArray(question.java_concepts) &&
-         selectedConcepts.some(concept => question.java_concepts.includes(concept)))
+        (question.concepts && Array.isArray(question.concepts) &&
+         selectedConcepts.some(concept => question.concepts.includes(concept)))
 
-      console.log(`Question ${question.id}: search=${matchesSearch}, concepts=${matchesConcepts}, java_concepts=`, question.java_concepts)
+      console.log(`Question ${question.id}: search=${matchesSearch}, concepts=${matchesConcepts}, concepts=`, question.concepts)
       
       return matchesSearch && matchesConcepts
     })
@@ -453,7 +453,7 @@
                       <Markdown content={question.question_text} />
                     </div>
                     <div class="flex items-center justify-between text-xs text-gray-500">
-                      <span>Concepts: {question.java_concepts.join(', ')}</span>
+                      <span>Concepts: {question.concepts.join(', ')}</span>
                       <span>Created: {new Date(question.created_at || '').toLocaleDateString()}</span>
                     </div>
                   </div>

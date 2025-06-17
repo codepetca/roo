@@ -101,7 +101,7 @@ class TestAttemptStore {
           id: this.questions[0].id,
           question_id: this.questions[0].question_id,
           question_text: this.questions[0].question_text?.slice(0, 100),
-          java_concepts: this.questions[0].java_concepts
+          concepts: this.questions[0].concepts
         } : null
       })
       

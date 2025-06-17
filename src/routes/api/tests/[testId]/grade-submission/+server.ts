@@ -46,16 +46,16 @@ export const POST: RequestHandler = async ({ params, request }) => {
     // Get question details for each answer
     const answersWithQuestions = []
     for (const answer of answers) {
-      // Direct lookup to java_questions since that's where question_id points
-      const { data: javaQuestion } = await supabase
-        .from('java_questions')
-        .select('question_text, java_concepts, rubric')
+      // Direct lookup to questions since that's where question_id points
+      const { data: question } = await supabase
+        .from('questions')
+        .select('question_text, concepts, rubric')
         .eq('id', answer.question_id)
         .single()
 
       answersWithQuestions.push({
         ...answer,
-        java_questions: javaQuestion
+        questions: question
       })
     }
 
@@ -82,8 +82,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
       }
 
       try {
-        const questionText = answer.java_questions?.question_text || ''
-        const rubric = answer.java_questions?.rubric || {}
+        const questionText = answer.questions?.question_text || ''
+        const rubric = answer.questions?.rubric || {}
 
         console.log('Grading answer:', {
           answerId: answer.id,

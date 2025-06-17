@@ -47,10 +47,10 @@ export const GET: RequestHandler = async ({ params }) => {
     const processedAnswers = []
     
     for (const answer of answers || []) {
-      // Direct lookup to java_questions since that's where question_id points
+      // Direct lookup to questions since that's where question_id points
       const { data: javaQuestion } = await supabase
-        .from('java_questions')
-        .select('question_text, java_concepts, rubric')
+        .from('questions')
+        .select('question_text, concepts, rubric')
         .eq('id', answer.question_id)
         .single()
 
@@ -67,7 +67,7 @@ export const GET: RequestHandler = async ({ params }) => {
         ...answer,
         answer_code: finalCode,
         question_text: javaQuestion?.question_text || 'Question not found',
-        java_concepts: javaQuestion?.java_concepts || [],
+        concepts: javaQuestion?.concepts || [],
         rubric: javaQuestion?.rubric || null
       })
     }

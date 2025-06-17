@@ -226,6 +226,117 @@ export type Database = {
         }
         Relationships: []
       }
+      questions: {
+        Row: {
+          archived: boolean | null
+          concepts: string[]
+          created_at: string | null
+          created_by: string | null
+          id: string
+          language: string
+          question_text: string
+          rubric: Json
+        }
+        Insert: {
+          archived?: boolean | null
+          concepts: string[]
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          language?: string
+          question_text: string
+          rubric: Json
+        }
+        Update: {
+          archived?: boolean | null
+          concepts?: string[]
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          language?: string
+          question_text?: string
+          rubric?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      submissions: {
+        Row: {
+          created_at: string | null
+          extracted_code: string | null
+          feedback: Json | null
+          graded_at: string | null
+          id: string
+          image_url: string | null
+          language: string
+          overall_score: number | null
+          question_id: string
+          scores: Json | null
+          status: string | null
+          student_id: string
+          teacher_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          extracted_code?: string | null
+          feedback?: Json | null
+          graded_at?: string | null
+          id?: string
+          image_url?: string | null
+          language?: string
+          overall_score?: number | null
+          question_id: string
+          scores?: Json | null
+          status?: string | null
+          student_id: string
+          teacher_id: string
+        }
+        Update: {
+          created_at?: string | null
+          extracted_code?: string | null
+          feedback?: Json | null
+          graded_at?: string | null
+          id?: string
+          image_url?: string | null
+          language?: string
+          overall_score?: number | null
+          question_id?: string
+          scores?: Json | null
+          status?: string | null
+          student_id?: string
+          teacher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       test_answers: {
         Row: {
           answer_code: string | null
@@ -275,7 +386,7 @@ export type Database = {
             foreignKeyName: "test_answers_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
-            referencedRelation: "java_questions"
+            referencedRelation: "questions"
             referencedColumns: ["id"]
           },
         ]
@@ -284,6 +395,7 @@ export type Database = {
         Row: {
           auto_submitted: boolean | null
           created_at: string | null
+          graded_at: string | null
           id: string
           started_at: string | null
           status: string | null
@@ -296,6 +408,7 @@ export type Database = {
         Insert: {
           auto_submitted?: boolean | null
           created_at?: string | null
+          graded_at?: string | null
           id?: string
           started_at?: string | null
           status?: string | null
@@ -308,6 +421,7 @@ export type Database = {
         Update: {
           auto_submitted?: boolean | null
           created_at?: string | null
+          graded_at?: string | null
           id?: string
           started_at?: string | null
           status?: string | null
@@ -364,7 +478,7 @@ export type Database = {
             foreignKeyName: "test_questions_question_id_fkey"
             columns: ["question_id"]
             isOneToOne: false
-            referencedRelation: "java_questions"
+            referencedRelation: "questions"
             referencedColumns: ["id"]
           },
           {

@@ -44,9 +44,9 @@ export const GET: RequestHandler = async ({ params, url }) => {
         *,
         test_questions!inner (
           question_id,
-          java_questions (
+          questions (
             question_text,
-            java_concepts
+            concepts
           )
         )
       `)
@@ -61,8 +61,8 @@ export const GET: RequestHandler = async ({ params, url }) => {
     // Flatten the data structure for easier frontend consumption
     const processedAnswers = answers?.map(answer => ({
       ...answer,
-      question_text: answer.test_questions?.java_questions?.question_text || null,
-      java_concepts: answer.test_questions?.java_questions?.java_concepts || []
+      question_text: answer.test_questions?.questions?.question_text || null,
+      concepts: answer.test_questions?.questions?.concepts || []
     })) || []
 
     return json({

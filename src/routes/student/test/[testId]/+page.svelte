@@ -324,7 +324,7 @@
                 Question {testAttemptStore.currentQuestionIndex + 1}
               </h2>
               <div class="text-sm text-gray-500">
-                Concepts: {testAttemptStore.currentQuestion.java_concepts?.join(', ') || 'N/A'}
+                Concepts: {testAttemptStore.currentQuestion.concepts?.join(', ') || 'N/A'}
               </div>
             </div>
             
@@ -485,7 +485,7 @@
                     </div>
                   </div>
                   <div class="text-xs text-gray-500 mt-1">
-                    {question.java_concepts?.join(', ') || 'N/A'}
+                    {question.concepts?.join(', ') || 'N/A'}
                   </div>
                 </button>
               {/each}

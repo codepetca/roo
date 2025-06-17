@@ -12,10 +12,10 @@ export const GET: RequestHandler = async ({ params }) => {
         *,
         test_questions (
           *,
-          java_questions (
+          questions (
             id,
             question_text,
-            java_concepts,
+            concepts,
             rubric,
             solution
           )

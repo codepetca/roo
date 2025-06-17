@@ -102,11 +102,10 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
         *,
         test_questions (
           *,
-          java_questions (
+          questions (
             id,
             question_text,
-            java_concepts,
-            solution
+            concepts
           )
         )
       `)

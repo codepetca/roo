@@ -16,7 +16,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
 
     // Get the original question
     const { data: originalQuestion, error: fetchError } = await supabase
-      .from('java_questions')
+      .from('questions')
       .select('*')
       .eq('id', id)
       .single()
@@ -29,17 +29,17 @@ export const POST: RequestHandler = async ({ params, request }) => {
     // Generate modified question using AI
     const modifiedQuestionData = await generateModifiedQuestion(
       originalQuestion.question_text,
-      originalQuestion.java_concepts,
+      originalQuestion.concepts,
       modificationPrompt
     )
     
     // Create a new question entry
     const { data: newQuestion, error: createError } = await supabase
-      .from('java_questions')
+      .from('questions')
       .insert({
         question_text: modifiedQuestionData.question,
         rubric: modifiedQuestionData.rubric,
-        java_concepts: originalQuestion.java_concepts,
+        concepts: originalQuestion.concepts,
         created_by: originalQuestion.created_by
       })
       .select()
