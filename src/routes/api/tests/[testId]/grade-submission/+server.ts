@@ -28,20 +28,10 @@ export const POST: RequestHandler = async ({ params, request }) => {
       return json({ error: 'Submission must be submitted before grading' }, { status: 400 })
     }
 
-    // Get all answers for this attempt with question details
+    // Get all answers for this attempt
     const { data: answers, error: answersError } = await supabase
       .from('test_answers')
-      .select(`
-        *,
-        test_questions!inner (
-          question_id,
-          java_questions (
-            question_text,
-            java_concepts,
-            rubric
-          )
-        )
-      `)
+      .select('*')
       .eq('attempt_id', attemptId)
 
     if (answersError) {
@@ -53,12 +43,28 @@ export const POST: RequestHandler = async ({ params, request }) => {
       return json({ error: 'No answers found for this submission' }, { status: 400 })
     }
 
+    // Get question details for each answer
+    const answersWithQuestions = []
+    for (const answer of answers) {
+      // Direct lookup to java_questions since that's where question_id points
+      const { data: javaQuestion } = await supabase
+        .from('java_questions')
+        .select('question_text, java_concepts, rubric')
+        .eq('id', answer.question_id)
+        .single()
+
+      answersWithQuestions.push({
+        ...answer,
+        java_questions: javaQuestion
+      })
+    }
+
     let totalScore = 0
     let totalWeight = 0
     let gradedAnswers = 0
 
     // Grade each answer
-    for (const answer of answers) {
+    for (const answer of answersWithQuestions) {
       if (!answer.answer_code || !answer.answer_code.trim()) {
         // Skip empty answers, but update with zero score
         await supabase
@@ -76,8 +82,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
       }
 
       try {
-        const questionText = answer.test_questions?.java_questions?.question_text || ''
-        const rubric = answer.test_questions?.java_questions?.rubric || {}
+        const questionText = answer.java_questions?.question_text || ''
+        const rubric = answer.java_questions?.rubric || {}
 
         console.log('Grading answer:', {
           answerId: answer.id,
@@ -139,7 +145,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
     const { error: updateError } = await supabase
       .from('test_attempts')
       .update({
-        final_score: finalScore,
+        total_score: finalScore,
         status: 'graded',
         graded_at: new Date().toISOString()
       })
@@ -154,7 +160,7 @@ export const POST: RequestHandler = async ({ params, request }) => {
       success: true,
       finalScore,
       gradedAnswers,
-      totalAnswers: answers.length,
+      totalAnswers: answersWithQuestions.length,
       message: `Successfully graded ${gradedAnswers} answers. Final score: ${finalScore}%`
     })
 

@@ -83,13 +83,24 @@
   async function gradeAllSubmissions(): Promise<void> {
     if (!test || submissions.length === 0) return
 
+    // Get all submitted attempt IDs
+    const attemptIds = submissions
+      .filter(sub => sub.status === 'submitted')
+      .map(sub => sub.id)
+
+    if (attemptIds.length === 0) {
+      alert('No submitted tests to grade')
+      return
+    }
+
     gradingAll = true
     try {
       const response = await fetch(`/api/tests/${testId}/grade-all`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        body: JSON.stringify({ attemptIds })
       })
 
       const result = await response.json()
