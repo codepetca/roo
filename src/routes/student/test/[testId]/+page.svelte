@@ -3,7 +3,7 @@
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
   import { testAttemptStore } from '$lib/stores/test-attempt.svelte.js'
-  import { user } from '$lib/stores/auth.js'
+  import { user } from '$lib/stores/auth.svelte.js'
   import CodeEditor from '$lib/components/CodeEditor.svelte'
   import TestTimer from '$lib/components/TestTimer.svelte'
   import Markdown from '$lib/components/Markdown.svelte'

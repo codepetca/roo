@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { user, profile } from '$lib/stores/auth.js'
+  import { user, profile } from '$lib/stores/auth.svelte.js'
   import { goto } from '$app/navigation'
   import Markdown from '$lib/components/Markdown.svelte'
-  import { addToast } from '$lib/stores/toast'
+  import { toastStore } from '$lib/stores/toast.svelte.js'
   import { questionsStore } from '$lib/stores/questions.svelte'
   import type {
     Question,
@@ -59,10 +59,10 @@
       questionsStore.addQuestion(responseData.data)
       
       // Show success message
-      addToast('Question generated successfully!', 'success')
+      toastStore.addToast('Question generated successfully!', 'success')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      addToast('Error generating question: ' + errorMessage, 'error')
+      toastStore.addToast('Error generating question: ' + errorMessage, 'error')
     } finally {
       generatingQuestion = false
     }
@@ -117,7 +117,7 @@
       target.value = ''
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      addToast('Error grading submission: ' + errorMessage, 'error')
+      toastStore.addToast('Error grading submission: ' + errorMessage, 'error')
     } finally {
       uploadingImage = false
     }
@@ -156,10 +156,10 @@
         selectedQuestion = null
       }
       
-      addToast('Question archived successfully', 'success')
+      toastStore.addToast('Question archived successfully', 'success')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      addToast('Error archiving question: ' + errorMessage, 'error')
+      toastStore.addToast('Error archiving question: ' + errorMessage, 'error')
     }
   }
 
@@ -176,12 +176,12 @@
 
   async function submitModifyQuestion(): Promise<void> {
     if (!modificationPrompt.trim()) {
-      addToast('Please enter a modification request', 'error')
+      toastStore.addToast('Please enter a modification request', 'error')
       return
     }
 
     if (!modifyingQuestion) {
-      addToast('No question selected for modification', 'error')
+      toastStore.addToast('No question selected for modification', 'error')
       return
     }
 
@@ -205,11 +205,11 @@
       // Add the modified question to the top of the list
       questionsStore.addQuestion(data.question)
       
-      addToast('Question modified successfully!', 'success')
+      toastStore.addToast('Question modified successfully!', 'success')
       cancelModifyQuestion()
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      addToast('Error modifying question: ' + errorMessage, 'error')
+      toastStore.addToast('Error modifying question: ' + errorMessage, 'error')
     } finally {
       isModifying = false
     }
@@ -234,7 +234,7 @@
       currentSolution = data.solution
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      addToast('Error generating solution: ' + errorMessage, 'error')
+      toastStore.addToast('Error generating solution: ' + errorMessage, 'error')
       closeSolution()
     } finally {
       loadingSolution = false

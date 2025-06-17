@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { user, profile, loading } from '$lib/stores/auth.js'
+  import { user, profile, loading } from '$lib/stores/auth.svelte.js'
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   

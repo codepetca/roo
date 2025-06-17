@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { toasts, removeToast } from '$lib/stores/toast.js'
+  import { toastStore } from '$lib/stores/toast.svelte.js'
   import { fly } from 'svelte/transition'
 </script>
 
 <div class="fixed top-4 right-4 z-50 space-y-2">
-  {#each $toasts as toast (toast.id)}
+  {#each toastStore.toasts as toast (toast.id)}
     <div
       class="flex items-center justify-between p-4 rounded-lg shadow-lg max-w-sm {
         toast.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' :
@@ -37,7 +37,7 @@
       
       <!-- Close button -->
       <button
-        onclick={() => removeToast(toast.id)}
+        onclick={() => toastStore.removeToast(toast.id)}
         class="ml-3 flex-shrink-0 text-gray-400 hover:text-gray-600"
         aria-label="Close notification"
       >

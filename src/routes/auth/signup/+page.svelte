@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { signUpWithEmail } from '$lib/stores/auth.js'
+  import { signUpWithEmail } from '$lib/stores/auth.svelte.js'
   import { goto } from '$app/navigation'
-  import { addToast } from '$lib/stores/toast.js'
+  import { toastStore } from '$lib/stores/toast.svelte.js'
   
   let email = $state('')
   let password = $state('')
@@ -28,7 +28,7 @@
 
     try {
       await signUpWithEmail(email, password, fullName, role)
-      addToast('Account created! Please check your email to verify your account.', 'success', 5000)
+      toastStore.addToast('Account created! Please check your email to verify your account.', 'success', 5000)
       
       // Redirect to login after a delay
       setTimeout(() => {

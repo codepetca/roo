@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
-  import { user } from '$lib/stores/auth.js'
+  import { user } from '$lib/stores/auth.svelte.js'
   import type { CodingTest, TestAttempt } from '$lib/types/index.js'
 
   let availableTests = $state<CodingTest[]>([])

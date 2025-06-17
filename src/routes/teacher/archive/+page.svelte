@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { addToast } from '$lib/stores/toast'
+  import { toastStore } from '$lib/stores/toast.svelte.js'
   import { archivedQuestionsStore } from '$lib/stores/archived-questions.svelte'
   import { questionsStore } from '$lib/stores/questions.svelte'
   import Markdown from '$lib/components/Markdown.svelte'
@@ -15,7 +15,7 @@
 
   async function deleteSelectedQuestions(): Promise<void> {
     if (archivedQuestionsStore.selectedCount === 0) {
-      addToast('No questions selected', 'error')
+      toastStore.addToast('No questions selected', 'error')
       return
     }
 
@@ -25,25 +25,25 @@
 
     try {
       const result = await archivedQuestionsStore.deleteSelectedQuestions()
-      addToast(`${result.deletedCount} question(s) deleted permanently`, 'success')
+      toastStore.addToast(`${result.deletedCount} question(s) deleted permanently`, 'success')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      addToast('Error deleting questions: ' + errorMessage, 'error')
+      toastStore.addToast('Error deleting questions: ' + errorMessage, 'error')
     }
   }
 
   async function restoreSelectedQuestions(): Promise<void> {
     if (archivedQuestionsStore.selectedCount === 0) {
-      addToast('No questions selected', 'error')
+      toastStore.addToast('No questions selected', 'error')
       return
     }
 
     try {
       const result = await archivedQuestionsStore.restoreSelectedQuestions()
-      addToast(`${result.restoredCount} question(s) restored`, 'success')
+      toastStore.addToast(`${result.restoredCount} question(s) restored`, 'success')
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      addToast('Error restoring questions: ' + errorMessage, 'error')
+      toastStore.addToast('Error restoring questions: ' + errorMessage, 'error')
     }
   }
 

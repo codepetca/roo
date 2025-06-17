@@ -2,7 +2,7 @@
   import { onMount } from 'svelte'
   import { page } from '$app/stores'
   import { goto } from '$app/navigation'
-  import { user } from '$lib/stores/auth.js'
+  import { user } from '$lib/stores/auth.svelte.js'
   import type { TestAttempt, TestAnswer, CodingTest } from '$lib/types/index.js'
   
   const testId = $derived($page.params.testId)

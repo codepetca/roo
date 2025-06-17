@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { signInWithEmail } from '$lib/stores/auth.js'
+  import { authStore } from '$lib/stores/auth.svelte.js'
   import { goto } from '$app/navigation'
-  import { addToast } from '$lib/stores/toast.js'
+  import { toastStore } from '$lib/stores/toast.svelte.js'
   
   let email = $state('')
   let password = $state('')
@@ -18,12 +18,38 @@
     error = ''
 
     try {
-      await signInWithEmail(email, password)
-      addToast('Welcome back!', 'success')
-      goto('/')
+      await authStore.signInWithEmail(email, password)
+      toastStore.addToast('Welcome back!', 'success')
+      
+      // Wait for profile to load, then redirect based on role
+      let attempts = 0
+      const maxAttempts = 50 // 5 seconds max wait
+      
+      const checkProfile = () => {
+        attempts++
+        console.log('Checking profile, attempt:', attempts, 'Profile:', authStore.profile?.role)
+        
+        if (authStore.profile?.role) {
+          loading = false
+          if (authStore.profile.role === 'teacher') {
+            goto('/teacher')
+          } else if (authStore.profile.role === 'student') {
+            goto('/student')
+          } else {
+            goto('/')
+          }
+        } else if (attempts < maxAttempts) {
+          setTimeout(checkProfile, 100)
+        } else {
+          console.log('Profile load timeout, redirecting to home')
+          loading = false
+          goto('/')
+        }
+      }
+      
+      checkProfile()
     } catch (err: any) {
       error = err.message || 'Failed to sign in'
-    } finally {
       loading = false
     }
   }

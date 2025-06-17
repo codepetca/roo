@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation'
   import { questionsStore } from '$lib/stores/questions.svelte.js'
   import { testsStore } from '$lib/stores/tests.svelte.js'
-  import { user } from '$lib/stores/auth.js'
+  import { user } from '$lib/stores/auth.svelte.js'
   import Markdown from '$lib/components/Markdown.svelte'
   import type { Question, TestSettings } from '$lib/types/index.js'
 
