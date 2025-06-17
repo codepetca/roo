@@ -5,16 +5,24 @@
   import Markdown from '$lib/components/Markdown.svelte'
   import { addToast } from '$lib/stores/toast'
   import { questionsStore } from '$lib/stores/questions.svelte'
-  import type { Question, JavaConcept, GradingResult, Submission, SubmissionWithRelations, Solution } from '$lib/types/index.js'
+  import type {
+    Question,
+    JavaConcept,
+    ClaudeGradingResponse, // Changed from GradingResult
+    Submission,
+    SubmissionWithRelations,
+    Solution,
+    APIResponse // Added for typing API responses
+  } from '$lib/types/index.js'
   
   // Use Svelte 5 runes for state management
   let selectedConcepts = $state<JavaConcept[]>(['variables', 'conditionals'])
   let generatingQuestion = $state<boolean>(false)
   let uploadingImage = $state<boolean>(false)
-  let selectedQuestion = $state<Question | null>(null)
-  let gradingResult = $state<GradingResult | null>(null)
+  let selectedQuestion = $state<Question | null>(null) // Uses new Question interface
+  let gradingResult = $state<ClaudeGradingResponse | null>(null) // Updated to ClaudeGradingResponse
   let recentSubmissions = $state<SubmissionWithRelations[]>([])
-  let modifyingQuestion = $state<Question | null>(null)
+  let modifyingQuestion = $state<Question | null>(null) // Uses new Question interface
   let modificationPrompt = $state<string>('')
   let isModifying = $state<boolean>(false)
   let viewingSolution = $state<Question | null>(null)
@@ -36,19 +44,19 @@
   async function generateQuestion(): Promise<void> {
     generatingQuestion = true
     try {
-      const response = await fetch('/api/questions', {
+      const fetchResponse = await fetch('/api/questions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ concepts: selectedConcepts })
       })
       
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to generate question')
+      const responseData: APIResponse<Question> = await fetchResponse.json()
+
+      if (!fetchResponse.ok || !responseData.success || !responseData.data) {
+        throw new Error(responseData.error?.message || 'Failed to generate question')
       }
       
-      const data = await response.json()
-      questionsStore.addQuestion(data.question)
+      questionsStore.addQuestion(responseData.data)
       
       // Show success message
       addToast('Question generated successfully!', 'success')
@@ -80,13 +88,27 @@
         body: formData
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to grade submission')
+      if (!fetchResponse.ok) { // Check fetchResponse.ok for network/HTTP errors first
+        const errorText = await fetchResponse.text(); // Get raw text if JSON parsing might fail
+        try {
+          const errorData: APIResponse<never> = JSON.parse(errorText);
+          throw new Error(errorData.error?.message || 'Failed to grade submission - HTTP error');
+        } catch (e) {
+          throw new Error(`Failed to grade submission: ${fetchResponse.statusText} - ${errorText}`);
+        }
       }
 
-      const data = await response.json()
-      gradingResult = data.submission.gradingResult
+      const responseData: APIResponse<Submission> = await fetchResponse.json()
+
+      if (!responseData.success || !responseData.data) {
+        throw new Error(responseData.error?.message || 'Failed to grade submission - API error')
+      }
+
+      // The API returns a Submission object. Submission type has fields compatible with ClaudeGradingResponse.
+      // Assigning the whole submission to gradingResult if its structure matches,
+      // or extract specific fields if gradingResult needs to be exactly ClaudeGradingResponse.
+      // For now, let's assume Submission's grading fields are what we want to display with gradingResult.
+      gradingResult = responseData.data as unknown as ClaudeGradingResponse; // Cast needed if Submission is not directly assignable
       
       // Refresh submissions list
       await loadRecentSubmissions()
@@ -106,11 +128,22 @@
     if (!$user?.id) return
     
     try {
-      const response = await fetch(`/api/submissions?teacherId=${$user.id}`)
-      const data = await response.json()
-      recentSubmissions = data.submissions || []
+      const fetchResponse = await fetch(`/api/submissions?teacherId=${$user.id}`) // Assuming this API also uses APIResponse
+      const responseData: APIResponse<SubmissionWithRelations[]> = await fetchResponse.json()
+
+      if (!fetchResponse.ok || !responseData.success || !responseData.data) {
+        // Handle case where responseData.data might be undefined even if success is true (e.g. empty list)
+        if (fetchResponse.ok && responseData.success && responseData.data === undefined) {
+          recentSubmissions = [];
+        } else {
+          throw new Error(responseData.error?.message || 'Failed to load submissions')
+        }
+      } else {
+        recentSubmissions = responseData.data || []
+      }
     } catch (error: unknown) {
       console.error('Failed to load submissions:', error)
+      // Optionally add a toast message here for the user
     }
   }
 
@@ -130,7 +163,7 @@
     }
   }
 
-  function startModifyQuestion(question: Question): void {
+  function startModifyQuestion(question: Question): void { // Question here uses the new interface
     modifyingQuestion = question
     modificationPrompt = ''
   }
@@ -160,12 +193,14 @@
         body: JSON.stringify({ modificationPrompt })
       })
 
-      if (!response.ok) {
-        const errorData = await response.json()
+      if (!fetchResponse.ok) {
+        // Assuming this endpoint does not use APIResponse yet, old error handling
+        const errorData = await fetchResponse.json()
         throw new Error(errorData.error || 'Failed to modify question')
       }
 
-      const data = await response.json()
+      // Assuming this endpoint returns { question: Question } directly
+      const data: { question: Question } = await fetchResponse.json()
       
       // Add the modified question to the top of the list
       questionsStore.addQuestion(data.question)
@@ -180,20 +215,22 @@
     }
   }
 
-  async function viewSolution(question: Question): Promise<void> {
+  async function viewSolution(question: Question): Promise<void> { // Question here uses the new interface
     viewingSolution = question
     currentSolution = null
     loadingSolution = true
 
     try {
-      const response = await fetch(`/api/questions/${question.id}/solution`)
+      const fetchResponse = await fetch(`/api/questions/${question.id}/solution`)
       
-      if (!response.ok) {
-        const errorData = await response.json()
+      if (!fetchResponse.ok) {
+        // Assuming this endpoint does not use APIResponse yet, old error handling
+        const errorData = await fetchResponse.json()
         throw new Error(errorData.error || 'Failed to generate solution')
       }
 
-      const data = await response.json()
+      // Assuming this endpoint returns { solution: Solution } directly
+      const data: { solution: Solution } = await fetchResponse.json()
       currentSolution = data.solution
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'

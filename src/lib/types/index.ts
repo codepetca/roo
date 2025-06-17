@@ -25,48 +25,62 @@ export type ProfileInsert = TablesInsert<'profiles'>
 export type ProfileUpdate = TablesUpdate<'profiles'>
 
 // API Response Types
+export interface APIError {
+  message: string
+  code?: string
+  field?: string
+}
+
+export interface APIResponse<T = any> {
+  success: boolean
+  data?: T
+  error?: APIError
+}
+
+// Original ApiResponse - can be deprecated or migrated later
 export interface ApiResponse<T = unknown> {
   success?: boolean
   error?: string
   data?: T
 }
 
-export interface QuestionResponse extends ApiResponse<Question> {
-  question?: Question
+export interface QuestionResponse extends APIResponse<Question> { // Updated to use new APIResponse
+  question?: Question // This still refers to `Tables<'java_questions'>` due to `export type Question`
 }
 
-export interface QuestionsResponse extends ApiResponse<Question[]> {
-  questions?: Question[]
+export interface QuestionsResponse extends APIResponse<Question[]> { // Updated to use new APIResponse
+  questions?: Question[] // This still refers to `Tables<'java_questions'>`
 }
 
-export interface SubmissionResponse extends ApiResponse<Submission> {
+export interface SubmissionResponse extends APIResponse<Submission> { // Updated to use new APIResponse
   submission?: Submission & {
-    gradingResult?: GradingResult
+    gradingResult?: ClaudeGradingResponse // Updated to ClaudeGradingResponse
   }
 }
 
-export interface SubmissionsResponse extends ApiResponse<Submission[]> {
+export interface SubmissionsResponse extends APIResponse<Submission[]> { // Updated to use new APIResponse
   submissions?: Submission[]
 }
 
 // Claude AI Types
 export interface QuestionData {
   question: string
-  rubric: Rubric
+  rubric: RubricStructure // Updated to RubricStructure
   solution: Solution
   concepts: string[]
 }
 
-export interface Rubric {
-  communication: RubricCategory
-  correctness: RubricCategory
-  logic: RubricCategory
-}
-
-export interface RubricCategory {
+// Renamed Rubric to RubricStructure and ensured RubricCategory is defined correctly
+export interface RubricCategory { // This definition is fine, ensuring it's seen as part of the "new" structure
   description: string
   weight: number
   criteria: string[]
+}
+
+export interface RubricStructure { // Renamed from Rubric
+  communication: RubricCategory
+  correctness: RubricCategory
+  logic: RubricCategory
 }
 
 export interface Solution {
@@ -75,10 +89,37 @@ export interface Solution {
   keyPoints: string[]
 }
 
-export interface GradingResult {
+// New Question Interface (as per issue requirements)
+// This coexists with `export type Question = Tables<'java_questions'>;`
+// The new interface is for specific use-cases like Claude integration.
+export interface Question {
+  id: string
+  question_text: string
+  rubric: RubricStructure
+  java_concepts: string[]
+  created_at: string
+  created_by?: string
+}
+
+// New Claude Grading Request/Response Types (replaces GradingResult)
+export interface ClaudeGradingRequest {
+  imageBase64: string
+  question: string // This should be question_text
+  rubric: RubricStructure
+}
+
+export interface ClaudeGradingResponse { // This replaces GradingResult
   extractedCode: string
-  scores: Record<string, number>
-  feedback: Record<string, string>
+  scores: {
+    communication: number
+    correctness: number
+    logic: number
+  }
+  feedback: {
+    communication: string
+    correctness: string
+    logic: string
+  }
   overallScore: number
   generalComments: string
 }
@@ -148,9 +189,16 @@ export interface Toast {
 }
 
 // Auth Types
+export interface UserProfile {
+  id: string
+  role: UserRole
+  full_name: string | null
+  created_at: string
+}
+
 export interface AuthState {
   user: any | null // TODO: Type this properly with Supabase User type
-  profile: Profile | null
+  profile: UserProfile | null // Updated to use UserProfile
   loading: boolean
 }
 

@@ -1,7 +1,19 @@
 import { json, type RequestHandler } from '@sveltejs/kit'
 import { supabase } from '$lib/server/supabase.js'
 import { gradeCode } from '$lib/server/claude.js'
-import type { SubmissionResponse, ApiResponse } from '$lib/types/index.js'
+import type {
+  APIResponse,
+  APIError,
+  ClaudeGradingResponse,
+  RubricStructure,
+  Submission // Assuming Submission is Tables<'java_submissions'>
+} from '$lib/types/index.js'
+
+// Define a type for the question data fetched from DB
+interface DbQuestionData {
+  question_text: string;
+  rubric: RubricStructure | string; // Rubric from DB can be object or string
+}
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
@@ -12,19 +24,19 @@ export const POST: RequestHandler = async ({ request }) => {
     const teacherId = formData.get('teacherId') as string
 
     if (!image || !questionId || !studentId || !teacherId) {
-      const response: ApiResponse = { error: 'Missing required fields' }
-      return json(response, { status: 400 })
+      const errorResponse: APIResponse = { success: false, error: { message: 'Missing required fields' } }
+      return json(errorResponse, { status: 400 })
     }
 
     // Validate file type and size
     if (!image.type.startsWith('image/')) {
-      const response: ApiResponse = { error: 'File must be an image' }
-      return json(response, { status: 400 })
+      const errorResponse: APIResponse = { success: false, error: { message: 'File must be an image' } }
+      return json(errorResponse, { status: 400 })
     }
     
     if (image.size > 10 * 1024 * 1024) { // 10MB limit
-      const response: ApiResponse = { error: 'Image too large (max 10MB)' }
-      return json(response, { status: 400 })
+      const errorResponse: APIResponse = { success: false, error: { message: 'Image too large (max 10MB)' } }
+      return json(errorResponse, { status: 400 })
     }
 
     // Upload image to Supabase Storage
@@ -39,7 +51,8 @@ export const POST: RequestHandler = async ({ request }) => {
 
     if (uploadError) {
       console.error('Upload error:', uploadError)
-      throw new Error('Failed to upload image')
+      const errorResponse: APIResponse = { success: false, error: { message: 'Failed to upload image', code: uploadError.name } }
+      return json(errorResponse, { status: 500 })
     }
 
     // Get question details from java_questions table
@@ -47,10 +60,25 @@ export const POST: RequestHandler = async ({ request }) => {
       .from('java_questions')
       .select('question_text, rubric')
       .eq('id', questionId)
-      .single()
+      .single<DbQuestionData>() // Use the defined type
 
     if (questionError || !question) {
-      throw new Error('Question not found')
+      const errorResponse: APIResponse = { success: false, error: { message: 'Question not found or error fetching it', code: questionError?.code } }
+      return json(errorResponse, { status: 404 })
+    }
+
+    // Parse rubric if it's a string
+    let rubricForClaude: RubricStructure;
+    if (typeof question.rubric === 'string') {
+      try {
+        rubricForClaude = JSON.parse(question.rubric);
+      } catch (parseError) {
+        console.error('Rubric parse error:', parseError);
+        const errorResponse: APIResponse = { success: false, error: { message: 'Failed to parse question rubric' } };
+        return json(errorResponse, { status: 500 });
+      }
+    } else {
+      rubricForClaude = question.rubric;
     }
 
     // Convert image to base64 for Claude
@@ -58,14 +86,14 @@ export const POST: RequestHandler = async ({ request }) => {
     const imageBase64 = Buffer.from(imageBuffer).toString('base64')
 
     // Grade with Claude
-    const gradingResult = await gradeCode(
+    const gradingResult: ClaudeGradingResponse = await gradeCode(
       imageBase64, 
       question.question_text, 
-      question.rubric
+      rubricForClaude // Pass the parsed/verified rubric
     )
 
     // Save submission to java_submissions table
-    const { data: submission, error: submissionError } = await supabase
+    const { data: submissionRecord, error: submissionError } = await supabase
       .from('java_submissions')
       .insert({
         question_id: questionId,
@@ -80,26 +108,27 @@ export const POST: RequestHandler = async ({ request }) => {
         graded_at: new Date().toISOString()
       })
       .select()
-      .single()
+      .single<Submission>() // Specify the return type as Submission
 
     if (submissionError) {
       console.error('Submission error:', submissionError)
-      throw new Error('Failed to save submission')
+      const errorResponse: APIResponse = { success: false, error: { message: 'Failed to save submission', code: submissionError.code } }
+      return json(errorResponse, { status: 500 })
     }
 
-    const response: SubmissionResponse = { 
-      success: true, 
-      submission: {
-        ...submission,
-        gradingResult
-      }
-    }
+    // The submissionRecord should now contain all fields, including those from gradingResult
+    const response: APIResponse<Submission> = { success: true, data: submissionRecord }
     return json(response)
-  } catch (error) {
+
+  } catch (error: any) {
     console.error('Grading error:', error)
-    const response: ApiResponse = { 
-      error: error instanceof Error ? error.message : 'Grading failed' 
+    let errorMessage = 'Grading failed';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
     }
-    return json(response, { status: 500 })
+    const errorResponse: APIResponse = { success: false, error: { message: errorMessage } }
+    return json(errorResponse, { status: 500 })
   }
 }

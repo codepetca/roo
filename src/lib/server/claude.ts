@@ -1,6 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { env } from '$env/dynamic/private'
-import type { QuestionData, GradingResult, JavaConcept } from '$lib/types/index.js'
+import type {
+  QuestionData,
+  ClaudeGradingResponse, // Updated from GradingResult
+  JavaConcept,
+  RubricStructure      // Added for gradeCode function
+} from '$lib/types/index.js'
 
 let _anthropic: Anthropic | null = null
 
@@ -182,11 +187,15 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
   }
 }
 
-export async function gradeCode(imageBase64: string, question: string, rubric: any): Promise<GradingResult> {
+export async function gradeCode(
+  imageBase64: string,
+  questionText: string, // Renamed from question
+  rubric: RubricStructure // Typed rubric
+): Promise<ClaudeGradingResponse> { // Updated return type
   try {
     const prompt = `You are grading handwritten Java code for a high school student.
 
-QUESTION: ${question}
+QUESTION: ${questionText}
 
 RUBRIC: ${JSON.stringify(rubric, null, 2)}
 

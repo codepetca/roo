@@ -1,9 +1,10 @@
 import { writable } from 'svelte/store'
 import { supabase } from '$lib/supabase.js'
 import type { User } from '@supabase/supabase-js'
+import type { UserProfile, UserRole } from '$lib/types/index.js' // Added UserProfile and UserRole
 
 export const user = writable<User | null>(null)
-export const profile = writable<any>(null)
+export const profile = writable<UserProfile | null>(null) // Updated type from any to UserProfile | null
 export const loading = writable(true)
 
 export async function signInWithEmail(email: string, password: string) {
@@ -61,8 +62,13 @@ export async function loadProfile(userId: string) {
     .single()
   
   if (error) throw error
-  profile.set(data)
-  return data
+  // Ensure data conforms to UserProfile, especially the role
+  const userProfileData: UserProfile = {
+    ...data,
+    role: data.role as UserRole // Cast role to UserRole
+  };
+  profile.set(userProfileData)
+  return userProfileData // Return the typed profile
 }
 
 // Initialize auth state
@@ -97,33 +103,36 @@ supabase.auth.onAuthStateChange(async (event, session) => {
           } else {
             console.error('Manual profile creation failed:', createError)
             // Set a fallback profile from metadata
-            profile.set({
+            const fallbackProfile: UserProfile = {
               id: session.user.id,
               full_name: session.user.user_metadata.full_name,
-              role: session.user.user_metadata.role,
-              created_at: new Date().toISOString()
-            })
+              role: session.user.user_metadata.role as UserRole, // Cast role
+              created_at: session.user.created_at || new Date().toISOString() // Use user created_at if available
+            };
+            profile.set(fallbackProfile)
             console.log('Set fallback profile from metadata')
           }
         } catch (createError) {
           console.error('Profile creation attempt failed:', createError)
           // Set fallback profile from metadata
-          profile.set({
+          const fallbackProfileCatch: UserProfile = {
             id: session.user.id,
             full_name: session.user.user_metadata.full_name,
-            role: session.user.user_metadata.role,
-            created_at: new Date().toISOString()
-          })
+            role: session.user.user_metadata.role as UserRole, // Cast role
+            created_at: session.user.created_at || new Date().toISOString()
+          };
+          profile.set(fallbackProfileCatch)
           console.log('Set fallback profile from metadata (catch)')
         }
       } else {
         // No metadata available, set a basic profile
-        profile.set({
+        const basicFallbackProfile: UserProfile = {
           id: session.user.id,
           full_name: 'User',
-          role: 'teacher', // Default to teacher for testing
-          created_at: new Date().toISOString()
-        })
+          role: 'teacher' as UserRole, // Default to teacher, cast role
+          created_at: session.user.created_at || new Date().toISOString()
+        };
+        profile.set(basicFallbackProfile)
         console.log('Set basic fallback profile')
       }
     }
