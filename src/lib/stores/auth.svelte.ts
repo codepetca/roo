@@ -7,6 +7,7 @@ class AuthStore {
   profile = $state<UserProfile | null>(null)
   loading = $state(true)
   initialized = $state(false)
+  error = $state<string | null>(null)
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -15,49 +16,104 @@ class AuthStore {
   }
 
   private async initializeAuth() {
-    // Set up auth state change listener
+    console.log('Initializing auth system...')
+    
+    // Set up auth state change listener (fast, non-blocking)
     supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state changed:', event, session?.user?.id)
-
-      this.loading = true
+      this.error = null
       this.user = session?.user ?? null
 
       if (session?.user) {
-        console.log('User session found, creating temporary profile...')
-        // Skip database query for now and create a temporary profile
-        const tempProfile: UserProfile = {
-          id: session.user.id,
-          full_name: session.user.user_metadata?.full_name || session.user.email || 'User',
-          role: session.user.user_metadata?.role || 'teacher', // Default to teacher for now
-          created_at: session.user.created_at || new Date().toISOString(),
-        }
-        
-        this.profile = tempProfile
-        console.log('Temporary profile created:', tempProfile)
+        // Fast profile creation, no blocking
+        this.handleUserSession(session.user)
       } else {
         this.profile = null
         console.log('No session, cleared profile')
       }
 
-      this.loading = false
-      this.initialized = true
-      console.log('Auth loading complete')
+      console.log('Auth state change processed')
     })
 
-    // Get initial session
-    const { data: { session } } = await supabase.auth.getSession()
-    if (session) {
-      this.user = session.user
-      try {
-        await this.loadProfile(session.user.id)
-      } catch (error) {
-        console.error('Failed to load initial profile:', error)
-        await this.handleProfileCreation(session.user)
+    // Fast initial session check
+    try {
+      console.log('Getting initial session...')
+      const { data: { session } } = await this.withTimeout(
+        supabase.auth.getSession(),
+        1000 // Much shorter timeout
+      )
+      
+      if (session?.user) {
+        console.log('Initial session found:', session.user.id)
+        this.user = session.user
+        this.handleUserSession(session.user)
+      } else {
+        console.log('No initial session')
       }
+    } catch (error) {
+      console.log('Session check failed, but continuing:', error)
+      // Don't set error - just continue without blocking
     }
     
+    // Always complete initialization quickly
     this.loading = false
     this.initialized = true
+    console.log('Auth initialization complete')
+  }
+
+  private async handleUserSession(user: User) {
+    console.log('Handling user session for:', user.id)
+    
+    // FAST PATH: Create fallback profile immediately
+    this.createFallbackProfile(user)
+    
+    // BACKGROUND: Try to load real profile, but don't block UI
+    this.loadProfileInBackground(user.id)
+  }
+
+  private async loadProfileInBackground(userId: string) {
+    try {
+      console.log('Loading profile in background for:', userId)
+      const { data, error } = await this.withTimeout(
+        supabase.from('profiles').select('*').eq('id', userId).single(),
+        2000 // Shorter timeout for background load
+      )
+
+      if (!error && data) {
+        const userProfileData: UserProfile = {
+          ...data,
+          role: data.role as UserRole,
+          created_at: data.created_at ?? new Date().toISOString(),
+        }
+        
+        console.log('Background profile loaded:', userProfileData)
+        this.profile = userProfileData
+      }
+    } catch (error) {
+      console.log('Background profile load failed (using fallback):', error)
+      // Fallback is already set, no need to do anything
+    }
+  }
+
+  private createFallbackProfile(user: User) {
+    const fallbackProfile: UserProfile = {
+      id: user.id,
+      full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+      role: (user.user_metadata?.role as UserRole) || 'teacher',
+      created_at: user.created_at || new Date().toISOString(),
+    }
+    
+    this.profile = fallbackProfile
+    console.log('Created fallback profile:', fallbackProfile)
+  }
+
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs)
+      )
+    ])
   }
 
   private async handleProfileCreation(user: User) {
@@ -106,64 +162,6 @@ class AuthStore {
     console.log('Set fallback profile from metadata')
   }
 
-  async loadProfile(userId: string): Promise<UserProfile> {
-    console.log('Loading profile for user:', userId)
-    
-    // Try direct query with retries (avoid getSession which seems to hang)
-    let retries = 0
-    const maxRetries = 5
-    
-    while (retries < maxRetries) {
-      console.log(`Profile query attempt ${retries + 1}/${maxRetries}`)
-      
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .single()
-
-        console.log('Profile query result:', { data, error })
-
-        if (error) {
-          console.error('Profile load error:', error)
-          // If it's an auth error, retry
-          if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
-            console.log('Auth error, retrying...')
-            retries++
-            if (retries >= maxRetries) {
-              throw error
-            }
-            await new Promise(resolve => setTimeout(resolve, 500))
-            continue
-          }
-          throw error
-        }
-
-        // Success!
-        const userProfileData: UserProfile = {
-          ...data,
-          role: data.role as UserRole,
-          created_at: data.created_at ?? new Date().toISOString(),
-        }
-        
-        console.log('Setting profile to:', userProfileData)
-        this.profile = userProfileData
-        return userProfileData
-        
-      } catch (queryError) {
-        console.error(`Profile query failed on attempt ${retries + 1}:`, queryError)
-        retries++
-        if (retries >= maxRetries) {
-          throw queryError
-        }
-        console.log(`Retrying in 500ms... (${retries}/${maxRetries})`)
-        await new Promise(resolve => setTimeout(resolve, 500))
-      }
-    }
-    
-    throw new Error('Failed to load profile after maximum retries')
-  }
 
   async signInWithEmail(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -198,21 +196,66 @@ class AuthStore {
   }
 
   async signOut() {
+    console.log('Signing out...')
+    this.loading = true
+    
     try {
-      const { error } = await supabase.auth.signOut()
+      const { error } = await this.withTimeout(supabase.auth.signOut(), 5000)
       if (error) throw error
 
       // Clear stores
       this.user = null
       this.profile = null
+      this.error = null
       this.loading = false
 
+      console.log('Sign out successful')
       // Force page reload to clear any cached state
       window.location.href = '/'
     } catch (error) {
       console.error('Sign out error:', error)
       // Force reload anyway to clear state
+      this.user = null
+      this.profile = null
+      this.error = null
+      this.loading = false
       window.location.href = '/'
+    }
+  }
+
+  async refreshSession() {
+    console.log('Refreshing session...')
+    this.loading = true
+    this.error = null
+    
+    try {
+      const { data: { session }, error } = await this.withTimeout(
+        supabase.auth.refreshSession(),
+        5000
+      )
+      
+      if (error) {
+        console.error('Session refresh error:', error)
+        this.error = 'Session refresh failed'
+        return false
+      }
+      
+      if (session?.user) {
+        console.log('Session refreshed successfully')
+        await this.handleUserSession(session.user)
+        return true
+      } else {
+        console.log('No session after refresh')
+        this.user = null
+        this.profile = null
+        return false
+      }
+    } catch (error) {
+      console.error('Session refresh failed:', error)
+      this.error = 'Session refresh failed'
+      return false
+    } finally {
+      this.loading = false
     }
   }
 
