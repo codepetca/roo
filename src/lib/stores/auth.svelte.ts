@@ -101,7 +101,7 @@ class AuthStore {
     const fallbackProfile: UserProfile = {
       id: user.id,
       full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-      role: (user.user_metadata?.role as UserRole) || 'teacher',
+      role: (user.user_metadata?.role as UserRole) || 'student',
       created_at: user.created_at || new Date().toISOString(),
     }
     
@@ -180,20 +180,24 @@ class AuthStore {
     fullName: string,
     role: 'teacher' | 'student'
   ) {
+    // For teacher signups, set role to 'teacher_pending' to require approval
+    const actualRole = role === 'teacher' ? 'teacher_pending' : role
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
           full_name: fullName,
-          role: role,
+          role: actualRole,
         },
+        emailRedirectTo: `${window.location.origin}/auth/verify-email`,
       },
     })
     if (error) throw error
 
-    // Profile will be automatically created by database trigger
-    // No need to manually create it
+    // If email confirmation is required, user won't be logged in immediately
+    // Profile will be automatically created by database trigger after verification
     return data
   }
 
@@ -261,9 +265,60 @@ class AuthStore {
     }
   }
 
+  async resendVerificationEmail() {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: this.user?.email || '',
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/verify-email`,
+      },
+    })
+    if (error) throw error
+  }
+
+  async resetPassword(email: string) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth/reset-password`,
+    })
+    if (error) throw error
+  }
+
+  async approveTeacher(teacherId: string) {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: 'teacher' })
+      .eq('id', teacherId)
+    
+    if (error) throw error
+  }
+
+  async rejectTeacher(teacherId: string) {
+    const { error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', teacherId)
+    
+    if (error) throw error
+  }
+
+  async getPendingTeachers() {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'teacher_pending')
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    return data
+  }
+
   // Computed values
   get isAuthenticated() {
     return this.user !== null
+  }
+
+  get isEmailVerified() {
+    return this.user?.email_confirmed_at !== null
   }
 
   get isTeacher() {
@@ -272,6 +327,18 @@ class AuthStore {
 
   get isStudent() {
     return this.profile?.role === 'student'
+  }
+
+  get isTeacherPending() {
+    return this.profile?.role === 'teacher_pending'
+  }
+
+  get isAdmin() {
+    return this.profile?.role === 'admin'
+  }
+
+  get canAccessTeacherFeatures() {
+    return this.profile?.role === 'teacher' || this.profile?.role === 'admin'
   }
 
   get displayName() {
@@ -287,4 +354,4 @@ export const authStore = new AuthStore()
 
 // Export for backwards compatibility
 export const { user, profile, loading } = authStore
-export const { signInWithEmail, signUpWithEmail, signOut, loadProfile } = authStore
+export const { signInWithEmail, signUpWithEmail, signOut, resendVerificationEmail, resetPassword } = authStore

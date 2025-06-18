@@ -216,7 +216,7 @@ export type JavaConcept =
 
 // Status Types
 export type SubmissionStatus = 'pending' | 'graded' | 'error'
-export type UserRole = 'teacher' | 'student'
+export type UserRole = 'teacher' | 'student' | 'teacher_pending' | 'admin'
 
 // Online Test System Types
 export type CodingTest = Tables<'coding_tests'>

@@ -27,13 +27,29 @@
     success = ''
 
     try {
-      await signUpWithEmail(email, password, fullName, role)
-      toastStore.addToast('Account created! Please check your email to verify your account.', 'success', 5000)
+      const result = await signUpWithEmail(email, password, fullName, role)
       
-      // Redirect to login after a delay
-      setTimeout(() => {
-        goto('/auth/login')
-      }, 3000)
+      if (result.user && !result.user.email_confirmed_at) {
+        // Email confirmation required
+        if (role === 'teacher') {
+          toastStore.addToast('Teacher account created! Please verify your email, then wait for admin approval.', 'success')
+        } else {
+          toastStore.addToast('Account created! Please check your email to verify your account.', 'success')
+        }
+        goto('/auth/verify-email')
+      } else if (result.user && result.user.email_confirmed_at) {
+        // Email already confirmed (shouldn't happen in normal flow)
+        if (role === 'teacher') {
+          toastStore.addToast('Teacher account created! Waiting for admin approval.', 'success')
+          goto('/auth/pending-approval')
+        } else {
+          toastStore.addToast('Account created and verified! Redirecting...', 'success')
+          goto('/student')
+        }
+      } else {
+        // Show verification page anyway
+        goto('/auth/verify-email')
+      }
     } catch (err: any) {
       error = err.message || 'Failed to create account'
     } finally {
@@ -115,8 +131,25 @@
           required
         >
           <option value="student">Student</option>
-          <option value="teacher">Teacher</option>
+          <option value="teacher">Teacher (requires approval)</option>
         </select>
+        {#if role === 'teacher'}
+          <div class="mt-2 bg-blue-50 border border-blue-200 rounded-md p-3">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-blue-700">
+                  <strong>Teacher accounts require approval.</strong> After creating your account and verifying your email, 
+                  an administrator will review and approve your teacher access. You'll be notified when approved.
+                </p>
+              </div>
+            </div>
+          </div>
+        {/if}
       </div>
 
       <button

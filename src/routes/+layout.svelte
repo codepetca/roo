@@ -3,6 +3,7 @@
   import { onMount } from 'svelte'
   import { authStore } from '$lib/stores/auth.svelte.js'
   import { goto } from '$app/navigation'
+  import { page } from '$app/stores'
   import Toast from '$lib/components/Toast.svelte'
 
   async function handleSignOut() {
@@ -23,6 +24,20 @@
       refreshAttempted = true
       authStore.refreshSession()
     }
+    
+    // Check if user needs email verification
+    const currentPath = $page.url.pathname
+    const isAuthPage = currentPath.startsWith('/auth/')
+    const isPublicPage = currentPath === '/'
+    const isPendingApprovalPage = currentPath === '/auth/pending-approval'
+    
+    if (authStore.user && !authStore.isEmailVerified && !isAuthPage && !isPublicPage && authStore.initialized) {
+      console.log('User email not verified, redirecting to verification page')
+      goto('/auth/verify-email')
+    } else if (authStore.user && authStore.isEmailVerified && authStore.isTeacherPending && !isAuthPage && !isPublicPage && !isPendingApprovalPage && authStore.initialized) {
+      console.log('Teacher account pending approval, redirecting to pending approval page')
+      goto('/auth/pending-approval')
+    }
   })
   
   // Show loading state for auth
@@ -39,14 +54,25 @@
             <h1 class="text-xl font-semibold text-gray-900">Java Code Grader</h1>
           </div>
           <div class="flex items-center space-x-4">
-            {#if authStore.profile?.role === 'teacher'}
+            {#if !authStore.isEmailVerified}
+              <span class="text-sm text-amber-700 bg-amber-50 px-3 py-1 rounded-md">
+                Email verification required
+              </span>
+            {:else if authStore.isTeacherPending}
+              <span class="text-sm text-orange-700 bg-orange-50 px-3 py-1 rounded-md">
+                Teacher approval pending
+              </span>
+            {:else if authStore.canAccessTeacherFeatures}
               <div class="flex items-center space-x-3">
                 <a href="/teacher" class="text-blue-600 hover:text-blue-800">Dashboard</a>
                 <a href="/teacher/archive" class="text-blue-600 hover:text-blue-800">Archive</a>
                 <a href="/teacher/tests" class="text-blue-600 hover:text-blue-800">Online Tests</a>
                 <a href="/teacher/tests/create" class="text-blue-600 hover:text-blue-800">Create Test</a>
+                {#if authStore.isAdmin}
+                  <a href="/admin" class="text-purple-600 hover:text-purple-800">Admin</a>
+                {/if}
               </div>
-            {:else if authStore.profile?.role === 'student'}
+            {:else if authStore.isStudent}
               <div class="flex items-center space-x-3">
                 <a href="/student" class="text-blue-600 hover:text-blue-800">Dashboard</a>
               </div>
