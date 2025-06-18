@@ -312,6 +312,94 @@ class AuthStore {
     return data
   }
 
+  async getAllUsers(roleFilter?: string) {
+    let query = supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (roleFilter) {
+      query = query.eq('role', roleFilter)
+    }
+    
+    const { data, error } = await query
+    if (error) throw error
+    return data
+  }
+
+  async updateAccountStatus(userId: string, status: 'active' | 'disabled' | 'suspended') {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ account_status: status })
+      .eq('id', userId)
+    
+    if (error) throw error
+  }
+
+  async enrollStudent(studentData: any) {
+    // Create auth user first
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email: studentData.email,
+      password: this.generateTempPassword(),
+      email_confirm: true,
+      user_metadata: {
+        full_name: studentData.full_name,
+        role: 'student',
+        class_name: studentData.class_name,
+        student_id: studentData.student_id
+      }
+    })
+
+    if (authError) throw authError
+
+    // Profile will be created by database trigger
+    return authData
+  }
+
+  async bulkEnrollStudents(students: any[]) {
+    const results = {
+      successful: 0,
+      failed: 0,
+      errors: [] as string[],
+      results: [] as any[]
+    }
+
+    for (const student of students) {
+      try {
+        await this.enrollStudent(student)
+        results.successful++
+        results.results.push({
+          email: student.email,
+          success: true
+        })
+      } catch (error: any) {
+        results.failed++
+        const errorMsg = error.message || 'Unknown error'
+        results.errors.push(`${student.email}: ${errorMsg}`)
+        results.results.push({
+          email: student.email,
+          success: false,
+          error: errorMsg
+        })
+      }
+    }
+
+    return results
+  }
+
+  async updateStudentClass(studentId: string, className: string | null) {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ class_name: className })
+      .eq('id', studentId)
+    
+    if (error) throw error
+  }
+
+  private generateTempPassword(): string {
+    return Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8)
+  }
+
   // Computed values
   get isAuthenticated() {
     return this.user !== null

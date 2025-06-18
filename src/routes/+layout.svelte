@@ -70,6 +70,9 @@
                 <a href="/teacher/tests/create" class="text-blue-600 hover:text-blue-800">Create Test</a>
                 {#if authStore.isAdmin}
                   <a href="/admin" class="text-purple-600 hover:text-purple-800">Admin</a>
+                {:else if authStore.isTeacher}
+                  <a href="/admin/students" class="text-green-600 hover:text-green-800">Students</a>
+                  <a href="/admin/classes" class="text-purple-600 hover:text-purple-800">Classes</a>
                 {/if}
               </div>
             {:else if authStore.isStudent}

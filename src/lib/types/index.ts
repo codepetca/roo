@@ -195,6 +195,28 @@ export interface UserProfile {
   role: UserRole
   full_name: string | null
   created_at: string
+  class_name?: string | null
+  student_id?: string | null
+  account_status?: AccountStatus
+  email?: string | null
+}
+
+export interface StudentEnrollment {
+  full_name: string
+  email: string
+  class_name?: string
+  student_id?: string
+}
+
+export interface BulkEnrollmentResult {
+  successful: number
+  failed: number
+  errors: string[]
+  results: {
+    email: string
+    success: boolean
+    error?: string
+  }[]
 }
 
 export interface AuthState {
@@ -217,6 +239,7 @@ export type JavaConcept =
 // Status Types
 export type SubmissionStatus = 'pending' | 'graded' | 'error'
 export type UserRole = 'teacher' | 'student' | 'teacher_pending' | 'admin'
+export type AccountStatus = 'active' | 'disabled' | 'suspended'
 
 // Online Test System Types
 export type CodingTest = Tables<'coding_tests'>
