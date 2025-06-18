@@ -553,73 +553,69 @@
   {/if}
 
   <!-- Solution Viewing Modal -->
-  {#if viewingSolution}
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-white rounded-lg max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div class="p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-xl font-semibold text-gray-900">Expected Solution</h3>
-            <button 
-              onclick={closeSolution}
-              class="text-gray-400 hover:text-gray-600"
-            >
-              ×
-            </button>
-          </div>
-          
-          <div class="mb-4">
-            <h4 class="font-medium text-gray-700 mb-2">Question:</h4>
-            <div class="bg-gray-50 p-3 rounded border text-sm">
-              <Markdown content={viewingSolution.question_text} />
-            </div>
-          </div>
-          
-          {#if loadingSolution}
-            <div class="text-center py-8">
-              <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-2"></div>
-              <p class="text-green-600">Generating solution...</p>
-            </div>
-          {:else if currentSolution}
-            <div class="mb-4">
-              <h4 class="font-medium text-gray-700 mb-2">Expected Solution:</h4>
-              <div class="bg-gray-900 text-gray-100 p-4 rounded border font-mono text-sm overflow-x-auto">
-                <pre><code>{currentSolution.code}</code></pre>
-              </div>
-              
-              {#if currentSolution.explanation}
-                <div class="mt-4">
-                  <h4 class="font-medium text-gray-700 mb-2">Explanation:</h4>
-                  <div class="bg-blue-50 p-3 rounded border text-sm">
-                    <Markdown content={currentSolution.explanation} />
-                  </div>
-                </div>
-              {/if}
-              
-              {#if currentSolution.keyPoints && currentSolution.keyPoints.length > 0}
-                <div class="mt-4">
-                  <h4 class="font-medium text-gray-700 mb-2">Key Points for Grading:</h4>
-                  <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1">
-                    {#each currentSolution.keyPoints as point}
-                      <li>{point}</li>
-                    {/each}
-                  </ul>
-                </div>
-              {/if}
-            </div>
-          {/if}
-          
-          <div class="flex justify-end">
-            <button
-              onclick={closeSolution}
-              class="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-md"
-            >
-              Close
-            </button>
+  <AccessibleModal 
+    isOpen={!!viewingSolution} 
+    title="Expected Solution"
+    size="xl"
+    onclose={closeSolution}
+  >
+    <div slot="content">
+      {#if viewingSolution}
+        <div class="mb-4">
+          <h4 class="font-medium text-gray-700 mb-2">Question:</h4>
+          <div class="bg-gray-50 p-3 rounded border text-sm" role="region" aria-labelledby="solution-question">
+            <div id="solution-question" class="sr-only">Question being solved</div>
+            <Markdown content={viewingSolution.question_text} />
           </div>
         </div>
-      </div>
+        
+        {#if loadingSolution}
+          <div class="text-center py-8" role="status" aria-live="polite">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-2" aria-hidden="true"></div>
+            <p class="text-green-600">Generating solution...</p>
+          </div>
+        {:else if currentSolution}
+          <div class="mb-4">
+            <h4 class="font-medium text-gray-700 mb-2">Expected Solution:</h4>
+            <div class="bg-gray-900 text-gray-100 p-4 rounded border font-mono text-sm overflow-x-auto" role="region" aria-labelledby="solution-code">
+              <div id="solution-code" class="sr-only">Expected solution code</div>
+              <pre><code>{currentSolution.code}</code></pre>
+            </div>
+            
+            {#if currentSolution.explanation}
+              <div class="mt-4">
+                <h4 class="font-medium text-gray-700 mb-2">Explanation:</h4>
+                <div class="bg-blue-50 p-3 rounded border text-sm" role="region" aria-labelledby="solution-explanation">
+                  <div id="solution-explanation" class="sr-only">Solution explanation</div>
+                  <Markdown content={currentSolution.explanation} />
+                </div>
+              </div>
+            {/if}
+            
+            {#if currentSolution.keyPoints && currentSolution.keyPoints.length > 0}
+              <div class="mt-4">
+                <h4 class="font-medium text-gray-700 mb-2">Key Points for Grading:</h4>
+                <ul class="list-disc pl-5 text-sm text-gray-600 space-y-1" role="list">
+                  {#each currentSolution.keyPoints as point}
+                    <li role="listitem">{point}</li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+          </div>
+        {/if}
+      {/if}
     </div>
-  {/if}
+    
+    <div slot="footer">
+      <button
+        onclick={closeSolution}
+        class="px-4 py-2 bg-gray-600 text-white hover:bg-gray-700 rounded-md"
+      >
+        Close
+      </button>
+    </div>
+  </AccessibleModal>
 
   <!-- Recent Submissions -->
   <div class="card">

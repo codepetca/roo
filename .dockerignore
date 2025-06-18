@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Build outputs
+.svelte-kit/
+build/
+dist/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+.vitest/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Misc
+*.log
+*.pid
+*.seed
+*.pid.lock

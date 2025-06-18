@@ -4,6 +4,8 @@
   import { toastStore } from '$lib/stores/toast.svelte.js'
   import { goto } from '$app/navigation'
   import type { UserProfile } from '$lib/types/index.js'
+  import { generateId } from '$lib/utils/accessibility.js'
+  import AccessibleModal from '$lib/components/AccessibleModal.svelte'
   
   let students = $state<UserProfile[]>([])
   let loading = $state(true)
@@ -12,6 +14,12 @@
   let editingClass = $state<string | null>(null)
   let newClassName = $state('')
   let editClassName = $state('')
+  
+  // Generate unique IDs for form fields
+  const formIds = {
+    newClassName: generateId('new-class-name'),
+    editClassName: generateId('edit-class-name')
+  }
   
   // Get unique classes and their student counts
   const classStats = $derived(() => {
@@ -330,90 +338,80 @@
 </div>
 
 <!-- Create Class Modal -->
-{#if showCreateClass}
-  <div class="fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <div class="fixed inset-0 transition-opacity" onclick={() => showCreateClass = false}>
-        <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
-      </div>
-
-      <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Create New Class
-          </h3>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
-            <input
-              type="text"
-              bind:value={newClassName}
-              class="input"
-              placeholder="e.g., Grade 9A, Computer Science 101"
-              required
-            />
-          </div>
-        </div>
-        
-        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-          <button
-            onclick={createClass}
-            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-          >
-            Create Class
-          </button>
-          <button
-            onclick={() => showCreateClass = false}
-            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
+<AccessibleModal 
+  isOpen={showCreateClass} 
+  title="Create New Class"
+  size="md"
+  onclose={() => showCreateClass = false}
+>
+  <div slot="content">
+    <div>
+      <label for={formIds.newClassName} class="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
+      <input
+        id={formIds.newClassName}
+        type="text"
+        bind:value={newClassName}
+        class="input"
+        placeholder="e.g., Grade 9A, Computer Science 101"
+        required
+        aria-required="true"
+      />
     </div>
   </div>
-{/if}
+  
+  <div slot="footer">
+    <button
+      onclick={createClass}
+      class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+    >
+      Create Class
+    </button>
+    <button
+      onclick={() => showCreateClass = false}
+      class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+    >
+      Cancel
+    </button>
+  </div>
+</AccessibleModal>
 
 <!-- Edit Class Modal -->
-{#if showEditClass && editingClass}
-  <div class="fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <div class="fixed inset-0 transition-opacity" onclick={() => showEditClass = false}>
-        <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
+<AccessibleModal 
+  isOpen={showEditClass && !!editingClass} 
+  title="Rename Class: {editingClass || ''}"
+  size="md"
+  onclose={() => showEditClass = false}
+>
+  <div slot="content">
+    {#if editingClass}
+      <div>
+        <label for={formIds.editClassName} class="block text-sm font-medium text-gray-700 mb-1">New Class Name</label>
+        <input
+          id={formIds.editClassName}
+          type="text"
+          bind:value={editClassName}
+          class="input"
+          required
+          aria-required="true"
+        />
       </div>
-
-      <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Rename Class: {editingClass}
-          </h3>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">New Class Name</label>
-            <input
-              type="text"
-              bind:value={editClassName}
-              class="input"
-              required
-            />
-          </div>
-        </div>
-        
-        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-          <button
-            onclick={() => renameClass(editingClass!, editClassName)}
-            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-          >
-            Rename Class
-          </button>
-          <button
-            onclick={() => showEditClass = false}
-            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
-    </div>
+    {/if}
   </div>
-{/if}
+  
+  <div slot="footer">
+    {#if editingClass}
+      <button
+        onclick={() => renameClass(editingClass!, editClassName)}
+        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
+      >
+        Rename Class
+      </button>
+      <button
+        onclick={() => showEditClass = false}
+        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+      >
+        Cancel
+      </button>
+    {/if}
+  </div>
+</AccessibleModal>

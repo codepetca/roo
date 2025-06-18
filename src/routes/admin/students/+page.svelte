@@ -4,15 +4,39 @@
   import { toastStore } from '$lib/stores/toast.svelte.js'
   import { goto } from '$app/navigation'
   import type { UserProfile, StudentEnrollment, BulkEnrollmentResult } from '$lib/types/index.js'
+  import { debounce, PerformanceMonitor } from '$lib/utils/performance.js'
+  import { generateId } from '$lib/utils/accessibility.js'
+  import AccessibleModal from '$lib/components/AccessibleModal.svelte'
   
   let students = $state<UserProfile[]>([])
   let loading = $state(true)
   let enrollmentLoading = $state(false)
   let showBulkEnroll = $state(false)
   let showSingleEnroll = $state(false)
+  
+  // Generate unique IDs for form fields
+  const formIds = {
+    fullName: generateId('full-name'),
+    email: generateId('email'),
+    className: generateId('class-name'),
+    studentId: generateId('student-id'),
+    bulkText: generateId('bulk-text'),
+    searchFilter: generateId('search-filter'),
+    classFilter: generateId('class-filter'),
+    statusFilter: generateId('status-filter')
+  }
   let searchTerm = $state('')
   let classFilter = $state('')
   let statusFilter = $state('')
+  let debouncedSearchTerm = $state('')
+  
+  // Performance monitoring
+  const performanceMonitor = PerformanceMonitor.getInstance()
+  
+  // Debounced search to reduce API calls and improve performance
+  const debouncedSearch = debounce((term: string) => {
+    debouncedSearchTerm = term
+  }, 300)
   
   // Single enrollment form
   let singleStudent = $state<StudentEnrollment>({
@@ -35,19 +59,29 @@
     return classes.sort()
   })
   
-  // Filtered students
+  // Filtered students with performance optimization
   const filteredStudents = $derived(() => {
-    return students.filter(student => {
-      const matchesSearch = !searchTerm || 
-        student.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.student_id?.toLowerCase().includes(searchTerm.toLowerCase())
+    performanceMonitor.startMeasurement('filterStudents')
+    
+    const filtered = students.filter(student => {
+      const matchesSearch = !debouncedSearchTerm || 
+        student.full_name?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        student.email?.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+        student.student_id?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       
       const matchesClass = !classFilter || student.class_name === classFilter
       const matchesStatus = !statusFilter || student.account_status === statusFilter
       
       return student.role === 'student' && matchesSearch && matchesClass && matchesStatus
     })
+    
+    performanceMonitor.endMeasurement('filterStudents')
+    return filtered
+  })
+  
+  // Watch search term changes and debounce
+  $effect(() => {
+    debouncedSearch(searchTerm)
   })
   
   // Student statistics
@@ -75,7 +109,9 @@
   async function loadStudents() {
     loading = true
     try {
-      const allUsers = await authStore.getAllUsers()
+      const allUsers = await performanceMonitor.measureAsync('loadStudents', () => 
+        authStore.getAllUsers()
+      )
       students = allUsers || []
     } catch (error: any) {
       toastStore.addToast(error.message || 'Failed to load students', 'error')
@@ -302,8 +338,9 @@
     <h3 class="text-sm font-medium text-gray-900 mb-3">Filters</h3>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+        <label for={formIds.searchFilter} class="block text-sm font-medium text-gray-700 mb-1">Search</label>
         <input
+          id={formIds.searchFilter}
           type="text"
           bind:value={searchTerm}
           placeholder="Search by name, email, or student ID"
@@ -312,8 +349,8 @@
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Class</label>
-        <select bind:value={classFilter} class="input">
+        <label for={formIds.classFilter} class="block text-sm font-medium text-gray-700 mb-1">Class</label>
+        <select id={formIds.classFilter} bind:value={classFilter} class="input">
           <option value="">All Classes</option>
           {#each uniqueClasses as className}
             <option value={className}>{className}</option>
@@ -322,8 +359,8 @@
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-        <select bind:value={statusFilter} class="input">
+        <label for={formIds.statusFilter} class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <select id={formIds.statusFilter} bind:value={statusFilter} class="input">
           <option value="">All Statuses</option>
           <option value="active">Active</option>
           <option value="disabled">Disabled</option>
@@ -461,156 +498,150 @@
 </div>
 
 <!-- Single Student Enrollment Modal -->
-{#if showSingleEnroll}
-  <div class="fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <div class="fixed inset-0 transition-opacity" onclick={() => showSingleEnroll = false}>
-        <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
-      </div>
-
-      <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Enroll Single Student
-          </h3>
-          
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-              <input
-                type="text"
-                bind:value={singleStudent.full_name}
-                class="input"
-                placeholder="Enter student's full name"
-                required
-              />
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-              <input
-                type="email"
-                bind:value={singleStudent.email}
-                class="input"
-                placeholder="Enter student's email"
-                required
-              />
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Class</label>
-              <input
-                type="text"
-                bind:value={singleStudent.class_name}
-                class="input"
-                placeholder="e.g., Grade 9A, Computer Science 101"
-              />
-            </div>
-            
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
-              <input
-                type="text"
-                bind:value={singleStudent.student_id}
-                class="input"
-                placeholder="Optional student ID number"
-              />
-            </div>
-          </div>
-        </div>
-        
-        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-          <button
-            onclick={enrollSingleStudent}
-            disabled={enrollmentLoading}
-            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-          >
-            {enrollmentLoading ? 'Enrolling...' : 'Enroll Student'}
-          </button>
-          <button
-            onclick={() => showSingleEnroll = false}
-            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
+<AccessibleModal 
+  isOpen={showSingleEnroll} 
+  title="Enroll Single Student"
+  size="md"
+  onclose={() => showSingleEnroll = false}
+>
+  <div slot="content" class="space-y-4">
+    <div>
+      <label for={formIds.fullName} class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+      <input
+        id={formIds.fullName}
+        type="text"
+        bind:value={singleStudent.full_name}
+        class="input"
+        placeholder="Enter student's full name"
+        required
+        aria-required="true"
+      />
+    </div>
+    
+    <div>
+      <label for={formIds.email} class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+      <input
+        id={formIds.email}
+        type="email"
+        bind:value={singleStudent.email}
+        class="input"
+        placeholder="Enter student's email"
+        required
+        aria-required="true"
+      />
+    </div>
+    
+    <div>
+      <label for={formIds.className} class="block text-sm font-medium text-gray-700 mb-1">Class</label>
+      <input
+        id={formIds.className}
+        type="text"
+        bind:value={singleStudent.class_name}
+        class="input"
+        placeholder="e.g., Grade 9A, Computer Science 101"
+      />
+    </div>
+    
+    <div>
+      <label for={formIds.studentId} class="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
+      <input
+        id={formIds.studentId}
+        type="text"
+        bind:value={singleStudent.student_id}
+        class="input"
+        placeholder="Optional student ID number"
+      />
     </div>
   </div>
-{/if}
+  
+  <div slot="footer">
+    <button
+      onclick={enrollSingleStudent}
+      disabled={enrollmentLoading}
+      class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+      aria-describedby="enroll-button-help"
+    >
+      {enrollmentLoading ? 'Enrolling...' : 'Enroll Student'}
+    </button>
+    <button
+      onclick={() => showSingleEnroll = false}
+      class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+    >
+      Cancel
+    </button>
+    <div id="enroll-button-help" class="sr-only">Creates a new student account and sends welcome email</div>
+  </div>
+</AccessibleModal>
 
 <!-- Bulk Enrollment Modal -->
-{#if showBulkEnroll}
-  <div class="fixed inset-0 z-50 overflow-y-auto">
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-      <div class="fixed inset-0 transition-opacity" onclick={() => showBulkEnroll = false}>
-        <div class="absolute inset-0 bg-gray-500 opacity-75"></div>
-      </div>
-
-      <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-        <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
-            Bulk Student Enrollment
-          </h3>
-          
-          <div class="mb-4">
-            <p class="text-sm text-gray-600 mb-2">
-              Enter student data, one per line in CSV format:
-            </p>
-            <p class="text-sm text-gray-500 mb-3">
-              Format: <code>Full Name, Email, Class (optional), Student ID (optional)</code>
-            </p>
-            
-            <textarea
-              bind:value={bulkText}
-              rows="8"
-              class="input"
-              placeholder="John Doe, john@example.com, Grade 9A, 12345&#10;Jane Smith, jane@example.com, Grade 9B&#10;..."
-            ></textarea>
+<AccessibleModal 
+  isOpen={showBulkEnroll} 
+  title="Bulk Student Enrollment"
+  size="lg"
+  onclose={() => showBulkEnroll = false}
+>
+  <div slot="content">
+    <div class="mb-4">
+      <p class="text-sm text-gray-600 mb-2">
+        Enter student data, one per line in CSV format:
+      </p>
+      <p class="text-sm text-gray-500 mb-3">
+        Format: <code>Full Name, Email, Class (optional), Student ID (optional)</code>
+      </p>
+      
+      <label for={formIds.bulkText} class="sr-only">Student enrollment data</label>
+      <textarea
+        id={formIds.bulkText}
+        bind:value={bulkText}
+        rows="8"
+        class="input"
+        placeholder="John Doe, john@example.com, Grade 9A, 12345&#10;Jane Smith, jane@example.com, Grade 9B&#10;..."
+        aria-describedby="bulk-format-help"
+      ></textarea>
+      <div id="bulk-format-help" class="sr-only">Enter one student per line with comma-separated values: name, email, class, and student ID</div>
+    </div>
+    
+    {#if enrollmentResults}
+      <div class="mb-4 p-4 bg-gray-50 rounded-md" role="region" aria-labelledby="results-heading">
+        <h4 id="results-heading" class="text-sm font-medium text-gray-900 mb-2">Enrollment Results</h4>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div class="text-green-600" role="status">
+            <span aria-hidden="true">✓</span> Successful: {enrollmentResults.successful}
           </div>
-          
-          {#if enrollmentResults}
-            <div class="mb-4 p-4 bg-gray-50 rounded-md">
-              <h4 class="text-sm font-medium text-gray-900 mb-2">Enrollment Results</h4>
-              <div class="grid grid-cols-2 gap-4 text-sm">
-                <div class="text-green-600">
-                  ✓ Successful: {enrollmentResults.successful}
-                </div>
-                <div class="text-red-600">
-                  ✗ Failed: {enrollmentResults.failed}
-                </div>
-              </div>
-              
-              {#if enrollmentResults.errors.length > 0}
-                <div class="mt-3">
-                  <h5 class="text-xs font-medium text-red-900 mb-1">Errors:</h5>
-                  <div class="text-xs text-red-700 max-h-32 overflow-y-auto">
-                    {#each enrollmentResults.errors as error}
-                      <div>{error}</div>
-                    {/each}
-                  </div>
-                </div>
-              {/if}
-            </div>
-          {/if}
+          <div class="text-red-600" role="status">
+            <span aria-hidden="true">✗</span> Failed: {enrollmentResults.failed}
+          </div>
         </div>
         
-        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-          <button
-            onclick={processBulkEnrollment}
-            disabled={enrollmentLoading}
-            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-          >
-            {enrollmentLoading ? 'Processing...' : 'Enroll Students'}
-          </button>
-          <button
-            onclick={() => showBulkEnroll = false}
-            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-          >
-            Close
-          </button>
-        </div>
+        {#if enrollmentResults.errors.length > 0}
+          <div class="mt-3">
+            <h5 class="text-xs font-medium text-red-900 mb-1">Errors:</h5>
+            <div class="text-xs text-red-700 max-h-32 overflow-y-auto" role="log" aria-live="polite">
+              {#each enrollmentResults.errors as error}
+                <div>{error}</div>
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
-    </div>
+    {/if}
   </div>
-{/if}
+  
+  <div slot="footer">
+    <button
+      onclick={processBulkEnrollment}
+      disabled={enrollmentLoading}
+      class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
+      aria-describedby="bulk-enroll-button-help"
+    >
+      {enrollmentLoading ? 'Processing...' : 'Enroll Students'}
+    </button>
+    <button
+      onclick={() => showBulkEnroll = false}
+      class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+    >
+      Close
+    </button>
+    <div id="bulk-enroll-button-help" class="sr-only">Processes the entered CSV data and creates multiple student accounts</div>
+  </div>
+</AccessibleModal>

@@ -1,6 +1,7 @@
 import { supabase } from '$lib/supabase.js'
 import type { User } from '@supabase/supabase-js'
 import type { UserProfile, UserRole } from '$lib/types/index.js'
+import { PerformanceMonitor, debounce } from '$lib/utils/performance.js'
 
 class AuthStore {
   user = $state<User | null>(null)
@@ -8,6 +9,7 @@ class AuthStore {
   loading = $state(true)
   initialized = $state(false)
   error = $state<string | null>(null)
+  private performanceMonitor = PerformanceMonitor.getInstance()
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -313,18 +315,20 @@ class AuthStore {
   }
 
   async getAllUsers(roleFilter?: string) {
-    let query = supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
-    
-    if (roleFilter) {
-      query = query.eq('role', roleFilter)
-    }
-    
-    const { data, error } = await query
-    if (error) throw error
-    return data
+    return this.performanceMonitor.measureAsync('getAllUsers', async () => {
+      let query = supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (roleFilter) {
+        query = query.eq('role', roleFilter)
+      }
+      
+      const { data, error } = await query
+      if (error) throw error
+      return data
+    })
   }
 
   async updateAccountStatus(userId: string, status: 'active' | 'disabled' | 'suspended') {
