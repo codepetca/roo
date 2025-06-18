@@ -187,14 +187,26 @@
   }
 </script>
 
-<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-  <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900">Database Cleanup</h1>
-    <p class="mt-2 text-gray-600">Remove test data and prepare for production deployment</p>
+<!-- Page Header -->
+<div class="page-header">
+  <div class="page-content py-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="heading-xl">Database Cleanup</h1>
+        <p class="text-body mt-1">Remove test data and prepare for production deployment</p>
+      </div>
+      <a href="/admin" class="btn btn-secondary btn-sm">
+        ← Back to Admin
+      </a>
+    </div>
   </div>
+</div>
+
+<!-- Main Content -->
+<div class="page-content py-8 space-y-8 max-w-4xl">
 
   <!-- Warning Banner -->
-  <div class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+  <div class="alert alert-danger">
     <div class="flex">
       <div class="flex-shrink-0">
         <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -221,12 +233,14 @@
   </div>
 
   <!-- Full Cleanup Section -->
-  <div class="bg-white shadow rounded-lg mb-6">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-medium text-gray-900">Complete Database Cleanup</h2>
-      <p class="text-sm text-gray-600">Remove all test data in the correct order</p>
+  <div class="card">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="heading-md">Complete Database Cleanup</h2>
+        <p class="text-body text-gray-600 mt-1">Remove all test data in the correct order</p>
+      </div>
     </div>
-    <div class="p-6">
+    <div class="space-y-4">
       <button
         onclick={cleanupTestData}
         disabled={loading}
@@ -234,107 +248,109 @@
       >
         {loading ? 'Cleaning...' : '🗑️ Clean All Test Data'}
       </button>
-      <p class="mt-2 text-sm text-gray-500">
+      <p class="text-caption text-gray-500">
         This will remove: user accounts, questions, tests, submissions, and attempts
       </p>
     </div>
   </div>
 
   <!-- Selective Cleanup Section -->
-  <div class="bg-white shadow rounded-lg mb-6">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-medium text-gray-900">Selective Cleanup</h2>
-      <p class="text-sm text-gray-600">Clean specific types of data</p>
-    </div>
-    <div class="p-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <button
-          onclick={() => cleanupSpecificData('test-accounts')}
-          disabled={loading}
-          class="btn btn-danger btn-sm"
-        >
-          {loading ? 'Cleaning...' : 'Clean Test Accounts'}
-        </button>
-        
-        <button
-          onclick={() => cleanupSpecificData('questions')}
-          disabled={loading}
-          class="btn btn-danger btn-sm"
-        >
-          {loading ? 'Cleaning...' : 'Clean Questions'}
-        </button>
-        
-        <button
-          onclick={() => cleanupSpecificData('tests')}
-          disabled={loading}
-          class="btn btn-danger btn-sm"
-        >
-          {loading ? 'Cleaning...' : 'Clean Coding Tests'}
-        </button>
-        
-        <button
-          onclick={() => cleanupSpecificData('submissions')}
-          disabled={loading}
-          class="btn btn-danger btn-sm"
-        >
-          {loading ? 'Cleaning...' : 'Clean Submissions'}
-        </button>
+  <div class="card">
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h2 class="heading-md">Selective Cleanup</h2>
+        <p class="text-body text-gray-600 mt-1">Clean specific types of data</p>
       </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <button
+        onclick={() => cleanupSpecificData('test-accounts')}
+        disabled={loading}
+        class="btn btn-danger btn-sm"
+      >
+        {loading ? 'Cleaning...' : 'Clean Test Accounts'}
+      </button>
+      
+      <button
+        onclick={() => cleanupSpecificData('questions')}
+        disabled={loading}
+        class="btn btn-danger btn-sm"
+      >
+        {loading ? 'Cleaning...' : 'Clean Questions'}
+      </button>
+      
+      <button
+        onclick={() => cleanupSpecificData('tests')}
+        disabled={loading}
+        class="btn btn-danger btn-sm"
+      >
+        {loading ? 'Cleaning...' : 'Clean Coding Tests'}
+      </button>
+      
+      <button
+        onclick={() => cleanupSpecificData('submissions')}
+        disabled={loading}
+        class="btn btn-danger btn-sm"
+      >
+        {loading ? 'Cleaning...' : 'Clean Submissions'}
+      </button>
     </div>
   </div>
 
   <!-- Results Section -->
   {#if cleanupResults}
-    <div class="bg-white shadow rounded-lg">
-      <div class="px-6 py-4 border-b border-gray-200">
-        <h2 class="text-lg font-medium text-gray-900">Cleanup Results</h2>
+    <div class="card">
+      <div class="flex items-center justify-between mb-6">
+        <h2 class="heading-md">Cleanup Results</h2>
       </div>
-      <div class="p-6">
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+      
+      <div class="stat-group mb-6">
+        <div class="stat-item">
           <div class="text-center">
-            <div class="text-2xl font-bold text-red-600">{cleanupResults.profiles}</div>
-            <div class="text-sm text-gray-600">Profiles</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-red-600">{cleanupResults.questions}</div>
-            <div class="text-sm text-gray-600">Questions</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-red-600">{cleanupResults.tests}</div>
-            <div class="text-sm text-gray-600">Tests</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-red-600">{cleanupResults.submissions}</div>
-            <div class="text-sm text-gray-600">Submissions</div>
-          </div>
-          <div class="text-center">
-            <div class="text-2xl font-bold text-red-600">{cleanupResults.attempts}</div>
-            <div class="text-sm text-gray-600">Attempts</div>
+            <p class="text-2xl font-semibold text-red-600">{cleanupResults.profiles}</p>
+            <p class="text-caption text-gray-500 uppercase tracking-wide">Profiles</p>
           </div>
         </div>
-        
-        <div class="mt-4 bg-green-50 border border-green-200 rounded-md p-4">
-          <div class="flex">
-            <div class="flex-shrink-0">
-              <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-              </svg>
-            </div>
-            <div class="ml-3">
-              <p class="text-sm text-green-700">
-                Cleanup completed successfully! The database is now ready for production deployment.
-              </p>
-            </div>
+        <div class="stat-item">
+          <div class="text-center">
+            <p class="text-2xl font-semibold text-red-600">{cleanupResults.questions}</p>
+            <p class="text-caption text-gray-500 uppercase tracking-wide">Questions</p>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="text-center">
+            <p class="text-2xl font-semibold text-red-600">{cleanupResults.tests}</p>
+            <p class="text-caption text-gray-500 uppercase tracking-wide">Tests</p>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="text-center">
+            <p class="text-2xl font-semibold text-red-600">{cleanupResults.submissions}</p>
+            <p class="text-caption text-gray-500 uppercase tracking-wide">Submissions</p>
+          </div>
+        </div>
+        <div class="stat-item">
+          <div class="text-center">
+            <p class="text-2xl font-semibold text-red-600">{cleanupResults.attempts}</p>
+            <p class="text-caption text-gray-500 uppercase tracking-wide">Attempts</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="alert alert-success">
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-green-700">
+              Cleanup completed successfully! The database is now ready for production deployment.
+            </p>
           </div>
         </div>
       </div>
     </div>
   {/if}
-
-  <!-- Back to Admin -->
-  <div class="mt-6 text-center">
-    <a href="/admin" class="text-blue-600 hover:text-blue-800 underline">
-      ← Back to Admin Dashboard
-    </a>
-  </div>
 </div>

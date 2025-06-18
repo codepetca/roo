@@ -220,125 +220,137 @@
   }
 </script>
 
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-  <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900">Student Management</h1>
-    <p class="mt-2 text-gray-600">Enroll and manage student accounts</p>
+<!-- Page Header -->
+<div class="page-header">
+  <div class="page-content py-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="heading-xl">Student Management</h1>
+        <p class="text-body mt-1">Enroll and manage student accounts</p>
+      </div>
+      <button
+        onclick={loadStudents}
+        disabled={loading}
+        class="btn btn-secondary btn-sm"
+      >
+        {loading ? 'Loading...' : 'Refresh'}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="page-content py-8 space-y-8">
+
+  <!-- Quick Actions -->
+  <div class="card">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="heading-md">Quick Actions</h2>
+    </div>
+    <div class="action-group">
+      <button
+        onclick={() => showSingleEnroll = true}
+        class="btn btn-primary"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Add Single Student
+      </button>
+      
+      <button
+        onclick={() => showBulkEnroll = true}
+        class="btn btn-secondary"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        Bulk Enrollment
+      </button>
+    </div>
   </div>
 
-  <!-- Action Buttons -->
-  <div class="mb-6 flex flex-wrap gap-3">
-    <button
-      onclick={() => showSingleEnroll = true}
-      class="btn btn-primary"
-    >
-      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-      </svg>
-      Add Single Student
-    </button>
-    
-    <button
-      onclick={() => showBulkEnroll = true}
-      class="btn btn-secondary"
-    >
-      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-      </svg>
-      Bulk Enrollment
-    </button>
-    
-    <button
-      onclick={loadStudents}
-      disabled={loading}
-      class="btn btn-secondary"
-    >
-      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-      </svg>
-      {loading ? 'Loading...' : 'Refresh'}
-    </button>
-  </div>
-
-  <!-- Statistics -->
-  <div class="mb-6 grid grid-cols-2 md:grid-cols-5 gap-4">
-    <div class="bg-white rounded-lg shadow p-4">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <!-- Statistics Overview -->
+  <div class="stat-group">
+    <div class="stat-item">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-caption text-gray-500 uppercase tracking-wide">Total Students</p>
+          <p class="text-2xl font-semibold text-gray-900 mt-1">{studentStats.total}</p>
+        </div>
+        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-8.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
           </svg>
         </div>
-        <div class="ml-3">
-          <p class="text-sm font-medium text-gray-500">Total</p>
-          <p class="text-2xl font-semibold text-gray-900">{studentStats.total}</p>
-        </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-4">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="stat-item">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-caption text-gray-500 uppercase tracking-wide">Active</p>
+          <p class="text-2xl font-semibold text-green-600 mt-1">{studentStats.active}</p>
+        </div>
+        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
         </div>
-        <div class="ml-3">
-          <p class="text-sm font-medium text-gray-500">Active</p>
-          <p class="text-2xl font-semibold text-green-600">{studentStats.active}</p>
-        </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-4">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="stat-item">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-caption text-gray-500 uppercase tracking-wide">Disabled</p>
+          <p class="text-2xl font-semibold text-red-600 mt-1">{studentStats.disabled}</p>
+        </div>
+        <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
         </div>
-        <div class="ml-3">
-          <p class="text-sm font-medium text-gray-500">Disabled</p>
-          <p class="text-2xl font-semibold text-red-600">{studentStats.disabled}</p>
-        </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-4">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="stat-item">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-caption text-gray-500 uppercase tracking-wide">Suspended</p>
+          <p class="text-2xl font-semibold text-orange-600 mt-1">{studentStats.suspended}</p>
+        </div>
+        <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L5.268 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
           </svg>
         </div>
-        <div class="ml-3">
-          <p class="text-sm font-medium text-gray-500">Suspended</p>
-          <p class="text-2xl font-semibold text-yellow-600">{studentStats.suspended}</p>
-        </div>
       </div>
     </div>
 
-    <div class="bg-white rounded-lg shadow p-4">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <svg class="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="stat-item">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-caption text-gray-500 uppercase tracking-wide">With Class</p>
+          <p class="text-2xl font-semibold text-gray-900 mt-1">{studentStats.withClass}</p>
+        </div>
+        <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
           </svg>
-        </div>
-        <div class="ml-3">
-          <p class="text-sm font-medium text-gray-500">With Class</p>
-          <p class="text-2xl font-semibold text-purple-600">{studentStats.withClass}</p>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Filters -->
-  <div class="mb-6 bg-white rounded-lg shadow p-4">
-    <h3 class="text-sm font-medium text-gray-900 mb-3">Filters</h3>
+  <div class="card">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="heading-md">Filters</h2>
+    </div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div>
-        <label for={formIds.searchFilter} class="block text-sm font-medium text-gray-700 mb-1">Search</label>
+        <label for={formIds.searchFilter} class="form-label">Search</label>
         <input
           id={formIds.searchFilter}
           type="text"
@@ -349,7 +361,7 @@
       </div>
       
       <div>
-        <label for={formIds.classFilter} class="block text-sm font-medium text-gray-700 mb-1">Class</label>
+        <label for={formIds.classFilter} class="form-label">Class</label>
         <select id={formIds.classFilter} bind:value={classFilter} class="input">
           <option value="">All Classes</option>
           {#each uniqueClasses as className}
@@ -359,7 +371,7 @@
       </div>
       
       <div>
-        <label for={formIds.statusFilter} class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <label for={formIds.statusFilter} class="form-label">Status</label>
         <select id={formIds.statusFilter} bind:value={statusFilter} class="input">
           <option value="">All Statuses</option>
           <option value="active">Active</option>
@@ -371,127 +383,119 @@
   </div>
 
   <!-- Students List -->
-  <div class="bg-white shadow rounded-lg">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-medium text-gray-900">
-        Students ({filteredStudents.length})
-      </h2>
+  <div class="card">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="heading-md">Students ({filteredStudents.length})</h2>
     </div>
 
-    <div class="overflow-x-auto">
+    <div class="table-container">
       {#if loading}
-        <div class="p-6 text-center">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-          <p class="mt-2 text-gray-600">Loading students...</p>
+        <div class="flex items-center justify-center py-12">
+          <div class="text-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+            <p class="text-body mt-3">Loading students...</p>
+          </div>
         </div>
       {:else if filteredStudents.length === 0}
-        <div class="p-6 text-center">
-          <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-8.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-          </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900">No students found</h3>
-          <p class="mt-1 text-sm text-gray-500">Get started by enrolling your first student.</p>
+        <div class="text-center py-12">
+          <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-8.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+          </div>
+          <h3 class="heading-sm mb-2">No students found</h3>
+          <p class="text-body">Get started by enrolling your first student.</p>
         </div>
       {:else}
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
-            <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Student
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Class
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Student ID
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Enrolled
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            {#each filteredStudents as student}
+        <div class="table-responsive">
+          <table class="table">
+            <thead>
               <tr>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <div>
-                    <div class="text-sm font-medium text-gray-900">
-                      {student.full_name || 'No name'}
-                    </div>
-                    <div class="text-sm text-gray-500">{student.email}</div>
-                  </div>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {student.class_name || '-'}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                  {student.student_id || '-'}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {
-                    student.account_status === 'disabled' ? 'bg-red-100 text-red-800' :
-                    student.account_status === 'suspended' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }">
-                    {student.account_status || 'active'}
-                  </span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {new Date(student.created_at).toLocaleDateString()}
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div class="flex space-x-2">
-                    {#if student.account_status === 'active'}
-                      <button
-                        onclick={() => updateStudentStatus(student.id, 'disabled')}
-                        class="text-red-600 hover:text-red-900 text-xs"
-                        title="Disable account"
-                      >
-                        Disable
-                      </button>
-                      <button
-                        onclick={() => updateStudentStatus(student.id, 'suspended')}
-                        class="text-yellow-600 hover:text-yellow-900 text-xs"
-                        title="Suspend account temporarily"
-                      >
-                        Suspend
-                      </button>
-                    {:else if student.account_status === 'disabled'}
-                      <button
-                        onclick={() => updateStudentStatus(student.id, 'active')}
-                        class="text-green-600 hover:text-green-900 text-xs"
-                        title="Reactivate account"
-                      >
-                        Enable
-                      </button>
-                    {:else if student.account_status === 'suspended'}
-                      <button
-                        onclick={() => updateStudentStatus(student.id, 'active')}
-                        class="text-green-600 hover:text-green-900 text-xs"
-                        title="Reactivate account"
-                      >
-                        Reactivate
-                      </button>
-                      <button
-                        onclick={() => updateStudentStatus(student.id, 'disabled')}
-                        class="text-red-600 hover:text-red-900 text-xs"
-                        title="Disable account permanently"
-                      >
-                        Disable
-                      </button>
-                    {/if}
-                  </div>
-                </td>
+                <th>Student</th>
+                <th>Class</th>
+                <th>Student ID</th>
+                <th>Status</th>
+                <th>Enrolled</th>
+                <th>Actions</th>
               </tr>
-            {/each}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {#each filteredStudents as student}
+                <tr>
+                  <td>
+                    <div>
+                      <div class="font-medium text-gray-900">
+                        {student.full_name || 'No name'}
+                      </div>
+                      <div class="text-caption text-gray-500">{student.email}</div>
+                    </div>
+                  </td>
+                  <td class="text-body text-gray-900">
+                    {student.class_name || '-'}
+                  </td>
+                  <td class="text-body text-gray-900">
+                    {student.student_id || '-'}
+                  </td>
+                  <td>
+                    <span class="badge {
+                      student.account_status === 'disabled' ? 'badge-danger' :
+                      student.account_status === 'suspended' ? 'badge-warning' :
+                      'badge-success'
+                    }">
+                      {student.account_status || 'active'}
+                    </span>
+                  </td>
+                  <td class="text-body text-gray-500">
+                    {new Date(student.created_at).toLocaleDateString()}
+                  </td>
+                  <td>
+                    <div class="action-group action-group-sm">
+                      {#if student.account_status === 'active'}
+                        <button
+                          onclick={() => updateStudentStatus(student.id, 'disabled')}
+                          class="btn btn-danger btn-xs"
+                          title="Disable account"
+                        >
+                          Disable
+                        </button>
+                        <button
+                          onclick={() => updateStudentStatus(student.id, 'suspended')}
+                          class="btn btn-warning btn-xs"
+                          title="Suspend account temporarily"
+                        >
+                          Suspend
+                        </button>
+                      {:else if student.account_status === 'disabled'}
+                        <button
+                          onclick={() => updateStudentStatus(student.id, 'active')}
+                          class="btn btn-success btn-xs"
+                          title="Reactivate account"
+                        >
+                          Enable
+                        </button>
+                      {:else if student.account_status === 'suspended'}
+                        <button
+                          onclick={() => updateStudentStatus(student.id, 'active')}
+                          class="btn btn-success btn-xs"
+                          title="Reactivate account"
+                        >
+                          Reactivate
+                        </button>
+                        <button
+                          onclick={() => updateStudentStatus(student.id, 'disabled')}
+                          class="btn btn-danger btn-xs"
+                          title="Disable account permanently"
+                        >
+                          Disable
+                        </button>
+                      {/if}
+                    </div>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
       {/if}
     </div>
   </div>
@@ -506,7 +510,7 @@
 >
   <div slot="content" class="space-y-4">
     <div>
-      <label for={formIds.fullName} class="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+      <label for={formIds.fullName} class="form-label">Full Name *</label>
       <input
         id={formIds.fullName}
         type="text"
@@ -519,7 +523,7 @@
     </div>
     
     <div>
-      <label for={formIds.email} class="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+      <label for={formIds.email} class="form-label">Email *</label>
       <input
         id={formIds.email}
         type="email"
@@ -532,7 +536,7 @@
     </div>
     
     <div>
-      <label for={formIds.className} class="block text-sm font-medium text-gray-700 mb-1">Class</label>
+      <label for={formIds.className} class="form-label">Class</label>
       <input
         id={formIds.className}
         type="text"
@@ -543,7 +547,7 @@
     </div>
     
     <div>
-      <label for={formIds.studentId} class="block text-sm font-medium text-gray-700 mb-1">Student ID</label>
+      <label for={formIds.studentId} class="form-label">Student ID</label>
       <input
         id={formIds.studentId}
         type="text"
@@ -555,20 +559,22 @@
   </div>
   
   <div slot="footer">
-    <button
-      onclick={enrollSingleStudent}
-      disabled={enrollmentLoading}
-      class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-      aria-describedby="enroll-button-help"
-    >
-      {enrollmentLoading ? 'Enrolling...' : 'Enroll Student'}
-    </button>
-    <button
-      onclick={() => showSingleEnroll = false}
-      class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-    >
-      Cancel
-    </button>
+    <div class="action-group">
+      <button
+        onclick={enrollSingleStudent}
+        disabled={enrollmentLoading}
+        class="btn btn-primary"
+        aria-describedby="enroll-button-help"
+      >
+        {enrollmentLoading ? 'Enrolling...' : 'Enroll Student'}
+      </button>
+      <button
+        onclick={() => showSingleEnroll = false}
+        class="btn btn-secondary"
+      >
+        Cancel
+      </button>
+    </div>
     <div id="enroll-button-help" class="sr-only">Creates a new student account and sends welcome email</div>
   </div>
 </AccessibleModal>
@@ -628,20 +634,22 @@
   </div>
   
   <div slot="footer">
-    <button
-      onclick={processBulkEnrollment}
-      disabled={enrollmentLoading}
-      class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-      aria-describedby="bulk-enroll-button-help"
-    >
-      {enrollmentLoading ? 'Processing...' : 'Enroll Students'}
-    </button>
-    <button
-      onclick={() => showBulkEnroll = false}
-      class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-    >
-      Close
-    </button>
+    <div class="action-group">
+      <button
+        onclick={processBulkEnrollment}
+        disabled={enrollmentLoading}
+        class="btn btn-primary"
+        aria-describedby="bulk-enroll-button-help"
+      >
+        {enrollmentLoading ? 'Processing...' : 'Enroll Students'}
+      </button>
+      <button
+        onclick={() => showBulkEnroll = false}
+        class="btn btn-secondary"
+      >
+        Close
+      </button>
+    </div>
     <div id="bulk-enroll-button-help" class="sr-only">Processes the entered CSV data and creates multiple student accounts</div>
   </div>
 </AccessibleModal>

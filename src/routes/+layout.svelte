@@ -66,7 +66,7 @@
               <div class="flex items-center space-x-3">
                 <a href="/teacher" class="text-blue-600 hover:text-blue-800">Dashboard</a>
                 <a href="/teacher/archive" class="text-blue-600 hover:text-blue-800">Archive</a>
-                <a href="/teacher/tests" class="text-blue-600 hover:text-blue-800">Online Tests</a>
+                <a href="/teacher/tests" class="text-blue-600 hover:text-blue-800">Tests</a>
                 <a href="/teacher/tests/create" class="text-blue-600 hover:text-blue-800">Create Test</a>
                 {#if authStore.isAdmin}
                   <a href="/admin" class="text-purple-600 hover:text-purple-800">Admin</a>

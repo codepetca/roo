@@ -62,190 +62,202 @@
   }
 </script>
 
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-  <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-    <p class="mt-2 text-gray-600">Manage teacher account approvals and platform administration</p>
+<!-- Page Header -->
+<div class="page-header">
+  <div class="page-content py-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="heading-xl">Admin Dashboard</h1>
+        <p class="text-body mt-1">Manage teacher approvals and platform administration</p>
+      </div>
+      <button
+        onclick={loadPendingTeachers}
+        disabled={loading}
+        class="btn btn-secondary btn-sm"
+      >
+        {loading ? 'Loading...' : 'Refresh'}
+      </button>
+    </div>
   </div>
+</div>
 
-  <!-- Pending Teacher Approvals Section -->
-  <div class="bg-white shadow rounded-lg">
-    <div class="px-6 py-4 border-b border-gray-200">
+<!-- Main Content -->
+<div class="page-content py-8 space-y-8">
+  <!-- Statistics Overview -->
+  <div class="stat-group">
+    <div class="stat-item">
       <div class="flex items-center justify-between">
-        <h2 class="text-lg font-medium text-gray-900">Pending Teacher Approvals</h2>
-        <button
-          onclick={loadPendingTeachers}
-          disabled={loading}
-          class="btn btn-secondary btn-sm"
-        >
-          {loading ? 'Loading...' : 'Refresh'}
-        </button>
+        <div>
+          <p class="text-caption text-gray-500 uppercase tracking-wide">Pending Approvals</p>
+          <p class="text-2xl font-semibold text-gray-900 mt-1">{pendingTeachers.length}</p>
+        </div>
+        <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
       </div>
     </div>
-
-    <div class="divide-y divide-gray-200">
-      {#if loading}
-        <div class="p-6 text-center">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-          <p class="mt-2 text-gray-600">Loading pending approvals...</p>
+    
+    <div class="stat-item">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-caption text-gray-500 uppercase tracking-wide">Platform Status</p>
+          <p class="text-lg font-medium text-green-600 mt-1">Online</p>
         </div>
-      {:else if pendingTeachers.length === 0}
-        <div class="p-6 text-center">
-          <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
           </svg>
-          <h3 class="mt-2 text-sm font-medium text-gray-900">No pending approvals</h3>
-          <p class="mt-1 text-sm text-gray-500">All teacher applications have been processed.</p>
         </div>
-      {:else}
-        {#each pendingTeachers as teacher}
-          <div class="p-6">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-4">
-                <div class="flex-shrink-0">
-                  <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                    <span class="text-sm font-medium text-gray-700 uppercase">
-                      {teacher.full_name?.charAt(0) || 'T'}
-                    </span>
-                  </div>
-                </div>
-                <div class="flex-1 min-w-0">
-                  <h3 class="text-sm font-medium text-gray-900 truncate">
-                    {teacher.full_name || 'No name provided'}
-                  </h3>
-                  <p class="text-sm text-gray-500">
-                    Applied on {new Date(teacher.created_at || '').toLocaleDateString()}
-                  </p>
-                  <div class="mt-1">
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                      Teacher Application
-                    </span>
-                  </div>
-                </div>
-              </div>
-              
-              <div class="flex space-x-2">
-                <button
-                  onclick={() => approveTeacher(teacher.id, teacher.full_name || 'Teacher')}
-                  disabled={actionLoading === teacher.id}
-                  class="btn btn-success btn-sm"
-                >
-                  {actionLoading === teacher.id ? 'Processing...' : 'Approve'}
-                </button>
-                <button
-                  onclick={() => rejectTeacher(teacher.id, teacher.full_name || 'Teacher')}
-                  disabled={actionLoading === teacher.id}
-                  class="btn btn-danger btn-sm"
-                >
-                  {actionLoading === teacher.id ? 'Processing...' : 'Reject'}
-                </button>
-              </div>
-            </div>
-          </div>
-        {/each}
-      {/if}
+      </div>
+    </div>
+    
+    <div class="stat-item">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-caption text-gray-500 uppercase tracking-wide">Access Level</p>
+          <p class="text-lg font-medium text-gray-900 mt-1">Administrator</p>
+        </div>
+        <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.586-2H4.414A1.414 1.414 0 003 3.414v.172A1.414 1.414 0 004.414 5h10.172A1.414 1.414 0 0016 3.586v-.172A1.414 1.414 0 0014.586 2z"></path>
+          </svg>
+        </div>
+      </div>
+    </div>
+    
+    <div class="stat-item">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-caption text-gray-500 uppercase tracking-wide">Last Updated</p>
+          <p class="text-lg font-medium text-gray-900 mt-1">Just now</p>
+        </div>
+        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+          <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+        </div>
+      </div>
     </div>
   </div>
 
   <!-- Quick Actions -->
-  <div class="mt-8 bg-white shadow rounded-lg">
-    <div class="px-6 py-4 border-b border-gray-200">
-      <h2 class="text-lg font-medium text-gray-900">Quick Actions</h2>
+  <div class="card">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="heading-md">Quick Actions</h2>
     </div>
-    <div class="p-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <a
-          href="/admin/students"
-          class="flex items-center justify-center px-4 py-3 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <a
+        href="/admin/students"
+        class="group flex items-center p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-25 transition-all"
+      >
+        <div class="w-10 h-10 bg-blue-50 group-hover:bg-blue-100 rounded-lg flex items-center justify-center mr-3 transition-colors">
+          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-8.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
           </svg>
-          Manage Students
-        </a>
-        
-        <a
-          href="/admin/classes"
-          class="flex items-center justify-center px-4 py-3 border border-purple-300 rounded-md text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 transition-colors"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        </div>
+        <div>
+          <p class="font-medium text-gray-900">Students</p>
+          <p class="text-caption text-gray-500">Manage enrollment</p>
+        </div>
+      </a>
+      
+      <a
+        href="/admin/classes"
+        class="group flex items-center p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-25 transition-all"
+      >
+        <div class="w-10 h-10 bg-purple-50 group-hover:bg-purple-100 rounded-lg flex items-center justify-center mr-3 transition-colors">
+          <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
           </svg>
-          Manage Classes
-        </a>
-        
-        <a
-          href="/admin/cleanup"
-          class="flex items-center justify-center px-4 py-3 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        </div>
+        <div>
+          <p class="font-medium text-gray-900">Classes</p>
+          <p class="text-caption text-gray-500">Organize groups</p>
+        </div>
+      </a>
+      
+      <a
+        href="/admin/cleanup"
+        class="group flex items-center p-4 border border-gray-200 rounded-lg hover:border-gray-300 hover:bg-gray-25 transition-all"
+      >
+        <div class="w-10 h-10 bg-red-50 group-hover:bg-red-100 rounded-lg flex items-center justify-center mr-3 transition-colors">
+          <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
           </svg>
-          Database Cleanup
-        </a>
-        
-        <button
-          onclick={loadPendingTeachers}
-          disabled={loading}
-          class="flex items-center justify-center px-4 py-3 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
-        >
-          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
-          Refresh Approvals
-        </button>
-      </div>
+        </div>
+        <div>
+          <p class="font-medium text-gray-900">Cleanup</p>
+          <p class="text-caption text-gray-500">Database maintenance</p>
+        </div>
+      </a>
     </div>
   </div>
 
-  <!-- Admin Statistics -->
-  <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <div class="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
-            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-8.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-            </svg>
-          </div>
-        </div>
-        <div class="ml-4">
-          <p class="text-sm font-medium text-gray-600">Pending Approvals</p>
-          <p class="text-2xl font-semibold text-gray-900">{pendingTeachers.length}</p>
-        </div>
-      </div>
+  <!-- Teacher Approvals -->
+  <div class="card">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="heading-md">Teacher Approvals</h2>
+      {#if pendingTeachers.length > 0}
+        <span class="badge badge-warning">{pendingTeachers.length} pending</span>
+      {/if}
     </div>
 
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <div class="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
-            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-          </div>
-        </div>
-        <div class="ml-4">
-          <p class="text-sm font-medium text-gray-600">Platform Status</p>
-          <p class="text-lg font-semibold text-green-600">Active</p>
+    {#if loading}
+      <div class="flex items-center justify-center py-12">
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p class="text-body mt-3">Loading approvals...</p>
         </div>
       </div>
-    </div>
-
-    <div class="bg-white rounded-lg shadow p-6">
-      <div class="flex items-center">
-        <div class="flex-shrink-0">
-          <div class="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center">
-            <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-            </svg>
-          </div>
+    {:else if pendingTeachers.length === 0}
+      <div class="text-center py-12">
+        <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+          </svg>
         </div>
-        <div class="ml-4">
-          <p class="text-sm font-medium text-gray-600">Your Role</p>
-          <p class="text-lg font-semibold text-purple-600">Administrator</p>
-        </div>
+        <h3 class="heading-sm mb-2">All caught up!</h3>
+        <p class="text-body">No pending teacher applications to review.</p>
       </div>
-    </div>
+    {:else}
+      <div class="space-y-3">
+        {#each pendingTeachers as teacher}
+          <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg">
+            <div class="flex items-center space-x-3">
+              <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                <span class="text-sm font-medium text-gray-700">
+                  {teacher.full_name?.charAt(0)?.toUpperCase() || 'T'}
+                </span>
+              </div>
+              <div>
+                <p class="font-medium text-gray-900">{teacher.full_name || 'No name provided'}</p>
+                <p class="text-caption text-gray-500">
+                  Applied {new Date(teacher.created_at || '').toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            
+            <div class="action-group">
+              <button
+                onclick={() => approveTeacher(teacher.id, teacher.full_name || 'Teacher')}
+                disabled={actionLoading === teacher.id}
+                class="btn btn-success btn-sm"
+              >
+                {actionLoading === teacher.id ? 'Processing...' : 'Approve'}
+              </button>
+              <button
+                onclick={() => rejectTeacher(teacher.id, teacher.full_name || 'Teacher')}
+                disabled={actionLoading === teacher.id}
+                class="btn btn-danger btn-sm"
+              >
+                {actionLoading === teacher.id ? 'Processing...' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        {/each}
+      </div>
+    {/if}
   </div>
 </div>

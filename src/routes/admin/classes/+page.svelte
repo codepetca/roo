@@ -170,127 +170,151 @@
   }
 </script>
 
-<div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-  <div class="mb-8">
-    <h1 class="text-3xl font-bold text-gray-900">Class Management</h1>
-    <p class="mt-2 text-gray-600">Organize students into classes and manage class structure</p>
+<!-- Page Header -->
+<div class="page-header">
+  <div class="page-content py-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="heading-xl">Class Management</h1>
+        <p class="text-body mt-1">Organize students into classes and manage class structure</p>
+      </div>
+      <button
+        onclick={loadStudents}
+        disabled={loading}
+        class="btn btn-secondary btn-sm"
+      >
+        {loading ? 'Loading...' : 'Refresh'}
+      </button>
+    </div>
   </div>
+</div>
 
-  <!-- Action Buttons -->
-  <div class="mb-6 flex flex-wrap gap-3">
-    <button
-      onclick={() => showCreateClass = true}
-      class="btn btn-primary"
-    >
-      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-      </svg>
-      Create New Class
-    </button>
-    
-    <button
-      onclick={loadStudents}
-      disabled={loading}
-      class="btn btn-secondary"
-    >
-      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-      </svg>
-      {loading ? 'Loading...' : 'Refresh'}
-    </button>
-    
-    <a href="/admin/students" class="btn btn-secondary">
-      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-8.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-      </svg>
-      Manage Students
-    </a>
+<!-- Main Content -->
+<div class="page-content py-8 space-y-8">
+
+  <!-- Quick Actions -->
+  <div class="card">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="heading-md">Quick Actions</h2>
+    </div>
+    <div class="action-group">
+      <button
+        onclick={() => showCreateClass = true}
+        class="btn btn-primary"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Create New Class
+      </button>
+      
+      <a href="/admin/students" class="btn btn-secondary">
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-8.5a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+        </svg>
+        Manage Students
+      </a>
+    </div>
   </div>
 
   <!-- Classes Overview -->
-  {#if loading}
-    <div class="bg-white rounded-lg shadow p-6 text-center">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-      <p class="mt-2 text-gray-600">Loading classes...</p>
+  <div class="card">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="heading-md">Classes ({classStats.length})</h2>
     </div>
-  {:else}
-    <div class="grid gap-6">
-      {#each classStats as classData}
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <div class="flex items-center justify-between">
+
+    {#if loading}
+      <div class="flex items-center justify-center py-12">
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p class="text-body mt-3">Loading classes...</p>
+        </div>
+      </div>
+    {:else if classStats.length === 0}
+      <div class="text-center py-12">
+        <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+          </svg>
+        </div>
+        <h3 class="heading-sm mb-2">No classes found</h3>
+        <p class="text-body">Get started by creating your first class.</p>
+      </div>
+    {:else}
+      <div class="space-y-6">
+        {#each classStats as classData}
+          <div class="border border-gray-100 rounded-lg p-6">
+            <div class="flex items-center justify-between mb-4">
               <div class="flex items-center space-x-3">
-                <div class="flex-shrink-0">
-                  <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
-                    </svg>
-                  </div>
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                  </svg>
                 </div>
                 <div>
-                  <h3 class="text-lg font-medium text-gray-900">
-                    {classData.name}
-                  </h3>
-                  <p class="text-sm text-gray-500">
+                  <h3 class="heading-sm">{classData.name}</h3>
+                  <p class="text-caption text-gray-500">
                     {classData.students.length} student{classData.students.length !== 1 ? 's' : ''}
                   </p>
                 </div>
               </div>
               
-              <div class="flex items-center space-x-2">
-                {#if classData.name !== 'Unassigned'}
+              {#if classData.name !== 'Unassigned'}
+                <div class="action-group action-group-sm">
                   <button
                     onclick={() => startEditClass(classData.name)}
-                    class="text-blue-600 hover:text-blue-900 text-sm"
+                    class="btn btn-secondary btn-xs"
                   >
                     Rename
                   </button>
                   <button
                     onclick={() => deleteClass(classData.name)}
-                    class="text-red-600 hover:text-red-900 text-sm"
+                    class="btn btn-danger btn-xs"
                   >
                     Delete
                   </button>
-                {/if}
-              </div>
+                </div>
+              {/if}
             </div>
             
             <!-- Class Statistics -->
-            <div class="mt-4 grid grid-cols-3 gap-4">
-              <div class="text-center">
-                <div class="text-lg font-semibold text-green-600">{classData.active}</div>
-                <div class="text-xs text-gray-500">Active</div>
+            <div class="stat-group mb-4">
+              <div class="stat-item stat-item-sm">
+                <div class="text-center">
+                  <p class="text-sm font-semibold text-green-600">{classData.active}</p>
+                  <p class="text-caption text-gray-500">Active</p>
+                </div>
               </div>
-              <div class="text-center">
-                <div class="text-lg font-semibold text-red-600">{classData.disabled}</div>
-                <div class="text-xs text-gray-500">Disabled</div>
+              <div class="stat-item stat-item-sm">
+                <div class="text-center">
+                  <p class="text-sm font-semibold text-red-600">{classData.disabled}</p>
+                  <p class="text-caption text-gray-500">Disabled</p>
+                </div>
               </div>
-              <div class="text-center">
-                <div class="text-lg font-semibold text-yellow-600">{classData.suspended}</div>
-                <div class="text-xs text-gray-500">Suspended</div>
+              <div class="stat-item stat-item-sm">
+                <div class="text-center">
+                  <p class="text-sm font-semibold text-orange-600">{classData.suspended}</p>
+                  <p class="text-caption text-gray-500">Suspended</p>
+                </div>
               </div>
             </div>
-          </div>
-          
-          <!-- Students in Class -->
-          {#if classData.students.length > 0}
-            <div class="px-6 py-4">
-              <div class="grid gap-3">
+            
+            <!-- Students in Class -->
+            {#if classData.students.length > 0}
+              <div class="space-y-3">
                 {#each classData.students as student}
-                  <div class="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                  <div class="flex items-center justify-between p-3 bg-gray-25 rounded-lg">
                     <div class="flex items-center space-x-3">
-                      <div class="flex-shrink-0">
-                        <div class="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                          <span class="text-xs font-medium text-gray-700 uppercase">
-                            {student.full_name?.charAt(0) || 'S'}
-                          </span>
-                        </div>
+                      <div class="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                        <span class="text-xs font-medium text-gray-700 uppercase">
+                          {student.full_name?.charAt(0) || 'S'}
+                        </span>
                       </div>
                       <div>
-                        <div class="text-sm font-medium text-gray-900">
+                        <div class="font-medium text-gray-900">
                           {student.full_name || 'No name'}
                         </div>
-                        <div class="text-xs text-gray-500">
+                        <div class="text-caption text-gray-500">
                           {student.email}
                           {#if student.student_id}
                             • ID: {student.student_id}
@@ -300,17 +324,17 @@
                     </div>
                     
                     <div class="flex items-center space-x-2">
-                      <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full {
-                        student.account_status === 'disabled' ? 'bg-red-100 text-red-800' :
-                        student.account_status === 'suspended' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-green-100 text-green-800'
+                      <span class="badge {
+                        student.account_status === 'disabled' ? 'badge-danger' :
+                        student.account_status === 'suspended' ? 'badge-warning' :
+                        'badge-success'
                       }">
                         {student.account_status || 'active'}
                       </span>
                       
                       <select
                         onchange={(e) => moveStudentToClass(student.id, e.target.value || null)}
-                        class="text-xs border border-gray-300 rounded px-2 py-1"
+                        class="input input-sm w-auto"
                       >
                         <option value="">Move to...</option>
                         {#each classStats as otherClass}
@@ -325,16 +349,16 @@
                   </div>
                 {/each}
               </div>
-            </div>
-          {:else}
-            <div class="px-6 py-4 text-center text-gray-500">
-              <p class="text-sm">No students in this class</p>
-            </div>
-          {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
+            {:else}
+              <div class="text-center py-8">
+                <p class="text-body text-gray-500">No students in this class</p>
+              </div>
+            {/if}
+          </div>
+        {/each}
+      </div>
+    {/if}
+  </div>
 </div>
 
 <!-- Create Class Modal -->
@@ -346,7 +370,7 @@
 >
   <div slot="content">
     <div>
-      <label for={formIds.newClassName} class="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
+      <label for={formIds.newClassName} class="form-label">Class Name</label>
       <input
         id={formIds.newClassName}
         type="text"
@@ -360,18 +384,20 @@
   </div>
   
   <div slot="footer">
-    <button
-      onclick={createClass}
-      class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-    >
-      Create Class
-    </button>
-    <button
-      onclick={() => showCreateClass = false}
-      class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-    >
-      Cancel
-    </button>
+    <div class="action-group">
+      <button
+        onclick={createClass}
+        class="btn btn-primary"
+      >
+        Create Class
+      </button>
+      <button
+        onclick={() => showCreateClass = false}
+        class="btn btn-secondary"
+      >
+        Cancel
+      </button>
+    </div>
   </div>
 </AccessibleModal>
 
@@ -385,7 +411,7 @@
   <div slot="content">
     {#if editingClass}
       <div>
-        <label for={formIds.editClassName} class="block text-sm font-medium text-gray-700 mb-1">New Class Name</label>
+        <label for={formIds.editClassName} class="form-label">New Class Name</label>
         <input
           id={formIds.editClassName}
           type="text"
@@ -400,18 +426,20 @@
   
   <div slot="footer">
     {#if editingClass}
-      <button
-        onclick={() => renameClass(editingClass!, editClassName)}
-        class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-      >
-        Rename Class
-      </button>
-      <button
-        onclick={() => showEditClass = false}
-        class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-      >
-        Cancel
-      </button>
+      <div class="action-group">
+        <button
+          onclick={() => renameClass(editingClass!, editClassName)}
+          class="btn btn-primary"
+        >
+          Rename Class
+        </button>
+        <button
+          onclick={() => showEditClass = false}
+          class="btn btn-secondary"
+        >
+          Cancel
+        </button>
+      </div>
     {/if}
   </div>
 </AccessibleModal>
