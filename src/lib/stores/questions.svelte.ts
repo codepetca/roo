@@ -117,5 +117,8 @@ class QuestionsStore {
   archivedCount = $derived(this.archivedQuestions.length)
 }
 
+// Export the class for testing
+export { QuestionsStore }
+
 // Create a singleton instance
 export const questionsStore = new QuestionsStore()

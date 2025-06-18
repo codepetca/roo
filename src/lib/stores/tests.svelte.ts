@@ -165,5 +165,8 @@ class TestsStore {
   }
 }
 
+// Export the class for testing
+export { TestsStore }
+
 // Create singleton instance
 export const testsStore = new TestsStore()

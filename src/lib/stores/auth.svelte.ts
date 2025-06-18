@@ -279,6 +279,9 @@ class AuthStore {
   }
 }
 
+// Export the class for testing
+export { AuthStore }
+
 // Export singleton instance
 export const authStore = new AuthStore()
 
