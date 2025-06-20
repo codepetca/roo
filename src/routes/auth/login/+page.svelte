@@ -59,7 +59,7 @@
   <div class="max-w-md w-full space-y-8 p-8">
     <div class="text-center">
       <h2 class="text-3xl font-bold text-gray-900">Sign In</h2>
-      <p class="mt-2 text-gray-600">Access your Java Code Grader account</p>
+      <p class="mt-2 text-gray-600">Access your Codegrade account</p>
     </div>
 
     <form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-6">

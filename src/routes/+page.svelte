@@ -56,7 +56,7 @@
 <div class="min-h-screen flex items-center justify-center">
   <div class="max-w-md w-full space-y-8 p-8">
     <div class="text-center">
-      <h1 class="text-4xl font-bold text-gray-900 mb-2">Java Code Grader</h1>
+      <h1 class="text-4xl font-bold text-gray-900 mb-2">Codegrade</h1>
       <p class="text-gray-600 mb-8">
         AI-powered grading for handwritten Java code submissions
       </p>

@@ -337,7 +337,7 @@
           </div>
         </div>
 
-        <!-- Debug Info (remove this later) -->
+        <!-- Debug Info (remove this later)
         <div class="mb-4 p-4 bg-red-100 border-2 border-red-500 rounded text-sm font-bold">
           🐛 DEBUG: 
           Loading: {questionsStore.loading} | 
@@ -345,7 +345,7 @@
           Active: {questionsStore.activeQuestions.length} | 
           Filtered: {filteredQuestions.length} | 
           Error: {questionsStore.error || 'None'}
-        </div>
+        </div> -->
 
         <!-- Search and Filters -->
         <div class="mb-6 space-y-4">
@@ -358,8 +358,8 @@
             />
           </div>
 
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Filter by concepts:</label>
+          <fieldset>
+            <legend class="block text-sm font-medium text-gray-700 mb-2">Filter by concepts:</legend>
             <div class="flex flex-wrap gap-2">
               {#each javaConcepts as concept}
                 <label class="flex items-center">
@@ -373,7 +373,7 @@
                 </label>
               {/each}
             </div>
-          </div>
+          </fieldset>
 
           <div class="flex gap-2">
             <button
@@ -441,6 +441,15 @@
                     : 'bg-white border-gray-200 hover:bg-gray-50'
                 }"
                 onclick={() => toggleQuestionSelection(question.id)}
+                onkeydown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    toggleQuestionSelection(question.id)
+                  }
+                }}
+                role="button"
+                tabindex="0"
+                aria-label="Toggle selection for question: {question.question_text.substring(0, 50)}..."
               >
                 <div class="flex items-start gap-3">
                   <input

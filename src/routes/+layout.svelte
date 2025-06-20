@@ -1,10 +1,13 @@
 <script lang="ts">
   import '../app.css'
   import { onMount } from 'svelte'
+  import type { Snippet } from 'svelte'
   import { authStore } from '$lib/stores/auth.svelte.js'
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   import Toast from '$lib/components/Toast.svelte'
+
+  let { children }: { children: Snippet } = $props()
 
   async function handleSignOut() {
     await authStore.signOut()
@@ -51,7 +54,7 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
           <div class="flex items-center">
-            <h1 class="text-xl font-semibold text-gray-900">Java Code Grader</h1>
+            <h1 class="text-xl font-semibold text-gray-900">Codegrade</h1>
           </div>
           <div class="flex items-center space-x-4">
             {#if !authStore.isEmailVerified}
@@ -127,7 +130,7 @@
 
   <!-- Main Content -->
   <main class="{authStore.user ? 'pt-4' : ''}">
-    <slot />
+    {@render children?.()}
   </main>
   
   <!-- Toast notifications -->

@@ -2,23 +2,29 @@
   import { onMount, createEventDispatcher } from 'svelte'
   import { trapFocus } from '$lib/utils/accessibility.js'
   
+  import type { Snippet } from 'svelte'
+  
   interface Props {
     isOpen: boolean
     title: string
     size?: 'sm' | 'md' | 'lg' | 'xl'
     closeOnBackdrop?: boolean
+    content?: Snippet
+    footer?: Snippet
   }
   
   let {
     isOpen = false,
     title,
     size = 'md',
-    closeOnBackdrop = true
+    closeOnBackdrop = true,
+    content,
+    footer
   }: Props = $props()
   
   const dispatch = createEventDispatcher()
   
-  let modal: HTMLDivElement
+  let modal = $state<HTMLDivElement>()
   let cleanup: (() => void) | null = null
   
   const sizeClasses = {
@@ -113,16 +119,16 @@
             </button>
           </div>
           
-          <!-- Content slot -->
+          <!-- Content -->
           <div class="mt-2">
-            <slot name="content" />
+            {@render content?.()}
           </div>
         </div>
         
         <!-- Footer -->
-        {#if $$slots.footer}
+        {#if footer}
           <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-            <slot name="footer" />
+            {@render footer?.()}
           </div>
         {/if}
       </div>

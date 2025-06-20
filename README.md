@@ -1,4 +1,4 @@
-# Java Code Grader MVP
+# Codegrade
 
 An AI-powered web application for grading handwritten Java code submissions from high school students (grades 9-12) in Ontario. Built with SvelteKit, Supabase, and Claude AI.
 
@@ -54,7 +54,7 @@ VITE_SUPABASE_ANON_KEY=your_anon_key
 
 ### 2. Database Setup
 
-The database tables are already created in the Roo Supabase project:
+The database tables are already created in the Codegrade Supabase project:
 - `profiles` - User profiles with roles (teacher/student)
 - `java_questions` - Generated coding questions with rubrics
 - `java_submissions` - Student submissions and grades
