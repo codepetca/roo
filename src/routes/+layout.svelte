@@ -6,8 +6,15 @@
   import { goto } from '$app/navigation'
   import { page } from '$app/stores'
   import Toast from '$lib/components/Toast.svelte'
+  import Sidebar from '$lib/components/Sidebar.svelte'
+  import Icon from '$lib/components/Icon.svelte'
 
   let { children }: { children: Snippet } = $props()
+  let sidebarOpen = $state(false)
+
+  function toggleSidebar() {
+    sidebarOpen = !sidebarOpen
+  }
 
   async function handleSignOut() {
     await authStore.signOut()
@@ -48,53 +55,39 @@
 </script>
 
 <div class="min-h-screen bg-gray-50">
-  <!-- Navigation -->
   {#if authStore.user}
-    <nav class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex items-center">
-            <h1 class="text-xl font-semibold text-gray-900">Codegrade</h1>
+    <div class="flex h-screen">
+      <!-- Sidebar -->
+      <Sidebar isOpen={sidebarOpen} onClose={() => sidebarOpen = false} />
+      
+      <!-- Main content area -->
+      <div class="flex-1 flex flex-col lg:ml-0 min-w-0">
+        <!-- Mobile header -->
+        <header class="lg:hidden bg-white border-b border-gray-200 px-4 py-3">
+          <div class="flex items-center justify-between">
+            <button
+              onclick={toggleSidebar}
+              class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+              aria-label="Open sidebar"
+            >
+              <Icon name="bars-3" size="md" />
+            </button>
+            <h1 class="text-lg font-semibold text-gray-900">Codegrade</h1>
+            <div class="w-10"></div> <!-- Spacer for centering -->
           </div>
-          <div class="flex items-center space-x-4">
-            {#if !authStore.isEmailVerified}
-              <span class="text-sm text-amber-700 bg-amber-50 px-3 py-1 rounded-md">
-                Email verification required
-              </span>
-            {:else if authStore.isTeacherPending}
-              <span class="text-sm text-orange-700 bg-orange-50 px-3 py-1 rounded-md">
-                Teacher approval pending
-              </span>
-            {:else if authStore.canAccessTeacherFeatures}
-              <div class="flex items-center space-x-3">
-                <a href="/teacher" class="text-blue-600 hover:text-blue-800">Dashboard</a>
-                <a href="/teacher/archive" class="text-blue-600 hover:text-blue-800">Archive</a>
-                <a href="/teacher/tests" class="text-blue-600 hover:text-blue-800">Tests</a>
-                <a href="/teacher/tests/create" class="text-blue-600 hover:text-blue-800">Create Test</a>
-                {#if authStore.isAdmin}
-                  <a href="/admin" class="text-purple-600 hover:text-purple-800">Admin</a>
-                {:else if authStore.isTeacher}
-                  <a href="/admin/students" class="text-green-600 hover:text-green-800">Students</a>
-                  <a href="/admin/classes" class="text-purple-600 hover:text-purple-800">Classes</a>
-                {/if}
-              </div>
-            {:else if authStore.isStudent}
-              <div class="flex items-center space-x-3">
-                <a href="/student" class="text-blue-600 hover:text-blue-800">Dashboard</a>
-              </div>
-            {/if}
-            
-            {#if authStore.profile}
-              <span class="text-sm text-gray-700 border-l border-gray-300 pl-4">
-                {authStore.profile.full_name} ({authStore.profile.role})
-              </span>
-            {/if}
-            
-            <button onclick={handleSignOut} class="btn btn-secondary">Sign Out</button>
-          </div>
-        </div>
+        </header>
+        
+        <!-- Page content -->
+        <main class="flex-1 overflow-auto bg-gray-50">
+          {@render children?.()}
+        </main>
       </div>
-    </nav>
+    </div>
+  {:else}
+    <!-- Unauthenticated layout -->
+    <main>
+      {@render children?.()}
+    </main>
   {/if}
 
   <!-- Auth Loading State -->
@@ -128,10 +121,6 @@
     </div>
   {/if}
 
-  <!-- Main Content -->
-  <main class="{authStore.user ? 'pt-4' : ''}">
-    {@render children?.()}
-  </main>
   
   <!-- Toast notifications -->
   <Toast />

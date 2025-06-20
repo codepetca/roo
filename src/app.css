@@ -160,4 +160,125 @@
   .action-group-vertical {
     @apply flex flex-col gap-2;
   }
+
+  /* Sidebar & Navigation */
+  .sidebar {
+    @apply w-64 bg-white border-r border-gray-200 flex flex-col;
+  }
+
+  .sidebar-header {
+    @apply px-6 py-4 border-b border-gray-100;
+  }
+
+  .sidebar-nav {
+    @apply flex-1 px-4 py-4 space-y-1;
+  }
+
+  .sidebar-nav-item {
+    @apply flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200;
+  }
+
+  .sidebar-nav-item-active {
+    @apply bg-gray-900 text-white;
+  }
+
+  .sidebar-nav-item-inactive {
+    @apply text-gray-700 hover:bg-gray-50 hover:text-gray-900;
+  }
+
+  .sidebar-footer {
+    @apply border-t border-gray-100 px-4 py-4 space-y-1;
+  }
+
+  /* Icon utilities */
+  .icon-nav {
+    @apply w-5 h-5 mr-3 transition-colors;
+  }
+
+  .icon-button {
+    @apply p-2 rounded-lg transition-colors;
+  }
+
+  .icon-button-ghost {
+    @apply text-gray-500 hover:text-gray-700 hover:bg-gray-100;
+  }
+
+  /* Enhanced form components */
+  .date-picker {
+    @apply relative;
+  }
+
+  .date-picker-input {
+    @apply input pr-10 cursor-pointer;
+  }
+
+  .date-picker-icon {
+    @apply absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors;
+  }
+
+  .date-picker-dropdown {
+    @apply absolute top-full left-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-50 p-4 min-w-80;
+  }
+
+  .calendar-header {
+    @apply flex items-center justify-between mb-4;
+  }
+
+  .calendar-nav-button {
+    @apply p-1 rounded-lg hover:bg-gray-100 transition-colors;
+  }
+
+  .calendar-title {
+    @apply text-sm font-semibold text-gray-900;
+  }
+
+  .calendar-grid {
+    @apply grid grid-cols-7 gap-1;
+  }
+
+  .calendar-day-header {
+    @apply h-8 flex items-center justify-center text-xs font-medium text-gray-500;
+  }
+
+  .calendar-day {
+    @apply h-8 w-8 rounded-lg text-sm transition-all duration-200 flex items-center justify-center;
+  }
+
+  .calendar-day-selected {
+    @apply bg-gray-900 text-white;
+  }
+
+  .calendar-day-today {
+    @apply bg-blue-50 text-blue-600 font-medium;
+  }
+
+  .calendar-day-current-month {
+    @apply text-gray-900 hover:bg-gray-100;
+  }
+
+  .calendar-day-other-month {
+    @apply text-gray-400 hover:bg-gray-50;
+  }
+
+  /* Mobile responsiveness utilities */
+  .mobile-header {
+    @apply lg:hidden bg-white border-b border-gray-200 px-4 py-3;
+  }
+
+  .mobile-menu-button {
+    @apply p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors;
+  }
+
+  .mobile-backdrop {
+    @apply fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden;
+  }
+
+  /* Content layout utilities */
+  .main-content {
+    @apply flex-1 overflow-auto bg-gray-50;
+  }
+
+  .content-wrapper {
+    @apply flex-1 flex flex-col lg:ml-0 min-w-0;
+  }
 }

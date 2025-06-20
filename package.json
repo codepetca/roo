@@ -50,6 +50,7 @@
 		"@codemirror/state": "^6.5.2",
 		"@codemirror/theme-one-dark": "^6.1.2",
 		"@codemirror/view": "^6.37.2",
+		"@heroicons/react": "^2.2.0",
 		"@supabase/supabase-js": "^2.45.0",
 		"codemirror": "^6.0.1",
 		"dotenv": "^16.5.0",
