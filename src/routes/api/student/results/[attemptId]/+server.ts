@@ -42,12 +42,10 @@ export const GET: RequestHandler = async ({ params, url }) => {
       .from('test_answers')
       .select(`
         *,
-        test_questions!inner (
-          question_id,
-          questions (
-            question_text,
-            concepts
-          )
+        questions (
+          id,
+          question_text,
+          concepts
         )
       `)
       .eq('attempt_id', attemptId)
@@ -61,8 +59,8 @@ export const GET: RequestHandler = async ({ params, url }) => {
     // Flatten the data structure for easier frontend consumption
     const processedAnswers = answers?.map(answer => ({
       ...answer,
-      question_text: answer.test_questions?.questions?.question_text || null,
-      concepts: answer.test_questions?.questions?.concepts || []
+      question_text: answer.questions?.question_text || null,
+      concepts: answer.questions?.concepts || []
     })) || []
 
     return json({
