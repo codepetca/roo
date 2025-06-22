@@ -1,11 +1,8 @@
 [build]
   command = "npm run build"
-  publish = "build"
 
 [build.environment]
   NODE_VERSION = "20"
-
-# Redirects handled by _redirects file
 
 # Security headers
 [[headers]]
@@ -16,22 +13,3 @@
     X-XSS-Protection = "1; mode=block"
     Referrer-Policy = "strict-origin-when-cross-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-
-# Cache static assets
-[[headers]]
-  for = "/assets/*"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# Cache fonts
-[[headers]]
-  for = "/*.woff2"
-  [headers.values]
-    Cache-Control = "public, max-age=31536000, immutable"
-
-# Function timeout (for API routes)
-[functions]
-  node_bundler = "esbuild"
-  
-[functions."**"]
-  timeout = 30
