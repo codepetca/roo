@@ -18,11 +18,8 @@ class AuthStore {
   }
 
   private async initializeAuth() {
-    console.log('Initializing auth system...')
-    
     // Set up auth state change listener (fast, non-blocking)
     supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.id)
       this.error = null
       this.user = session?.user ?? null
 
@@ -31,41 +28,30 @@ class AuthStore {
         this.handleUserSession(session.user)
       } else {
         this.profile = null
-        console.log('No session, cleared profile')
       }
-
-      console.log('Auth state change processed')
     })
 
     // Fast initial session check
     try {
-      console.log('Getting initial session...')
       const { data: { session } } = await this.withTimeout(
         supabase.auth.getSession(),
         1000 // Much shorter timeout
       )
       
       if (session?.user) {
-        console.log('Initial session found:', session.user.id)
         this.user = session.user
         this.handleUserSession(session.user)
-      } else {
-        console.log('No initial session')
       }
     } catch (error) {
-      console.log('Session check failed, but continuing:', error)
       // Don't set error - just continue without blocking
     }
     
     // Always complete initialization quickly
     this.loading = false
     this.initialized = true
-    console.log('Auth initialization complete')
   }
 
   private async handleUserSession(user: User) {
-    console.log('Handling user session for:', user.id)
-    
     // FAST PATH: Create fallback profile immediately
     this.createFallbackProfile(user)
     
@@ -75,7 +61,6 @@ class AuthStore {
 
   private async loadProfileInBackground(userId: string) {
     try {
-      console.log('Loading profile in background for:', userId)
       const result = await this.withTimeout(
         supabase.from('profiles').select('*').eq('id', userId).single(),
         2000 // Shorter timeout for background load
@@ -89,17 +74,14 @@ class AuthStore {
           created_at: data.created_at ?? new Date().toISOString(),
         }
         
-        console.log('Background profile loaded:', userProfileData)
         this.profile = userProfileData
       }
     } catch (error) {
-      console.log('Background profile load failed (using fallback):', error)
       // Fallback is already set, no need to do anything
     }
   }
 
   private createFallbackProfile(user: User) {
-    console.log('Creating fallback profile with user metadata:', user.user_metadata)
     const fallbackProfile: UserProfile = {
       id: user.id,
       full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
@@ -108,7 +90,6 @@ class AuthStore {
     }
     
     this.profile = fallbackProfile
-    console.log('Created fallback profile:', fallbackProfile)
   }
 
   private async withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
@@ -133,13 +114,10 @@ class AuthStore {
         if (!createError) {
           // Profile created successfully, load it
           await this.loadProfile(user.id)
-          console.log('Profile created and loaded from metadata')
         } else {
-          console.error('Manual profile creation failed:', createError)
           this.setFallbackProfile(user)
         }
       } catch (createError) {
-        console.error('Profile creation attempt failed:', createError)
         this.setFallbackProfile(user)
       }
     } else {
@@ -151,7 +129,6 @@ class AuthStore {
         created_at: user.created_at || new Date().toISOString(),
       }
       this.profile = basicFallbackProfile
-      console.log('Set basic fallback profile')
     }
   }
 
@@ -163,7 +140,6 @@ class AuthStore {
       created_at: user.created_at || new Date().toISOString(),
     }
     this.profile = fallbackProfile
-    console.log('Set fallback profile from metadata')
   }
 
 
@@ -204,7 +180,6 @@ class AuthStore {
   }
 
   async signOut() {
-    console.log('Signing out...')
     this.loading = true
     
     try {
@@ -217,11 +192,9 @@ class AuthStore {
       this.error = null
       this.loading = false
 
-      console.log('Sign out successful')
       // Force page reload to clear any cached state
       window.location.href = '/'
     } catch (error) {
-      console.error('Sign out error:', error)
       // Force reload anyway to clear state
       this.user = null
       this.profile = null
@@ -232,7 +205,6 @@ class AuthStore {
   }
 
   async refreshSession() {
-    console.log('Refreshing session...')
     this.loading = true
     this.error = null
     
@@ -243,23 +215,19 @@ class AuthStore {
       )
       
       if (error) {
-        console.error('Session refresh error:', error)
         this.error = 'Session refresh failed'
         return false
       }
       
       if (session?.user) {
-        console.log('Session refreshed successfully')
         await this.handleUserSession(session.user)
         return true
       } else {
-        console.log('No session after refresh')
         this.user = null
         this.profile = null
         return false
       }
     } catch (error) {
-      console.error('Session refresh failed:', error)
       this.error = 'Session refresh failed'
       return false
     } finally {

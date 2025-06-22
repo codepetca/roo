@@ -32,7 +32,7 @@
         error = result.error || 'Failed to load results'
       }
     } catch (err) {
-      console.error('Error loading results:', err)
+      // Error loading results
       error = 'Failed to load results'
     } finally {
       loading = false

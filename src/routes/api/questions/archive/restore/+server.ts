@@ -16,13 +16,11 @@ export async function POST({ request }) {
       .in('id', questionIds)
 
     if (error) {
-      console.error('Restore questions error:', error)
       throw error
     }
 
     return json({ success: true, restoredCount: questionIds.length })
   } catch (error) {
-    console.error('Restore questions error:', error)
     return json({ error: 'Failed to restore questions' }, { status: 500 })
   }
 }

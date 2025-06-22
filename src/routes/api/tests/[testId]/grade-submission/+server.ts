@@ -35,7 +35,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
       .eq('attempt_id', attemptId)
 
     if (answersError) {
-      console.error('Database error fetching answers:', answersError)
       return json({ error: 'Failed to fetch answers for grading' }, { status: 500 })
     }
 
@@ -85,11 +84,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
         const questionText = answer.questions?.question_text || ''
         const rubric = answer.questions?.rubric || {}
 
-        console.log('Grading answer:', {
-          answerId: answer.id,
-          questionText: questionText.slice(0, 100),
-          codeLength: answer.answer_code?.length
-        })
 
         // For online test submissions, we don't have images, so we'll grade the code directly
         // Create a simulated grading response since gradeCode expects an image
@@ -123,7 +117,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
         gradedAnswers++
 
       } catch (error) {
-        console.error(`Error grading answer ${answer.id}:`, error)
         // Mark as grading failed
         await supabase
           .from('test_answers')
@@ -152,7 +145,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
       .eq('id', attemptId)
 
     if (updateError) {
-      console.error('Error updating attempt with final score:', updateError)
       return json({ error: 'Failed to update final score' }, { status: 500 })
     }
 
@@ -165,7 +157,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
     })
 
   } catch (error) {
-    console.error('Grade submission error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to grade submission' 
     }, { status: 500 })
@@ -200,7 +191,6 @@ async function gradeCodeText(code: string, questionText: string, rubric: any) {
 
     return { scores, feedback }
   } catch (error) {
-    console.error('Error in text grading:', error)
     return {
       scores: { communication: 2, correctness: 2, logic: 2 },
       feedback: { general: 'Automatic grading completed with basic analysis' }

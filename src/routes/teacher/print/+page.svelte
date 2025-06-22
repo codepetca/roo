@@ -23,7 +23,7 @@
       const data = await response.json()
       questions = data.questions || []
     } catch (error: unknown) {
-      console.error('Failed to load questions:', error)
+      // Failed to load questions
     }
   }
 

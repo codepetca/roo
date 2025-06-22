@@ -18,25 +18,20 @@ class QuestionsStore {
   }
 
   async loadQuestions(): Promise<void> {
-    console.log('Loading questions...')
     this.loading = true
     this.error = null
     
     try {
       const response = await fetch('/api/questions')
-      console.log('Questions fetch response:', response.ok, response.status)
       const data: APIResponse<Question[]> = await response.json()
-      console.log('Questions API response:', data)
       
       if (!response.ok || !data.success) {
         throw new Error(data.error?.message || 'Failed to fetch questions')
       }
       
       this.questions = data.data || []
-      console.log('Loaded questions count:', this.questions.length)
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Unknown error'
-      console.error('Failed to load questions:', err)
     } finally {
       this.loading = false
     }
@@ -55,7 +50,6 @@ class QuestionsStore {
 
       if (!response.ok) {
         const errorData: APIResponse = await response.json()
-        console.error('Archive API error:', errorData)
         throw new Error(errorData.error?.message || 'Failed to archive question')
       }
 
@@ -71,12 +65,10 @@ class QuestionsStore {
         window.dispatchEvent(event)
       }
       
-      console.log('Question archived successfully:', questionId)
       return { success: true }
     } catch (err) {
       const error = err instanceof Error ? err.message : 'Unknown error'
       this.error = error
-      console.error('Archive question failed:', err)
       throw err
     }
   }

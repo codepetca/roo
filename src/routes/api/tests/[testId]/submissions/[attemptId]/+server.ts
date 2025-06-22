@@ -20,7 +20,6 @@ export const GET: RequestHandler = async ({ params }) => {
       .single()
 
     if (attemptError || !attempt) {
-      console.error('Database error fetching attempt:', attemptError)
       return json({ error: 'Submission not found' }, { status: 404 })
     }
 
@@ -39,7 +38,6 @@ export const GET: RequestHandler = async ({ params }) => {
       .order('created_at', { ascending: true })
 
     if (answersError) {
-      console.error('Database error fetching answers:', answersError)
       return json({ error: 'Failed to fetch answers' }, { status: 500 })
     }
 
@@ -82,7 +80,6 @@ export const GET: RequestHandler = async ({ params }) => {
     })
 
   } catch (error) {
-    console.error('Fetch submission details error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to fetch submission details' 
     }, { status: 500 })

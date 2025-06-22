@@ -104,16 +104,12 @@ export class PerformanceMonitor {
   endMeasurement(name: string): number {
     const startTime = this.measurements.get(name);
     if (!startTime) {
-      console.warn(`No start measurement found for: ${name}`);
       return 0;
     }
     
     const duration = performance.now() - startTime;
     this.measurements.delete(name);
     
-    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-      console.log(`⚡ ${name}: ${duration.toFixed(2)}ms`);
-    }
     
     return duration;
   }
@@ -172,7 +168,7 @@ export function createOptimizedImageLoader() {
           img.src = src;
         });
       } catch (error) {
-        console.error('Image optimization failed:', error);
+        // Image optimization failed
         return src;
       }
     },
@@ -197,7 +193,7 @@ export function createCleanupManager() {
         try {
           fn();
         } catch (error) {
-          console.error('Cleanup function failed:', error);
+          // Cleanup function failed
         }
       });
       cleanupFunctions.length = 0;

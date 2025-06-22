@@ -7,7 +7,6 @@ export const GET: RequestHandler = async ({ url }) => {
     const studentId = url.searchParams.get('studentId')
     const teacherId = url.searchParams.get('teacherId')
 
-    console.log('Submissions API called with:', { studentId, teacherId })
 
     let query = supabase
       .from('submissions')
@@ -30,13 +29,10 @@ export const GET: RequestHandler = async ({ url }) => {
       return json(response, { status: 400 })
     }
 
-    console.log('Executing submissions query...')
     const { data: submissions, error } = await query
 
-    console.log('Submissions query result:', { submissions: submissions?.length, error })
 
     if (error) {
-      console.error('Submissions query error:', error)
       throw error
     }
 
@@ -46,7 +42,6 @@ export const GET: RequestHandler = async ({ url }) => {
     }
     return json(response)
   } catch (error) {
-    console.error('Fetch submissions error:', error)
     const response: APIResponse = { 
       success: false, 
       error: { message: 'Failed to fetch submissions' }

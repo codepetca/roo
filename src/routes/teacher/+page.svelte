@@ -125,29 +125,22 @@
 
 
   async function loadRecentSubmissions(): Promise<void> {
-    console.log('Loading submissions for user:', authStore.user?.id)
     if (!authStore.user?.id) {
-      console.log('No user ID, skipping submissions load')
       return
     }
     
     try {
       const url = `/api/submissions?teacherId=${authStore.user.id}`
-      console.log('Fetching submissions from:', url)
       const fetchResponse = await fetch(url)
       const responseData: APIResponse<SubmissionWithRelations[]> = await fetchResponse.json()
-
-      console.log('Submissions API response:', { ok: fetchResponse.ok, responseData })
 
       if (!fetchResponse.ok || !responseData.success) {
         throw new Error(responseData.error?.message || 'Failed to load submissions')
       }
 
       recentSubmissions = responseData.data || []
-      console.log('Loaded submissions:', recentSubmissions.length)
     } catch (error: unknown) {
-      console.error('Failed to load submissions:', error)
-      // Optionally add a toast message here for the user
+      // Failed to load submissions - could show toast to user
     }
   }
 
@@ -252,12 +245,6 @@
   }
 
   onMount(async () => {
-    console.log('Teacher page mounted, auth state:', {
-      user: authStore.user?.id,
-      profile: authStore.profile?.role,
-      loading: authStore.loading
-    })
-    
     // Store handles loading questions automatically
     await loadRecentSubmissions()
   })

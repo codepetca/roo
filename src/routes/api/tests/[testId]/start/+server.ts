@@ -67,7 +67,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
       .single()
 
     if (attemptError) {
-      console.error('Database error creating attempt:', attemptError)
       return json({ error: 'Failed to start test' }, { status: 500 })
     }
 
@@ -79,7 +78,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
       .order('question_order')
 
     if (questionsError) {
-      console.error('Error fetching test questions:', questionsError)
       return json({ error: 'Failed to initialize test' }, { status: 500 })
     }
 
@@ -95,7 +93,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
       .insert(initialAnswers)
 
     if (answersError) {
-      console.error('Error creating initial answers:', answersError)
       // Clean up attempt if answers failed to create
       await supabase.from('test_attempts').delete().eq('id', attempt.id)
       return json({ error: 'Failed to initialize answers' }, { status: 500 })
@@ -107,7 +104,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
     })
 
   } catch (error) {
-    console.error('Start test error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to start test' 
     }, { status: 500 })

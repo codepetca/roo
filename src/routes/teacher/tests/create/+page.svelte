@@ -45,10 +45,6 @@
   
   // Update filtered questions when dependencies change
   $effect(() => {
-    console.log('EFFECT CALLED: questionsStore.activeQuestions.length =', questionsStore.activeQuestions.length)
-    console.log('Search term:', searchTerm)
-    console.log('Selected concepts:', selectedConcepts)
-    
     if (questionsStore.activeQuestions.length === 0) {
       filteredQuestions = []
       return
@@ -68,12 +64,9 @@
         (question.concepts && Array.isArray(question.concepts) &&
          selectedConcepts.some(concept => question.concepts.includes(concept)))
 
-      console.log(`Question ${question.id}: search=${matchesSearch}, concepts=${matchesConcepts}, concepts=`, question.concepts)
-      
       return matchesSearch && matchesConcepts
     })
     
-    console.log('Filtered result:', filtered.length, 'questions')
     filteredQuestions = filtered
   })
 
@@ -132,7 +125,6 @@
     creating = true
 
     try {
-      console.log('Creating test with user:', authStore.user?.id)
       if (!authStore.user?.id) {
         alert('You must be logged in to create a test')
         return
@@ -160,7 +152,7 @@
         alert(`Failed to create test: ${result.error}`)
       }
     } catch (error) {
-      console.error('Error creating test:', error)
+      // Error creating test
       alert('Failed to create test. Please try again.')
     } finally {
       creating = false
@@ -168,11 +160,7 @@
   }
 
   onMount(async () => {
-    console.log('Loading questions...')
     await questionsStore.loadQuestions()
-    console.log('Questions loaded:', questionsStore.questions.length)
-    console.log('Active questions:', questionsStore.activeQuestions.length)
-    console.log('Error:', questionsStore.error)
     
     // Set default end date to 1 week from now
     const nextWeek = new Date()

@@ -9,17 +9,8 @@
   
   // Auto-redirect authenticated users to their dashboard
   $effect(() => {
-    console.log('Effect triggered:', { 
-      user: authStore.user?.id, 
-      profile: authStore.profile?.role, 
-      profileFull: authStore.profile,
-      loading: authStore.loading, 
-      url: $page.url.pathname 
-    })
-    
     // Only redirect if we're on the landing page (/)
     if (!authStore.loading && authStore.user && authStore.profile && $page.url.pathname === '/') {
-      console.log('Redirecting to dashboard:', authStore.profile.role)
       if (authStore.profile.role === 'teacher') {
         goto('/teacher')
       } else if (authStore.profile.role === 'student') {
@@ -41,12 +32,10 @@
   })
   
   function forceRedirect() {
-    console.log('Force redirecting to teacher dashboard')
     goto('/teacher')
   }
   
   function clearAuth() {
-    console.log('Clearing auth state')
     localStorage.clear()
     sessionStorage.clear()
     window.location.reload()

@@ -26,11 +26,8 @@
   
   // Handle auth state and provide user feedback
   $effect(() => {
-    console.log('Layout - User:', authStore.user?.id, 'Profile:', authStore.profile?.role, 'Loading:', authStore.loading)
-    
     // Only try refresh once per session
     if (authStore.error && authStore.user && !refreshAttempted) {
-      console.log('Auth error detected, attempting session refresh...')
       refreshAttempted = true
       authStore.refreshSession()
     }
@@ -42,10 +39,8 @@
     const isPendingApprovalPage = currentPath === '/auth/pending-approval'
     
     if (authStore.user && !authStore.isEmailVerified && !isAuthPage && !isPublicPage && authStore.initialized) {
-      console.log('User email not verified, redirecting to verification page')
       goto('/auth/verify-email')
     } else if (authStore.user && authStore.isEmailVerified && authStore.isTeacherPending && !isAuthPage && !isPublicPage && !isPendingApprovalPage && authStore.initialized) {
-      console.log('Teacher account pending approval, redirecting to pending approval page')
       goto('/auth/pending-approval')
     }
   })

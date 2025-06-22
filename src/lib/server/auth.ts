@@ -28,7 +28,6 @@ export async function getAuthenticatedUser(event: RequestEvent) {
     }
     return user
   } catch (error) {
-    console.error('Auth verification failed:', error)
     return null
   }
 }

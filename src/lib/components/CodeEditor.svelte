@@ -71,7 +71,6 @@
   function createEditor() {
     if (!editorContainer) return
 
-    console.log('Creating editor with value:', value, 'readonly:', readonly)
 
     // Start with minimal extensions and build up
     const extensions = []
@@ -97,26 +96,22 @@
         extensions.push(lightTheme)
       }
       
-      console.log('Extensions created successfully:', extensions.length)
     } catch (error) {
-      console.error('Error creating extensions:', error)
+      // Error creating extensions - fallback will be used
     }
 
     try {
-      console.log('Creating EditorState with extensions:', extensions.length)
       const state = EditorState.create({
         doc: value,
         extensions
       })
 
-      console.log('Creating EditorView...')
       editorView = new EditorView({
         state,
         parent: editorContainer
       })
-      console.log('EditorView created successfully')
     } catch (error) {
-      console.error('Error creating editor:', error)
+      // Error creating editor - using fallback
       // Create a fallback simple editor
       editorView = new EditorView({
         state: EditorState.create({

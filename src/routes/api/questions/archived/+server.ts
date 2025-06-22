@@ -13,7 +13,6 @@ export async function GET() {
 
     return json({ questions })
   } catch (error) {
-    console.error('Fetch archived questions error:', error)
     return json({ error: 'Failed to fetch archived questions' }, { status: 500 })
   }
 }

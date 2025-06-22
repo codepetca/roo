@@ -43,7 +43,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
       .single()
 
     if (submitError) {
-      console.error('Database error submitting test:', submitError)
       return json({ error: 'Failed to submit test' }, { status: 500 })
     }
 
@@ -70,7 +69,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
           gradingResult = gradeData.results
         }
       } catch (gradeError) {
-        console.error('Error grading immediately:', gradeError)
         // Don't fail the submission if grading fails
       }
     }
@@ -83,7 +81,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
     })
 
   } catch (error) {
-    console.error('Submit test error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to submit test' 
     }, { status: 500 })

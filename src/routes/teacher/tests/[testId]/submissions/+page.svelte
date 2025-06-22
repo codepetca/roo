@@ -30,13 +30,11 @@
     error = null
 
     try {
-      console.log('Loading submissions for test:', testId, 'teacher:', authStore.user?.id)
-      
+        
       // Load test details
       const testResponse = await fetch(`/api/tests/${testId}`)
       const testResult = await testResponse.json()
       
-      console.log('Test response:', testResponse.status, testResult)
       
       if (testResponse.ok) {
         test = testResult.test
@@ -46,17 +44,15 @@
       const response = await fetch(`/api/tests/${testId}/submissions?teacherId=${authStore.user.id}`)
       const result = await response.json()
 
-      console.log('Submissions response:', response.status, result)
 
       if (response.ok) {
         submissions = result.submissions || []
-        console.log('Loaded submissions:', submissions.length, submissions)
       } else {
         error = result.error || 'Failed to load submissions'
-        console.error('Submissions error:', error)
+        // Submissions error
       }
     } catch (err) {
-      console.error('Error loading submissions:', err)
+      // Error loading submissions
       error = 'Failed to load submissions'
     } finally {
       loading = false
@@ -75,7 +71,7 @@
         alert(`Failed to load submission details: ${result.error}`)
       }
     } catch (error) {
-      console.error('Error loading submission details:', error)
+      // Error loading submission details
       alert('Failed to load submission details')
     }
   }
@@ -114,7 +110,7 @@
         alert(`Grading failed: ${result.error}`)
       }
     } catch (error) {
-      console.error('Error grading submissions:', error)
+      // Error grading submissions
       alert('Failed to grade submissions')
     } finally {
       gradingAll = false
@@ -143,7 +139,7 @@
         alert(`Grading failed: ${result.error}`)
       }
     } catch (error) {
-      console.error('Error grading submission:', error)
+      // Error grading submission
       alert('Failed to grade submission')
     }
   }

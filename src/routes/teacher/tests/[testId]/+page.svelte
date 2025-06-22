@@ -44,7 +44,7 @@
       
       lastUpdate = new Date()
     } catch (err) {
-      console.error('Error loading test data:', err)
+      // Error loading test data
       error = err instanceof Error ? err.message : 'Failed to load test data'
     } finally {
       loading = false
@@ -62,7 +62,7 @@
         attempts = result.attempts || []
       }
     } catch (err) {
-      console.error('Error loading attempts:', err)
+      // Error loading attempts
     }
   }
 
@@ -82,7 +82,7 @@
         alert(`Failed to publish test: ${result.error}`)
       }
     } catch (error) {
-      console.error('Error publishing test:', error)
+      // Error publishing test
       alert('Failed to publish test')
     } finally {
       publishingTest = false
@@ -109,7 +109,7 @@
         alert(`Grading failed: ${result.error}`)
       }
     } catch (error) {
-      console.error('Error grading submissions:', error)
+      // Error grading submissions
       alert('Failed to grade submissions')
     } finally {
       gradingAll = false
@@ -151,7 +151,7 @@
         alert('Failed to export results')
       }
     } catch (error) {
-      console.error('Error exporting results:', error)
+      // Error exporting results
       alert('Failed to export results')
     }
   }

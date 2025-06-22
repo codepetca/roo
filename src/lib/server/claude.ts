@@ -28,7 +28,6 @@ function countCodeLines(code: string): number {
 function validateSolutionLength(solution: any): boolean {
   if (!solution || !solution.code) return false
   const lineCount = countCodeLines(solution.code)
-  console.log(`Solution has ${lineCount} lines`)
   return lineCount <= 12
 }
 
@@ -37,23 +36,17 @@ export async function generateQuestion(concepts: JavaConcept[]): Promise<Questio
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      console.log(`Generating question for concepts: ${concepts.join(', ')} (attempt ${attempt}/${maxAttempts})`)
-      
       const questionData = await generateQuestionAttempt(concepts, attempt)
       
       // Validate solution length
       if (validateSolutionLength(questionData.solution)) {
-        console.log('✅ Question generated with valid solution length')
         return questionData
       } else {
-        console.log(`❌ Solution too long (attempt ${attempt}), regenerating simpler version...`)
         if (attempt === maxAttempts) {
-          console.log('⚠️ All attempts failed, using last generated question anyway')
           return questionData
         }
       }
     } catch (error) {
-      console.error(`Question generation attempt ${attempt} failed:`, error)
       if (attempt === maxAttempts) {
         throw error
       }
@@ -126,24 +119,19 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
   "concepts": ["variables", "loops", "conditionals"]
 }`
 
-    console.log('Calling Claude API...')
     const message = await getAnthropic().messages.create({
       model: 'claude-3-5-haiku-20241022',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }]
     })
 
-    console.log('Claude API response received')
     const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
-    console.log('Raw response:', responseText.substring(0, 200) + '...')
     
     try {
       // First try to parse the response directly
       const parsedResponse = JSON.parse(responseText)
-      console.log('Successfully parsed JSON response')
       return parsedResponse
     } catch (firstError) {
-      console.log('Direct JSON parse failed, attempting cleanup...')
       
       // Find JSON content between curly braces
       const jsonStart = responseText.indexOf('{')
@@ -154,7 +142,6 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
       }
       
       const jsonText = responseText.substring(jsonStart, jsonEnd)
-      console.log('Extracted JSON:', jsonText.substring(0, 200) + '...')
       
       try {
         // Clean up the JSON by properly escaping newlines and other control characters
@@ -163,10 +150,8 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
           .replace(/\r/g, '\\r')
           .replace(/\t/g, '\\t')
         
-        console.log('Cleaned JSON:', cleanedJsonText.substring(0, 200) + '...')
         
         const parsedResponse = JSON.parse(cleanedJsonText)
-        console.log('Successfully parsed cleaned JSON response')
         return parsedResponse
       } catch (secondError) {
         console.error('JSON parsing failed:', { 

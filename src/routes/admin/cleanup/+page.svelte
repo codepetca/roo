@@ -102,7 +102,7 @@
       toastStore.addToast('Test data cleanup completed successfully!', 'success')
       
     } catch (error: any) {
-      console.error('Cleanup error:', error)
+      // Cleanup error
       toastStore.addToast(`Cleanup failed: ${error.message}`, 'error')
     } finally {
       loading = false

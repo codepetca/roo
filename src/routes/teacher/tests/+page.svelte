@@ -13,12 +13,6 @@
   const filteredTests = $derived.by(() => {
     let tests = [...testsStore.tests] // Create a copy to avoid mutation
 
-    console.log('Filtering tests:', { 
-      totalTests: tests.length, 
-      searchTerm, 
-      statusFilter,
-      sampleTest: tests[0] ? { id: tests[0].id, title: tests[0].title, status: tests[0].status } : null
-    })
 
     // Filter by search term
     if (searchTerm.trim()) {
@@ -54,7 +48,6 @@
       return sortOrder === 'asc' ? comparison : -comparison
     })
 
-    console.log('Filtered tests result:', tests.length)
     return tests
   })
 
@@ -116,7 +109,7 @@
         alert(`Failed to duplicate test: ${createResult.error}`)
       }
     } catch (error) {
-      console.error('Error duplicating test:', error)
+      // Error duplicating test
       alert('Failed to duplicate test')
     }
   }

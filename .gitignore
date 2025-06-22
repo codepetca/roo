@@ -25,3 +25,6 @@ vite.config.ts.timestamp-*
 # Claude Code
 .mcp.json
 .claude/
+
+# Sentry Config File
+.env.sentry-build-plugin

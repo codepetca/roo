@@ -28,7 +28,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
       .single()
 
     if (attemptError || !attempt) {
-      console.error('Database error fetching attempt:', attemptError)
       return json({ error: 'Test attempt not found' }, { status: 404 })
     }
 
@@ -52,7 +51,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
       .order('created_at', { ascending: true })
 
     if (answersError) {
-      console.error('Database error fetching answers:', answersError)
       return json({ error: 'Failed to fetch answers' }, { status: 500 })
     }
 
@@ -71,7 +69,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
     })
 
   } catch (error) {
-    console.error('Student results API error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to fetch results' 
     }, { status: 500 })

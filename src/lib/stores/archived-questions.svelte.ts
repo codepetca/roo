@@ -38,7 +38,6 @@ class ArchivedQuestionsStore {
       this.questions = data.data || []
     } catch (err) {
       this.error = err instanceof Error ? err.message : 'Unknown error'
-      console.error('Failed to load archived questions:', err)
     } finally {
       this.loading = false
     }

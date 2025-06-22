@@ -46,14 +46,12 @@ export const POST: RequestHandler = async ({ params, request }) => {
       .single()
 
     if (createError) {
-      console.error('Database error creating modified question:', createError)
       throw createError
     }
 
     const response: QuestionResponse = { question: newQuestion }
     return json(response)
   } catch (error) {
-    console.error('Question modification error:', error)
     const response: ApiResponse = { error: 'Failed to modify question' }
     return json(response, { status: 500 })
   }
@@ -114,23 +112,19 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
   "concepts": ${JSON.stringify(concepts)}
 }`
 
-  console.log('Calling Claude API for question modification...')
   const message = await getAnthropic().messages.create({
     model: 'claude-3-5-haiku-20241022',
     max_tokens: 1500,
     messages: [{ role: 'user', content: prompt }]
   })
 
-  console.log('Claude API response received for modification')
   const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
   
   try {
     // First try to parse the response directly
     const parsedResponse = JSON.parse(responseText)
-    console.log('Successfully parsed modified question JSON')
     return parsedResponse
   } catch (firstError: unknown) {
-    console.log('Direct JSON parse failed, attempting cleanup...')
     
     // Find JSON content between curly braces
     const jsonStart = responseText.indexOf('{')
@@ -150,17 +144,11 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
         .replace(/\t/g, '\\t')
       
       const parsedResponse = JSON.parse(cleanedJsonText)
-      console.log('Successfully parsed cleaned modified question JSON')
       return parsedResponse
     } catch (secondError: unknown) {
       const firstErrorMessage = firstError instanceof Error ? firstError.message : 'Unknown error'
       const secondErrorMessage = secondError instanceof Error ? secondError.message : 'Unknown error'
       
-      console.error('Modified question JSON parsing failed:', { 
-        originalError: firstErrorMessage, 
-        cleanupError: secondErrorMessage,
-        jsonText: jsonText.substring(0, 500)
-      })
       throw new Error(`Failed to parse modified question JSON: ${secondErrorMessage}`)
     }
   }

@@ -5,7 +5,6 @@ export async function DELETE({ params }) {
   try {
     const { id } = params
     
-    console.log('Attempting to delete question with ID:', id)
     
     if (!id) {
       return json({ error: 'Question ID required' }, { status: 400 })
@@ -18,15 +17,12 @@ export async function DELETE({ params }) {
       .select()
 
     if (error) {
-      console.error('Delete question error:', error)
       throw error
     }
 
-    console.log('Delete result:', { deletedRows: data?.length || 0, data })
 
     return json({ success: true, deletedCount: data?.length || 0 })
   } catch (error) {
-    console.error('Question deletion error:', error)
     return json({ error: 'Failed to delete question' }, { status: 500 })
   }
 }

@@ -18,9 +18,8 @@
     generating = true
     try {
       samples = generateTestSamples()
-      console.log(`Generated ${samples.length} test samples`)
     } catch (error) {
-      console.error('Error generating samples:', error)
+      // Error generating samples
       alert('Error generating samples. Check console for details.')
     } finally {
       generating = false
@@ -67,7 +66,7 @@
 
       alert('Grading test completed! Check results below.')
     } catch (error) {
-      console.error('Grading test error:', error)
+      // Grading test error
       alert('Grading test failed: ' + (error as Error).message)
     } finally {
       testingGrading = false

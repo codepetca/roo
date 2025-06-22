@@ -26,7 +26,6 @@ export async function GET({ url }) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error fetching available tests:', error)
       throw error
     }
 
@@ -41,7 +40,6 @@ export async function GET({ url }) {
       tests: testsWithCount 
     })
   } catch (error) {
-    console.error('Error in available-tests endpoint:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to load available tests' 
     }, { status: 500 })

@@ -27,7 +27,6 @@
       
       const checkProfile = () => {
         attempts++
-        console.log('Checking profile, attempt:', attempts, 'Profile:', authStore.profile?.role)
         
         if (authStore.profile?.role) {
           loading = false
@@ -41,7 +40,6 @@
         } else if (attempts < maxAttempts) {
           setTimeout(checkProfile, 100)
         } else {
-          console.log('Profile load timeout, redirecting to home')
           loading = false
           goto('/')
         }

@@ -12,7 +12,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       return json(errorResponse, { status: 401 })
     }
 
-    console.log('Looking up user profile for ID:', testData.createdBy)
 
     // Verify that the user exists and has teacher role
     const { data: profile, error: profileError } = await supabase
@@ -21,7 +20,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       .eq('id', testData.createdBy)
       .single()
 
-    console.log('Profile lookup result:', { profile, profileError })
 
     // If profile exists, check role
     if (profile && profile.role !== 'teacher') {
@@ -32,7 +30,7 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     // If profile doesn't exist, we'll allow it (fallback profile scenario)
     // This handles cases where users are authenticated but profile isn't in DB yet
     if (profileError) {
-      console.log('Profile not found in database, allowing fallback auth:', profileError.message)
+      // Profile not found in database, allowing fallback auth
     }
 
     const userId = testData.createdBy
@@ -71,7 +69,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       .single<CodingTest>() // Typed the returned test
 
     if (testError || !newTest) { // Added !newTest check
-      console.error('Database error creating test:', testError)
       const errorResponse: APIResponse = { success: false, error: { message: testError?.message || 'Failed to create test' } }
       return json(errorResponse, { status: 500 })
     }
@@ -89,7 +86,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       .insert(testQuestions)
 
     if (questionsError) {
-      console.error('Database error adding questions:', questionsError)
       // Clean up the test if questions failed to add
       await supabase.from('coding_tests').delete().eq('id', newTest.id) // Use newTest.id
       const errorResponse: APIResponse = { success: false, error: { message: questionsError.message || 'Failed to add questions to test' } }
@@ -114,7 +110,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
       .single<CodingTestWithQuestions>() // Typed the complete test
 
     if (fetchError || !completeTest) { // Added !completeTest check
-      console.error('Error fetching complete test:', fetchError)
       // Test was created, but fetching details failed. This is tricky.
       // For now, return error, but client might need to know test ID (newTest.id)
       const errorResponse: APIResponse = { success: false, error: { message: fetchError?.message || 'Test created but failed to fetch details' } }
@@ -125,7 +120,6 @@ export const POST: RequestHandler = async ({ request, cookies }) => {
     return json(response)
 
   } catch (error: any) {
-    console.error('Test creation error:', error)
     const errorResponse: APIResponse = {
       success: false,
       error: { message: error?.message || 'Failed to create test due to an unexpected error' }

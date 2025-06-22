@@ -24,7 +24,6 @@ export async function GET({ url }) {
       .order('created_at', { ascending: false })
 
     if (error) {
-      console.error('Error fetching student attempts:', error)
       throw error
     }
 
@@ -39,7 +38,6 @@ export async function GET({ url }) {
       attempts: transformedAttempts 
     })
   } catch (error) {
-    console.error('Error in student attempts endpoint:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to load attempts' 
     }, { status: 500 })

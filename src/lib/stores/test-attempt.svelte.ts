@@ -60,8 +60,6 @@ class TestAttemptStore {
     this.error = null
 
     try {
-      console.log('Starting test:', testId, 'for student:', studentId)
-      
       // Start the test attempt
       const startResponse = await fetch(`/api/tests/${testId}/start`, {
         method: 'POST',
@@ -71,9 +69,7 @@ class TestAttemptStore {
         body: JSON.stringify({ studentId })
       })
 
-      console.log('Start response status:', startResponse.status)
       const startResult = await startResponse.json()
-      console.log('Start result:', startResult)
 
       if (!startResponse.ok) {
         return { success: false, error: startResult.error || 'Failed to start test' }
@@ -82,11 +78,8 @@ class TestAttemptStore {
       this.attempt = startResult.attempt
 
       // Load test questions
-      console.log('Loading questions for test:', testId)
       const questionsResponse = await fetch(`/api/tests/${testId}/questions?studentId=${studentId}`)
-      console.log('Questions response status:', questionsResponse.status)
       const questionsResult = await questionsResponse.json()
-      console.log('Questions result:', questionsResult)
 
       if (!questionsResponse.ok) {
         return { success: false, error: questionsResult.error || 'Failed to load questions' }
@@ -94,16 +87,6 @@ class TestAttemptStore {
 
       this.test = questionsResult.test
       this.questions = questionsResult.questions || []
-      
-      console.log('Questions loaded:', {
-        count: this.questions.length,
-        sampleQuestion: this.questions[0] ? {
-          id: this.questions[0].id,
-          question_id: this.questions[0].question_id,
-          question_text: this.questions[0].question_text?.slice(0, 100),
-          concepts: this.questions[0].concepts
-        } : null
-      })
       
       // Initialize answers map
       this.answers = {}
@@ -130,7 +113,7 @@ class TestAttemptStore {
       return { success: true }
 
     } catch (error) {
-      console.error('Error starting test:', error)
+      // Error starting test
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to start test' 
@@ -141,14 +124,7 @@ class TestAttemptStore {
   }
 
   private initializeTimer(): void {
-    console.log('Initializing timer with:', { 
-      attempt: this.attempt, 
-      test: this.test?.time_limit_minutes,
-      started_at: this.attempt?.started_at 
-    })
-    
     if (!this.attempt || !this.test) {
-      console.log('Timer init failed: missing attempt or test')
       return
     }
 
@@ -157,22 +133,11 @@ class TestAttemptStore {
     const elapsed = Date.now() - startTime.getTime()
     const remaining = Math.max(0, timeLimit - elapsed)
 
-    console.log('Timer calculation:', { 
-      startTime, 
-      timeLimit, 
-      elapsed, 
-      remaining,
-      remainingSeconds: Math.floor(remaining / 1000)
-    })
-
     this.timer.timeRemaining = Math.floor(remaining / 1000) // Convert to seconds
     this.timer.isExpired = remaining <= 0
     this.timer.isRunning = !this.timer.isExpired && this.attempt.status === 'in_progress'
 
-    console.log('Timer state after init:', this.timer)
-
     if (this.timer.isRunning) {
-      console.log('Starting timer countdown')
       this.startTimerCountdown()
     }
   }
@@ -196,24 +161,14 @@ class TestAttemptStore {
     try {
       await this.submitTest(true)
     } catch (error) {
-      console.error('Auto-submit failed:', error)
+      // Auto-submit failed
     }
   }
 
   async saveAnswer(questionId: string, code: string): Promise<{ success: boolean; error?: string }> {
     if (!this.attempt || this.attempt.status !== 'in_progress') {
-      console.error('Save attempt failed: Test not in progress', { 
-        attempt: this.attempt?.id, 
-        status: this.attempt?.status 
-      })
       return { success: false, error: 'Test not in progress' }
     }
-
-    console.log('Attempting to save answer:', { 
-      questionId, 
-      codeLength: code.length, 
-      attemptId: this.attempt.id 
-    })
 
     this.autoSave.isSaving = true
 
@@ -233,19 +188,7 @@ class TestAttemptStore {
 
       const result = await response.json()
 
-      console.log('Save answer response:', { 
-        status: response.status, 
-        success: response.ok, 
-        result 
-      })
-
       if (!response.ok) {
-        console.error('Save answer failed:', { 
-          status: response.status, 
-          error: result.error,
-          questionId,
-          codeLength: code.length
-        })
         
         // Show user-visible error for critical save failures
         if (response.status >= 500) {
@@ -260,15 +203,10 @@ class TestAttemptStore {
       this.autoSave.lastSaved = new Date()
       this.autoSave.isDirty = false
 
-      console.log('Answer saved successfully:', { 
-        questionId, 
-        savedAt: this.autoSave.lastSaved.toISOString() 
-      })
-
       return { success: true }
 
     } catch (error) {
-      console.error('Network error saving answer:', error)
+      // Network error saving answer
       
       // Show user-visible error for network failures
       alert(`Warning: Network error while saving your answer. Please check your connection and try typing again. Your work may not be saved!`)
@@ -381,7 +319,7 @@ class TestAttemptStore {
       return { success: true }
 
     } catch (error) {
-      console.error('Error submitting test:', error)
+      // Error submitting test
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to submit test' 

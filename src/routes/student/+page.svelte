@@ -33,11 +33,10 @@
       if (attemptsResponse.ok) {
         pastAttempts = attemptsResult.attempts || []
       } else {
-        console.error('Failed to load past attempts:', attemptsResult.error)
         // Don't throw error for past attempts - it's not critical
       }
     } catch (err) {
-      console.error('Error loading student data:', err)
+      // Error loading student data
       error = err instanceof Error ? err.message : 'Failed to load student data'
     } finally {
       loading = false

@@ -21,10 +21,7 @@
   let showQuestionList = $state(false)
 
   async function startTest(): Promise<void> {
-    console.log('startTest called with user:', authStore.user?.id, 'testId:', testId)
-    
     if (!authStore.user?.id || !testId) {
-      console.error('Missing user or testId')
       alert('Authentication required')
       goto('/auth/login')
       return
@@ -32,9 +29,7 @@
 
     startingTest = true
     try {
-      console.log('Calling testAttemptStore.startTest...')
       const result = await testAttemptStore.startTest(testId, authStore.user.id)
-      console.log('testAttemptStore.startTest result:', result)
       
       if (result.success) {
         showInstructions = false
@@ -51,7 +46,7 @@
         alert(`Cannot start test: ${result.error}`)
       }
     } catch (error) {
-      console.error('Error starting test:', error)
+      // Error starting test
       alert('Failed to start test. Please try again.')
     } finally {
       startingTest = false
@@ -116,20 +111,16 @@
   onMount(async () => {
     // Load basic test information for the instructions screen
     if (testId) {
-      console.log('Loading test info for:', testId)
       try {
         const response = await fetch(`/api/tests/${testId}`)
         const result = await response.json()
         
         if (response.ok) {
           testAttemptStore.test = result.test
-          console.log('Test info loaded:', result.test)
         } else {
-          console.error('Failed to load test info:', result.error)
           testAttemptStore.error = result.error || 'Failed to load test'
         }
       } catch (error) {
-        console.error('Error loading test info:', error)
         testAttemptStore.error = 'Failed to load test'
       }
     }

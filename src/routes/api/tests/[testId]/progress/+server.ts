@@ -19,7 +19,6 @@ export const GET: RequestHandler = async ({ params }) => {
       .order('started_at', { ascending: false })
 
     if (attemptsError) {
-      console.error('Database error fetching attempts:', attemptsError)
       return json({ error: 'Failed to fetch test progress' }, { status: 500 })
     }
 
@@ -31,7 +30,6 @@ export const GET: RequestHandler = async ({ params }) => {
       .single()
 
     if (testError) {
-      console.error('Database error fetching test:', testError)
       return json({ error: 'Test not found' }, { status: 404 })
     }
 
@@ -42,7 +40,6 @@ export const GET: RequestHandler = async ({ params }) => {
       .eq('test_id', testId)
 
     if (countError) {
-      console.error('Database error counting questions:', countError)
       return json({ error: 'Failed to count questions' }, { status: 500 })
     }
 
@@ -107,7 +104,6 @@ export const GET: RequestHandler = async ({ params }) => {
     })
 
   } catch (error) {
-    console.error('Fetch test progress error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to fetch test progress' 
     }, { status: 500 })

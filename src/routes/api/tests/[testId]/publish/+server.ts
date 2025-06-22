@@ -18,7 +18,6 @@ export const PUT: RequestHandler = async ({ params }) => {
       .single()
 
     if (error) {
-      console.error('Database error publishing test:', error)
       return json({ error: 'Failed to publish test' }, { status: 500 })
     }
 
@@ -45,7 +44,6 @@ export const PUT: RequestHandler = async ({ params }) => {
     })
 
   } catch (error) {
-    console.error('Publish test error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to publish test' 
     }, { status: 500 })

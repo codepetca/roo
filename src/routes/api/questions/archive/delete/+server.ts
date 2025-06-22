@@ -16,13 +16,11 @@ export async function DELETE({ request }) {
       .in('id', questionIds)
 
     if (error) {
-      console.error('Permanent delete questions error:', error)
       throw error
     }
 
     return json({ success: true, deletedCount: questionIds.length })
   } catch (error) {
-    console.error('Permanent delete questions error:', error)
     return json({ error: 'Failed to permanently delete questions' }, { status: 500 })
   }
 }

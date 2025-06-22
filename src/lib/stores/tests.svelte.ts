@@ -37,7 +37,7 @@ class TestsStore {
 
       this.tests = data || []
     } catch (error) {
-      console.error('Error loading tests:', error)
+      // Error loading tests
       this.error = error instanceof Error ? error.message : 'Failed to load tests'
     } finally {
       this.loading = false
@@ -78,7 +78,7 @@ class TestsStore {
 
       return { success: true, test: result.data }
     } catch (error) {
-      console.error('Error creating test:', error)
+      // Error creating test
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to create test' 
@@ -106,7 +106,7 @@ class TestsStore {
 
       return { success: true }
     } catch (error) {
-      console.error('Error publishing test:', error)
+      // Error publishing test
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to publish test' 
@@ -131,7 +131,7 @@ class TestsStore {
 
       return { success: true }
     } catch (error) {
-      console.error('Error deleting test:', error)
+      // Error deleting test
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Failed to delete test' 
@@ -160,7 +160,7 @@ class TestsStore {
         }
       }
     } catch (error) {
-      console.error('Error updating test status:', error)
+      // Error updating test status
     }
   }
 }

@@ -50,7 +50,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
       .order('question_order')
 
     if (questionsError) {
-      console.error('Database error fetching questions:', questionsError)
       return json({ error: 'Failed to fetch questions' }, { status: 500 })
     }
 
@@ -61,7 +60,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
       .eq('attempt_id', attempt.id)
 
     if (answersError) {
-      console.error('Database error fetching answers:', answersError)
       return json({ error: 'Failed to fetch answers' }, { status: 500 })
     }
 
@@ -75,16 +73,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
       answer: answers.find(a => a.question_id === tq.question_id) || null
     }))
 
-    console.log('Test questions processed:', {
-      testId,
-      questionsCount: questionsWithAnswers.length,
-      sampleQuestion: questionsWithAnswers[0] ? {
-        id: questionsWithAnswers[0].id,
-        question_id: questionsWithAnswers[0].question_id,
-        question_text: questionsWithAnswers[0].question_text,
-        concepts: questionsWithAnswers[0].concepts
-      } : null
-    })
 
     return json({
       success: true,
@@ -94,7 +82,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
     })
 
   } catch (error) {
-    console.error('Fetch test questions error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to fetch test questions' 
     }, { status: 500 })

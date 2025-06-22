@@ -29,7 +29,6 @@ export const POST: RequestHandler = async ({ request }) => {
       .single()
 
     if (error) {
-      console.error('Database error:', error)
       // throw error // Keep original error handling for now, adjust if needed after testing
       const errorResponse: APIResponse = { success: false, error: { message: error.message || 'Database error inserting question' } }
       return json(errorResponse, { status: 500 })
@@ -40,7 +39,6 @@ export const POST: RequestHandler = async ({ request }) => {
     const response: APIResponse<Question> = { success: true, data: question as Question }
     return json(response)
   } catch (error: any) {
-    console.error('Question generation error:', error)
     const errorResponse: APIResponse = { success: false, error: { message: error.message || 'Failed to generate question' } }
     return json(errorResponse, { status: 500 })
   }
@@ -70,7 +68,6 @@ export const GET: RequestHandler = async () => {
     const response: APIResponse<Question[]> = { success: true, data: questions }
     return json(response)
   } catch (error: any) {
-    console.error('Fetch questions error:', error)
     const errorResponse: APIResponse = { success: false, error: { message: error.message || 'Failed to fetch questions' } }
     return json(errorResponse, { status: 500 })
   }
@@ -93,7 +90,6 @@ export const DELETE: RequestHandler = async ({ request }) => {
       .eq('id', questionId)
 
     if (error) {
-      console.error('Archive question error:', error)
       // throw error // Keep original error handling
       const errorResponse: APIResponse = { success: false, error: { message: error.message || 'Failed to archive question in database' } }
       return json(errorResponse, { status: 500 })
@@ -102,7 +98,6 @@ export const DELETE: RequestHandler = async ({ request }) => {
     const response: APIResponse = { success: true }
     return json(response)
   } catch (error: any) {
-    console.error('Archive question error:', error)
     const errorResponse: APIResponse = { success: false, error: { message: error.message || 'Failed to archive question' } }
     return json(errorResponse, { status: 500 })
   }

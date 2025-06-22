@@ -28,7 +28,6 @@ async function gradeCodeText(code: string, questionText: string, rubric: any) {
 
     return { scores, feedback }
   } catch (error) {
-    console.error('Error in text grading:', error)
     return {
       scores: { communication: 2, correctness: 2, logic: 2 },
       feedback: { general: 'Automatic grading completed with basic analysis' }
@@ -162,7 +161,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
             totalWeight += 1.0
 
           } catch (gradeError) {
-            console.error('Error grading answer:', gradeError)
             gradedAnswers.push({
               answerId: answer.id,
               questionId: answer.question_id,
@@ -202,7 +200,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
         gradedCount++
 
       } catch (error) {
-        console.error(`Error grading attempt ${attempt.id}:`, error)
         results.push({
           attemptId: attempt.id,
           success: false,
@@ -221,7 +218,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
     })
 
   } catch (error) {
-    console.error('Bulk grading error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to grade submissions' 
     }, { status: 500 })

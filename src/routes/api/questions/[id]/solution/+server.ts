@@ -37,7 +37,6 @@ export async function GET({ params }) {
     
     return json({ solution })
   } catch (error) {
-    console.error('Solution retrieval error:', error)
     return json({ error: 'Failed to get solution' }, { status: 500 })
   }
 }
@@ -73,23 +72,19 @@ Return ONLY valid JSON in this exact format:
   ]
 }`
 
-  console.log('Calling Claude API for solution generation...')
   const message = await getAnthropic().messages.create({
     model: 'claude-3-5-haiku-20241022',
     max_tokens: 1500,
     messages: [{ role: 'user', content: prompt }]
   })
 
-  console.log('Claude API response received for solution')
   const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
   
   try {
     // First try to parse the response directly
     const parsedResponse = JSON.parse(responseText)
-    console.log('Successfully parsed solution JSON')
     return parsedResponse
   } catch (firstError: any) {
-    console.log('Direct JSON parse failed, attempting cleanup...')
     
     // Find JSON content between curly braces
     const jsonStart = responseText.indexOf('{')
@@ -109,14 +104,8 @@ Return ONLY valid JSON in this exact format:
         .replace(/\t/g, '\\t')
       
       const parsedResponse = JSON.parse(cleanedJsonText)
-      console.log('Successfully parsed cleaned solution JSON')
       return parsedResponse
     } catch (secondError: any) {
-      console.error('Solution JSON parsing failed:', { 
-        originalError: (firstError as Error).message, 
-        cleanupError: secondError.message,
-        jsonText: jsonText.substring(0, 500)
-      })
       throw new Error(`Failed to parse solution JSON: ${secondError.message}`)
     }
   }

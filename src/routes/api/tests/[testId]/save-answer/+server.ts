@@ -7,16 +7,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
     const { testId } = params
     const { questionId, code, attemptId, timestamp } = await request.json()
 
-    console.log('Save answer API called:', { 
-      testId, 
-      questionId, 
-      attemptId, 
-      codeLength: code?.length || 0,
-      timestamp 
-    })
 
     if (!questionId || !attemptId) {
-      console.error('Missing required fields:', { questionId, attemptId })
       return json({ error: 'Question ID and attempt ID are required' }, { status: 400 })
     }
 
@@ -29,13 +21,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
       .eq('status', 'in_progress')
       .single()
 
-    console.log('Attempt verification:', { 
-      attempt: attempt ? { id: attempt.id, status: attempt.status } : null, 
-      error: attemptError 
-    })
 
     if (attemptError || !attempt) {
-      console.error('Attempt verification failed:', attemptError)
       return json({ error: 'Invalid attempt or test already submitted' }, { status: 400 })
     }
 
@@ -69,7 +56,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
     }
 
     // Save or update the answer
-    console.log('Attempting to upsert answer:', { attemptId, questionId, codeLength: code?.length })
     
     const { data: answer, error: saveError } = await supabase
       .from('test_answers')
@@ -84,14 +70,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
       .select()
       .single()
 
-    console.log('Upsert result:', { 
-      success: !saveError, 
-      answer: answer ? { id: answer.id, codeLength: answer.answer_code?.length } : null,
-      error: saveError 
-    })
 
     if (saveError) {
-      console.error('Database error saving answer:', saveError)
       return json({ error: `Database error: ${saveError.message}` }, { status: 500 })
     }
 
@@ -122,7 +102,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
     })
 
   } catch (error) {
-    console.error('Save answer error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to save answer' 
     }, { status: 500 })

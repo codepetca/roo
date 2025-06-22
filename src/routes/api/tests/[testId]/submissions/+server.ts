@@ -7,7 +7,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
     const { testId } = params
     const teacherId = url.searchParams.get('teacherId')
 
-    console.log('Submissions API called:', { testId, teacherId })
 
     // Verify teacher has access to this test
     if (teacherId) {
@@ -18,10 +17,8 @@ export const GET: RequestHandler = async ({ params, url }) => {
         .eq('created_by', teacherId)
         .single()
 
-      console.log('Test access check:', { test: test?.id, error: testError })
 
       if (testError || !test) {
-        console.error('Test access denied:', testError)
         return json({ error: 'Test not found or access denied' }, { status: 404 })
       }
     }
@@ -43,19 +40,8 @@ export const GET: RequestHandler = async ({ params, url }) => {
       .eq('test_id', testId)
       .order('submitted_at', { ascending: false })
 
-    console.log('Submissions query result:', { 
-      count: submissions?.length, 
-      error: submissionsError,
-      sampleSubmission: submissions?.[0] ? {
-        id: submissions[0].id,
-        status: submissions[0].status,
-        student_id: submissions[0].student_id,
-        answers_count: submissions[0].test_answers?.length
-      } : null
-    })
 
     if (submissionsError) {
-      console.error('Database error fetching submissions:', submissionsError)
       return json({ error: 'Failed to fetch submissions' }, { status: 500 })
     }
 
@@ -81,7 +67,6 @@ export const GET: RequestHandler = async ({ params, url }) => {
     })
 
   } catch (error) {
-    console.error('Fetch submissions error:', error)
     return json({ 
       error: error instanceof Error ? error.message : 'Failed to fetch submissions' 
     }, { status: 500 })
