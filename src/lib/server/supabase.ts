@@ -9,15 +9,42 @@ const createSupabaseClient = () => {
   if (!supabaseUrl || !supabaseKey) {
     console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables')
     // Return a dummy client that will gracefully handle missing config
+    const createChainableQuery = () => {
+      const queryBuilder = {
+        select: () => queryBuilder,
+        insert: () => queryBuilder,
+        update: () => queryBuilder,
+        delete: () => queryBuilder,
+        eq: () => queryBuilder,
+        neq: () => queryBuilder,
+        gt: () => queryBuilder,
+        gte: () => queryBuilder,
+        lt: () => queryBuilder,
+        lte: () => queryBuilder,
+        like: () => queryBuilder,
+        ilike: () => queryBuilder,
+        is: () => queryBuilder,
+        in: () => queryBuilder,
+        contains: () => queryBuilder,
+        match: () => queryBuilder,
+        not: () => queryBuilder,
+        filter: () => queryBuilder,
+        or: () => queryBuilder,
+        order: () => queryBuilder,
+        limit: () => queryBuilder,
+        range: () => queryBuilder,
+        single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured - demo mode') }),
+        maybeSingle: () => Promise.resolve({ data: null, error: new Error('Supabase not configured - demo mode') }),
+        then: (resolve: any) => Promise.resolve({ data: [], error: new Error('Supabase not configured - demo mode') }).then(resolve),
+        catch: (reject: any) => Promise.resolve({ data: [], error: new Error('Supabase not configured - demo mode') }).catch(reject)
+      }
+      return queryBuilder
+    }
+
     return {
-      from: () => ({
-        select: () => ({ data: null, error: new Error('Supabase not configured') }),
-        insert: () => ({ data: null, error: new Error('Supabase not configured') }),
-        update: () => ({ data: null, error: new Error('Supabase not configured') }),
-        delete: () => ({ data: null, error: new Error('Supabase not configured') })
-      }),
+      from: () => createChainableQuery(),
       auth: {
-        getUser: () => ({ data: { user: null }, error: new Error('Supabase not configured') })
+        getUser: () => ({ data: { user: null }, error: new Error('Supabase not configured - demo mode') })
       }
     } as any
   } else {

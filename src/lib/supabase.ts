@@ -20,21 +20,60 @@ const createSupabaseClient = () => {
     console.error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY environment variables')
     console.error('Current values:', { supabaseUrl, supabaseAnonKey })
     // Return a dummy client for development/staging without credentials
+    const createChainableQuery = () => {
+      const queryBuilder = {
+        select: () => queryBuilder,
+        insert: () => queryBuilder,
+        update: () => queryBuilder,
+        delete: () => queryBuilder,
+        eq: () => queryBuilder,
+        neq: () => queryBuilder,
+        gt: () => queryBuilder,
+        gte: () => queryBuilder,
+        lt: () => queryBuilder,
+        lte: () => queryBuilder,
+        like: () => queryBuilder,
+        ilike: () => queryBuilder,
+        is: () => queryBuilder,
+        in: () => queryBuilder,
+        contains: () => queryBuilder,
+        containedBy: () => queryBuilder,
+        rangeGt: () => queryBuilder,
+        rangeGte: () => queryBuilder,
+        rangeLt: () => queryBuilder,
+        rangeLte: () => queryBuilder,
+        rangeAdjacent: () => queryBuilder,
+        overlaps: () => queryBuilder,
+        textSearch: () => queryBuilder,
+        match: () => queryBuilder,
+        not: () => queryBuilder,
+        filter: () => queryBuilder,
+        or: () => queryBuilder,
+        order: () => queryBuilder,
+        limit: () => queryBuilder,
+        range: () => queryBuilder,
+        single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured - demo mode') }),
+        maybeSingle: () => Promise.resolve({ data: null, error: new Error('Supabase not configured - demo mode') }),
+        then: (resolve: any) => Promise.resolve({ data: [], error: new Error('Supabase not configured - demo mode') }).then(resolve),
+        catch: (reject: any) => Promise.resolve({ data: [], error: new Error('Supabase not configured - demo mode') }).catch(reject)
+      }
+      return queryBuilder
+    }
+
     return {
-      from: () => ({
-        select: () => Promise.resolve({ data: [], error: new Error('Supabase not configured') }),
-        insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-        update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-        delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
-      }),
+      from: () => createChainableQuery(),
       auth: {
         getSession: () => Promise.resolve({ data: { session: null }, error: null }),
         getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-        signInWithPassword: () => Promise.resolve({ data: { user: null, session: null }, error: new Error('Supabase not configured') }),
-        signUp: () => Promise.resolve({ data: { user: null, session: null }, error: new Error('Supabase not configured') }),
+        signInWithPassword: () => Promise.resolve({ data: { user: null, session: null }, error: new Error('Supabase not configured - demo mode') }),
+        signUp: () => Promise.resolve({ data: { user: null, session: null }, error: new Error('Supabase not configured - demo mode') }),
         signOut: () => Promise.resolve({ error: null }),
         onAuthStateChange: () => ({ data: { subscription: null }, error: null })
-      }
+      },
+      channel: () => ({
+        on: () => ({ subscribe: () => ({}) }),
+        subscribe: () => ({})
+      })
     } as any
   } else {
     return createClient<Database>(supabaseUrl, supabaseAnonKey, {
