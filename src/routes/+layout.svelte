@@ -47,10 +47,13 @@
   
   // Show loading state for auth
   const showAuthLoading = $derived(authStore.loading && !authStore.initialized)
+  
+  // Only show sidebar when we have a confirmed authenticated user
+  const shouldShowSidebar = $derived(authStore.initialized && authStore.isAuthenticated)
 </script>
 
 <div class="min-h-screen bg-gray-50">
-  {#if authStore.user}
+  {#if shouldShowSidebar}
     <div class="flex h-screen">
       <!-- Sidebar -->
       <Sidebar isOpen={sidebarOpen} onClose={() => sidebarOpen = false} />
