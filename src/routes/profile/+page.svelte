@@ -162,9 +162,9 @@
 
         <!-- Account Status -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
+          <span class="block text-sm font-medium text-gray-700 mb-2">
             Account Status
-          </label>
+          </span>
           <div class="space-y-2">
             <div class="flex items-center">
               <div class="w-2 h-2 rounded-full mr-2 {authStore.isEmailVerified ? 'bg-green-500' : 'bg-red-500'}"></div>
