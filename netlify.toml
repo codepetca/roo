@@ -5,11 +5,7 @@
 [build.environment]
   NODE_VERSION = "20"
 
-# SvelteKit redirects
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+# Redirects handled by _redirects file
 
 # Security headers
 [[headers]]
