@@ -23,6 +23,7 @@
     "test:e2e:debug": "playwright test --debug",
     "clean": "rm -rf .svelte-kit dist build",
     "deploy:build": "npm run clean && npm run check && npm run test:run && npm run test:e2e && npm run build:prod",
+    "build:netlify": "npm run prepare && npm run build",
     "start": "node -r dotenv/config build/index.js"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-node';
+import adapter from '@sveltejs/adapter-auto';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,15 +8,8 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// Production-ready Node.js adapter
-		adapter: adapter({
-			// Output directory for the production build
-			out: 'build',
-			// Precompress static assets with gzip and brotli
-			precompress: true,
-			// Configure environment variable prefix
-			envPrefix: ''
-		}),
+		// Auto adapter - detects deployment platform
+		adapter: adapter(),
 		
 		// Security headers and CSP
 		csp: {
