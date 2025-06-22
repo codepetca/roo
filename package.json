@@ -17,11 +17,16 @@
     "test:run": "vitest run",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test --config=playwright.ci.config.ts",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug",
     "clean": "rm -rf .svelte-kit dist build",
-    "deploy:build": "npm run clean && npm run check && npm run test:run && npm run build:prod",
+    "deploy:build": "npm run clean && npm run check && npm run test:run && npm run test:e2e && npm run build:prod",
     "start": "node -r dotenv/config build/index.js"
   },
   "devDependencies": {
+    "@playwright/test": "^1.53.1",
     "@sveltejs/adapter-auto": "^6.0.0",
     "@sveltejs/adapter-node": "^5.2.12",
     "@sveltejs/kit": "^2.16.0",
