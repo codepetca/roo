@@ -169,7 +169,7 @@ vi.mock('$app/stores', () => ({
 }))
 
 // Export test utilities
-export const createMockUser = (overrides = {}) => ({
+export const createMockUser = (overrides: any = {}) => ({
   id: 'test-user-id',
   email: 'test@example.com',
   created_at: new Date().toISOString(),
@@ -180,7 +180,7 @@ export const createMockUser = (overrides = {}) => ({
   ...overrides
 })
 
-export const createMockProfile = (overrides = {}) => ({
+export const createMockProfile = (overrides: any = {}) => ({
   id: 'test-user-id',
   full_name: 'Test User',
   role: 'teacher' as const,
@@ -188,7 +188,7 @@ export const createMockProfile = (overrides = {}) => ({
   ...overrides
 })
 
-export const createMockQuestion = (overrides = {}) => ({
+export const createMockQuestion = (overrides: any = {}) => ({
   id: 'test-question-id',
   question_text: 'Write a Java method that adds two numbers.',
   concepts: ['variables', 'methods'],
@@ -208,7 +208,7 @@ export const createMockQuestion = (overrides = {}) => ({
   ...overrides
 })
 
-export const createMockTest = (overrides = {}) => ({
+export const createMockTest = (overrides: any = {}) => ({
   id: 'test-test-id',
   title: 'Test Java Quiz',
   description: 'A test quiz for Java fundamentals',
@@ -225,7 +225,7 @@ export const createMockTest = (overrides = {}) => ({
   ...overrides
 })
 
-export const createMockAttempt = (overrides = {}) => ({
+export const createMockAttempt = (overrides: any = {}) => ({
   id: 'test-attempt-id',
   test_id: 'test-test-id',
   student_id: 'test-student-id',
@@ -240,7 +240,7 @@ export const createMockAttempt = (overrides = {}) => ({
   ...overrides
 })
 
-export const createMockAnswer = (overrides = {}) => ({
+export const createMockAnswer = (overrides: any = {}) => ({
   id: 'test-answer-id',
   attempt_id: 'test-attempt-id',
   question_id: 'test-question-id',

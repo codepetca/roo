@@ -234,10 +234,28 @@ describe('CodeEditor Component', () => {
       const mockDestroy = vi.fn()
       const { EditorView } = await import('@codemirror/view')
       vi.mocked(EditorView).mockImplementation(() => ({
-        state: { doc: { toString: () => 'test' } },
+        state: { 
+          doc: { 
+            toString: () => 'test',
+            length: 4,
+            lines: 1,
+            lineAt: vi.fn(),
+            line: vi.fn(),
+            sliceString: vi.fn(),
+            slice: vi.fn(),
+            eq: vi.fn(),
+            iter: vi.fn(),
+            iterLines: vi.fn(),
+            iterRange: vi.fn(),
+            replace: vi.fn(),
+            append: vi.fn(),
+            prepend: vi.fn(),
+            toJSON: vi.fn()
+          } 
+        },
         dispatch: vi.fn(),
         destroy: mockDestroy
-      }))
+      }) as any)
 
       const { unmount } = render(CodeEditor, {
         props: {
@@ -258,10 +276,28 @@ describe('CodeEditor Component', () => {
       const mockDispatch = vi.fn()
       const { EditorView } = await import('@codemirror/view')
       vi.mocked(EditorView).mockImplementation(() => ({
-        state: { doc: { toString: () => 'old value' } },
+        state: { 
+          doc: { 
+            toString: () => 'old value',
+            length: 9,
+            lines: 1,
+            lineAt: vi.fn(),
+            line: vi.fn(),
+            sliceString: vi.fn(),
+            slice: vi.fn(),
+            eq: vi.fn(),
+            iter: vi.fn(),
+            iterLines: vi.fn(),
+            iterRange: vi.fn(),
+            replace: vi.fn(),
+            append: vi.fn(),
+            prepend: vi.fn(),
+            toJSON: vi.fn()
+          } 
+        },
         dispatch: mockDispatch,
         destroy: vi.fn()
-      }))
+      }) as any)
 
       const { rerender } = render(CodeEditor, {
         props: {
@@ -292,10 +328,28 @@ describe('CodeEditor Component', () => {
       const mockDispatch = vi.fn()
       const { EditorView } = await import('@codemirror/view')
       vi.mocked(EditorView).mockImplementation(() => ({
-        state: { doc: { toString: () => 'same value' } },
+        state: { 
+          doc: { 
+            toString: () => 'same value',
+            length: 10,
+            lines: 1,
+            lineAt: vi.fn(),
+            line: vi.fn(),
+            sliceString: vi.fn(),
+            slice: vi.fn(),
+            eq: vi.fn(),
+            iter: vi.fn(),
+            iterLines: vi.fn(),
+            iterRange: vi.fn(),
+            replace: vi.fn(),
+            append: vi.fn(),
+            prepend: vi.fn(),
+            toJSON: vi.fn()
+          } 
+        },
         dispatch: mockDispatch,
         destroy: vi.fn()
-      }))
+      }) as any)
 
       const { rerender } = render(CodeEditor, {
         props: {
@@ -338,7 +392,8 @@ describe('CodeEditor Component', () => {
     })
 
     it('creates fallback editor when main creation fails', async () => {
-      const { EditorView, EditorState } = await import('@codemirror/view')
+      const { EditorView } = await import('@codemirror/view')
+      const { EditorState } = await import('@codemirror/state')
       
       // Make the first EditorView creation fail
       vi.mocked(EditorView)
@@ -346,10 +401,28 @@ describe('CodeEditor Component', () => {
           throw new Error('Editor creation failed')
         })
         .mockImplementationOnce(() => ({
-          state: { doc: { toString: () => 'test' } },
+          state: { 
+            doc: { 
+              toString: () => 'test',
+              length: 4,
+              lines: 1,
+              lineAt: vi.fn(),
+              line: vi.fn(),
+              sliceString: vi.fn(),
+              slice: vi.fn(),
+              eq: vi.fn(),
+              iter: vi.fn(),
+              iterLines: vi.fn(),
+              iterRange: vi.fn(),
+              replace: vi.fn(),
+              append: vi.fn(),
+              prepend: vi.fn(),
+              toJSON: vi.fn()
+            } 
+          },
           dispatch: vi.fn(),
           destroy: vi.fn()
-        }))
+        }) as any)
 
       render(CodeEditor, {
         props: {

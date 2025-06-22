@@ -125,7 +125,7 @@ describe('Claude AI Integration', () => {
       const result = await generateQuestion(concepts)
       
       // Should use the second, shorter solution
-      expect(result.solution.code).toBe(shortSolution)
+      expect(result.solution?.code).toBe(shortSolution)
       expect(mockCreate).toHaveBeenCalledTimes(2) // Should retry once
     })
   })
@@ -163,7 +163,24 @@ describe('Claude AI Integration', () => {
         messages: { create: mockCreate }
       }) as any)
 
-      const result = await gradeCode(imageBase64, question, rubric)
+      const validRubric = {
+        communication: {
+          description: 'Communication clarity',
+          weight: 1,
+          criteria: ['Clear comments', 'Good variable names']
+        },
+        correctness: {
+          description: 'Code correctness',
+          weight: 2,
+          criteria: ['Works correctly', 'Handles edge cases']
+        },
+        logic: {
+          description: 'Logic quality',
+          weight: 1,
+          criteria: ['Good algorithm', 'Efficient solution']
+        }
+      }
+      const result = await gradeCode(imageBase64, question, validRubric)
 
       expect(result).toMatchObject({
         extractedCode: expect.any(String),
@@ -209,7 +226,24 @@ describe('Claude AI Integration', () => {
         messages: { create: mockCreate }
       }) as any)
 
-      await expect(gradeCode('image', 'question', {})).rejects.toThrow('Failed to grade submission')
+      const emptyRubric = {
+        communication: {
+          description: '',
+          weight: 0,
+          criteria: []
+        },
+        correctness: {
+          description: '',
+          weight: 0,
+          criteria: []
+        },
+        logic: {
+          description: '',
+          weight: 0,
+          criteria: []
+        }
+      }
+      await expect(gradeCode('image', 'question', emptyRubric)).rejects.toThrow('Failed to grade submission')
     })
   })
 })
