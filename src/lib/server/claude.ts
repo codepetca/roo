@@ -125,13 +125,17 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
       messages: [{ role: 'user', content: prompt }]
     })
 
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
+    const firstContent = message.content[0]
+    if (!firstContent || firstContent.type !== 'text') {
+      throw new Error('Expected text response from Claude API')
+    }
+    const responseText = firstContent.text
     
     try {
       // First try to parse the response directly
       const parsedResponse = JSON.parse(responseText)
       return parsedResponse
-    } catch (firstError) {
+    } catch (firstError: unknown) {
       
       // Find JSON content between curly braces
       const jsonStart = responseText.indexOf('{')
@@ -153,22 +157,26 @@ Return ONLY valid JSON in this exact format (use simple markdown with line break
         
         const parsedResponse = JSON.parse(cleanedJsonText)
         return parsedResponse
-      } catch (secondError) {
+      } catch (secondError: unknown) {
+        const firstMsg = firstError instanceof Error ? firstError.message : String(firstError)
+        const secondMsg = secondError instanceof Error ? secondError.message : String(secondError)
         console.error('JSON parsing failed:', { 
-          originalError: firstError.message, 
-          cleanupError: secondError.message,
+          originalError: firstMsg, 
+          cleanupError: secondMsg,
           jsonText: jsonText.substring(0, 500)
         })
-        throw new Error(`Failed to parse JSON: ${secondError.message}`)
+        throw new Error(`Failed to parse JSON: ${secondMsg}`)
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
     console.error('Question generation error details:', {
-      message: error.message,
-      stack: error.stack,
+      message: errorMsg,
+      stack: errorStack,
       concepts
     })
-    throw new Error(`Failed to generate question: ${error.message}`)
+    throw new Error(`Failed to generate question: ${errorMsg}`)
   }
 }
 
@@ -226,10 +234,14 @@ Return ONLY valid JSON in this exact format:
       }]
     })
 
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
-    return JSON.parse(responseText)
-  } catch (error) {
-    console.error('Grading error:', error)
+    const firstContent = message.content[0]
+    if (!firstContent || firstContent.type !== 'text') {
+      throw new Error('Expected text response from Claude API')
+    }
+    return JSON.parse(firstContent.text)
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    console.error('Grading error:', errorMsg)
     throw new Error('Failed to grade submission')
   }
 }

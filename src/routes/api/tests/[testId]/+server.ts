@@ -1,6 +1,7 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types.js";
 import { supabase } from "$lib/server/supabase.ts";
+import type { APIResponse, CodingTestWithQuestions } from "$lib/types/index.js";
 import * as Sentry from "@sentry/sveltekit";
 
 export const GET: RequestHandler = async ({ params }) => {
@@ -27,21 +28,28 @@ export const GET: RequestHandler = async ({ params }) => {
       .single();
 
     if (error) {
-      return json({ error: "Test not found" }, { status: 404 });
+      const errorResponse: APIResponse = {
+        success: false,
+        error: { message: "Test not found" }
+      };
+      return json(errorResponse, { status: 404 });
     }
 
-    return json({ test });
+    const response: APIResponse<CodingTestWithQuestions> = {
+      success: true,
+      data: test
+    };
+    return json(response);
   } catch (error) {
     Sentry.captureException(error, {
       tags: { api_route: "tests/[testId]", operation: "fetch" },
       extra: { testId: params.testId },
     });
-    return json(
-      {
-        error: error instanceof Error ? error.message : "Failed to fetch test",
-      },
-      { status: 500 },
-    );
+    const errorResponse: APIResponse = {
+      success: false,
+      error: { message: error instanceof Error ? error.message : "Failed to fetch test" }
+    };
+    return json(errorResponse, { status: 500 });
   }
 };
 
@@ -61,24 +69,28 @@ export const PUT: RequestHandler = async ({ params, request }) => {
       .single();
 
     if (error) {
-      return json({ error: "Failed to update test" }, { status: 500 });
+      const errorResponse: APIResponse = {
+        success: false,
+        error: { message: "Failed to update test" }
+      };
+      return json(errorResponse, { status: 500 });
     }
 
-    return json({
+    const response: APIResponse<typeof test> = {
       success: true,
-      test,
-    });
+      data: test
+    };
+    return json(response);
   } catch (error) {
     Sentry.captureException(error, {
       tags: { api_route: "tests/[testId]", operation: "update" },
       extra: { testId: params.testId },
     });
-    return json(
-      {
-        error: error instanceof Error ? error.message : "Failed to update test",
-      },
-      { status: 500 },
-    );
+    const errorResponse: APIResponse = {
+      success: false,
+      error: { message: error instanceof Error ? error.message : "Failed to update test" }
+    };
+    return json(errorResponse, { status: 500 });
   }
 };
 
@@ -94,7 +106,11 @@ export const DELETE: RequestHandler = async ({ params }) => {
       .eq("test_id", testId);
 
     if (attemptsError) {
-      return json({ error: "Failed to fetch test attempts" }, { status: 500 });
+      const errorResponse: APIResponse = {
+        success: false,
+        error: { message: "Failed to fetch test attempts" }
+      };
+      return json(errorResponse, { status: 500 });
     }
 
 
@@ -127,10 +143,11 @@ export const DELETE: RequestHandler = async ({ params }) => {
         .in("attempt_id", attemptIds);
 
       if (answersError) {
-        return json(
-          { error: "Failed to delete test answers" },
-          { status: 500 },
-        );
+        const errorResponse: APIResponse = {
+          success: false,
+          error: { message: "Failed to delete test answers" }
+        };
+        return json(errorResponse, { status: 500 });
       }
 
       // 3. Delete test attempts
@@ -140,10 +157,11 @@ export const DELETE: RequestHandler = async ({ params }) => {
         .eq("test_id", testId);
 
       if (attemptsDeleteError) {
-        return json(
-          { error: "Failed to delete test attempts" },
-          { status: 500 },
-        );
+        const errorResponse: APIResponse = {
+          success: false,
+          error: { message: "Failed to delete test attempts" }
+        };
+        return json(errorResponse, { status: 500 });
       }
 
     }
@@ -155,10 +173,11 @@ export const DELETE: RequestHandler = async ({ params }) => {
       .eq("test_id", testId);
 
     if (questionsError) {
-      return json(
-        { error: "Failed to delete test questions" },
-        { status: 500 },
-      );
+      const errorResponse: APIResponse = {
+        success: false,
+        error: { message: "Failed to delete test questions" }
+      };
+      return json(errorResponse, { status: 500 });
     }
 
     // 5. Finally delete the test itself
@@ -168,20 +187,26 @@ export const DELETE: RequestHandler = async ({ params }) => {
       .eq("id", testId);
 
     if (testError) {
-      return json({ error: "Failed to delete test" }, { status: 500 });
+      const errorResponse: APIResponse = {
+        success: false,
+        error: { message: "Failed to delete test" }
+      };
+      return json(errorResponse, { status: 500 });
     }
 
-    return json({ success: true });
+    const response: APIResponse = {
+      success: true
+    };
+    return json(response);
   } catch (error) {
     Sentry.captureException(error, {
       tags: { api_route: "tests/[testId]", operation: "delete" },
       extra: { testId: params.testId },
     });
-    return json(
-      {
-        error: error instanceof Error ? error.message : "Failed to delete test",
-      },
-      { status: 500 },
-    );
+    const errorResponse: APIResponse = {
+      success: false,
+      error: { message: error instanceof Error ? error.message : "Failed to delete test" }
+    };
+    return json(errorResponse, { status: 500 });
   }
 };

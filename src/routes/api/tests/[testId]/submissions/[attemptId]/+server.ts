@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit'
 import type { RequestHandler } from './$types.js'
 import { supabase } from '$lib/server/supabase.ts'
+import type { APIResponse } from '$lib/types/index.js'
 
 export const GET: RequestHandler = async ({ params }) => {
   try {
@@ -20,7 +21,11 @@ export const GET: RequestHandler = async ({ params }) => {
       .single()
 
     if (attemptError || !attempt) {
-      return json({ error: 'Submission not found' }, { status: 404 })
+      const errorResponse: APIResponse = {
+        success: false,
+        error: { message: 'Submission not found' }
+      };
+      return json(errorResponse, { status: 404 })
     }
 
     // Get all answers for this attempt with question details
@@ -38,7 +43,11 @@ export const GET: RequestHandler = async ({ params }) => {
       .order('created_at', { ascending: true })
 
     if (answersError) {
-      return json({ error: 'Failed to fetch answers' }, { status: 500 })
+      const errorResponse: APIResponse = {
+        success: false,
+        error: { message: 'Failed to fetch answers' }
+      };
+      return json(errorResponse, { status: 500 })
     }
 
     // Get question details for each answer
@@ -70,18 +79,26 @@ export const GET: RequestHandler = async ({ params }) => {
       })
     }
 
-    return json({
+    const response: APIResponse<{
+      attempt: typeof attempt & { student_name: string },
+      answers: typeof processedAnswers
+    }> = {
       success: true,
-      attempt: {
-        ...attempt,
-        student_name: attempt.profiles?.full_name || 'Unknown Student'
-      },
-      answers: processedAnswers
-    })
+      data: {
+        attempt: {
+          ...attempt,
+          student_name: attempt.profiles?.full_name || 'Unknown Student'
+        },
+        answers: processedAnswers
+      }
+    };
+    return json(response)
 
   } catch (error) {
-    return json({ 
-      error: error instanceof Error ? error.message : 'Failed to fetch submission details' 
-    }, { status: 500 })
+    const errorResponse: APIResponse = {
+      success: false,
+      error: { message: error instanceof Error ? error.message : 'Failed to fetch submission details' }
+    };
+    return json(errorResponse, { status: 500 })
   }
 }

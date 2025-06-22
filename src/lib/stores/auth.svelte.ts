@@ -61,11 +61,10 @@ class AuthStore {
 
   private async loadProfileInBackground(userId: string) {
     try {
-      const result = await this.withTimeout(
+      const { data, error } = await this.withTimeout(
         supabase.from('profiles').select('*').eq('id', userId).single(),
         2000 // Shorter timeout for background load
       )
-      const { data, error } = result
 
       if (!error && data) {
         const userProfileData: UserProfile = {
@@ -113,7 +112,7 @@ class AuthStore {
 
         if (!createError) {
           // Profile created successfully, load it
-          await this.loadProfile(user.id)
+          await this.loadProfileInBackground(user.id)
         } else {
           this.setFallbackProfile(user)
         }

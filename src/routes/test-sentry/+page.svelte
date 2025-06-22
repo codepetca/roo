@@ -1,13 +1,14 @@
-<script>
+<script lang="ts">
   import * as Sentry from '@sentry/sveltekit';
   
   function testClientError() {
     console.log('Testing client error...');
     try {
       throw new Error('Manual Sentry Test - Client Error');
-    } catch (error) {
+    } catch (error: unknown) {
       Sentry.captureException(error);
-      console.log('Error sent to Sentry:', error.message);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.log('Error sent to Sentry:', errorMsg);
     }
   }
   
@@ -18,8 +19,9 @@
       if (!response.ok) {
         throw new Error('Server error response received');
       }
-    } catch (error) {
-      console.log('Server error occurred:', error.message);
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      console.log('Server error occurred:', errorMsg);
     }
   }
 </script>

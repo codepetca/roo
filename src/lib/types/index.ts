@@ -20,6 +20,11 @@ export interface SubmissionWithRelations extends Submission {
   } | null
 }
 
+// Extended test answer type with joined question data for display
+export interface TestAnswerWithQuestion extends TestAnswer {
+  questions?: Question | null
+}
+
 export type Profile = Tables<'profiles'>
 export type ProfileInsert = TablesInsert<'profiles'>
 export type ProfileUpdate = TablesUpdate<'profiles'>
@@ -63,21 +68,13 @@ export interface SubmissionsResponse extends APIResponse<Submission[]> { // Upda
 }
 
 // Claude AI Types
-export interface QuestionData {
-  question: string
-  rubric: RubricStructure // Updated to RubricStructure
-  solution: Solution
-  concepts: string[]
-}
-
-// Renamed Rubric to RubricStructure and ensured RubricCategory is defined correctly
-export interface RubricCategory { // This definition is fine, ensuring it's seen as part of the "new" structure
+export interface RubricCategory {
   description: string
   weight: number
   criteria: string[]
 }
 
-export interface RubricStructure { // Renamed from Rubric
+export interface RubricStructure {
   communication: RubricCategory
   correctness: RubricCategory
   logic: RubricCategory
@@ -89,9 +86,7 @@ export interface Solution {
   keyPoints: string[]
 }
 
-// New Question Interface (as per issue requirements)
-// This coexists with `export type Question = Tables<'java_questions'>;`
-// The new interface is for specific use-cases like Claude integration.
+// Claude integration specific interface
 export interface QuestionData {
   id: string
   question_text: string
@@ -100,6 +95,7 @@ export interface QuestionData {
   language: string
   created_at: string
   created_by?: string
+  solution?: Solution
 }
 
 // New Claude Grading Request/Response Types (replaces GradingResult)
@@ -273,9 +269,7 @@ export interface TestAttemptWithDetails extends TestAttempt {
   test_answers?: TestAnswer[]
 }
 
-export interface TestAnswerWithQuestion extends TestAnswer {
-  questions?: Question
-}
+// TestAnswerWithQuestion is already defined above, removing duplicate
 
 export interface TestProgress {
   testId: string

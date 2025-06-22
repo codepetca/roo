@@ -19,7 +19,11 @@
   let selectedSubmission = $state<string | null>(null)
   let submissionDetails = $state<{
     attempt: TestAttempt,
-    answers: (TestAnswer & { question_text?: string, java_concepts?: string[] })[]
+    answers: (TestAnswer & { 
+      question_text?: string, 
+      concepts?: string[], 
+      rubric?: any 
+    })[]
   } | null>(null)
   let gradingResults = $state<any>(null)
 
@@ -41,6 +45,9 @@
       }
 
       // Load submissions
+      if (!authStore.user?.id) {
+        throw new Error('User not authenticated')
+      }
       const response = await fetch(`/api/tests/${testId}/submissions?teacherId=${authStore.user.id}`)
       const result = await response.json()
 
@@ -64,11 +71,11 @@
       const response = await fetch(`/api/tests/${testId}/submissions/${attemptId}`)
       const result = await response.json()
 
-      if (response.ok) {
-        submissionDetails = result
+      if (response.ok && result.success) {
+        submissionDetails = result.data
         selectedSubmission = attemptId
       } else {
-        alert(`Failed to load submission details: ${result.error}`)
+        alert(`Failed to load submission details: ${result.error?.message || result.error}`)
       }
     } catch (error) {
       // Error loading submission details
@@ -256,8 +263,8 @@
                     <h3 class="font-medium text-gray-900">
                       {submission.student_name || 'Student'}
                     </h3>
-                    <span class="px-2 py-1 text-xs rounded-full {getStatusColor(submission.status)}">
-                      {submission.status}
+                    <span class="px-2 py-1 text-xs rounded-full {getStatusColor(submission.status || 'unknown')}">
+                      {submission.status || 'unknown'}
                     </span>
                   </div>
                   
