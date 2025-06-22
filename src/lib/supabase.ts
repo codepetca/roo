@@ -9,7 +9,9 @@ console.log('Debug - Environment variables:', {
   hasUrl: !!supabaseUrl,
   hasKey: !!supabaseAnonKey,
   urlPreview: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'undefined',
-  allEnvVars: Object.keys(import.meta.env)
+  keyPreview: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'undefined',
+  allEnvVars: Object.keys(import.meta.env),
+  fullEnvVars: import.meta.env
 })
 
 // Create dummy client or real client based on environment variables

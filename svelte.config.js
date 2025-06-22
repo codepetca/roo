@@ -11,16 +11,18 @@ const config = {
 		// Auto adapter - detects deployment platform
 		adapter: adapter(),
 		
-		// Security headers and CSP
+		// Security headers and CSP - relaxed for staging
 		csp: {
 			mode: 'auto',
 			directives: {
 				'default-src': ['self'],
-				'script-src': ['self', 'unsafe-inline'],
-				'style-src': ['self', 'unsafe-inline'],
+				'script-src': ['self', 'unsafe-inline', 'unsafe-eval', 'blob:'],
+				'style-src': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
+				'style-src-elem': ['self', 'unsafe-inline', 'https://fonts.googleapis.com'],
+				'font-src': ['self', 'https://fonts.gstatic.com'],
 				'img-src': ['self', 'data:', 'blob:', 'https:'],
-				'font-src': ['self'],
 				'connect-src': ['self', 'https:'],
+				'worker-src': ['self', 'blob:'],
 				'frame-src': ['none']
 			}
 		},
