@@ -7,8 +7,16 @@ yarn-error.log*
 # Firebase
 .firebase/
 firebase-debug.log
+firebase-debug.*.log
 firestore-debug.log
 ui-debug.log
+pubsub-debug.log
+functions-debug.log
+
+# Firebase emulators
+firestore_export/
+*.local
+emulator-data/
 
 # Environment variables
 .env
@@ -16,6 +24,7 @@ ui-debug.log
 .env.development.local
 .env.test.local
 .env.production.local
+functions/.env
 
 # Service account keys
 *-service-account-key.json
@@ -25,6 +34,7 @@ service-account-*.json
 dist/
 build/
 lib/
+functions/lib/
 
 # Logs
 logs/
