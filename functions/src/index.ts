@@ -1,18 +1,17 @@
 import {onRequest} from "firebase-functions/v2/https";
 import {logger} from "firebase-functions";
 
-export const helloWorld = onRequest((request, response) => {
-  logger.info("Hello logs!", {structuredData: true});
-  response.send("Hello from Firebase!");
-});
-
-export const testRoo = onRequest((request, response) => {
-  const message = "Roo auto-grading system is alive!";
-  logger.info("Roo test function called", {structuredData: true});
+export const api = onRequest({cors: true}, (request, response) => {
+  logger.info("Roo API function called", {
+    method: request.method,
+    path: request.path,
+    structuredData: true
+  });
   
   response.json({
-    message,
+    message: "Roo auto-grading system API",
     timestamp: new Date().toISOString(),
-    status: "success"
+    status: "active",
+    version: "1.0.0"
   });
 });
