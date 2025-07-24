@@ -17,7 +17,7 @@ export interface Assignment {
   gradingRubric: {
     enabled: boolean;
     criteria: string[];
-    promptTemplate: string;
+    promptTemplate?: string;
   };
   createdAt: FirebaseFirestore.Timestamp;
   updatedAt: FirebaseFirestore.Timestamp;

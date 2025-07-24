@@ -1,0 +1,93 @@
+import { z } from 'zod';
+
+// Base schemas for common fields
+const timestampSchema = z.object({
+  _seconds: z.number(),
+  _nanoseconds: z.number()
+});
+
+// Assignment schemas
+export const createAssignmentSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(1, "Description is required"),
+  maxPoints: z.number().min(0).max(1000),
+  dueDate: z.string().datetime().optional(),
+  gradingRubric: z.object({
+    enabled: z.boolean().default(true),
+    criteria: z.array(z.string()).default(["Content", "Grammar", "Structure"]),
+    promptTemplate: z.string().optional()
+  }).optional()
+});
+
+export const assignmentSchema = createAssignmentSchema.extend({
+  id: z.string(),
+  classroomId: z.string(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+  dueDate: timestampSchema
+});
+
+// Submission schemas
+export const submissionStatusSchema = z.enum(['pending', 'grading', 'graded', 'error']);
+
+export const createSubmissionSchema = z.object({
+  assignmentId: z.string().min(1),
+  studentId: z.string().min(1),
+  studentEmail: z.string().email(),
+  studentName: z.string().min(1),
+  documentUrl: z.string().url(),
+  content: z.string().optional()
+});
+
+export const submissionSchema = createSubmissionSchema.extend({
+  id: z.string(),
+  submittedAt: timestampSchema,
+  status: submissionStatusSchema,
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema
+});
+
+// Grade schemas
+export const gradeDetailSchema = z.object({
+  name: z.string(),
+  score: z.number().min(0),
+  maxScore: z.number().min(0),
+  feedback: z.string()
+});
+
+export const createGradeSchema = z.object({
+  submissionId: z.string().min(1),
+  assignmentId: z.string().min(1),
+  studentId: z.string().min(1),
+  score: z.number().min(0),
+  maxScore: z.number().min(0),
+  feedback: z.string(),
+  gradingDetails: z.object({
+    criteria: z.array(gradeDetailSchema)
+  })
+});
+
+export const gradeSchema = createGradeSchema.extend({
+  id: z.string(),
+  gradedBy: z.enum(['ai', 'manual']),
+  gradedAt: timestampSchema,
+  postedToClassroom: z.boolean().default(false),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema
+});
+
+// API request schemas
+export const testWriteSchema = z.object({
+  test: z.string(),
+  step: z.number().optional(),
+  data: z.any().optional()
+});
+
+// Type exports (inferred from schemas)
+export type CreateAssignment = z.infer<typeof createAssignmentSchema>;
+export type Assignment = z.infer<typeof assignmentSchema>;
+export type CreateSubmission = z.infer<typeof createSubmissionSchema>;
+export type Submission = z.infer<typeof submissionSchema>;
+export type CreateGrade = z.infer<typeof createGradeSchema>;
+export type Grade = z.infer<typeof gradeSchema>;
+export type TestWrite = z.infer<typeof testWriteSchema>;

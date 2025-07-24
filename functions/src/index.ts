@@ -2,6 +2,8 @@ import {onRequest} from "firebase-functions/v2/https";
 import {logger} from "firebase-functions";
 import {db, FieldValue} from "./config/firebase";
 import {Assignment} from "./types";
+import {createAssignmentSchema, testWriteSchema} from "./schemas";
+import {z} from "zod";
 
 export const api = onRequest({cors: true}, async (request, response) => {
   logger.info("Roo API function called", {
@@ -33,20 +35,34 @@ export const api = onRequest({cors: true}, async (request, response) => {
 
     // Test Firestore write
     if (method === "POST" && path === "/test-write") {
-      const testDoc = {
-        message: "Test document from Roo",
-        timestamp: FieldValue.serverTimestamp(),
-        testData: request.body || {}
-      };
-      
-      const docRef = await db.collection("test").add(testDoc);
-      logger.info("Test document written", {docId: docRef.id});
-      
-      response.json({
-        success: true,
-        docId: docRef.id,
-        message: "Test document written to Firestore"
-      });
+      try {
+        // Validate request body
+        const validatedData = testWriteSchema.parse(request.body);
+        
+        const testDoc = {
+          message: "Test document from Roo",
+          timestamp: FieldValue.serverTimestamp(),
+          testData: validatedData
+        };
+        
+        const docRef = await db.collection("test").add(testDoc);
+        logger.info("Test document written", {docId: docRef.id});
+        
+        response.json({
+          success: true,
+          docId: docRef.id,
+          message: "Test document written to Firestore"
+        });
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          response.status(400).json({
+            error: "Validation failed",
+            details: validationError.issues
+          });
+        } else {
+          throw validationError;
+        }
+      }
       return;
     }
 
@@ -72,29 +88,47 @@ export const api = onRequest({cors: true}, async (request, response) => {
 
     // Create test assignment
     if (method === "POST" && path === "/assignments") {
-      const assignmentData: Omit<Assignment, "id"> = {
-        classroomId: "test-classroom-1",
-        title: request.body.title || "Test Assignment",
-        description: request.body.description || "This is a test assignment",
-        dueDate: FieldValue.serverTimestamp() as any,
-        maxPoints: request.body.maxPoints || 100,
-        gradingRubric: {
-          enabled: true,
-          criteria: ["Content", "Grammar", "Structure"],
-          promptTemplate: "Grade this assignment based on content, grammar, and structure."
-        },
-        createdAt: FieldValue.serverTimestamp() as any,
-        updatedAt: FieldValue.serverTimestamp() as any
-      };
-      
-      const docRef = await db.collection("assignments").add(assignmentData);
-      logger.info("Assignment created", {assignmentId: docRef.id});
-      
-      response.json({
-        success: true,
-        assignmentId: docRef.id,
-        message: "Test assignment created"
-      });
+      try {
+        // Validate request body
+        const validatedData = createAssignmentSchema.parse(request.body);
+        
+        const assignmentData: Omit<Assignment, "id"> = {
+          classroomId: "test-classroom-1",
+          title: validatedData.title,
+          description: validatedData.description,
+          dueDate: FieldValue.serverTimestamp() as any,
+          maxPoints: validatedData.maxPoints,
+          gradingRubric: validatedData.gradingRubric || {
+            enabled: true,
+            criteria: ["Content", "Grammar", "Structure"],
+            promptTemplate: "Grade this assignment based on content, grammar, and structure."
+          },
+          createdAt: FieldValue.serverTimestamp() as any,
+          updatedAt: FieldValue.serverTimestamp() as any
+        };
+        
+        const docRef = await db.collection("assignments").add(assignmentData);
+        logger.info("Assignment created", {assignmentId: docRef.id});
+        
+        response.json({
+          success: true,
+          assignmentId: docRef.id,
+          assignment: {
+            ...assignmentData,
+            id: docRef.id
+          },
+          message: "Assignment created successfully"
+        });
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          response.status(400).json({
+            error: "Validation failed",
+            details: validationError.issues
+          });
+        } else {
+          throw validationError;
+        }
+      }
       return;
     }
 
