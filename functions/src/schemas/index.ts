@@ -83,6 +83,21 @@ export const testWriteSchema = z.object({
   data: z.any().optional()
 });
 
+export const gradeSubmissionSchema = z.object({
+  submissionText: z.string().min(1, "Submission text is required"),
+  assignmentId: z.string().min(1, "Assignment ID is required"),
+  studentId: z.string().min(1, "Student ID is required"),
+  studentName: z.string().min(1, "Student name is required"),
+  customPrompt: z.string().optional()
+});
+
+export const testGradingSchema = z.object({
+  text: z.string().min(1, "Text to grade is required"),
+  criteria: z.array(z.string()).default(["Content", "Grammar", "Structure"]),
+  maxPoints: z.number().min(1).max(1000).default(100),
+  promptTemplate: z.string().optional()
+});
+
 // Type exports (inferred from schemas)
 export type CreateAssignment = z.infer<typeof createAssignmentSchema>;
 export type Assignment = z.infer<typeof assignmentSchema>;
@@ -91,3 +106,5 @@ export type Submission = z.infer<typeof submissionSchema>;
 export type CreateGrade = z.infer<typeof createGradeSchema>;
 export type Grade = z.infer<typeof gradeSchema>;
 export type TestWrite = z.infer<typeof testWriteSchema>;
+export type GradeSubmissionRequest = z.infer<typeof gradeSubmissionSchema>;
+export type TestGrading = z.infer<typeof testGradingSchema>;

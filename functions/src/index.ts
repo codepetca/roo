@@ -1,11 +1,19 @@
 import {onRequest} from "firebase-functions/v2/https";
 import {logger} from "firebase-functions";
+import {defineSecret} from "firebase-functions/params";
 import {db, FieldValue} from "./config/firebase";
 import {Assignment} from "./types";
-import {createAssignmentSchema, testWriteSchema} from "./schemas";
+import {createAssignmentSchema, testWriteSchema, testGradingSchema} from "./schemas";
 import {z} from "zod";
+// Define the secret
+const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
-export const api = onRequest({cors: true}, async (request, response) => {
+export const api = onRequest(
+  {
+    cors: true,
+    secrets: [geminiApiKey]
+  },
+  async (request, response) => {
   logger.info("Roo API function called", {
     method: request.method,
     path: request.path,
@@ -27,7 +35,9 @@ export const api = onRequest({cors: true}, async (request, response) => {
           "POST /test-write": "Test Firestore write",
           "GET /test-read": "Test Firestore read",
           "GET /assignments": "List all assignments",
-          "POST /assignments": "Create test assignment"
+          "POST /assignments": "Create test assignment",
+          "POST /test-grading": "Test AI grading with sample text",
+          "GET /gemini/test": "Test Gemini API connection"
         }
       });
       return;
@@ -149,6 +159,69 @@ export const api = onRequest({cors: true}, async (request, response) => {
         count: assignments.length,
         assignments
       });
+      return;
+    }
+
+    // Test Gemini connection
+    if (method === "GET" && path === "/gemini/test") {
+      try {
+        const { createGeminiService } = await import("./services/gemini");
+        const geminiService = createGeminiService(geminiApiKey.value());
+        const isConnected = await geminiService.testConnection();
+        response.json({
+          success: isConnected,
+          message: isConnected ? "Gemini API is working" : "Gemini API connection failed",
+          service: "gemini-1.5-flash"
+        });
+      } catch (error) {
+        response.status(500).json({
+          success: false,
+          error: "Failed to test Gemini connection",
+          message: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+      return;
+    }
+
+    // Test AI grading
+    if (method === "POST" && path === "/test-grading") {
+      try {
+        const validatedData = testGradingSchema.parse(request.body);
+        
+        const gradingRequest = {
+          submissionId: "test-submission",
+          assignmentId: "test-assignment",
+          title: "Test Assignment",
+          description: "This is a test assignment for AI grading",
+          maxPoints: validatedData.maxPoints,
+          criteria: validatedData.criteria,
+          submission: validatedData.text,
+          promptTemplate: validatedData.promptTemplate
+        };
+
+        const { createGeminiService } = await import("./services/gemini");
+        const geminiService = createGeminiService(geminiApiKey.value());
+        const result = await geminiService.gradeSubmission(gradingRequest);
+        
+        response.json({
+          success: true,
+          grading: result,
+          metadata: {
+            submissionLength: validatedData.text.length,
+            criteria: validatedData.criteria,
+            maxPoints: validatedData.maxPoints
+          }
+        });
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          response.status(400).json({
+            error: "Validation failed",
+            details: validationError.issues
+          });
+        } else {
+          throw validationError;
+        }
+      }
       return;
     }
 
