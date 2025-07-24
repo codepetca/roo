@@ -98,6 +98,23 @@ export const testGradingSchema = z.object({
   promptTemplate: z.string().optional()
 });
 
+// Google Classroom schemas
+export const classroomCourseSchema = z.object({
+  courseId: z.string().min(1, "Course ID is required")
+});
+
+export const assignmentFetchSchema = z.object({
+  courseId: z.string().min(1, "Course ID is required"),
+  courseWorkId: z.string().min(1, "Assignment ID is required")
+});
+
+export const postGradeSchema = z.object({
+  courseId: z.string().min(1, "Course ID is required"),
+  courseWorkId: z.string().min(1, "Assignment ID is required"),
+  submissionId: z.string().min(1, "Submission ID is required"),
+  grade: z.number().min(0).max(1000, "Grade must be between 0 and 1000")
+});
+
 // Type exports (inferred from schemas)
 export type CreateAssignment = z.infer<typeof createAssignmentSchema>;
 export type Assignment = z.infer<typeof assignmentSchema>;
@@ -108,3 +125,6 @@ export type Grade = z.infer<typeof gradeSchema>;
 export type TestWrite = z.infer<typeof testWriteSchema>;
 export type GradeSubmissionRequest = z.infer<typeof gradeSubmissionSchema>;
 export type TestGrading = z.infer<typeof testGradingSchema>;
+export type ClassroomCourseRequest = z.infer<typeof classroomCourseSchema>;
+export type AssignmentFetchRequest = z.infer<typeof assignmentFetchSchema>;
+export type PostGradeRequest = z.infer<typeof postGradeSchema>;

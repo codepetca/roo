@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "googleapis": "^154.0.0"
+  },
+  "devDependencies": {
+    "undici-types": "^7.12.0"
+  }
+}

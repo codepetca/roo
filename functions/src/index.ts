@@ -1,17 +1,19 @@
 import {onRequest} from "firebase-functions/v2/https";
 import {logger} from "firebase-functions";
-import {defineSecret} from "firebase-functions/params";
+import {defineSecret, defineString} from "firebase-functions/params";
 import {db, FieldValue} from "./config/firebase";
 import {Assignment} from "./types";
 import {createAssignmentSchema, testWriteSchema, testGradingSchema} from "./schemas";
 import {z} from "zod";
-// Define the secret
+// Define secrets and parameters
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
+const spreadsheetId = defineString("SHEETS_SPREADSHEET_ID");
 
 export const api = onRequest(
   {
     cors: true,
-    secrets: [geminiApiKey]
+    secrets: [geminiApiKey],
+    params: [spreadsheetId]
   },
   async (request, response) => {
   logger.info("Roo API function called", {
@@ -37,7 +39,10 @@ export const api = onRequest(
           "GET /assignments": "List all assignments",
           "POST /assignments": "Create test assignment",
           "POST /test-grading": "Test AI grading with sample text",
-          "GET /gemini/test": "Test Gemini API connection"
+          "GET /gemini/test": "Test Gemini API connection",
+          "GET /sheets/test": "Test Google Sheets connection",
+          "GET /sheets/assignments": "Get assignments from Google Sheets",
+          "POST /sheets/submissions": "Get submissions for an assignment from Sheets"
         }
       });
       return;
@@ -211,6 +216,77 @@ export const api = onRequest(
             criteria: validatedData.criteria,
             maxPoints: validatedData.maxPoints
           }
+        });
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          response.status(400).json({
+            error: "Validation failed",
+            details: validationError.issues
+          });
+        } else {
+          throw validationError;
+        }
+      }
+      return;
+    }
+
+    // Test Google Sheets connection
+    if (method === "GET" && path === "/sheets/test") {
+      try {
+        const { createSheetsService } = await import("./services/sheets");
+        const sheetsService = await createSheetsService();
+        const isConnected = await sheetsService.testConnection();
+        
+        response.json({
+          success: isConnected,
+          message: isConnected ? "Google Sheets API is working" : "Google Sheets connection failed",
+          service: "sheets-v4"
+        });
+      } catch (error) {
+        response.status(500).json({
+          success: false,
+          error: "Failed to test Sheets connection",
+          message: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+      return;
+    }
+
+    // Get assignments from Google Sheets
+    if (method === "GET" && path === "/sheets/assignments") {
+      try {
+        const { createSheetsService } = await import("./services/sheets");
+        const sheetsService = await createSheetsService();
+        const assignments = await sheetsService.getAssignments();
+        
+        response.json({
+          success: true,
+          count: assignments.length,
+          assignments
+        });
+      } catch (error) {
+        response.status(500).json({
+          success: false,
+          error: "Failed to fetch assignments from Sheets",
+          message: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+      return;
+    }
+
+    // Get submissions for a specific assignment from Google Sheets
+    if (method === "POST" && path === "/sheets/submissions") {
+      try {
+        const validatedData = z.object({ assignmentId: z.string().min(1) }).parse(request.body);
+        const { createSheetsService } = await import("./services/sheets");
+        const sheetsService = await createSheetsService();
+        const submissions = await sheetsService.getSubmissions(validatedData.assignmentId);
+        
+        response.json({
+          success: true,
+          assignmentId: validatedData.assignmentId,
+          count: submissions.length,
+          submissions
         });
       } catch (validationError) {
         if (validationError instanceof z.ZodError) {
