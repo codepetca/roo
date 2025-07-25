@@ -1,19 +1,17 @@
 import {onRequest} from "firebase-functions/v2/https";
 import {logger} from "firebase-functions";
-import {defineSecret, defineString} from "firebase-functions/params";
+import {defineSecret} from "firebase-functions/params";
 import {db, FieldValue} from "./config/firebase";
 import {Assignment} from "./types";
 import {createAssignmentSchema, testWriteSchema, testGradingSchema} from "./schemas";
 import {z} from "zod";
-// Define secrets and parameters
+// Define secrets and parameters  
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
-const spreadsheetId = defineString("SHEETS_SPREADSHEET_ID");
 
 export const api = onRequest(
   {
     cors: true,
-    secrets: [geminiApiKey],
-    params: [spreadsheetId]
+    secrets: [geminiApiKey]
   },
   async (request, response) => {
   logger.info("Roo API function called", {
@@ -42,7 +40,12 @@ export const api = onRequest(
           "GET /gemini/test": "Test Gemini API connection",
           "GET /sheets/test": "Test Google Sheets connection",
           "GET /sheets/assignments": "Get assignments from Google Sheets",
-          "POST /sheets/submissions": "Get submissions for an assignment from Sheets"
+          "POST /sheets/submissions": "Get submissions for an assignment from Sheets",
+          "GET /sheets/all-submissions": "Get all submissions from Sheets",
+          "GET /sheets/ungraded": "Get ungraded submissions",
+          "POST /sheets/answer-key": "Get answer key for a quiz form",
+          "POST /grade-quiz": "Grade a quiz submission using answer key",
+          "POST /grade-submission": "Grade a single submission with generous coding mode"
         }
       });
       return;
@@ -193,15 +196,24 @@ export const api = onRequest(
       try {
         const validatedData = testGradingSchema.parse(request.body);
         
+        // Import prompts and choose appropriate template
+        const { GRADING_PROMPTS } = await import("./services/gemini");
+        const isCodeSubmission = validatedData.text.toLowerCase().includes('function') || 
+                                validatedData.text.toLowerCase().includes('karel') ||
+                                validatedData.text.includes('{') || validatedData.text.includes('}');
+        
+        const promptTemplate = validatedData.promptTemplate || 
+                              (isCodeSubmission ? GRADING_PROMPTS.generousCode : GRADING_PROMPTS.default);
+
         const gradingRequest = {
           submissionId: "test-submission",
           assignmentId: "test-assignment",
-          title: "Test Assignment",
-          description: "This is a test assignment for AI grading",
+          title: "Test Assignment - Karel Code",
+          description: "This is a test assignment for generous AI grading of Karel code",
           maxPoints: validatedData.maxPoints,
           criteria: validatedData.criteria,
           submission: validatedData.text,
-          promptTemplate: validatedData.promptTemplate
+          promptTemplate: promptTemplate
         };
 
         const { createGeminiService } = await import("./services/gemini");
@@ -296,6 +308,216 @@ export const api = onRequest(
           });
         } else {
           throw validationError;
+        }
+      }
+      return;
+    }
+
+    // Get all submissions from Google Sheets
+    if (method === "GET" && path === "/sheets/all-submissions") {
+      try {
+        const { createSheetsService } = await import("./services/sheets");
+        const sheetsService = await createSheetsService();
+        const submissions = await sheetsService.getAllSubmissions();
+        
+        response.json({
+          success: true,
+          count: submissions.length,
+          submissions
+        });
+      } catch (error) {
+        response.status(500).json({
+          success: false,
+          error: "Failed to fetch all submissions",
+          message: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+      return;
+    }
+
+    // Get ungraded submissions
+    if (method === "GET" && path === "/sheets/ungraded") {
+      try {
+        const { createSheetsService } = await import("./services/sheets");
+        const sheetsService = await createSheetsService();
+        const submissions = await sheetsService.getUngraduatedSubmissions();
+        
+        response.json({
+          success: true,
+          count: submissions.length,
+          submissions
+        });
+      } catch (error) {
+        response.status(500).json({
+          success: false,
+          error: "Failed to fetch ungraded submissions",
+          message: error instanceof Error ? error.message : "Unknown error"
+        });
+      }
+      return;
+    }
+
+    // Get answer key for a quiz form
+    if (method === "POST" && path === "/sheets/answer-key") {
+      try {
+        const validatedData = z.object({ formId: z.string().min(1) }).parse(request.body);
+        const { createSheetsService } = await import("./services/sheets");
+        const sheetsService = await createSheetsService();
+        const answerKey = await sheetsService.getAnswerKey(validatedData.formId);
+        
+        response.json({
+          success: true,
+          answerKey
+        });
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          response.status(400).json({
+            error: "Validation failed",
+            details: validationError.issues
+          });
+        } else {
+          response.status(500).json({
+            success: false,
+            error: "Failed to fetch answer key",
+            message: validationError instanceof Error ? validationError.message : "Unknown error"
+          });
+        }
+      }
+      return;
+    }
+
+    // Grade a quiz submission using answer key
+    if (method === "POST" && path === "/grade-quiz") {
+      try {
+        const validatedData = z.object({
+          submissionId: z.string().min(1),
+          formId: z.string().min(1),
+          studentAnswers: z.record(z.string()) // questionNumber -> answer
+        }).parse(request.body);
+
+        const { createSheetsService } = await import("./services/sheets");
+        const { createGeminiService } = await import("./services/gemini");
+        
+        const sheetsService = await createSheetsService();
+        const geminiService = createGeminiService(geminiApiKey.value());
+
+        // Get answer key
+        const answerKey = await sheetsService.getAnswerKey(validatedData.formId);
+        if (!answerKey) {
+          response.status(404).json({
+            success: false,
+            error: "Answer key not found for this form"
+          });
+          return;
+        }
+
+        // Convert string keys to numbers for student answers
+        const studentAnswers: { [questionNumber: number]: string } = {};
+        Object.entries(validatedData.studentAnswers).forEach(([key, value]) => {
+          studentAnswers[parseInt(key)] = value;
+        });
+
+        // Grade the quiz
+        const gradingResult = await geminiService.gradeQuiz({
+          submissionId: validatedData.submissionId,
+          formId: validatedData.formId,
+          studentAnswers,
+          answerKey
+        });
+
+        // Update the grade in sheets
+        await sheetsService.updateGrade(validatedData.submissionId, gradingResult.totalScore);
+
+        response.json({
+          success: true,
+          grading: gradingResult,
+          answerKey: {
+            totalPoints: answerKey.totalPoints,
+            questionCount: answerKey.questions.length
+          }
+        });
+
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          response.status(400).json({
+            error: "Validation failed",
+            details: validationError.issues
+          });
+        } else {
+          response.status(500).json({
+            success: false,
+            error: "Failed to grade quiz",
+            message: validationError instanceof Error ? validationError.message : "Unknown error"
+          });
+        }
+      }
+      return;
+    }
+
+    // Grade a single submission with generous coding mode
+    if (method === "POST" && path === "/grade-submission") {
+      try {
+        const validatedData = z.object({
+          submissionId: z.string().min(1),
+          submissionText: z.string().min(1),
+          assignmentTitle: z.string().min(1),
+          assignmentDescription: z.string().optional().default(""),
+          maxPoints: z.number().min(1).default(100),
+          isCodeAssignment: z.boolean().default(false),
+          gradingStrictness: z.enum(['strict', 'standard', 'generous']).default('generous')
+        }).parse(request.body);
+
+        const { createGeminiService } = await import("./services/gemini");
+        const { createSheetsService } = await import("./services/sheets");
+        
+        const geminiService = createGeminiService(geminiApiKey.value());
+        const sheetsService = await createSheetsService();
+
+        // Choose appropriate prompt template
+        const { GRADING_PROMPTS } = await import("./services/gemini");
+        let promptTemplate = GRADING_PROMPTS.default;
+        if (validatedData.isCodeAssignment || validatedData.gradingStrictness === 'generous') {
+          promptTemplate = GRADING_PROMPTS.generousCode;
+        }
+
+        // Prepare grading request
+        const gradingRequest = {
+          submissionId: validatedData.submissionId,
+          assignmentId: "manual-grading",
+          title: validatedData.assignmentTitle,
+          description: validatedData.assignmentDescription,
+          maxPoints: validatedData.maxPoints,
+          criteria: ["Understanding", "Logic", "Implementation"],
+          submission: validatedData.submissionText,
+          promptTemplate
+        };
+
+        const result = await geminiService.gradeSubmission(gradingRequest);
+        
+        // Update grade in sheets
+        await sheetsService.updateGrade(validatedData.submissionId, result.score);
+
+        response.json({
+          success: true,
+          grading: result,
+          metadata: {
+            gradingMode: validatedData.gradingStrictness,
+            isCodeAssignment: validatedData.isCodeAssignment
+          }
+        });
+
+      } catch (validationError) {
+        if (validationError instanceof z.ZodError) {
+          response.status(400).json({
+            error: "Validation failed",
+            details: validationError.issues
+          });
+        } else {
+          response.status(500).json({
+            success: false,
+            error: "Failed to grade submission",
+            message: validationError instanceof Error ? validationError.message : "Unknown error"
+          });
         }
       }
       return;

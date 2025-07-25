@@ -6,9 +6,8 @@ const SHEETS_SCOPES = [
   'https://www.googleapis.com/auth/spreadsheets.readonly'
 ];
 
-// Configuration - get from Firebase config
-import { defineString } from 'firebase-functions/params';
-const spreadsheetId = defineString('SHEETS_SPREADSHEET_ID');
+// Configuration - hardcoded for now (TODO: use environment variables)
+const spreadsheetId = "119EdfrPtA3G180b2EgkzVr5v-kxjNgYQjgDkLmuN02Y";
 
 export interface SheetAssignment {
   id: string;
@@ -23,16 +22,43 @@ export interface SheetAssignment {
 
 export interface SheetSubmission {
   id: string;
-  assignmentId: string;
-  studentId: string;
-  studentName: string;
+  assignmentTitle: string;
+  courseId: string;
+  studentFirstName: string;
+  studentLastName: string;
   studentEmail: string;
   submissionText: string;
   submissionDate: string;
-  status: 'submitted' | 'late' | 'missing';
-  currentGrade?: number;
-  submissionType: 'forms' | 'files';
-  sourceFileId?: string;
+  currentGrade?: string;
+  gradingStatus: 'pending' | 'graded' | 'reviewed';
+  maxPoints: number;
+  sourceSheetName: string;
+  assignmentDescription: string;
+  lastProcessed: string;
+  sourceFileId: string;
+  isQuiz: boolean;
+  formId: string;
+}
+
+export interface QuizQuestion {
+  formId: string;
+  assignmentTitle: string;
+  courseId: string;
+  questionNumber: number;
+  questionText: string;
+  questionType: string;
+  points: number;
+  correctAnswer: string;
+  answerExplanation: string;
+  gradingStrictness: 'strict' | 'standard' | 'generous';
+}
+
+export interface QuizAnswerKey {
+  formId: string;
+  assignmentTitle: string;
+  courseId: string;
+  questions: QuizQuestion[];
+  totalPoints: number;
 }
 
 export class SheetsService {
@@ -49,7 +75,7 @@ export class SheetsService {
     try {
       // Try to read basic spreadsheet metadata
       const response = await this.sheets.spreadsheets.get({
-        spreadsheetId: spreadsheetId.value()
+        spreadsheetId: spreadsheetId
       });
       
       logger.info(`Sheets connection test successful - spreadsheet: ${response.data.properties.title}`);
@@ -70,7 +96,7 @@ export class SheetsService {
       logger.info('Fetching assignments from Google Sheets');
       
       const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: spreadsheetId.value(),
+        spreadsheetId: spreadsheetId,
         range: 'Assignments!A2:H', // Skip header row - added submission type column
       });
 
@@ -94,41 +120,101 @@ export class SheetsService {
   }
 
   /**
-   * Get submissions for a specific assignment from the Submissions sheet
-   * Expected sheet format:
-   * A: Submission ID | B: Assignment ID | C: Student ID | D: Student Name | E: Student Email | 
-   * F: Submission Text | G: Submission Date | H: Status | I: Current Grade
+   * Get all submissions from the Submissions sheet
+   * New sheet format with 17 columns including quiz metadata
    */
-  async getSubmissions(assignmentId: string): Promise<SheetSubmission[]> {
+  async getAllSubmissions(): Promise<SheetSubmission[]> {
     try {
-      logger.info(`Fetching submissions for assignment ${assignmentId} from Google Sheets`);
+      logger.info('Fetching all submissions from Google Sheets');
       
       const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: spreadsheetId.value(),
-        range: 'Submissions!A2:K', // Extended to include submission type and source file ID // Skip header row
+        spreadsheetId: spreadsheetId,
+        range: 'Submissions!A2:Q', // All 17 columns
+      });
+
+      const rows = response.data.values || [];
+      logger.info(`Found ${rows.length} total submissions`);
+      
+      return rows.map((row: string[]) => ({
+        id: row[0] || '',
+        assignmentTitle: row[1] || '',
+        courseId: row[2] || '',
+        studentFirstName: row[3] || '',
+        studentLastName: row[4] || '',
+        studentEmail: row[5] || '',
+        submissionText: row[6] || '',
+        submissionDate: row[7] || '',
+        currentGrade: row[8] || undefined,
+        gradingStatus: (row[9] as 'pending' | 'graded' | 'reviewed') || 'pending',
+        maxPoints: parseInt(row[10]) || 100,
+        sourceSheetName: row[11] || '',
+        assignmentDescription: row[12] || '',
+        lastProcessed: row[13] || '',
+        sourceFileId: row[14] || '',
+        isQuiz: row[15] === 'TRUE' || row[15] === 'true',
+        formId: row[16] || ''
+      }));
+    } catch (error) {
+      logger.error('Error fetching submissions', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get submissions for a specific assignment
+   */
+  async getSubmissions(assignmentTitle: string): Promise<SheetSubmission[]> {
+    const allSubmissions = await this.getAllSubmissions();
+    return allSubmissions.filter(s => s.assignmentTitle === assignmentTitle);
+  }
+
+  /**
+   * Get quiz answer keys from the Answer Keys sheet
+   */
+  async getAnswerKey(formId: string): Promise<QuizAnswerKey | null> {
+    try {
+      logger.info(`Fetching answer key for form ${formId}`);
+      
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: spreadsheetId,
+        range: 'Answer Keys!A2:J', // All answer key columns
       });
 
       const rows = response.data.values || [];
       
-      // Filter rows for the specific assignment
-      const assignmentRows = rows.filter((row: string[]) => row[1] === assignmentId);
-      logger.info(`Found ${assignmentRows.length} submissions for assignment ${assignmentId}`);
+      // Filter for this specific form
+      const formRows = rows.filter((row: string[]) => row[0] === formId);
       
-      return assignmentRows.map((row: string[], index: number) => ({
-        id: row[0] || `submission_${assignmentId}_${index}`,
-        assignmentId: row[1] || assignmentId,
-        studentId: row[2] || 'unknown',
-        studentName: row[3] || 'Unknown Student',
-        studentEmail: row[4] || '',
-        submissionText: row[5] || '',
-        submissionDate: row[6] || '',
-        status: (row[7] as 'submitted' | 'late' | 'missing') || 'submitted',
-        currentGrade: row[8] ? parseFloat(row[8]) : undefined,
-        submissionType: (row[9] as 'forms' | 'files') || 'forms',
-        sourceFileId: row[10] || undefined
+      if (formRows.length === 0) {
+        logger.info(`No answer key found for form ${formId}`);
+        return null;
+      }
+      
+      // Build answer key object
+      const questions: QuizQuestion[] = formRows.map((row: string[]) => ({
+        formId: row[0],
+        assignmentTitle: row[1],
+        courseId: row[2],
+        questionNumber: parseInt(row[3]) || 0,
+        questionText: row[4] || '',
+        questionType: row[5] || '',
+        points: parseInt(row[6]) || 0,
+        correctAnswer: row[7] || '',
+        answerExplanation: row[8] || '',
+        gradingStrictness: (row[9] as 'strict' | 'standard' | 'generous') || 'generous'
       }));
+      
+      const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
+      
+      return {
+        formId: formId,
+        assignmentTitle: questions[0]?.assignmentTitle || '',
+        courseId: questions[0]?.courseId || '',
+        questions: questions,
+        totalPoints: totalPoints
+      };
     } catch (error) {
-      logger.error(`Error fetching submissions for assignment ${assignmentId}`, error);
+      logger.error(`Error fetching answer key for form ${formId}`, error);
       throw error;
     }
   }
@@ -143,8 +229,8 @@ export class SheetsService {
       
       // First, find the row for this submission
       const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: spreadsheetId.value(),
-        range: 'Submissions!A2:K', // Extended to include submission type and source file ID
+        spreadsheetId: spreadsheetId,
+        range: 'Submissions!A2:Q', // All 17 columns
       });
 
       const rows = response.data.values || [];
@@ -154,15 +240,15 @@ export class SheetsService {
         throw new Error(`Submission ${submissionId} not found in sheet`);
       }
 
-      // Update the grade (column I, which is index 8)
-      const cellRange = `Submissions!I${rowIndex + 2}`; // +2 because we start from row 2 (skipping header)
+      // Update the grade (column I, which is index 8) and status (column J, index 9)
+      const gradeRange = `Submissions!I${rowIndex + 2}:J${rowIndex + 2}`;
       
       await this.sheets.spreadsheets.values.update({
-        spreadsheetId: spreadsheetId.value(),
-        range: cellRange,
+        spreadsheetId: spreadsheetId,
+        range: gradeRange,
         valueInputOption: 'RAW',
         requestBody: {
-          values: [[grade]]
+          values: [[grade, 'graded']]
         }
       });
 
@@ -174,43 +260,24 @@ export class SheetsService {
   }
 
   /**
-   * Get all assignments that need grading (submissions without grades)
+   * Get all submissions that need grading (submissions without grades)
    */
-  async getUngraduatedSubmissions(): Promise<Array<SheetSubmission & { assignmentTitle: string }>> {
+  async getUngraduatedSubmissions(): Promise<SheetSubmission[]> {
     try {
       logger.info('Fetching ungraded submissions from Google Sheets');
       
-      // Get all assignments first to map titles
-      const assignments = await this.getAssignments();
-      const assignmentMap = new Map(assignments.map(a => [a.id, a.title]));
+      const allSubmissions = await this.getAllSubmissions();
       
-      // Get all submissions
-      const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: spreadsheetId.value(),
-        range: 'Submissions!A2:K', // Extended to include submission type and source file ID
-      });
-
-      const rows = response.data.values || [];
+      // Filter for submissions without grades (currentGrade is empty or pending status)
+      const ungradedSubmissions = allSubmissions.filter(s => 
+        !s.currentGrade || 
+        s.currentGrade.trim() === '' || 
+        s.gradingStatus === 'pending'
+      );
       
-      // Filter for submissions without grades (column I is empty)
-      const ungradedRows = rows.filter((row: string[]) => !row[8] || row[8].trim() === '');
+      logger.info(`Found ${ungradedSubmissions.length} ungraded submissions`);
       
-      logger.info(`Found ${ungradedRows.length} ungraded submissions`);
-      
-      return ungradedRows.map((row: string[], index: number) => ({
-        id: row[0] || `submission_${index}`,
-        assignmentId: row[1] || 'unknown',
-        studentId: row[2] || 'unknown',
-        studentName: row[3] || 'Unknown Student',
-        studentEmail: row[4] || '',
-        submissionText: row[5] || '',
-        submissionDate: row[6] || '',
-        status: (row[7] as 'submitted' | 'late' | 'missing') || 'submitted',
-        currentGrade: undefined,
-        submissionType: (row[9] as 'forms' | 'files') || 'forms',
-        sourceFileId: row[10] || undefined,
-        assignmentTitle: assignmentMap.get(row[1]) || 'Unknown Assignment'
-      }));
+      return ungradedSubmissions;
     } catch (error) {
       logger.error('Error fetching ungraded submissions', error);
       throw error;

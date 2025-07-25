@@ -60,11 +60,11 @@ function processAllSubmissionTypes() {
       console.log(`Processing classroom: ${courseId}`);
 
       // Process ONLY Google Sheets with "(responses)" pattern
-      const responseSheetSubmissions = processResponseSheets(
+      const responseSheetData = processResponseSheets(
         classroomFolder,
         courseId
       );
-      allSubmissions.push(...responseSheetSubmissions);
+      allSubmissions.push(...responseSheetData.submissions);
     } catch (error) {
       console.error(
         `Error processing classroom ${classroomFolder.getName()}:`,
@@ -83,26 +83,31 @@ function processAllSubmissionTypes() {
  * Process Google Sheets with "(responses)" pattern - search more thoroughly
  */
 function processResponseSheets(classroomFolder, courseId) {
-  const submissions = [];
+  const result = {
+    submissions: [],
+    answerKeys: []
+  };
 
   // Search in main folder
   console.log(`Searching for response sheets in: ${classroomFolder.getName()}`);
-  const mainFolderSheets = findResponseSheetsInFolder(
+  const mainFolderData = findResponseSheetsInFolder(
     classroomFolder,
     courseId
   );
-  submissions.push(...mainFolderSheets);
+  result.submissions.push(...mainFolderData.submissions);
+  result.answerKeys.push(...mainFolderData.answerKeys);
 
   // Also search in subfolders (response sheets might be in subfolders)
   const subfolders = classroomFolder.getFolders();
   while (subfolders.hasNext()) {
     const subfolder = subfolders.next();
     console.log(`Searching subfolder: ${subfolder.getName()}`);
-    const subfolderSheets = findResponseSheetsInFolder(subfolder, courseId);
-    submissions.push(...subfolderSheets);
+    const subfolderData = findResponseSheetsInFolder(subfolder, courseId);
+    result.submissions.push(...subfolderData.submissions);
+    result.answerKeys.push(...subfolderData.answerKeys);
   }
 
-  return submissions;
+  return result;
 }
 
 /**
@@ -110,6 +115,7 @@ function processResponseSheets(classroomFolder, courseId) {
  */
 function findResponseSheetsInFolder(folder, courseId) {
   const submissions = [];
+  const answerKeys = [];
   const files = folder.getFiles();
 
   while (files.hasNext()) {
@@ -120,6 +126,15 @@ function findResponseSheetsInFolder(folder, courseId) {
       // Check if it's a Google Form by trying to access it as a form
       const form = FormApp.openById(file.getId());
       console.log(`Found Google Form: ${fileName}`);
+
+      // Extract answer key if it's a quiz
+      if (form.isQuiz()) {
+        console.log(`  Form is a quiz - extracting answer key`);
+        const answerKey = extractQuizAnswerKey(form, file.getId(), fileName, courseId);
+        if (answerKey) {
+          answerKeys.push(answerKey);
+        }
+      }
 
       const destinationId = form.getDestinationId();
 
@@ -133,7 +148,9 @@ function findResponseSheetsInFolder(folder, courseId) {
             assignmentTitle,
             courseId,
             file.getDateCreated(),
-            `${fileName} (Responses)`
+            `${fileName} (Responses)`,
+            form.isQuiz(),
+            file.getId()
           );
           submissions.push(...sheetSubmissions);
           console.log(
@@ -188,7 +205,142 @@ function findResponseSheetsInFolder(folder, courseId) {
     }
   }
 
-  return submissions;
+  // Write answer keys to personal sheets if any were found
+  if (answerKeys.length > 0) {
+    writeAnswerKeysToSheets(answerKeys);
+  }
+
+  return {
+    submissions: submissions,
+    answerKeys: answerKeys
+  };
+}
+
+/**
+ * Extract answer key from a Google Form quiz
+ */
+function extractQuizAnswerKey(form, formId, formTitle, courseId) {
+  const answerKeyData = {
+    formId: formId,
+    assignmentTitle: formTitle,
+    courseId: courseId,
+    totalPoints: 0,
+    questions: []
+  };
+
+  try {
+    const items = form.getItems();
+    let questionCounter = 0;
+    
+    items.forEach((item, index) => {
+      const questionType = item.getType();
+      
+      // Skip non-question items
+      if (questionType === FormApp.ItemType.PAGE_BREAK ||
+          questionType === FormApp.ItemType.SECTION_HEADER ||
+          questionType === FormApp.ItemType.IMAGE ||
+          questionType === FormApp.ItemType.VIDEO) {
+        return; // Skip this item
+      }
+      
+      // Skip items without titles (like name/email fields)
+      const questionTitle = item.getTitle();
+      if (!questionTitle || questionTitle.trim() === "") {
+        return;
+      }
+      
+      // Skip name and email fields
+      const titleLower = questionTitle.toLowerCase();
+      if (titleLower.includes("first name") || 
+          titleLower.includes("last name") || 
+          titleLower.includes("email") ||
+          titleLower === "name") {
+        return;
+      }
+      
+      questionCounter++;
+      const questionNumber = questionCounter;
+      let points = 0;
+      let correctAnswer = "";
+      let answerExplanation = "";
+      
+      // Try to get points (might not be available for all question types)
+      try {
+        if (item.asMultipleChoiceItem) {
+          points = item.asMultipleChoiceItem().getPoints() || 0;
+        } else if (item.asCheckboxItem) {
+          points = item.asCheckboxItem().getPoints() || 0;
+        } else if (item.asTextItem) {
+          points = item.asTextItem().getPoints() || 0;
+        } else if (item.asParagraphTextItem) {
+          points = item.asParagraphTextItem().getPoints() || 0;
+        } else if (item.asScaleItem) {
+          points = item.asScaleItem().getPoints() || 0;
+        } else if (item.asGridItem) {
+          points = item.asGridItem().getPoints() || 0;
+        }
+      } catch (e) {
+        // Points might not be available
+        points = 0;
+      }
+      
+      // Extract answer based on question type
+      if (questionType === FormApp.ItemType.MULTIPLE_CHOICE) {
+        const mcItem = item.asMultipleChoiceItem();
+        const choices = mcItem.getChoices();
+        const correctChoice = choices.find(choice => choice.isCorrectAnswer());
+        if (correctChoice) {
+          correctAnswer = correctChoice.getValue();
+          // Get feedback for correct answer if available
+          try {
+            const feedback = correctChoice.getFeedback();
+            if (feedback && feedback.getText) {
+              answerExplanation = feedback.getText();
+            }
+          } catch (feedbackError) {
+            // Feedback might not be available for this choice
+          }
+        }
+      } else if (questionType === FormApp.ItemType.CHECKBOX) {
+        const cbItem = item.asCheckboxItem();
+        const choices = cbItem.getChoices();
+        const correctChoices = choices.filter(choice => choice.isCorrectAnswer());
+        correctAnswer = correctChoices.map(c => c.getValue()).join("; ");
+      } else if (questionType === FormApp.ItemType.TEXT) {
+        // For text questions, we can't get the exact answer
+        correctAnswer = "[Short answer - AI grading]";
+      } else if (questionType === FormApp.ItemType.PARAGRAPH_TEXT) {
+        correctAnswer = "[Long answer/Code - AI grading]";
+      } else if (questionType === FormApp.ItemType.SCALE) {
+        // For scale questions
+        correctAnswer = "[Scale question]";
+      } else if (questionType === FormApp.ItemType.GRID) {
+        // For grid questions
+        correctAnswer = "[Grid question]";
+      } else {
+        // Other question types
+        correctAnswer = `[${questionType} - check manually]`;
+      }
+      
+      answerKeyData.totalPoints += points;
+      answerKeyData.questions.push({
+        questionNumber: questionNumber,
+        questionText: questionTitle,
+        questionType: questionType.toString(),
+        points: points,
+        correctAnswer: correctAnswer,
+        answerExplanation: answerExplanation,
+        gradingStrictness: "generous" // Default for all questions
+      });
+      
+      console.log(`    Q${questionNumber}: ${points} points - ${questionType}`);
+    });
+    
+    return answerKeyData;
+  } catch (error) {
+    console.error(`Error extracting answer key from form ${formTitle}:`, error);
+    return null;
+  }
 }
 
 /**
@@ -199,7 +351,9 @@ function extractSubmissionsFromResponseSheet(
   assignmentTitle,
   courseId,
   createdDate,
-  fileName
+  fileName,
+  isQuiz = false,
+  formId = null
 ) {
   const submissions = [];
 
@@ -316,9 +470,11 @@ function extractSubmissionsFromResponseSheet(
           sourceFileName: fileName,
           currentGrade: "", // Empty = needs grading
           gradingStatus: "pending",
-          maxPoints: 100, // Default
+          maxPoints: 100, // Default - will be updated if quiz
           assignmentDescription: `Google Forms responses: ${assignmentTitle}`,
           lastProcessed: new Date().toISOString(),
+          isQuiz: isQuiz,
+          formId: formId || fileId,
         };
 
         submissions.push(submission);
@@ -373,6 +529,8 @@ function writeToPersonalSheets(submissions) {
       "Assignment Description", // M - Context about assignment
       "Last Processed", // N - When we last updated this
       "Source File ID", // O - For linking back to original
+      "Is Quiz", // P - Whether this is a quiz with answer key
+      "Form ID", // Q - Form ID for quiz answer key lookup
     ];
 
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -395,6 +553,8 @@ function writeToPersonalSheets(submissions) {
         s.assignmentDescription,
         s.lastProcessed,
         s.sourceFileId,
+        s.isQuiz || false,
+        s.formId || "",
       ]);
 
       sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
@@ -435,6 +595,90 @@ function writeToPersonalSheets(submissions) {
 }
 
 /**
+ * Write answer keys to personal sheets
+ */
+function writeAnswerKeysToSheets(answerKeys) {
+  console.log("Writing answer keys to personal Google Sheets...");
+
+  try {
+    const spreadsheet = SpreadsheetApp.openById(CONFIG.PERSONAL_SPREADSHEET_ID);
+    
+    let sheet = spreadsheet.getSheetByName("Answer Keys");
+    
+    // Create sheet if it doesn't exist
+    if (!sheet) {
+      sheet = spreadsheet.insertSheet("Answer Keys");
+      console.log('Created new "Answer Keys" sheet');
+    }
+    
+    // Clear existing data
+    sheet.clear();
+    
+    // Headers for answer keys
+    const headers = [
+      "Form ID",
+      "Assignment Title",
+      "Course ID",
+      "Question Number",
+      "Question Text",
+      "Question Type",
+      "Points",
+      "Correct Answer",
+      "Answer Explanation",
+      "Grading Strictness"
+    ];
+    
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Flatten answer keys into rows
+    const rows = [];
+    answerKeys.forEach(answerKey => {
+      answerKey.questions.forEach(question => {
+        rows.push([
+          answerKey.formId,
+          answerKey.assignmentTitle,
+          answerKey.courseId,
+          question.questionNumber,
+          question.questionText,
+          question.questionType,
+          question.points,
+          question.correctAnswer,
+          question.answerExplanation || "",
+          question.gradingStrictness
+        ]);
+      });
+    });
+    
+    if (rows.length > 0) {
+      sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+      
+      // Add summary row with total points
+      answerKeys.forEach((answerKey, index) => {
+        const summaryRow = index + rows.length + 3;
+        sheet.getRange(summaryRow, 1).setValue(`Total points for ${answerKey.assignmentTitle}: ${answerKey.totalPoints}`);
+      });
+    }
+    
+    // Format headers
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setFontWeight("bold");
+    headerRange.setBackground("#4285f4");
+    headerRange.setFontColor("white");
+    
+    // Auto-resize columns
+    sheet.autoResizeColumns(1, headers.length);
+    
+    // Freeze header row
+    sheet.setFrozenRows(1);
+    
+    console.log(`Successfully wrote ${rows.length} answer key questions to Answer Keys sheet`);
+  } catch (error) {
+    console.error("Error writing answer keys to sheets:", error);
+    throw error;
+  }
+}
+
+/**
  * Clear existing data from personal sheets
  */
 function clearPersonalSheets() {
@@ -442,10 +686,14 @@ function clearPersonalSheets() {
 
   try {
     const spreadsheet = SpreadsheetApp.openById(CONFIG.PERSONAL_SPREADSHEET_ID);
-    const sheet = spreadsheet.getSheetByName("Submissions");
+    const submissionsSheet = spreadsheet.getSheetByName("Submissions");
+    const answerKeysSheet = spreadsheet.getSheetByName("Answer Keys");
 
-    if (sheet) {
-      sheet.clear();
+    if (submissionsSheet) {
+      submissionsSheet.clear();
+    }
+    if (answerKeysSheet) {
+      answerKeysSheet.clear();
     }
   } catch (error) {
     console.error("Error clearing sheets:", error);
@@ -545,22 +793,25 @@ function testSystem() {
       console.log(`\nChecking classroom: ${courseId}`);
 
       // Use the same search logic as the main function
-      const responseSheets = findResponseSheetsInFolder(folder, courseId);
+      const responseData = findResponseSheetsInFolder(folder, courseId);
       console.log(
-        `  Found ${responseSheets.length} response sheets in main folder`
+        `  Found ${responseData.submissions.length} response sheets in main folder`
       );
+      console.log(`  Found ${responseData.answerKeys.length} quiz answer keys`);
 
       // Also check subfolders
       const subfolders = folder.getFolders();
       let subfolderSheetCount = 0;
+      let subfolderKeyCount = 0;
       while (subfolders.hasNext()) {
         const subfolder = subfolders.next();
-        const subfolderSheets = findResponseSheetsInFolder(subfolder, courseId);
-        subfolderSheetCount += subfolderSheets.length;
-        if (subfolderSheets.length > 0) {
+        const subfolderData = findResponseSheetsInFolder(subfolder, courseId);
+        subfolderSheetCount += subfolderData.submissions.length;
+        subfolderKeyCount += subfolderData.answerKeys.length;
+        if (subfolderData.submissions.length > 0) {
           console.log(
             `  Found ${
-              subfolderSheets.length
+              subfolderData.submissions.length
             } response sheets in subfolder: ${subfolder.getName()}`
           );
         }
@@ -568,7 +819,12 @@ function testSystem() {
 
       console.log(
         `  Total response sheets: ${
-          responseSheets.length + subfolderSheetCount
+          responseData.submissions.length + subfolderSheetCount
+        }`
+      );
+      console.log(
+        `  Total answer keys: ${
+          responseData.answerKeys.length + subfolderKeyCount
         }`
       );
     });

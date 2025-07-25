@@ -2,7 +2,7 @@
 
 # Test script for Google Sheets integration
 
-BASE_URL="https://us-central1-roo-app-3d24e.cloudfunctions.net/api"
+BASE_URL="https://api-pmxfayuvra-uc.a.run.app"
 
 echo "Testing Google Sheets Integration..."
 echo "==================================="
