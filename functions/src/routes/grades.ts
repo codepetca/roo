@@ -4,10 +4,13 @@
  */
 
 import { Request, Response } from "express";
-import { z } from "zod";
 import * as admin from "firebase-admin";
 import { createFirestoreGradeService } from "../services/firestore";
-import { handleRouteError } from "../middleware/validation";
+import { 
+  createSubmissionRequestSchema,
+  updateSubmissionStatusSchema 
+} from "../schemas";
+import { handleRouteError, validateData, RequestWithParams } from "../middleware/validation";
 
 /**
  * Get all grades for an assignment
@@ -16,7 +19,7 @@ import { handleRouteError } from "../middleware/validation";
  */
 export async function getGradesByAssignment(req: Request, res: Response) {
   try {
-    const assignmentId = req.params.assignmentId;
+    const assignmentId = (req as RequestWithParams).params.assignmentId;
     if (!assignmentId) {
       res.status(400).json({
         success: false,
@@ -47,7 +50,7 @@ export async function getGradesByAssignment(req: Request, res: Response) {
  */
 export async function getGradeBySubmission(req: Request, res: Response) {
   try {
-    const submissionId = req.params.submissionId;
+    const submissionId = (req as RequestWithParams).params.submissionId;
     if (!submissionId) {
       res.status(400).json({
         success: false,
@@ -106,23 +109,16 @@ export async function getUngradedSubmissions(req: Request, res: Response) {
  */
 export async function createSubmission(req: Request, res: Response) {
   try {
-    const validatedData = z.object({
-      assignmentId: z.string().min(1),
-      studentId: z.string().min(1),
-      studentName: z.string().min(1),
-      studentEmail: z.string().email(),
-      submissionText: z.string().min(1),
-      submittedAt: z.string().datetime().optional(),
-      status: z.enum(["pending", "grading", "graded", "error"]).default("pending")
-    }).parse(req.body);
+    const validatedData = validateData(createSubmissionRequestSchema, req.body);
 
     const firestoreService = createFirestoreGradeService();
     
     const submissionData = {
       ...validatedData,
+      status: validatedData.status || "pending" as const,
       submittedAt: validatedData.submittedAt 
-        ? new Date(validatedData.submittedAt) as unknown as admin.firestore.Timestamp
-        : new Date() as unknown as admin.firestore.Timestamp
+        ? admin.firestore.Timestamp.fromDate(new Date(validatedData.submittedAt))
+        : admin.firestore.Timestamp.now()
     };
 
     const submissionId = await firestoreService.saveSubmission(submissionData);
@@ -145,7 +141,7 @@ export async function createSubmission(req: Request, res: Response) {
  */
 export async function getSubmissionsByAssignment(req: Request, res: Response) {
   try {
-    const assignmentId = req.params.assignmentId;
+    const assignmentId = (req as RequestWithParams).params.assignmentId;
     if (!assignmentId) {
       res.status(400).json({
         success: false,
@@ -176,7 +172,7 @@ export async function getSubmissionsByAssignment(req: Request, res: Response) {
  */
 export async function getSubmissionById(req: Request, res: Response) {
   try {
-    const submissionId = req.params.submissionId;
+    const submissionId = (req as RequestWithParams).params.submissionId;
     if (!submissionId) {
       res.status(400).json({
         success: false,
@@ -213,11 +209,8 @@ export async function getSubmissionById(req: Request, res: Response) {
  */
 export async function updateSubmissionStatus(req: Request, res: Response) {
   try {
-    const submissionId = req.params.submissionId;
-    const validatedData = z.object({
-      status: z.enum(["pending", "grading", "graded", "error"]),
-      gradeId: z.string().optional()
-    }).parse(req.body);
+    const submissionId = (req as RequestWithParams).params.submissionId;
+    const validatedData = validateData(updateSubmissionStatusSchema, req.body);
 
     if (!submissionId) {
       res.status(400).json({

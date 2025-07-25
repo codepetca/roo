@@ -3,21 +3,9 @@
  * Location: functions/src/services/firestore.ts:1
  */
 
-import { db } from "../config/firebase";
+import { db, getCurrentTimestamp } from "../config/firebase";
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
-import { isEmulator } from "../utils/emulator";
-
-/**
- * Get current timestamp - uses current time in emulator, serverTimestamp in production
- */
-function getCurrentTimestamp(): any {
-  if (isEmulator()) {
-    // In emulator, use current time directly
-    return new Date();
-  }
-  return admin.firestore.FieldValue.serverTimestamp();
-}
 
 export interface GradeData {
   submissionId: string;

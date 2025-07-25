@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
-import { z } from "zod";
-import { handleRouteError } from "../middleware/validation";
+import { 
+  getSheetsSubmissionsSchema,
+  getAnswerKeySchema 
+} from "../schemas";
+import { handleRouteError, validateData } from "../middleware/validation";
 
 /**
  * Get assignments from Google Sheets
@@ -34,7 +37,7 @@ export async function getSheetsAssignments(req: Request, res: Response) {
  */
 export async function getSheetsSubmissions(req: Request, res: Response) {
   try {
-    const validatedData = z.object({ assignmentId: z.string().min(1) }).parse(req.body);
+    const validatedData = validateData(getSheetsSubmissionsSchema, req.body);
     const { createSheetsService } = await import("../services/sheets");
     const sheetsService = await createSheetsService();
     const submissions = await sheetsService.getSubmissions(validatedData.assignmentId);
@@ -107,7 +110,7 @@ export async function getUngradedSubmissions(req: Request, res: Response) {
  */
 export async function getAnswerKey(req: Request, res: Response) {
   try {
-    const validatedData = z.object({ formId: z.string().min(1) }).parse(req.body);
+    const validatedData = validateData(getAnswerKeySchema, req.body);
     const { createSheetsService } = await import("../services/sheets");
     const sheetsService = await createSheetsService();
     const answerKey = await sheetsService.getAnswerKey(validatedData.formId);

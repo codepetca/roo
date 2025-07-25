@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
-import { db, FieldValue } from "../config/firebase";
+import { db, getCurrentTimestamp, sanitizeDocument, sanitizeDocuments } from "../config/firebase";
 import { Assignment } from "../types";
 import { createAssignmentSchema, testWriteSchema } from "../schemas";
-import { handleRouteError } from "../middleware/validation";
+import { handleRouteError, validateData, sendApiResponse } from "../middleware/validation";
+import * as admin from "firebase-admin";
 
 /**
  * Create a new test assignment in Firestore
@@ -12,35 +13,37 @@ import { handleRouteError } from "../middleware/validation";
  */
 export async function createAssignment(req: Request, res: Response) {
   try {
-    const validatedData = createAssignmentSchema.parse(req.body);
+    const validatedData = validateData(createAssignmentSchema, req.body);
     
     const assignmentData: Omit<Assignment, "id"> = {
       classroomId: "test-classroom-1",
       title: validatedData.title,
       description: validatedData.description,
-      dueDate: FieldValue.serverTimestamp() as any,
+      dueDate: validatedData.dueDate ? admin.firestore.Timestamp.fromDate(new Date(validatedData.dueDate)) : getCurrentTimestamp(),
       maxPoints: validatedData.maxPoints,
-      gradingRubric: validatedData.gradingRubric || {
-        enabled: true,
-        criteria: ["Content", "Grammar", "Structure"],
-        promptTemplate: "Grade this assignment based on content, grammar, and structure."
+      gradingRubric: {
+        enabled: validatedData.gradingRubric?.enabled ?? true,
+        criteria: validatedData.gradingRubric?.criteria ?? ["Content", "Grammar", "Structure"],
+        promptTemplate: validatedData.gradingRubric?.promptTemplate ?? "Grade this assignment based on content, grammar, and structure."
       },
-      createdAt: FieldValue.serverTimestamp() as any,
-      updatedAt: FieldValue.serverTimestamp() as any
+      createdAt: getCurrentTimestamp(),
+      updatedAt: getCurrentTimestamp()
     };
     
     const docRef = await db.collection("assignments").add(assignmentData);
     logger.info("Assignment created", { assignmentId: docRef.id });
     
-    res.json({
-      success: true,
-      assignmentId: docRef.id,
-      assignment: {
-        ...assignmentData,
-        id: docRef.id
-      },
-      message: "Assignment created successfully"
+    const createdAssignment = sanitizeDocument({
+      ...assignmentData,
+      id: docRef.id
     });
+    
+    sendApiResponse(
+      res,
+      { assignmentId: docRef.id, assignment: createdAssignment },
+      true,
+      "Assignment created successfully"
+    );
   } catch (error) {
     handleRouteError(error, req, res);
   }
@@ -63,11 +66,13 @@ export async function listAssignments(req: Request, res: Response) {
       ...doc.data()
     }));
     
-    res.json({
-      success: true,
-      count: assignments.length,
-      assignments
-    });
+    sendApiResponse(
+      res,
+      {
+        count: assignments.length,
+        assignments: sanitizeDocuments(assignments)
+      }
+    );
   } catch (error) {
     handleRouteError(error, req, res);
   }
@@ -80,22 +85,23 @@ export async function listAssignments(req: Request, res: Response) {
  */
 export async function testFirestoreWrite(req: Request, res: Response) {
   try {
-    const validatedData = testWriteSchema.parse(req.body);
+    const validatedData = validateData(testWriteSchema, req.body);
     
     const testDoc = {
       message: "Test document from Roo",
-      timestamp: FieldValue.serverTimestamp(),
+      timestamp: getCurrentTimestamp(),
       testData: validatedData
     };
     
     const docRef = await db.collection("test").add(testDoc);
     logger.info("Test document written", { docId: docRef.id });
     
-    res.json({
-      success: true,
-      docId: docRef.id,
-      message: "Test document written to Firestore"
-    });
+    sendApiResponse(
+      res,
+      { docId: docRef.id },
+      true,
+      "Test document written to Firestore"
+    );
   } catch (error) {
     handleRouteError(error, req, res);
   }

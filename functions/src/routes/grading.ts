@@ -1,7 +1,11 @@
 import { Request, Response } from "express";
-import { z } from "zod";
-import { testGradingSchema } from "../schemas";
-import { handleRouteError } from "../middleware/validation";
+import { 
+  testGradingSchema,
+  gradeQuizTestSchema,
+  gradeQuizSchema,
+  gradeCodeSchema 
+} from "../schemas";
+import { handleRouteError, validateData } from "../middleware/validation";
 
 /**
  * Test AI grading with sample text (development endpoint)
@@ -26,7 +30,7 @@ export async function testGrading(req: Request, res: Response) {
       assignmentId: "test-assignment",
       title: "Test Assignment - Karel Code",
       description: "This is a test assignment for generous AI grading of Karel code",
-      maxPoints: validatedData.maxPoints,
+      maxPoints: validatedData.maxPoints || 100,
       criteria: validatedData.criteria,
       submission: validatedData.text,
       promptTemplate: promptTemplate
@@ -58,11 +62,7 @@ export async function testGrading(req: Request, res: Response) {
  */
 export async function gradeQuizTest(req: Request, res: Response) {
   try {
-    const validatedData = z.object({
-      submissionId: z.string().min(1),
-      formId: z.string().min(1),
-      studentAnswers: z.record(z.string(), z.string()) // questionNumber -> answer
-    }).parse(req.body);
+    const validatedData = validateData(gradeQuizTestSchema, req.body);
 
     const { createSheetsService } = await import("../services/sheets");
     const { createGeminiService } = await import("../services/gemini");
@@ -119,14 +119,7 @@ export async function gradeQuizTest(req: Request, res: Response) {
  */
 export async function gradeQuiz(req: Request, res: Response) {
   try {
-    const validatedData = z.object({
-      submissionId: z.string().min(1),
-      formId: z.string().min(1),
-      assignmentId: z.string().min(1),
-      studentId: z.string().min(1),
-      studentName: z.string().min(1),
-      studentAnswers: z.record(z.string(), z.string()) // questionNumber -> answer
-    }).parse(req.body);
+    const validatedData = validateData(gradeQuizSchema, req.body);
 
     const { createSheetsService } = await import("../services/sheets");
     const { createGeminiService } = await import("../services/gemini");
@@ -204,18 +197,7 @@ export async function gradeQuiz(req: Request, res: Response) {
  */
 export async function gradeCode(req: Request, res: Response) {
   try {
-    const validatedData = z.object({
-      submissionId: z.string().min(1),
-      submissionText: z.string().min(1),
-      assignmentId: z.string().min(1),
-      assignmentTitle: z.string().min(1),
-      studentId: z.string().min(1),
-      studentName: z.string().min(1),
-      assignmentDescription: z.string().optional().default(""),
-      maxPoints: z.number().min(1).default(100),
-      isCodeAssignment: z.boolean().default(false),
-      gradingStrictness: z.enum(["strict", "standard", "generous"]).default("generous")
-    }).parse(req.body);
+    const validatedData = validateData(gradeCodeSchema, req.body);
 
     const { createGeminiService } = await import("../services/gemini");
     const { createFirestoreGradeService } = await import("../services/firestore");
@@ -236,8 +218,8 @@ export async function gradeCode(req: Request, res: Response) {
       submissionId: validatedData.submissionId,
       assignmentId: validatedData.assignmentId,
       title: validatedData.assignmentTitle,
-      description: validatedData.assignmentDescription,
-      maxPoints: validatedData.maxPoints,
+      description: validatedData.assignmentDescription || "",
+      maxPoints: validatedData.maxPoints || 100,
       criteria: ["Understanding", "Logic", "Implementation"],
       submission: validatedData.submissionText,
       promptTemplate
@@ -252,7 +234,7 @@ export async function gradeCode(req: Request, res: Response) {
       studentId: validatedData.studentId,
       studentName: validatedData.studentName,
       score: result.score,
-      maxPoints: validatedData.maxPoints,
+      maxPoints: validatedData.maxPoints || 100,
       feedback: result.feedback,
       gradedBy: "ai",
       criteriaScores: result.criteriaScores,
