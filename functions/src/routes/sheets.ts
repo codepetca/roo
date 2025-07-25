@@ -124,3 +124,28 @@ export async function getAnswerKey(req: Request, res: Response) {
     });
   }
 }
+
+/**
+ * Debug endpoint to list all sheet names in the spreadsheet
+ * Location: functions/src/routes/sheets.ts:127
+ * Route: GET /sheets/list-sheets
+ */
+export async function listSheetNames(req: Request, res: Response) {
+  try {
+    const { createSheetsService } = await import("../services/sheets");
+    const sheetsService = await createSheetsService();
+    const sheetNames = await sheetsService.listSheetNames();
+    
+    res.json({
+      success: true,
+      sheetNames,
+      count: sheetNames.length
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Failed to list sheet names",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+}

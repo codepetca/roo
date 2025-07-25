@@ -1,9 +1,13 @@
 import { google } from "googleapis";
 import { logger } from "firebase-functions";
 
-// Google Sheets API scopes
+// Google Sheets API scopes - includes both read and write permissions
+// Required for:
+// - Reading sheets data (getAssignments, getAllSubmissions, getAnswerKey)
+// - Writing grades back to sheets (updateGrade method)
+// Authentication uses Firebase Functions default service account
 const SHEETS_SCOPES = [
-  "https://www.googleapis.com/auth/spreadsheets.readonly"
+  "https://www.googleapis.com/auth/spreadsheets" // Full read/write access
 ];
 
 // Configuration - hardcoded for now (TODO: use environment variables)
@@ -87,7 +91,25 @@ export class SheetsService {
   }
 
   /**
-   * Get assignments from the Assignments sheet
+   * List all sheet names in the spreadsheet
+   */
+  async listSheetNames(): Promise<string[]> {
+    try {
+      const response = await this.sheets.spreadsheets.get({
+        spreadsheetId: spreadsheetId
+      });
+      
+      const sheetNames = response.data.sheets?.map((sheet: any) => sheet.properties.title) || [];
+      logger.info(`Found ${sheetNames.length} sheets:`, sheetNames);
+      return sheetNames;
+    } catch (error) {
+      logger.error("Error listing sheet names", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get assignments from the Sheet1 (default assignments sheet)
    * Expected sheet format:
    * A: Assignment ID | B: Course ID | C: Title | D: Description | E: Due Date | F: Max Points | G: Created Date
    */
@@ -97,7 +119,7 @@ export class SheetsService {
       
       const response = await this.sheets.spreadsheets.values.get({
         spreadsheetId: spreadsheetId,
-        range: "Assignments!A2:H", // Skip header row - added submission type column
+        range: "Sheet1!A2:H", // Skip header row - changed from Assignments to Sheet1
       });
 
       const rows = response.data.values || [];

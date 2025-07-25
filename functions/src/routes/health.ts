@@ -30,6 +30,7 @@ export async function getApiStatus(req: Request, res: Response) {
         "GET /sheets/all-submissions": "Get all submissions from Sheets",
         "GET /sheets/ungraded": "Get ungraded submissions",
         "POST /sheets/answer-key": "Get answer key for a quiz form",
+        "POST /grade-quiz-test": "Grade a quiz submission (test mode - no sheet updates)",
         "POST /grade-quiz": "Grade a quiz submission using answer key",
         "POST /grade-code": "Grade a single coding assignment with generous mode"
       }

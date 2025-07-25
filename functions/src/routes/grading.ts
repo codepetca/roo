@@ -52,8 +52,69 @@ export async function testGrading(req: Request, res: Response) {
 }
 
 /**
- * Grade a quiz submission using answer key from Google Sheets
+ * Grade a quiz submission using answer key from Google Sheets (test mode - no sheet updates)
  * Location: functions/src/routes/grading.ts:48
+ * Route: POST /grade-quiz-test
+ */
+export async function gradeQuizTest(req: Request, res: Response) {
+  try {
+    const validatedData = z.object({
+      submissionId: z.string().min(1),
+      formId: z.string().min(1),
+      studentAnswers: z.record(z.string(), z.string()) // questionNumber -> answer
+    }).parse(req.body);
+
+    const { createSheetsService } = await import("../services/sheets");
+    const { createGeminiService } = await import("../services/gemini");
+    
+    const sheetsService = await createSheetsService();
+    const geminiApiKey = req.app.locals.geminiApiKey;
+    const geminiService = createGeminiService(geminiApiKey);
+
+    // Get answer key
+    const answerKey = await sheetsService.getAnswerKey(validatedData.formId);
+    if (!answerKey) {
+      res.status(404).json({
+        success: false,
+        error: "Answer key not found for this form"
+      });
+      return;
+    }
+
+    // Convert string keys to numbers for student answers
+    const studentAnswers: { [questionNumber: number]: string } = {};
+    Object.entries(validatedData.studentAnswers).forEach(([key, value]) => {
+      studentAnswers[parseInt(key)] = value as string;
+    });
+
+    // Grade the quiz
+    const gradingResult = await geminiService.gradeQuiz({
+      submissionId: validatedData.submissionId,
+      formId: validatedData.formId,
+      studentAnswers,
+      answerKey
+    });
+
+    // TEST MODE: Skip sheet update to avoid authentication issues
+    res.json({
+      success: true,
+      grading: gradingResult,
+      answerKey: {
+        totalPoints: answerKey.totalPoints,
+        questionCount: answerKey.questions.length
+      },
+      testMode: true,
+      note: "Grade calculated but not saved to sheets (test mode)"
+    });
+
+  } catch (error) {
+    handleRouteError(error, req, res);
+  }
+}
+
+/**
+ * Grade a quiz submission using answer key from Google Sheets
+ * Location: functions/src/routes/grading.ts:98
  * Route: POST /grade-quiz
  */
 export async function gradeQuiz(req: Request, res: Response) {

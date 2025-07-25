@@ -5,8 +5,8 @@ import { defineSecret } from "firebase-functions/params";
 // Route handlers
 import { getApiStatus, testGeminiConnection, testSheetsConnection } from "./routes/health";
 import { createAssignment, listAssignments, testFirestoreWrite, testFirestoreRead } from "./routes/assignments";
-import { testGrading, gradeQuiz, gradeCode } from "./routes/grading";
-import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngradedSubmissions, getAnswerKey } from "./routes/sheets";
+import { testGrading, gradeQuiz, gradeQuizTest, gradeCode } from "./routes/grading";
+import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngradedSubmissions, getAnswerKey, listSheetNames } from "./routes/sheets";
 
 // Define secrets and parameters  
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
@@ -63,6 +63,9 @@ export const api = onRequest(
       if (method === "POST" && path === "/test-grading") {
         return await testGrading(request, response);
       }
+      if (method === "POST" && path === "/grade-quiz-test") {
+        return await gradeQuizTest(request, response);
+      }
       if (method === "POST" && path === "/grade-quiz") {
         return await gradeQuiz(request, response);
       }
@@ -85,6 +88,9 @@ export const api = onRequest(
       }
       if (method === "POST" && path === "/sheets/answer-key") {
         return await getAnswerKey(request, response);
+      }
+      if (method === "GET" && path === "/sheets/list-sheets") {
+        return await listSheetNames(request, response);
       }
 
       // Default 404
