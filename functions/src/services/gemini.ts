@@ -1,5 +1,5 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { logger } from 'firebase-functions';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { logger } from "firebase-functions";
 
 // Rate limiting configuration
 const RATE_LIMIT = {
@@ -46,7 +46,7 @@ const rateLimiter = new RateLimiter();
 // Gemini service factory
 export const createGeminiService = (apiKey: string) => {
   const genAI = new GoogleGenerativeAI(apiKey);
-  return new GeminiService(genAI.getGenerativeModel({ model: 'gemini-1.5-flash' }));
+  return new GeminiService(genAI.getGenerativeModel({ model: "gemini-1.5-flash" }));
 };
 
 // Grading prompt templates
@@ -163,7 +163,7 @@ export interface QuizGradingRequest {
       points: number;
       correctAnswer: string;
       answerExplanation: string;
-      gradingStrictness: 'strict' | 'standard' | 'generous';
+      gradingStrictness: "strict" | "standard" | "generous";
     }>;
     totalPoints: number;
   };
@@ -190,24 +190,24 @@ export class GeminiService {
     if (!rateLimiter.canMakeRequest(rateLimitKey)) {
       const remaining = rateLimiter.getRemainingRequests(rateLimitKey);
       throw new Error(
-        `Rate limit exceeded. Please wait before grading more submissions. ` +
+        "Rate limit exceeded. Please wait before grading more submissions. " +
         `Remaining requests: ${remaining}/${RATE_LIMIT.maxRequests} per minute.`
       );
     }
 
     try {
       // Build the prompt
-      const criteriaList = request.criteria.join('\n- ');
+      const criteriaList = request.criteria.join("\n- ");
       const basePrompt = request.promptTemplate || GRADING_PROMPTS.default;
       
       const prompt = basePrompt
-        .replace('{criteria}', criteriaList)
-        .replace('{title}', request.title)
-        .replace('{description}', request.description)
-        .replace('{maxPoints}', request.maxPoints.toString())
-        .replace('{submission}', request.submission);
+        .replace("{criteria}", criteriaList)
+        .replace("{title}", request.title)
+        .replace("{description}", request.description)
+        .replace("{maxPoints}", request.maxPoints.toString())
+        .replace("{submission}", request.submission);
 
-      logger.info('Grading submission with Gemini', {
+      logger.info("Grading submission with Gemini", {
         submissionId: request.submissionId,
         promptLength: prompt.length,
       });
@@ -220,31 +220,31 @@ export class GeminiService {
       // Parse JSON response
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        throw new Error('Invalid response format from AI');
+        throw new Error("Invalid response format from AI");
       }
 
       const gradingResult = JSON.parse(jsonMatch[0]) as GradingResponse;
 
       // Validate response
       if (
-        typeof gradingResult.score !== 'number' ||
+        typeof gradingResult.score !== "number" ||
         !gradingResult.feedback ||
         !Array.isArray(gradingResult.criteriaScores)
       ) {
-        throw new Error('Invalid grading response structure');
+        throw new Error("Invalid grading response structure");
       }
 
       // Ensure score is within bounds
       gradingResult.score = Math.max(0, Math.min(request.maxPoints, gradingResult.score));
 
-      logger.info('Grading completed', {
+      logger.info("Grading completed", {
         submissionId: request.submissionId,
         score: gradingResult.score,
       });
 
       return gradingResult;
     } catch (error) {
-      logger.error('Gemini grading error', error);
+      logger.error("Gemini grading error", error);
       throw error;
     }
   }
@@ -263,17 +263,17 @@ export class GeminiService {
     let totalScore = 0;
 
     for (const question of request.answerKey.questions) {
-      const studentAnswer = request.studentAnswers[question.questionNumber] || '';
+      const studentAnswer = request.studentAnswers[question.questionNumber] || "";
       
       // For multiple choice, do exact matching
-      if (question.questionType === 'MULTIPLE_CHOICE') {
+      if (question.questionType === "MULTIPLE_CHOICE") {
         const isCorrect = studentAnswer.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase();
         const score = isCorrect ? question.points : 0;
         
         questionGrades.push({
           questionNumber: question.questionNumber,
           score,
-          feedback: isCorrect ? 'Correct!' : `Incorrect. The correct answer is: ${question.correctAnswer}`,
+          feedback: isCorrect ? "Correct!" : `Incorrect. The correct answer is: ${question.correctAnswer}`,
           maxScore: question.points
         });
         
@@ -295,7 +295,7 @@ export class GeminiService {
             questionGrades.push({
               questionNumber: question.questionNumber,
               score,
-              feedback: gradingResult.feedback || 'No feedback provided',
+              feedback: gradingResult.feedback || "No feedback provided",
               maxScore: question.points
             });
             
@@ -306,7 +306,7 @@ export class GeminiService {
             questionGrades.push({
               questionNumber: question.questionNumber,
               score,
-              feedback: 'Could not parse AI response, partial credit given for attempt',
+              feedback: "Could not parse AI response, partial credit given for attempt",
               maxScore: question.points
             });
             totalScore += score;
@@ -318,7 +318,7 @@ export class GeminiService {
           questionGrades.push({
             questionNumber: question.questionNumber,
             score,
-            feedback: 'Grading error occurred, partial credit given for attempt',
+            feedback: "Grading error occurred, partial credit given for attempt",
             maxScore: question.points
           });
           totalScore += score;
@@ -326,7 +326,7 @@ export class GeminiService {
       }
     }
 
-    logger.info('Quiz grading completed', {
+    logger.info("Quiz grading completed", {
       submissionId: request.submissionId,
       totalScore,
       maxScore: request.answerKey.totalPoints
@@ -336,19 +336,19 @@ export class GeminiService {
   }
 
   private buildQuestionGradingPrompt(question: any, studentAnswer: string): string {
-    const isCodeQuestion = question.questionText.toLowerCase().includes('code') || 
-                          question.questionText.toLowerCase().includes('program') ||
-                          question.questionText.toLowerCase().includes('karel') ||
-                          studentAnswer.includes('{') || studentAnswer.includes('}');
+    const isCodeQuestion = question.questionText.toLowerCase().includes("code") || 
+                          question.questionText.toLowerCase().includes("program") ||
+                          question.questionText.toLowerCase().includes("karel") ||
+                          studentAnswer.includes("{") || studentAnswer.includes("}");
 
-    let strictnessInstructions = '';
-    if (question.gradingStrictness === 'generous' || isCodeQuestion) {
+    let strictnessInstructions = "";
+    if (question.gradingStrictness === "generous" || isCodeQuestion) {
       strictnessInstructions = `GENEROUS GRADING MODE:
 - Focus on understanding and logic over syntax
 - Minor typos, missing semicolons, bracket errors should not heavily penalize
 - If student shows they understand the concept, give most/all points
 - Only penalize for fundamental misunderstanding`;
-    } else if (question.gradingStrictness === 'strict') {
+    } else if (question.gradingStrictness === "strict") {
       strictnessInstructions = `STRICT GRADING MODE:
 - Accuracy and precision are important
 - Syntax and format matter
@@ -364,7 +364,7 @@ export class GeminiService {
 
 Question: ${question.questionText}
 Correct Answer: ${question.correctAnswer}
-${question.answerExplanation ? `Explanation: ${question.answerExplanation}` : ''}
+${question.answerExplanation ? `Explanation: ${question.answerExplanation}` : ""}
 Points Possible: ${question.points}
 
 Student's Answer:
@@ -379,15 +379,15 @@ Please grade this answer and provide feedback. Return JSON format:
 
   async testConnection(): Promise<boolean> {
     try {
-      const prompt = 'Say "Hello, Roo!" if you can read this.';
+      const prompt = "Say \"Hello, Roo!\" if you can read this.";
       const result = await this.model.generateContent(prompt);
       const response = await result.response;
       const text = response.text();
       
-      logger.info('Gemini test response', { response: text });
-      return text.includes('Hello, Roo!');
+      logger.info("Gemini test response", { response: text });
+      return text.includes("Hello, Roo!");
     } catch (error) {
-      logger.error('Gemini connection test failed', error);
+      logger.error("Gemini connection test failed", error);
       return false;
     }
   }

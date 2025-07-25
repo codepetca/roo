@@ -1,8 +1,40 @@
 {
+  "name": "roo-autograding",
+  "private": true,
+  "version": "1.0.0",
+  "description": "AI-powered auto-grading system for educational assignments",
+  "scripts": {
+    "dev": "concurrently \"npm:dev:frontend\" \"npm:dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd functions && npm run serve",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd functions && npm run build",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "cd frontend && npm test",
+    "test:backend": "./test-all-endpoints.sh",
+    "test:all": "npm run test:frontend && npm run test:backend",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:backend": "cd functions && npm run lint",
+    "format": "npm run format:frontend && npm run format:backend",
+    "format:frontend": "cd frontend && npm run format",
+    "format:backend": "cd functions && npm run format",
+    "type-check": "npm run type-check:frontend && npm run type-check:backend",
+    "type-check:frontend": "cd frontend && npm run check",
+    "type-check:backend": "cd functions && tsc --noEmit",
+    "quality:check": "npm run lint && npm run type-check",
+    "quality:complexity": "npx complexity-report functions/src/ && npx complexity-report frontend/src/",
+    "quality:report": "npm run quality:check && npm run quality:complexity",
+    "deploy": "npm run build && cd functions && npm run deploy",
+    "serve": "npm run build:backend && cd functions && npm run serve"
+  },
   "dependencies": {
     "googleapis": "^154.0.0"
   },
   "devDependencies": {
-    "undici-types": "^7.12.0"
+    "undici-types": "^7.12.0",
+    "concurrently": "^8.2.2",
+    "complexity-report": "^2.0.0-alpha"
   }
 }

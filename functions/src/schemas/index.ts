@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 // Base schemas for common fields
 const timestampSchema = z.object({
@@ -28,7 +28,7 @@ export const assignmentSchema = createAssignmentSchema.extend({
 });
 
 // Submission schemas
-export const submissionStatusSchema = z.enum(['pending', 'grading', 'graded', 'error']);
+export const submissionStatusSchema = z.enum(["pending", "grading", "graded", "error"]);
 
 export const createSubmissionSchema = z.object({
   assignmentId: z.string().min(1),
@@ -69,7 +69,7 @@ export const createGradeSchema = z.object({
 
 export const gradeSchema = createGradeSchema.extend({
   id: z.string(),
-  gradedBy: z.enum(['ai', 'manual']),
+  gradedBy: z.enum(["ai", "manual"]),
   gradedAt: timestampSchema,
   postedToClassroom: z.boolean().default(false),
   createdAt: timestampSchema,

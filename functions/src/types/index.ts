@@ -1,10 +1,12 @@
+import * as admin from "firebase-admin";
+
 export interface Classroom {
   id: string;
   name: string;
   courseCode: string;
   teacherId: string;
-  createdAt: FirebaseFirestore.Timestamp;
-  updatedAt: FirebaseFirestore.Timestamp;
+  createdAt: admin.firestore.Timestamp;
+  updatedAt: admin.firestore.Timestamp;
 }
 
 export interface Assignment {
@@ -12,15 +14,15 @@ export interface Assignment {
   classroomId: string;
   title: string;
   description: string;
-  dueDate: FirebaseFirestore.Timestamp;
+  dueDate: admin.firestore.Timestamp;
   maxPoints: number;
   gradingRubric: {
     enabled: boolean;
     criteria: string[];
     promptTemplate?: string;
   };
-  createdAt: FirebaseFirestore.Timestamp;
-  updatedAt: FirebaseFirestore.Timestamp;
+  createdAt: admin.firestore.Timestamp;
+  updatedAt: admin.firestore.Timestamp;
 }
 
 export interface Submission {
@@ -29,12 +31,12 @@ export interface Submission {
   studentId: string;
   studentEmail: string;
   studentName: string;
-  submittedAt: FirebaseFirestore.Timestamp;
+  submittedAt: admin.firestore.Timestamp;
   documentUrl: string;
-  status: 'pending' | 'grading' | 'graded' | 'error';
+  status: "pending" | "grading" | "graded" | "error";
   content?: string;
-  createdAt: FirebaseFirestore.Timestamp;
-  updatedAt: FirebaseFirestore.Timestamp;
+  createdAt: admin.firestore.Timestamp;
+  updatedAt: admin.firestore.Timestamp;
 }
 
 export interface Grade {
@@ -53,9 +55,9 @@ export interface Grade {
       feedback: string;
     }>;
   };
-  gradedBy: 'ai' | 'manual';
-  gradedAt: FirebaseFirestore.Timestamp;
+  gradedBy: "ai" | "manual";
+  gradedAt: admin.firestore.Timestamp;
   postedToClassroom: boolean;
-  createdAt: FirebaseFirestore.Timestamp;
-  updatedAt: FirebaseFirestore.Timestamp;
+  createdAt: admin.firestore.Timestamp;
+  updatedAt: admin.firestore.Timestamp;
 }
