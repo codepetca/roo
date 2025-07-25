@@ -7,7 +7,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 **Roo**: Full-stack AI-powered auto-grading system for educational assignments
 - **Focus**: Programming assignments (Karel the Dog) and quizzes
 - **AI**: Google Gemini 1.5 Flash with generous grading for handwritten code
-- **Stack**: SvelteKit frontend + Firebase Functions backend + Google Sheets integration
+- **Stack**: SvelteKit + **Svelte 5** frontend + Firebase Functions backend + Google Sheets integration
+
+🚨 **MANDATORY**: Use Svelte 5 runes (`$state`, `$derived`, `$props`) - NOT Svelte 4 patterns!
 
 ## Quick Start
 
@@ -102,11 +104,13 @@ import { GradingRequest } from "../types";
 
 ## Technology Stack
 
-- **Frontend**: SvelteKit 2.x + TypeScript + TailwindCSS
+- **Frontend**: SvelteKit 2.x + **Svelte 5** (REQUIRED) + TypeScript + TailwindCSS
 - **Backend**: Firebase Functions + TypeScript + Zod validation
 - **Database**: Firestore + Google Sheets (legacy)
 - **AI**: Google Gemini 1.5 Flash
 - **Testing**: Vitest (frontend) + endpoint scripts (backend)
+
+⚠️ **CRITICAL**: This project uses **Svelte 5** syntax and patterns. Do NOT use Svelte 4 patterns!
 
 ## Critical Notes
 
@@ -137,9 +141,23 @@ PUBLIC_FIREBASE_PROJECT_ID=roo-app-3d24e
 
 ### Frontend Component Development
 1. Create component in `frontend/src/lib/`
-2. Use TypeScript and Svelte 5 conventions
-3. Import types from backend if needed
-4. Test with `npm run test:frontend`
+2. **MUST USE Svelte 5 syntax**: `$state`, `$derived`, `$props` (NO Svelte 4 patterns!)
+3. Use TypeScript and modern Svelte 5 conventions
+4. Import types from backend if needed
+5. Test with `npm run test:frontend`
+
+**Svelte 5 Example**:
+```svelte
+<script lang="ts">
+  interface Props {
+    data: GradingResult;
+  }
+  
+  let { data }: Props = $props();
+  let isLoading = $state(false);
+  let computed = $derived(data.score > 80);
+</script>
+```
 
 ### AI Grading Modifications
 1. Update prompts in `services/gemini.ts:GRADING_PROMPTS`
