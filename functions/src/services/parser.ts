@@ -19,7 +19,7 @@ export function parseSubmissionText(submissionText: string): StudentAnswers {
   }
 
   // Split by lines and process each line
-  const lines = submissionText.split('\n');
+  const lines = submissionText.split("\n");
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
@@ -42,7 +42,7 @@ export function parseSubmissionText(submissionText: string): StudentAnswers {
         }
         
         // Stop if we hit another field (like "Email Address:", "Score:", etc.)
-        if (nextLine.includes(':') && !nextLine.match(/^\d+\./)) {
+        if (nextLine.includes(":") && !nextLine.match(/^\d+\./)) {
           // Check if this looks like a question continuation or a new field
           if (nextLine.match(/^(Email Address|Score|First Name|Last Name):/)) {
             break;
@@ -51,7 +51,7 @@ export function parseSubmissionText(submissionText: string): StudentAnswers {
         
         // Add the line to the answer if it's not empty
         if (nextLine) {
-          answer += '\n' + nextLine;
+          answer += "\n" + nextLine;
         }
         
         nextLineIndex++;
@@ -72,7 +72,7 @@ export function parseSubmissionText(submissionText: string): StudentAnswers {
  * Handles mixed format where some questions are numbered (1-3) and others are by question text
  * Location: functions/src/services/parser.ts:65
  */
-export function parseKarelQuizSubmission(submissionText: string, answerKey?: any): StudentAnswers {
+export function parseKarelQuizSubmission(submissionText: string): StudentAnswers {
   const studentAnswers: StudentAnswers = {};
   
   if (!submissionText) {
@@ -80,7 +80,7 @@ export function parseKarelQuizSubmission(submissionText: string, answerKey?: any
   }
 
   // Split by lines and process each line
-  const lines = submissionText.split('\n');
+  const lines = submissionText.split("\n");
   
   // Question mappings based on the answer key format
   const questionMappings = [
@@ -112,14 +112,14 @@ export function parseKarelQuizSubmission(submissionText: string, answerKey?: any
       if (questionMapping.num === 11) {
         // Question 11 format: "Question?\n\ncode\n}: answer"
         let nextLineIndex = i + 1;
-        let answer = '';
+        let answer = "";
         
         while (nextLineIndex < lines.length) {
           const nextLine = lines[nextLineIndex].trim();
           
           // Look for the answer pattern }: answer
           if (nextLine.match(/^}:\s*(.+)$/)) {
-            answer = nextLine.match(/^}:\s*(.+)$/)?.[1] || '';
+            answer = nextLine.match(/^}:\s*(.+)$/)?.[1] || "";
             break;
           }
           
@@ -138,7 +138,7 @@ export function parseKarelQuizSubmission(submissionText: string, answerKey?: any
         i = nextLineIndex;
       } else {
         // Normal question processing
-        const colonIndex = line.indexOf(':');
+        const colonIndex = line.indexOf(":");
         if (colonIndex !== -1) {
           let answer = line.substring(colonIndex + 1).trim();
           
@@ -163,7 +163,7 @@ export function parseKarelQuizSubmission(submissionText: string, answerKey?: any
               
               // Add non-empty lines to the answer
               if (nextLine) {
-                answer += '\n' + nextLine;
+                answer += "\n" + nextLine;
               }
               
               nextLineIndex++;

@@ -122,17 +122,22 @@ export async function gradeQuiz(req: Request, res: Response) {
     const validatedData = z.object({
       submissionId: z.string().min(1),
       formId: z.string().min(1),
+      assignmentId: z.string().min(1),
+      studentId: z.string().min(1),
+      studentName: z.string().min(1),
       studentAnswers: z.record(z.string(), z.string()) // questionNumber -> answer
     }).parse(req.body);
 
     const { createSheetsService } = await import("../services/sheets");
     const { createGeminiService } = await import("../services/gemini");
+    const { createFirestoreGradeService } = await import("../services/firestore");
     
     const sheetsService = await createSheetsService();
     const geminiApiKey = req.app.locals.geminiApiKey;
     const geminiService = createGeminiService(geminiApiKey);
+    const firestoreService = createFirestoreGradeService();
 
-    // Get answer key
+    // Get answer key from Sheets (this remains for now)
     const answerKey = await sheetsService.getAnswerKey(validatedData.formId);
     if (!answerKey) {
       res.status(404).json({
@@ -156,15 +161,34 @@ export async function gradeQuiz(req: Request, res: Response) {
       answerKey
     });
 
-    // Update the grade in sheets
-    await sheetsService.updateGrade(validatedData.submissionId, gradingResult.totalScore);
+    // Save grade to Firestore instead of updating Sheets
+    const gradeId = await firestoreService.saveGrade({
+      submissionId: validatedData.submissionId,
+      assignmentId: validatedData.assignmentId,
+      studentId: validatedData.studentId,
+      studentName: validatedData.studentName,
+      score: gradingResult.totalScore,
+      maxPoints: answerKey.totalPoints,
+      feedback: `Quiz graded automatically. Score: ${gradingResult.totalScore}/${answerKey.totalPoints}`,
+      gradedBy: 'ai',
+      metadata: {
+        formId: validatedData.formId,
+        questionCount: answerKey.questions.length,
+        totalQuestions: answerKey.questions.length,
+        questionGrades: gradingResult.questionGrades
+      }
+    });
 
     res.json({
       success: true,
+      gradeId,
       grading: gradingResult,
       answerKey: {
         totalPoints: answerKey.totalPoints,
         questionCount: answerKey.questions.length
+      },
+      metadata: {
+        savedToFirestore: true
       }
     });
 
@@ -183,7 +207,10 @@ export async function gradeCode(req: Request, res: Response) {
     const validatedData = z.object({
       submissionId: z.string().min(1),
       submissionText: z.string().min(1),
+      assignmentId: z.string().min(1),
       assignmentTitle: z.string().min(1),
+      studentId: z.string().min(1),
+      studentName: z.string().min(1),
       assignmentDescription: z.string().optional().default(""),
       maxPoints: z.number().min(1).default(100),
       isCodeAssignment: z.boolean().default(false),
@@ -191,11 +218,11 @@ export async function gradeCode(req: Request, res: Response) {
     }).parse(req.body);
 
     const { createGeminiService } = await import("../services/gemini");
-    const { createSheetsService } = await import("../services/sheets");
+    const { createFirestoreGradeService } = await import("../services/firestore");
     
     const geminiApiKey = req.app.locals.geminiApiKey;
     const geminiService = createGeminiService(geminiApiKey);
-    const sheetsService = await createSheetsService();
+    const firestoreService = createFirestoreGradeService();
 
     // Choose appropriate prompt template
     const { GRADING_PROMPTS } = await import("../services/gemini");
@@ -207,7 +234,7 @@ export async function gradeCode(req: Request, res: Response) {
     // Prepare grading request
     const gradingRequest = {
       submissionId: validatedData.submissionId,
-      assignmentId: "manual-grading",
+      assignmentId: validatedData.assignmentId,
       title: validatedData.assignmentTitle,
       description: validatedData.assignmentDescription,
       maxPoints: validatedData.maxPoints,
@@ -218,15 +245,33 @@ export async function gradeCode(req: Request, res: Response) {
 
     const result = await geminiService.gradeSubmission(gradingRequest);
     
-    // Update grade in sheets
-    await sheetsService.updateGrade(validatedData.submissionId, result.score);
+    // Save grade to Firestore instead of Sheets
+    const gradeId = await firestoreService.saveGrade({
+      submissionId: validatedData.submissionId,
+      assignmentId: validatedData.assignmentId,
+      studentId: validatedData.studentId,
+      studentName: validatedData.studentName,
+      score: result.score,
+      maxPoints: validatedData.maxPoints,
+      feedback: result.feedback,
+      gradedBy: 'ai',
+      criteriaScores: result.criteriaScores,
+      metadata: {
+        submissionLength: validatedData.submissionText.length,
+        criteria: gradingRequest.criteria,
+        gradingMode: validatedData.gradingStrictness,
+        isCodeAssignment: validatedData.isCodeAssignment
+      }
+    });
 
     res.json({
       success: true,
+      gradeId,
       grading: result,
       metadata: {
         gradingMode: validatedData.gradingStrictness,
-        isCodeAssignment: validatedData.isCodeAssignment
+        isCodeAssignment: validatedData.isCodeAssignment,
+        savedToFirestore: true
       }
     });
 

@@ -14,12 +14,45 @@ This file provides guidance to Claude Code (claude.ai/code) when working with th
 ## Quick Start
 
 ```bash
-npm run dev              # Start both frontend and backend
+npm run dev              # Start frontend + Firebase emulators
+npm run emulators        # Start Firebase emulators with data persistence
 npm run build            # Build both components  
 npm run quality:check    # Lint + type check everything
 npm run test             # Run all tests
 npm run deploy           # Deploy to Firebase
 ```
+
+### Firebase Emulator Suite Setup
+
+The project uses Firebase Local Emulator Suite for safe local development without touching production data.
+
+#### Emulator Services
+- **Auth**: http://localhost:9099 (mock authentication)
+- **Firestore**: http://localhost:8080 (local database)
+- **Functions**: http://localhost:5001 (API endpoints)
+- **Emulator UI**: http://localhost:4000 (visual debugging)
+
+#### Quick Commands
+```bash
+npm run dev              # Start frontend + emulators together
+npm run emulators        # Start only emulators with data persistence
+npm run emulators:seed   # Populate test data (users, assignments, submissions)
+npm run emulators:export # Manually save current emulator state
+```
+
+#### Test Credentials (after seeding)
+- Teacher: `teacher@test.com` / `test123`
+- Student 1: `student1@test.com` / `test123`
+- Student 2: `student2@test.com` / `test123`
+
+#### Key Files
+- `firebase.json` - Emulator port configuration
+- `frontend/src/lib/firebase.ts` - Auto-connects to emulators in dev
+- `frontend/src/lib/api.ts` - API client with emulator URL switching
+- `functions/src/utils/emulator.ts` - Backend emulator detection
+- `scripts/seed-emulator-data.mjs` - Test data seeder
+
+Data persists in `./emulator-data/` between sessions (gitignored).
 
 ## Architecture
 
@@ -90,6 +123,16 @@ import { GradingRequest } from "../types";
 
 ## Development Workflow
 
+### Local Development Setup
+1. **Install dependencies**: `npm install` (root, frontend, and functions)
+2. **Set up environment**: Copy `.env.development` and configure Firebase credentials
+3. **Start development**: `npm run dev` (starts frontend + emulators)
+4. **Seed test data**: `npm run emulators:seed` (first time only)
+5. **Access services**:
+   - Frontend: http://localhost:5173
+   - API: http://localhost:5001/roo-app-3d24e/us-central1/api
+   - Emulator UI: http://localhost:4000
+
 ### Quality Gates
 1. **Before commits**: `npm run quality:check`
 2. **Before deployment**: `npm run build && npm run test`
@@ -131,6 +174,97 @@ PUBLIC_FIREBASE_PROJECT_ID=roo-app-3d24e
 - ✅ No secrets in code
 
 ## Common Tasks
+
+### Working with Firebase Emulators
+
+#### Starting Development
+```bash
+npm run dev                    # Frontend + emulators (recommended)
+npm run emulators             # Just emulators
+npm run emulators:seed        # Populate test data
+```
+
+#### Emulator Features
+- **Auto-detection**: Frontend/backend automatically connect when `PUBLIC_USE_EMULATORS=true`
+- **Data persistence**: Changes saved to `./emulator-data/` on exit
+- **Visual debugging**: Use Emulator UI at http://localhost:4000
+- **Hot reload**: Functions rebuild automatically on file changes
+- **Security rules**: Test Firestore rules without deployment
+
+#### Testing Scenarios
+```bash
+# Run tests with emulators
+npm run emulators:exec -- npm test
+
+# Test specific endpoint
+curl http://localhost:5001/roo-app-3d24e/us-central1/api/
+
+# Clear all data
+rm -rf emulator-data && npm run emulators
+
+# Export data snapshot
+npm run emulators:export
+```
+
+#### Troubleshooting Emulators
+- **Port conflicts**: Check `firebase.json` for port settings
+- **Connection errors**: Ensure emulators are running before starting frontend
+- **Data not persisting**: Check `--export-on-exit` flag in npm scripts
+- **Auth issues**: Use Emulator UI to manually create/verify users
+
+#### Critical Firebase Development Patterns (Learned from Implementation)
+
+**🚨 IMPORTANT: serverTimestamp() Issues in Emulators**
+- `FieldValue.serverTimestamp()` behaves differently/fails in Firebase emulators
+- **Always use environment-aware timestamp handling**:
+```typescript
+function getCurrentTimestamp(): any {
+  if (isEmulator()) {
+    return new Date(); // Direct timestamp in emulator
+  }
+  return admin.firestore.FieldValue.serverTimestamp(); // Server timestamp in production
+}
+```
+
+**Firebase Admin SDK Import Pattern**
+- **Always import Firebase Admin directly**, avoid re-exports that can fail in emulator:
+```typescript
+import * as admin from "firebase-admin"; // ✅ Correct
+// Use: admin.firestore.FieldValue.serverTimestamp()
+
+import { FieldValue } from "../config/firebase"; // ❌ Can fail in emulator
+```
+
+**Build Process for Functions**
+- **ALWAYS run `npm run build` after TypeScript changes** - the emulator runs compiled JS, not TS
+- Pattern: Edit TypeScript → Build → Test (not just Edit → Test)
+
+**Error Debugging Strategy**
+- Firebase error messages can be misleading - check import chains and environment context first
+- "Cannot read properties of undefined" often means import/context issues, not the method itself
+- Check emulator logs for detailed error traces
+
+**Graceful Fallback Patterns**
+```typescript
+// Handle missing documents gracefully
+try {
+  await this.updateSubmissionStatus(submissionId, 'graded', gradeId);
+} catch (error: any) {
+  if (error.code !== 5) { // 5 = NOT_FOUND
+    throw error;
+  }
+  // Log and continue - missing document is acceptable
+}
+```
+
+**Firebase Development Checklist**
+1. ✅ Set up emulator detection utility (`isEmulator()`) first
+2. ✅ Create environment-aware timestamp helpers early
+3. ✅ Use direct Firebase Admin imports, not re-exports  
+4. ✅ Build after every TypeScript change (`npm run build`)
+5. ✅ Test incrementally: AI → Storage → Retrieval
+6. ✅ Handle missing documents gracefully (check `error.code === 5`)
+7. ✅ Check emulator logs for detailed error context
 
 ### Adding New API Endpoint
 1. Create handler in appropriate `routes/*.ts` file

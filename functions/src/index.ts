@@ -7,6 +7,7 @@ import { getApiStatus, testGeminiConnection, testSheetsConnection } from "./rout
 import { createAssignment, listAssignments, testFirestoreWrite, testFirestoreRead } from "./routes/assignments";
 import { testGrading, gradeQuiz, gradeQuizTest, gradeCode } from "./routes/grading";
 import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngradedSubmissions, getAnswerKey, listSheetNames } from "./routes/sheets";
+import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as getFirestoreUngradedSubmissions, createSubmission, getSubmissionsByAssignment, getSubmissionById, updateSubmissionStatus } from "./routes/grades";
 
 // Define secrets and parameters  
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
@@ -91,6 +92,40 @@ export const api = onRequest(
       }
       if (method === "GET" && path === "/sheets/list-sheets") {
         return await listSheetNames(request, response);
+      }
+
+      // Firestore Grade Management Routes
+      if (method === "GET" && path.startsWith("/grades/assignment/")) {
+        const assignmentId = path.split("/grades/assignment/")[1];
+        (request as any).params = { assignmentId };
+        return await getGradesByAssignment(request, response);
+      }
+      if (method === "GET" && path.startsWith("/grades/submission/")) {
+        const submissionId = path.split("/grades/submission/")[1];
+        (request as any).params = { submissionId };
+        return await getGradeBySubmission(request, response);
+      }
+      if (method === "GET" && path === "/grades/ungraded") {
+        return await getFirestoreUngradedSubmissions(request, response);
+      }
+      if (method === "POST" && path === "/submissions") {
+        return await createSubmission(request, response);
+      }
+      if (method === "GET" && path.startsWith("/submissions/assignment/")) {
+        const assignmentId = path.split("/submissions/assignment/")[1];
+        (request as any).params = { assignmentId };
+        return await getSubmissionsByAssignment(request, response);
+      }
+      if (method === "GET" && path.startsWith("/submissions/") && !path.includes("/assignment/")) {
+        const submissionId = path.split("/submissions/")[1];
+        (request as any).params = { submissionId };
+        return await getSubmissionById(request, response);
+      }
+      if (method === "PATCH" && path.includes("/submissions/") && path.endsWith("/status")) {
+        const pathParts = path.split("/");
+        const submissionId = pathParts[pathParts.indexOf("submissions") + 1];
+        (request as any).params = { submissionId };
+        return await updateSubmissionStatus(request, response);
       }
 
       // Default 404

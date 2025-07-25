@@ -32,7 +32,14 @@ export async function getApiStatus(req: Request, res: Response) {
         "POST /sheets/answer-key": "Get answer key for a quiz form",
         "POST /grade-quiz-test": "Grade a quiz submission (test mode - no sheet updates)",
         "POST /grade-quiz": "Grade a quiz submission using answer key",
-        "POST /grade-code": "Grade a single coding assignment with generous mode"
+        "POST /grade-code": "Grade a single coding assignment with generous mode",
+        "GET /grades/assignment/{id}": "Get all grades for an assignment",
+        "GET /grades/submission/{id}": "Get grade for a specific submission",
+        "GET /grades/ungraded": "Get all ungraded submissions from Firestore",
+        "POST /submissions": "Create a new submission in Firestore",
+        "GET /submissions/assignment/{id}": "Get all submissions for an assignment",
+        "GET /submissions/{id}": "Get a specific submission by ID",
+        "PATCH /submissions/{id}/status": "Update submission status"
       }
     });
   } catch (error) {
