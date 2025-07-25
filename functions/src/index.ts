@@ -45,7 +45,7 @@ export const api = onRequest(
           "GET /sheets/ungraded": "Get ungraded submissions",
           "POST /sheets/answer-key": "Get answer key for a quiz form",
           "POST /grade-quiz": "Grade a quiz submission using answer key",
-          "POST /grade-submission": "Grade a single submission with generous coding mode"
+          "POST /grade-code": "Grade a single coding assignment with generous mode"
         }
       });
       return;
@@ -392,7 +392,7 @@ export const api = onRequest(
         const validatedData = z.object({
           submissionId: z.string().min(1),
           formId: z.string().min(1),
-          studentAnswers: z.record(z.string()) // questionNumber -> answer
+          studentAnswers: z.record(z.string(), z.string()) // questionNumber -> answer
         }).parse(request.body);
 
         const { createSheetsService } = await import("./services/sheets");
@@ -414,7 +414,7 @@ export const api = onRequest(
         // Convert string keys to numbers for student answers
         const studentAnswers: { [questionNumber: number]: string } = {};
         Object.entries(validatedData.studentAnswers).forEach(([key, value]) => {
-          studentAnswers[parseInt(key)] = value;
+          studentAnswers[parseInt(key)] = value as string;
         });
 
         // Grade the quiz
@@ -454,8 +454,8 @@ export const api = onRequest(
       return;
     }
 
-    // Grade a single submission with generous coding mode
-    if (method === "POST" && path === "/grade-submission") {
+    // Grade a single coding assignment with generous mode
+    if (method === "POST" && path === "/grade-code") {
       try {
         const validatedData = z.object({
           submissionId: z.string().min(1),
