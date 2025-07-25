@@ -27,8 +27,8 @@ export interface GradeData {
   score: number;
   maxPoints: number;
   feedback: string;
-  gradedBy: 'ai' | 'manual';
-  gradedAt: FirebaseFirestore.Timestamp;
+  gradedBy: "ai" | "manual";
+  gradedAt: admin.firestore.Timestamp;
   criteriaScores?: Array<{
     name: string;
     score: number;
@@ -62,11 +62,11 @@ export interface SubmissionData {
   studentName: string;
   studentEmail: string;
   submissionText: string;
-  submittedAt: FirebaseFirestore.Timestamp;
-  status: 'pending' | 'grading' | 'graded' | 'error';
+  submittedAt: admin.firestore.Timestamp;
+  status: "pending" | "grading" | "graded" | "error";
   grade?: GradeData;
-  createdAt: FirebaseFirestore.Timestamp;
-  updatedAt: FirebaseFirestore.Timestamp;
+  createdAt: admin.firestore.Timestamp;
+  updatedAt: admin.firestore.Timestamp;
 }
 
 /**
@@ -79,30 +79,30 @@ export class FirestoreGradeService {
    * Save a grade to Firestore
    * Location: functions/src/services/firestore.ts:49
    */
-  async saveGrade(gradeData: Omit<GradeData, 'gradedAt'>): Promise<string> {
+  async saveGrade(gradeData: Omit<GradeData, "gradedAt">): Promise<string> {
     try {
       const grade: GradeData = {
         ...gradeData,
         gradedAt: getCurrentTimestamp()
       };
 
-      const gradeRef = await db.collection('grades').add(grade);
+      const gradeRef = await db.collection("grades").add(grade);
       
       // Update the submission status if submission exists
       try {
-        await this.updateSubmissionStatus(gradeData.submissionId, 'graded', gradeRef.id);
-      } catch (error: any) {
+        await this.updateSubmissionStatus(gradeData.submissionId, "graded", gradeRef.id);
+      } catch (error: unknown) {
         // If submission doesn't exist, that's okay - we'll just save the grade
-        if (error.code !== 5) { // 5 = NOT_FOUND
+        if ((error as { code?: number }).code !== 5) { // 5 = NOT_FOUND
           throw error;
         }
-        logger.info('Submission not found, grade saved without updating submission status', { 
+        logger.info("Submission not found, grade saved without updating submission status", { 
           submissionId: gradeData.submissionId,
           gradeId: gradeRef.id
         });
       }
       
-      logger.info('Grade saved to Firestore', { 
+      logger.info("Grade saved to Firestore", { 
         gradeId: gradeRef.id, 
         submissionId: gradeData.submissionId,
         score: gradeData.score 
@@ -110,7 +110,7 @@ export class FirestoreGradeService {
       
       return gradeRef.id;
     } catch (error) {
-      logger.error('Error saving grade to Firestore', { 
+      logger.error("Error saving grade to Firestore", { 
         submissionId: gradeData.submissionId, 
         error 
       });
@@ -124,8 +124,8 @@ export class FirestoreGradeService {
    */
   async getGradeBySubmissionId(submissionId: string): Promise<GradeData | null> {
     try {
-      const gradesSnapshot = await db.collection('grades')
-        .where('submissionId', '==', submissionId)
+      const gradesSnapshot = await db.collection("grades")
+        .where("submissionId", "==", submissionId)
         .limit(1)
         .get();
 
@@ -136,7 +136,7 @@ export class FirestoreGradeService {
       const gradeDoc = gradesSnapshot.docs[0];
       return { ...gradeDoc.data(), id: gradeDoc.id } as GradeData & { id: string };
     } catch (error) {
-      logger.error('Error fetching grade by submission ID', { submissionId, error });
+      logger.error("Error fetching grade by submission ID", { submissionId, error });
       throw error;
     }
   }
@@ -147,9 +147,9 @@ export class FirestoreGradeService {
    */
   async getGradesByAssignmentId(assignmentId: string): Promise<GradeData[]> {
     try {
-      const gradesSnapshot = await db.collection('grades')
-        .where('assignmentId', '==', assignmentId)
-        .orderBy('gradedAt', 'desc')
+      const gradesSnapshot = await db.collection("grades")
+        .where("assignmentId", "==", assignmentId)
+        .orderBy("gradedAt", "desc")
         .get();
 
       return gradesSnapshot.docs.map(doc => ({
@@ -157,7 +157,7 @@ export class FirestoreGradeService {
         id: doc.id
       })) as (GradeData & { id: string })[];
     } catch (error) {
-      logger.error('Error fetching grades by assignment ID', { assignmentId, error });
+      logger.error("Error fetching grades by assignment ID", { assignmentId, error });
       throw error;
     }
   }
@@ -166,17 +166,17 @@ export class FirestoreGradeService {
    * Save a submission to Firestore
    * Location: functions/src/services/firestore.ts:117
    */
-  async saveSubmission(submissionData: Omit<SubmissionData, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async saveSubmission(submissionData: Omit<SubmissionData, "id" | "createdAt" | "updatedAt">): Promise<string> {
     try {
-      const submission: Omit<SubmissionData, 'id'> = {
+      const submission: Omit<SubmissionData, "id"> = {
         ...submissionData,
         createdAt: getCurrentTimestamp(),
         updatedAt: getCurrentTimestamp()
       };
 
-      const submissionRef = await db.collection('submissions').add(submission);
+      const submissionRef = await db.collection("submissions").add(submission);
       
-      logger.info('Submission saved to Firestore', { 
+      logger.info("Submission saved to Firestore", { 
         submissionId: submissionRef.id,
         assignmentId: submissionData.assignmentId,
         studentId: submissionData.studentId
@@ -184,7 +184,7 @@ export class FirestoreGradeService {
       
       return submissionRef.id;
     } catch (error) {
-      logger.error('Error saving submission to Firestore', { submissionData, error });
+      logger.error("Error saving submission to Firestore", { submissionData, error });
       throw error;
     }
   }
@@ -195,11 +195,11 @@ export class FirestoreGradeService {
    */
   async updateSubmissionStatus(
     submissionId: string, 
-    status: SubmissionData['status'], 
+    status: SubmissionData["status"], 
     gradeId?: string
   ): Promise<void> {
     try {
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         status,
         updatedAt: getCurrentTimestamp()
       };
@@ -208,11 +208,11 @@ export class FirestoreGradeService {
         updateData.gradeId = gradeId;
       }
 
-      await db.collection('submissions').doc(submissionId).update(updateData);
+      await db.collection("submissions").doc(submissionId).update(updateData);
       
-      logger.info('Submission status updated', { submissionId, status, gradeId });
+      logger.info("Submission status updated", { submissionId, status, gradeId });
     } catch (error) {
-      logger.error('Error updating submission status', { submissionId, status, error });
+      logger.error("Error updating submission status", { submissionId, status, error });
       throw error;
     }
   }
@@ -223,7 +223,7 @@ export class FirestoreGradeService {
    */
   async getSubmissionById(submissionId: string): Promise<SubmissionData | null> {
     try {
-      const submissionDoc = await db.collection('submissions').doc(submissionId).get();
+      const submissionDoc = await db.collection("submissions").doc(submissionId).get();
       
       if (!submissionDoc.exists) {
         return null;
@@ -234,7 +234,7 @@ export class FirestoreGradeService {
         ...submissionDoc.data() 
       } as SubmissionData;
     } catch (error) {
-      logger.error('Error fetching submission by ID', { submissionId, error });
+      logger.error("Error fetching submission by ID", { submissionId, error });
       throw error;
     }
   }
@@ -245,9 +245,9 @@ export class FirestoreGradeService {
    */
   async getSubmissionsByAssignmentId(assignmentId: string): Promise<SubmissionData[]> {
     try {
-      const submissionsSnapshot = await db.collection('submissions')
-        .where('assignmentId', '==', assignmentId)
-        .orderBy('submittedAt', 'desc')
+      const submissionsSnapshot = await db.collection("submissions")
+        .where("assignmentId", "==", assignmentId)
+        .orderBy("submittedAt", "desc")
         .get();
 
       return submissionsSnapshot.docs.map(doc => ({
@@ -255,7 +255,7 @@ export class FirestoreGradeService {
         ...doc.data()
       })) as SubmissionData[];
     } catch (error) {
-      logger.error('Error fetching submissions by assignment ID', { assignmentId, error });
+      logger.error("Error fetching submissions by assignment ID", { assignmentId, error });
       throw error;
     }
   }
@@ -266,9 +266,9 @@ export class FirestoreGradeService {
    */
   async getUngradedSubmissions(): Promise<SubmissionData[]> {
     try {
-      const submissionsSnapshot = await db.collection('submissions')
-        .where('status', 'in', ['pending', 'grading'])
-        .orderBy('submittedAt', 'asc')
+      const submissionsSnapshot = await db.collection("submissions")
+        .where("status", "in", ["pending", "grading"])
+        .orderBy("submittedAt", "asc")
         .get();
 
       return submissionsSnapshot.docs.map(doc => ({
@@ -276,7 +276,7 @@ export class FirestoreGradeService {
         ...doc.data()
       })) as SubmissionData[];
     } catch (error) {
-      logger.error('Error fetching ungraded submissions', { error });
+      logger.error("Error fetching ungraded submissions", { error });
       throw error;
     }
   }

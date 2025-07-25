@@ -1,6 +1,12 @@
 import { onRequest } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions";
 import { defineSecret } from "firebase-functions/params";
+import { Request } from "express";
+
+// Extended request interface with params
+interface RequestWithParams extends Request {
+  params: { [key: string]: string };
+}
 
 // Route handlers
 import { getApiStatus, testGeminiConnection, testSheetsConnection } from "./routes/health";
@@ -97,12 +103,12 @@ export const api = onRequest(
       // Firestore Grade Management Routes
       if (method === "GET" && path.startsWith("/grades/assignment/")) {
         const assignmentId = path.split("/grades/assignment/")[1];
-        (request as any).params = { assignmentId };
+        (request as RequestWithParams).params = { assignmentId };
         return await getGradesByAssignment(request, response);
       }
       if (method === "GET" && path.startsWith("/grades/submission/")) {
         const submissionId = path.split("/grades/submission/")[1];
-        (request as any).params = { submissionId };
+        (request as RequestWithParams).params = { submissionId };
         return await getGradeBySubmission(request, response);
       }
       if (method === "GET" && path === "/grades/ungraded") {
@@ -113,18 +119,18 @@ export const api = onRequest(
       }
       if (method === "GET" && path.startsWith("/submissions/assignment/")) {
         const assignmentId = path.split("/submissions/assignment/")[1];
-        (request as any).params = { assignmentId };
+        (request as RequestWithParams).params = { assignmentId };
         return await getSubmissionsByAssignment(request, response);
       }
       if (method === "GET" && path.startsWith("/submissions/") && !path.includes("/assignment/")) {
         const submissionId = path.split("/submissions/")[1];
-        (request as any).params = { submissionId };
+        (request as RequestWithParams).params = { submissionId };
         return await getSubmissionById(request, response);
       }
       if (method === "PATCH" && path.includes("/submissions/") && path.endsWith("/status")) {
         const pathParts = path.split("/");
         const submissionId = pathParts[pathParts.indexOf("submissions") + 1];
-        (request as any).params = { submissionId };
+        (request as RequestWithParams).params = { submissionId };
         return await updateSubmissionStatus(request, response);
       }
 

@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import { logger } from "firebase-functions";
 
 // Rate limiting configuration
@@ -181,7 +181,7 @@ export interface GradingResponse {
 }
 
 export class GeminiService {
-  constructor(private model: any) {}
+  constructor(private model: GenerativeModel) {}
 
   async gradeSubmission(request: GradingRequest): Promise<GradingResponse> {
     const rateLimitKey = `grading:${request.assignmentId}`;
@@ -335,7 +335,14 @@ export class GeminiService {
     return { totalScore, questionGrades };
   }
 
-  private buildQuestionGradingPrompt(question: any, studentAnswer: string): string {
+  private buildQuestionGradingPrompt(question: { 
+    questionText: string; 
+    gradingStrictness?: string; 
+    points: number; 
+    correctAnswer?: string; 
+    questionType?: string;
+    answerExplanation?: string;
+  }, studentAnswer: string): string {
     const isCodeQuestion = question.questionText.toLowerCase().includes("code") || 
                           question.questionText.toLowerCase().includes("program") ||
                           question.questionText.toLowerCase().includes("karel") ||

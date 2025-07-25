@@ -170,7 +170,7 @@ export async function gradeQuiz(req: Request, res: Response) {
       score: gradingResult.totalScore,
       maxPoints: answerKey.totalPoints,
       feedback: `Quiz graded automatically. Score: ${gradingResult.totalScore}/${answerKey.totalPoints}`,
-      gradedBy: 'ai',
+      gradedBy: "ai",
       metadata: {
         formId: validatedData.formId,
         questionCount: answerKey.questions.length,
@@ -254,7 +254,7 @@ export async function gradeCode(req: Request, res: Response) {
       score: result.score,
       maxPoints: validatedData.maxPoints,
       feedback: result.feedback,
-      gradedBy: 'ai',
+      gradedBy: "ai",
       criteriaScores: result.criteriaScores,
       metadata: {
         submissionLength: validatedData.submissionText.length,

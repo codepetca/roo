@@ -5,6 +5,7 @@
 
 import { Request, Response } from "express";
 import { z } from "zod";
+import * as admin from "firebase-admin";
 import { createFirestoreGradeService } from "../services/firestore";
 import { handleRouteError } from "../middleware/validation";
 
@@ -112,7 +113,7 @@ export async function createSubmission(req: Request, res: Response) {
       studentEmail: z.string().email(),
       submissionText: z.string().min(1),
       submittedAt: z.string().datetime().optional(),
-      status: z.enum(['pending', 'grading', 'graded', 'error']).default('pending')
+      status: z.enum(["pending", "grading", "graded", "error"]).default("pending")
     }).parse(req.body);
 
     const firestoreService = createFirestoreGradeService();
@@ -120,8 +121,8 @@ export async function createSubmission(req: Request, res: Response) {
     const submissionData = {
       ...validatedData,
       submittedAt: validatedData.submittedAt 
-        ? new Date(validatedData.submittedAt) as unknown as FirebaseFirestore.Timestamp
-        : new Date() as unknown as FirebaseFirestore.Timestamp
+        ? new Date(validatedData.submittedAt) as unknown as admin.firestore.Timestamp
+        : new Date() as unknown as admin.firestore.Timestamp
     };
 
     const submissionId = await firestoreService.saveSubmission(submissionData);
@@ -214,7 +215,7 @@ export async function updateSubmissionStatus(req: Request, res: Response) {
   try {
     const submissionId = req.params.submissionId;
     const validatedData = z.object({
-      status: z.enum(['pending', 'grading', 'graded', 'error']),
+      status: z.enum(["pending", "grading", "graded", "error"]),
       gradeId: z.string().optional()
     }).parse(req.body);
 

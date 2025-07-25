@@ -24,6 +24,7 @@
     "format": "npm run format:frontend && npm run format:backend",
     "format:frontend": "cd frontend && npm run format",
     "format:backend": "cd functions && npm run format",
+    "check": "npm run type-check",
     "type-check": "npm run type-check:frontend && npm run type-check:backend",
     "type-check:frontend": "cd frontend && npm run check",
     "type-check:backend": "cd functions && tsc --noEmit",

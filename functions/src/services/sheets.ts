@@ -99,7 +99,7 @@ export class SheetsService {
         spreadsheetId: spreadsheetId
       });
       
-      const sheetNames = response.data.sheets?.map((sheet: any) => sheet.properties.title) || [];
+      const sheetNames = response.data.sheets?.map((sheet: any) => sheet.properties?.title).filter(Boolean) || [];
       logger.info(`Found ${sheetNames.length} sheets:`, sheetNames);
       return sheetNames;
     } catch (error) {
@@ -132,7 +132,7 @@ export class SheetsService {
         description: row[3] || "",
         dueDate: row[4] || "",
         maxPoints: row[5] ? parseInt(row[5]) : undefined,
-        submissionType: row[6] || "mixed",
+        submissionType: (row[6] as "forms" | "files" | "mixed") || "mixed",
         createdDate: row[7] || ""
       }));
     } catch (error) {
