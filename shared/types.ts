@@ -41,6 +41,9 @@ export interface Assignment extends BaseDocument {
     criteria: string[];
     promptTemplate?: string;
   };
+  isQuiz: boolean;
+  formId?: string;
+  sourceFileId?: string;
 }
 
 export interface CreateAssignmentRequest {
