@@ -14,6 +14,7 @@ import { createAssignment, listAssignments, testFirestoreWrite, testFirestoreRea
 import { testGrading, gradeQuiz, gradeQuizTest, gradeCode } from "./routes/grading";
 import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngradedSubmissions, getAnswerKey, listSheetNames } from "./routes/sheets";
 import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as getFirestoreUngradedSubmissions, createSubmission, getSubmissionsByAssignment, getSubmissionById, updateSubmissionStatus } from "./routes/grades";
+import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
 
 // Define secrets and parameters  
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
@@ -98,6 +99,17 @@ export const api = onRequest(
       }
       if (method === "GET" && path === "/sheets/list-sheets") {
         return await listSheetNames(request, response);
+      }
+
+      // Sync routes
+      if (method === "POST" && path === "/sync/assignments") {
+        return await syncAssignments(request, response);
+      }
+      if (method === "POST" && path === "/sync/submissions") {
+        return await syncSubmissions(request, response);
+      }
+      if (method === "POST" && path === "/sync/all") {
+        return await syncAllData(request, response);
       }
 
       // Firestore Grade Management Routes

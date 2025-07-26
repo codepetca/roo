@@ -43,7 +43,7 @@ export function sanitizeDocument<T extends Record<string, unknown>>(doc: T): T {
           typeof item === "object" ? sanitizeDocument(item) : item
         );
       } else if (typeof value === "object") {
-        sanitized[key] = sanitizeDocument(value);
+        sanitized[key] = sanitizeDocument(value as Record<string, unknown>);
       }
     }
   });

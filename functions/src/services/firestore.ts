@@ -71,7 +71,7 @@ export class FirestoreGradeService {
     try {
       const grade: GradeData = {
         ...gradeData,
-        gradedAt: getCurrentTimestamp()
+        gradedAt: getCurrentTimestamp() as admin.firestore.Timestamp
       };
 
       const gradeRef = await db.collection("grades").add(grade);
@@ -158,8 +158,8 @@ export class FirestoreGradeService {
     try {
       const submission: Omit<SubmissionData, "id"> = {
         ...submissionData,
-        createdAt: getCurrentTimestamp(),
-        updatedAt: getCurrentTimestamp()
+        createdAt: getCurrentTimestamp() as admin.firestore.Timestamp,
+        updatedAt: getCurrentTimestamp() as admin.firestore.Timestamp
       };
 
       const submissionRef = await db.collection("submissions").add(submission);

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
-import { db, getCurrentTimestamp, sanitizeDocument, sanitizeDocuments } from "../config/firebase";
+import { db, getCurrentTimestamp, sanitizeDocument } from "../config/firebase";
 import { Assignment } from "../types";
 import { createAssignmentSchema, testWriteSchema } from "../schemas";
 import { handleRouteError, validateData, sendApiResponse } from "../middleware/validation";
@@ -19,15 +19,15 @@ export async function createAssignment(req: Request, res: Response) {
       classroomId: "test-classroom-1",
       title: validatedData.title,
       description: validatedData.description,
-      dueDate: validatedData.dueDate ? admin.firestore.Timestamp.fromDate(new Date(validatedData.dueDate)) : getCurrentTimestamp(),
+      dueDate: validatedData.dueDate ? admin.firestore.Timestamp.fromDate(new Date(validatedData.dueDate)) : admin.firestore.Timestamp.now(),
       maxPoints: validatedData.maxPoints,
       gradingRubric: {
         enabled: validatedData.gradingRubric?.enabled ?? true,
         criteria: validatedData.gradingRubric?.criteria ?? ["Content", "Grammar", "Structure"],
         promptTemplate: validatedData.gradingRubric?.promptTemplate ?? "Grade this assignment based on content, grammar, and structure."
       },
-      createdAt: getCurrentTimestamp(),
-      updatedAt: getCurrentTimestamp()
+      createdAt: getCurrentTimestamp() as admin.firestore.Timestamp,
+      updatedAt: getCurrentTimestamp() as admin.firestore.Timestamp
     };
     
     const docRef = await db.collection("assignments").add(assignmentData);
@@ -58,28 +58,40 @@ export async function listAssignments(req: Request, res: Response) {
   try {
     logger.info("listAssignments called", { method: req.method });
     
-    // Return test data for now to get the UI working
-    const testAssignments = [
-      {
-        id: "test-assignment-1",
-        title: "Test Assignment 1",
-        description: "This is a test assignment",
-        maxPoints: 100,
-        isQuiz: false,
-        classroomId: "test-classroom",
-        dueDate: { _seconds: Date.now() / 1000, _nanoseconds: 0 },
-        createdAt: { _seconds: Date.now() / 1000, _nanoseconds: 0 },
-        updatedAt: { _seconds: Date.now() / 1000, _nanoseconds: 0 },
-        gradingRubric: {
+    // Read assignments from Firestore
+    const assignmentsSnapshot = await db.collection("assignments")
+      .orderBy("createdAt", "desc")
+      .get();
+
+    if (assignmentsSnapshot.empty) {
+      logger.info("No assignments found in Firestore");
+      sendApiResponse(res, []);
+      return;
+    }
+
+    // Transform Firestore documents to API response format
+    const assignments = assignmentsSnapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        title: data.title,
+        description: data.description || "",
+        maxPoints: data.maxPoints || 100,
+        isQuiz: data.isQuiz || false,
+        classroomId: data.classroomId,
+        dueDate: data.dueDate ? { _seconds: data.dueDate.seconds, _nanoseconds: data.dueDate.nanoseconds } : undefined,
+        createdAt: { _seconds: data.createdAt.seconds, _nanoseconds: data.createdAt.nanoseconds },
+        updatedAt: { _seconds: data.updatedAt.seconds, _nanoseconds: data.updatedAt.nanoseconds },
+        gradingRubric: data.gradingRubric || {
           enabled: true,
           criteria: ["Content", "Grammar"],
           promptTemplate: "Grade this assignment"
         }
-      }
-    ];
-    
-    // Return assignments directly as expected by the frontend
-    sendApiResponse(res, testAssignments);
+      };
+    });
+
+    logger.info(`Retrieved ${assignments.length} assignments from Firestore`);
+    sendApiResponse(res, assignments);
   } catch (error) {
     handleRouteError(error, req, res);
   }

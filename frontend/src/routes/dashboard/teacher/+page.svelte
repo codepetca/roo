@@ -10,6 +10,8 @@
 	let recentSubmissions = $state<Submission[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let syncing = $state(false);
+	let syncMessage = $state<string | null>(null);
 
 	// Derived statistics
 	let totalAssignments = $derived(assignments.length);
@@ -68,17 +70,48 @@
 		}
 	}
 
+	async function syncData() {
+		try {
+			syncing = true;
+			syncMessage = null;
+			error = null;
+
+			const result = await api.syncAllData();
+			
+			if (result.success) {
+				syncMessage = `Successfully synced ${result.assignmentsProcessed} assignments and ${result.submissionsProcessed} submissions from Google Sheets`;
+				// Reload dashboard data to show updated content
+				await loadDashboardData();
+			} else {
+				syncMessage = `Sync completed with errors: ${result.assignmentsProcessed} assignments, ${result.submissionsProcessed} submissions. ${result.errors.length} errors occurred.`;
+				console.error('Sync errors:', result.errors);
+			}
+		} catch (err: unknown) {
+			console.error('Failed to sync data:', err);
+			error = err instanceof Error ? err.message : 'Failed to sync data from Google Sheets';
+		} finally {
+			syncing = false;
+		}
+	}
+
 	onMount(() => {
 		loadDashboardData();
 	});
 </script>
 
 {#snippet actions()}
-	<Button variant="primary" onclick={loadDashboardData} {loading}>
-		{#snippet children()}
-			Refresh
-		{/snippet}
-	</Button>
+	<div class="flex gap-2">
+		<Button variant="secondary" onclick={syncData} loading={syncing}>
+			{#snippet children()}
+				Sync from Sheets
+			{/snippet}
+		</Button>
+		<Button variant="primary" onclick={loadDashboardData} {loading}>
+			{#snippet children()}
+				Refresh
+			{/snippet}
+		</Button>
+	</div>
 {/snippet}
 
 <div class="space-y-6">
@@ -88,6 +121,20 @@
 		description="Manage assignments, review submissions, and track student progress with AI-powered grading."
 		{actions}
 	/>
+
+	<!-- Sync Message -->
+	{#if syncMessage}
+		<Alert
+			variant="success"
+			title="Sync Complete"
+			dismissible
+			onDismiss={() => (syncMessage = null)}
+		>
+			{#snippet children()}
+				{syncMessage}
+			{/snippet}
+		</Alert>
+	{/if}
 
 	{#if loading}
 		<!-- Loading State -->
@@ -248,7 +295,7 @@
 		<Card>
 			{#snippet children()}
 				<h3 class="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h3>
-				<div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+				<div class="grid grid-cols-1 gap-4 md:grid-cols-4">
 					<button
 						onclick={() => (window.location.href = '/dashboard/teacher/assignments')}
 						class="flex w-full items-center rounded-lg bg-blue-50 p-4 text-left transition-colors hover:bg-blue-100"
@@ -292,6 +339,32 @@
 						<div>
 							<p class="font-medium text-gray-900">Review Grades</p>
 							<p class="text-sm text-gray-600">View and manage student grades</p>
+						</div>
+					</button>
+
+					<button
+						onclick={syncData}
+						disabled={syncing}
+						class="flex w-full items-center rounded-lg bg-purple-50 p-4 text-left transition-colors hover:bg-purple-100 disabled:opacity-50"
+					>
+						<svg
+							class="mr-3 h-8 w-8 text-purple-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+							/>
+						</svg>
+						<div>
+							<p class="font-medium text-gray-900">
+								{syncing ? 'Syncing...' : 'Sync from Google Sheets'}
+							</p>
+							<p class="text-sm text-gray-600">Import latest data from school sheets</p>
 						</div>
 					</button>
 
