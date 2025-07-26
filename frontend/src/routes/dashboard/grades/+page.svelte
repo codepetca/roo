@@ -32,7 +32,8 @@
 	let avgScore = $derived(
 		filteredGrades.length > 0
 			? Math.round(
-					((filteredGrades.reduce((sum, g) => sum + g.score / g.maxScore, 0) / filteredGrades.length) *
+					((filteredGrades.reduce((sum, g) => sum + g.score / g.maxScore, 0) /
+						filteredGrades.length) *
 						100 *
 						10) /
 						10

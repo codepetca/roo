@@ -3,18 +3,18 @@
  * Location: functions/src/test/example.test.ts
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect } from "vitest";
 
 // Example utility function to test
 function isEmulator(): boolean {
-  return process.env.FUNCTIONS_EMULATOR === 'true' || 
-         process.env.NODE_ENV === 'development';
+  return process.env.FUNCTIONS_EMULATOR === "true" || 
+         process.env.NODE_ENV === "development";
 }
 
-describe('Example Tests', () => {
-  it('should detect emulator environment correctly', () => {
+describe("Example Tests", () => {
+  it("should detect emulator environment correctly", () => {
     // Set environment variable for test
-    process.env.FUNCTIONS_EMULATOR = 'true';
+    process.env.FUNCTIONS_EMULATOR = "true";
     
     expect(isEmulator()).toBe(true);
     
@@ -22,10 +22,10 @@ describe('Example Tests', () => {
     delete process.env.FUNCTIONS_EMULATOR;
   });
 
-  it('should handle production environment', () => {
+  it("should handle production environment", () => {
     // Ensure clean environment
     delete process.env.FUNCTIONS_EMULATOR;
-    process.env.NODE_ENV = 'production';
+    process.env.NODE_ENV = "production";
     
     expect(isEmulator()).toBe(false);
     
@@ -34,18 +34,18 @@ describe('Example Tests', () => {
   });
 });
 
-describe('Type Safety Validation', () => {
-  it('should validate request data structure', () => {
+describe("Type Safety Validation", () => {
+  it("should validate request data structure", () => {
     const mockRequest = {
-      submissionId: 'test-123',
-      assignmentId: 'assignment-456',
-      studentCode: 'print("Hello World")'
+      submissionId: "test-123",
+      assignmentId: "assignment-456",
+      studentCode: "print(\"Hello World\")"
     };
 
     // Basic structure validation
-    expect(mockRequest).toHaveProperty('submissionId');
-    expect(mockRequest).toHaveProperty('assignmentId');
-    expect(mockRequest).toHaveProperty('studentCode');
-    expect(typeof mockRequest.submissionId).toBe('string');
+    expect(mockRequest).toHaveProperty("submissionId");
+    expect(mockRequest).toHaveProperty("assignmentId");
+    expect(mockRequest).toHaveProperty("studentCode");
+    expect(typeof mockRequest.submissionId).toBe("string");
   });
 });

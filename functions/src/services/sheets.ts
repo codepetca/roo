@@ -1,5 +1,17 @@
 import { google } from "googleapis";
 import { logger } from "firebase-functions";
+import {
+  sheetAssignmentsArraySchema,
+  sheetSubmissionsArraySchema,
+  sheetAnswerKeysArraySchema,
+  parseAssignmentRow,
+  parseSubmissionRow,
+  parseAnswerKeyRow,
+  sheetAnswerKeysToDomain,
+  type SheetAssignment,
+  type SheetSubmission,
+  type QuizAnswerKeyDomain as QuizAnswerKey
+} from "../schemas";
 
 // Google Sheets API scopes - includes both read and write permissions
 // Required for:
@@ -12,58 +24,6 @@ const SHEETS_SCOPES = [
 
 // Configuration - hardcoded for now (TODO: use environment variables)
 const spreadsheetId = "119EdfrPtA3G180b2EgkzVr5v-kxjNgYQjgDkLmuN02Y";
-
-export interface SheetAssignment {
-  id: string;
-  courseId: string;
-  title: string;
-  description?: string;
-  dueDate?: string;
-  maxPoints?: number;
-  submissionType: "forms" | "files" | "mixed";
-  createdDate: string;
-}
-
-export interface SheetSubmission {
-  id: string;
-  assignmentTitle: string;
-  courseId: string;
-  studentFirstName: string;
-  studentLastName: string;
-  studentEmail: string;
-  submissionText: string;
-  submissionDate: string;
-  currentGrade?: string;
-  gradingStatus: "pending" | "graded" | "reviewed";
-  maxPoints: number;
-  sourceSheetName: string;
-  assignmentDescription: string;
-  lastProcessed: string;
-  sourceFileId: string;
-  isQuiz: boolean;
-  formId: string;
-}
-
-export interface QuizQuestion {
-  formId: string;
-  assignmentTitle: string;
-  courseId: string;
-  questionNumber: number;
-  questionText: string;
-  questionType: string;
-  points: number;
-  correctAnswer: string;
-  answerExplanation: string;
-  gradingStrictness: "strict" | "standard" | "generous";
-}
-
-export interface QuizAnswerKey {
-  formId: string;
-  assignmentTitle: string;
-  courseId: string;
-  questions: QuizQuestion[];
-  totalPoints: number;
-}
 
 export class SheetsService {
   private sheets: any;
@@ -125,16 +85,13 @@ export class SheetsService {
       const rows = response.data.values || [];
       logger.info(`Found ${rows.length} assignments in sheet`);
       
-      return rows.map((row: string[], index: number) => ({
-        id: row[0] || `assignment_${index}`,
-        courseId: row[1] || "unknown",
-        title: row[2] || "Untitled Assignment",
-        description: row[3] || "",
-        dueDate: row[4] || "",
-        maxPoints: row[5] ? parseInt(row[5]) : undefined,
-        submissionType: (row[6] as "forms" | "files" | "mixed") || "mixed",
-        createdDate: row[7] || ""
-      }));
+      // Parse each row and build array for validation
+      const parsedRows = rows.map((row: string[]) => {
+        return parseAssignmentRow(row);
+      });
+      
+      // Validate and transform the entire array at once
+      return sheetAssignmentsArraySchema.parse(parsedRows);
     } catch (error) {
       logger.error("Error fetching assignments from Sheets", error);
       throw error;
@@ -157,25 +114,13 @@ export class SheetsService {
       const rows = response.data.values || [];
       logger.info(`Found ${rows.length} total submissions`);
       
-      return rows.map((row: string[]) => ({
-        id: row[0] || "",
-        assignmentTitle: row[1] || "",
-        courseId: row[2] || "",
-        studentFirstName: row[3] || "",
-        studentLastName: row[4] || "",
-        studentEmail: row[5] || "",
-        submissionText: row[6] || "",
-        submissionDate: row[7] || "",
-        currentGrade: row[8] || undefined,
-        gradingStatus: (row[9] as "pending" | "graded" | "reviewed") || "pending",
-        maxPoints: parseInt(row[10]) || 100,
-        sourceSheetName: row[11] || "",
-        assignmentDescription: row[12] || "",
-        lastProcessed: row[13] || "",
-        sourceFileId: row[14] || "",
-        isQuiz: row[15] === "TRUE" || row[15] === "true",
-        formId: row[16] || ""
-      }));
+      // Parse each row and build array for validation
+      const parsedRows = rows.map((row: string[]) => {
+        return parseSubmissionRow(row);
+      });
+      
+      // Validate and transform the entire array at once
+      return sheetSubmissionsArraySchema.parse(parsedRows);
     } catch (error) {
       logger.error("Error fetching submissions", error);
       throw error;
@@ -212,29 +157,14 @@ export class SheetsService {
         return null;
       }
       
-      // Build answer key object
-      const questions: QuizQuestion[] = formRows.map((row: string[]) => ({
-        formId: row[0],
-        assignmentTitle: row[1],
-        courseId: row[2],
-        questionNumber: parseInt(row[3]) || 0,
-        questionText: row[4] || "",
-        questionType: row[5] || "",
-        points: parseInt(row[6]) || 0,
-        correctAnswer: row[7] || "",
-        answerExplanation: row[8] || "",
-        gradingStrictness: (row[9] as "strict" | "standard" | "generous") || "generous"
-      }));
+      // Parse each row and build array for validation
+      const parsedRows = formRows.map((row: string[]) => {
+        return parseAnswerKeyRow(row);
+      });
       
-      const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
-      
-      return {
-        formId: formId,
-        assignmentTitle: questions[0]?.assignmentTitle || "",
-        courseId: questions[0]?.courseId || "",
-        questions: questions,
-        totalPoints: totalPoints
-      };
+      // Validate and transform the entire array at once
+      const validatedAnswerKeys = sheetAnswerKeysArraySchema.parse(parsedRows);
+      return sheetAnswerKeysToDomain(validatedAnswerKeys);
     } catch (error) {
       logger.error(`Error fetching answer key for form ${formId}`, error);
       throw error;

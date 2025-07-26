@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
 import { 
-  testGradingSchema,
+  testGradingRequestSchema,
   gradeQuizTestSchema,
-  gradeQuizSchema,
-  gradeCodeSchema 
+  gradeQuizRequestSchema,
+  gradeCodeRequestSchema
 } from "../schemas";
-import { handleRouteError, validateData } from "../middleware/validation";
+import { handleRouteError, validateData, sendApiResponse } from "../middleware/validation";
 
 /**
  * Test AI grading with sample text (development endpoint)
@@ -14,7 +14,7 @@ import { handleRouteError, validateData } from "../middleware/validation";
  */
 export async function testGrading(req: Request, res: Response) {
   try {
-    const validatedData = testGradingSchema.parse(req.body);
+    const validatedData = validateData(testGradingRequestSchema, req.body);
     
     // Import prompts and choose appropriate template
     const { GRADING_PROMPTS } = await import("../services/gemini");
@@ -31,7 +31,7 @@ export async function testGrading(req: Request, res: Response) {
       title: "Test Assignment - Karel Code",
       description: "This is a test assignment for generous AI grading of Karel code",
       maxPoints: validatedData.maxPoints || 100,
-      criteria: validatedData.criteria,
+      criteria: validatedData.criteria || ["Content", "Grammar", "Structure"],
       submission: validatedData.text,
       promptTemplate: promptTemplate
     };
@@ -41,15 +41,17 @@ export async function testGrading(req: Request, res: Response) {
     const geminiService = createGeminiService(geminiApiKey);
     const result = await geminiService.gradeSubmission(gradingRequest);
     
-    res.json({
-      success: true,
+    // Validate response using schema
+    const responseData = {
       grading: result,
       metadata: {
         submissionLength: validatedData.text.length,
         criteria: validatedData.criteria,
         maxPoints: validatedData.maxPoints
       }
-    });
+    };
+    
+    sendApiResponse(res, responseData, true, "Test grading completed successfully");
   } catch (error) {
     handleRouteError(error, req, res);
   }
@@ -96,8 +98,7 @@ export async function gradeQuizTest(req: Request, res: Response) {
     });
 
     // TEST MODE: Skip sheet update to avoid authentication issues
-    res.json({
-      success: true,
+    sendApiResponse(res, {
       grading: gradingResult,
       answerKey: {
         totalPoints: answerKey.totalPoints,
@@ -105,7 +106,7 @@ export async function gradeQuizTest(req: Request, res: Response) {
       },
       testMode: true,
       note: "Grade calculated but not saved to sheets (test mode)"
-    });
+    }, true, "Quiz grading test completed successfully");
 
   } catch (error) {
     handleRouteError(error, req, res);
@@ -119,7 +120,7 @@ export async function gradeQuizTest(req: Request, res: Response) {
  */
 export async function gradeQuiz(req: Request, res: Response) {
   try {
-    const validatedData = validateData(gradeQuizSchema, req.body);
+    const validatedData = validateData(gradeQuizRequestSchema, req.body);
 
     const { createSheetsService } = await import("../services/sheets");
     const { createGeminiService } = await import("../services/gemini");
@@ -172,18 +173,10 @@ export async function gradeQuiz(req: Request, res: Response) {
       }
     });
 
-    res.json({
-      success: true,
+    sendApiResponse(res, {
       gradeId,
-      grading: gradingResult,
-      answerKey: {
-        totalPoints: answerKey.totalPoints,
-        questionCount: answerKey.questions.length
-      },
-      metadata: {
-        savedToFirestore: true
-      }
-    });
+      grading: gradingResult
+    }, true, "Quiz graded successfully");
 
   } catch (error) {
     handleRouteError(error, req, res);
@@ -197,7 +190,7 @@ export async function gradeQuiz(req: Request, res: Response) {
  */
 export async function gradeCode(req: Request, res: Response) {
   try {
-    const validatedData = validateData(gradeCodeSchema, req.body);
+    const validatedData = validateData(gradeCodeRequestSchema, req.body);
 
     const { createGeminiService } = await import("../services/gemini");
     const { createFirestoreGradeService } = await import("../services/firestore");
@@ -246,16 +239,10 @@ export async function gradeCode(req: Request, res: Response) {
       }
     });
 
-    res.json({
-      success: true,
+    sendApiResponse(res, {
       gradeId,
-      grading: result,
-      metadata: {
-        gradingMode: validatedData.gradingStrictness,
-        isCodeAssignment: validatedData.isCodeAssignment,
-        savedToFirestore: true
-      }
-    });
+      grading: result
+    }, true, "Code assignment graded successfully");
 
   } catch (error) {
     handleRouteError(error, req, res);

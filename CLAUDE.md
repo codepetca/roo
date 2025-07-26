@@ -82,13 +82,54 @@ For evolving patterns, detailed architecture, and implementation guides, see:
 - `docs/development/coding-patterns.md` - Detailed implementation patterns
 - `docs/development/ai-collaboration-guide.md` - How to work with Claude Code effectively
 
-## Quality Gates
+## 🔬 **MANDATORY TDD DEVELOPMENT WORKFLOW**
+
+This project follows **strict Test-Driven Development** - tests must fail before passing.
+
+### **Red-Green-Refactor Cycle (REQUIRED)**
+```bash
+# MANDATORY for ALL feature development:
+1. RED: Write failing test first (npm run test MUST fail)
+2. GREEN: Write minimal code to pass test  
+3. REFACTOR: Improve code while keeping tests green
+4. QUALITY: All quality gates pass
+5. COMMIT: Commit with proper message
+```
+
+### **Pre-Development Setup**
+```bash
+npm run emulators        # Start Firebase emulators with data persistence
+npm run dev             # Start frontend + emulators (separate terminal)
+```
+
+### **Schema-First Development Rules (MANDATORY)**
+1. **Google Sheets → Source Schemas**: Validate all sheet data
+2. **Source → Domain Schemas**: Transform for business logic  
+3. **Domain → DTO Schemas**: Serialize for API boundaries
+4. **Frontend Validation**: Validate all API responses
+
+### **Quality Gates (ALL MUST PASS)**
 
 **Before any commit**:
-- ✅ `npm run quality:check` passes (lint + type check)
-- ✅ All validation schemas are centralized
-- ✅ All API responses use proper error handling
-- ✅ No secrets in code
+- 🔴 **Tests fail first**: New tests must fail initially
+- ✅ **All tests pass**: `npm run test` (frontend + backend)
+- ✅ **Quality check**: `npm run quality:check` (lint + type check)
+- ✅ **Build succeeds**: `npm run build` 
+- ✅ **Schema validation**: All boundaries use Zod schemas
+- ✅ **Type safety**: No `any` types, proper error handling
+- ✅ **Security**: No secrets in code
+
+### **Testing Strategy**
+- **Coverage Target**: 85%+ automated test coverage
+- **Unit Tests**: Vitest for all business logic (TDD cycle)
+- **Integration Tests**: API endpoint testing with schema validation
+- **E2E Tests**: Playwright for critical user workflows
+- **Manual Tests**: Production health checks only
+
+### **Commit Format**
+```bash
+git commit -m "feat: description 🤖 Generated with [Claude Code](https://claude.ai/code)"
+```
 
 ---
 
