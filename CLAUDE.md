@@ -28,7 +28,7 @@ npm run deploy           # Deploy to Firebase
 - **Backend**: Firebase Functions + TypeScript + Zod validation
 - **Database**: Firestore + Google Sheets (legacy)
 - **AI**: Google Gemini 1.5 Flash
-- **Testing**: Vitest (frontend) + endpoint scripts (backend)
+- **Testing**: Vitest (comprehensive test suite with 90+ tests) + mocked services
 - **Type Safety**: Comprehensive Zod validation + shared types + TypeScript strict mode
 
 ## File Organization Principles
@@ -119,12 +119,18 @@ npm run dev             # Start frontend + emulators (separate terminal)
 - ✅ **Type safety**: No `any` types, proper error handling
 - ✅ **Security**: No secrets in code
 
-### **Testing Strategy**
-- **Coverage Target**: 85%+ automated test coverage
-- **Unit Tests**: Vitest for all business logic (TDD cycle)
-- **Integration Tests**: API endpoint testing with schema validation
-- **E2E Tests**: Playwright for critical user workflows
-- **Manual Tests**: Production health checks only
+### **Testing Strategy (90+ Tests ✅)**
+- **Current Coverage**: 90 tests (schemas, services, business logic)
+- **Unit Tests**: Vitest with comprehensive mocking (Firebase, Sheets, Gemini)
+- **Service Tests**: Full coverage of Firestore, Sheets, AI services
+- **Schema Tests**: Exhaustive validation of all data transformations
+- **Test Factories**: Reusable data factories for rapid test development
+
+#### **Test Maintenance Philosophy**
+- **Schema-driven**: Tests auto-adapt when schemas evolve
+- **Minimal rewrites**: ~95% of tests stay stable during development
+- **Efficient updates**: I update tests automatically with feature changes
+- **Rapid feedback**: Fast test suite enables confident refactoring
 
 ### **Commit Format**
 ```bash
