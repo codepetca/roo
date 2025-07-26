@@ -295,7 +295,7 @@
 		<Card>
 			{#snippet children()}
 				<h3 class="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h3>
-				<div class="grid grid-cols-1 gap-4 md:grid-cols-4">
+				<div class="grid grid-cols-1 gap-4 md:grid-cols-5">
 					<button
 						onclick={() => (window.location.href = '/dashboard/teacher/assignments')}
 						class="flex w-full items-center rounded-lg bg-blue-50 p-4 text-left transition-colors hover:bg-blue-100"
@@ -339,6 +339,29 @@
 						<div>
 							<p class="font-medium text-gray-900">Review Grades</p>
 							<p class="text-sm text-gray-600">View and manage student grades</p>
+						</div>
+					</button>
+
+					<button
+						onclick={() => (window.location.href = '/teacher/onboarding')}
+						class="flex w-full items-center rounded-lg bg-indigo-50 p-4 text-left transition-colors hover:bg-indigo-100"
+					>
+						<svg
+							class="mr-3 h-8 w-8 text-indigo-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+							/>
+						</svg>
+						<div>
+							<p class="font-medium text-gray-900">Set Up Google Sheets</p>
+							<p class="text-sm text-gray-600">Automate your sheet creation and setup</p>
 						</div>
 					</button>
 
