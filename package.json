@@ -9,10 +9,11 @@
     "shared"
   ],
   "scripts": {
-    "dev": "concurrently \"npm:dev:frontend\" \"npm:emulators\"",
+    "dev": "npm run emulators:kill && concurrently \"npm:dev:frontend\" \"npm:emulators\"",
     "dev:frontend": "cd frontend && npm run dev",
     "dev:backend": "cd functions && npm run serve",
     "emulators": "firebase emulators:start --import=./emulator-data --export-on-exit",
+    "emulators:kill": "pkill -f 'firebase emulators' || true",
     "emulators:exec": "firebase emulators:exec --import=./emulator-data",
     "emulators:export": "firebase emulators:export ./emulator-data",
     "emulators:seed": "node scripts/seed-emulator-data.mjs",
