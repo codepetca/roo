@@ -22,14 +22,13 @@ const SHEETS_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets" // Full read/write access
 ];
 
-// Configuration - hardcoded for now (TODO: use environment variables)
-const spreadsheetId = "119EdfrPtA3G180b2EgkzVr5v-kxjNgYQjgDkLmuN02Y";
-
 export class SheetsService {
   private sheets: any; // TODO: Type with proper Google Sheets API types
+  private spreadsheetId: string;
 
-  constructor(private serviceAccountAuth: any) { // TODO: Type with proper auth type
+  constructor(private serviceAccountAuth: any, spreadsheetId: string) { // TODO: Type with proper auth type
     this.sheets = google.sheets({ version: "v4", auth: this.serviceAccountAuth });
+    this.spreadsheetId = spreadsheetId;
   }
 
   /**
@@ -39,7 +38,7 @@ export class SheetsService {
     try {
       // Try to read basic spreadsheet metadata
       const response = await this.sheets.spreadsheets.get({
-        spreadsheetId: spreadsheetId
+        spreadsheetId: this.spreadsheetId
       });
       
       logger.info(`Sheets connection test successful - spreadsheet: ${response.data.properties.title}`);
@@ -56,7 +55,7 @@ export class SheetsService {
   async listSheetNames(): Promise<string[]> {
     try {
       const response = await this.sheets.spreadsheets.get({
-        spreadsheetId: spreadsheetId
+        spreadsheetId: this.spreadsheetId
       });
       
       const sheetNames = response.data.sheets?.map((sheet: { properties?: { title?: string } }) => sheet.properties?.title).filter(Boolean) || [];
@@ -78,7 +77,7 @@ export class SheetsService {
       logger.info("Fetching assignments from Google Sheets");
       
       const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: spreadsheetId,
+        spreadsheetId: this.spreadsheetId,
         range: "Sheet1!A2:H", // Skip header row - changed from Assignments to Sheet1
       });
 
@@ -107,7 +106,7 @@ export class SheetsService {
       logger.info("Fetching all submissions from Google Sheets");
       
       const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: spreadsheetId,
+        spreadsheetId: this.spreadsheetId,
         range: "Submissions!A2:Q", // All 17 columns
       });
 
@@ -143,7 +142,7 @@ export class SheetsService {
       logger.info(`Fetching answer key for form ${formId}`);
       
       const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: spreadsheetId,
+        spreadsheetId: this.spreadsheetId,
         range: "Answer Keys!A2:J", // All answer key columns
       });
 
@@ -181,7 +180,7 @@ export class SheetsService {
       
       // First, find the row for this submission
       const response = await this.sheets.spreadsheets.values.get({
-        spreadsheetId: spreadsheetId,
+        spreadsheetId: this.spreadsheetId,
         range: "Submissions!A2:Q", // All 17 columns
       });
 
@@ -196,7 +195,7 @@ export class SheetsService {
       const gradeRange = `Submissions!I${rowIndex + 2}:J${rowIndex + 2}`;
       
       await this.sheets.spreadsheets.values.update({
-        spreadsheetId: spreadsheetId,
+        spreadsheetId: this.spreadsheetId,
         range: gradeRange,
         valueInputOption: "RAW",
         requestBody: {
@@ -240,7 +239,7 @@ export class SheetsService {
 /**
  * Create a Sheets service instance with service account authentication
  */
-export const createSheetsService = async (): Promise<SheetsService> => {
+export const createSheetsService = async (spreadsheetId: string): Promise<SheetsService> => {
   try {
     // Use Google Auth with default credentials (Firebase service account)
     const authClient = new google.auth.GoogleAuth({
@@ -248,7 +247,7 @@ export const createSheetsService = async (): Promise<SheetsService> => {
     });
 
     const authInstance = await authClient.getClient();
-    return new SheetsService(authInstance);
+    return new SheetsService(authInstance, spreadsheetId);
   } catch (error) {
     logger.error("Failed to create Sheets service", error);
     throw error;

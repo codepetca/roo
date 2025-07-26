@@ -13,7 +13,21 @@ import { handleRouteError, validateData } from "../middleware/validation";
 export async function getSheetsAssignments(req: Request, res: Response) {
   try {
     const { createSheetsService } = await import("../services/sheets");
-    const sheetsService = await createSheetsService();
+    const { getTeacherSpreadsheetId } = await import("../config/teachers");
+    
+    // For now, use default teacher for development
+    const teacherEmail = "teacher@test.com";
+    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    
+    if (!spreadsheetId) {
+      return res.status(404).json({
+        success: false,
+        error: "No spreadsheet configured",
+        message: `Teacher ${teacherEmail} needs to be configured with a Google Sheets ID`
+      });
+    }
+    
+    const sheetsService = await createSheetsService(spreadsheetId);
     const assignments = await sheetsService.getAssignments();
     
     res.json({
@@ -39,7 +53,21 @@ export async function getSheetsSubmissions(req: Request, res: Response) {
   try {
     const validatedData = validateData(getSheetsSubmissionsSchema, req.body);
     const { createSheetsService } = await import("../services/sheets");
-    const sheetsService = await createSheetsService();
+    const { getTeacherSpreadsheetId } = await import("../config/teachers");
+    
+    // For now, use default teacher for development
+    const teacherEmail = "teacher@test.com";
+    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    
+    if (!spreadsheetId) {
+      return res.status(404).json({
+        success: false,
+        error: "No spreadsheet configured",
+        message: `Teacher ${teacherEmail} needs to be configured with a Google Sheets ID`
+      });
+    }
+    
+    const sheetsService = await createSheetsService(spreadsheetId);
     const submissions = await sheetsService.getSubmissions(validatedData.assignmentId);
     
     res.json({
@@ -61,7 +89,21 @@ export async function getSheetsSubmissions(req: Request, res: Response) {
 export async function getAllSubmissions(req: Request, res: Response) {
   try {
     const { createSheetsService } = await import("../services/sheets");
-    const sheetsService = await createSheetsService();
+    const { getTeacherSpreadsheetId } = await import("../config/teachers");
+    
+    // For now, use default teacher for development
+    const teacherEmail = "teacher@test.com";
+    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    
+    if (!spreadsheetId) {
+      return res.status(404).json({
+        success: false,
+        error: "No spreadsheet configured",
+        message: `Teacher ${teacherEmail} needs to be configured with a Google Sheets ID`
+      });
+    }
+    
+    const sheetsService = await createSheetsService(spreadsheetId);
     const submissions = await sheetsService.getAllSubmissions();
     
     res.json({
@@ -86,7 +128,21 @@ export async function getAllSubmissions(req: Request, res: Response) {
 export async function getUngradedSubmissions(req: Request, res: Response) {
   try {
     const { createSheetsService } = await import("../services/sheets");
-    const sheetsService = await createSheetsService();
+    const { getTeacherSpreadsheetId } = await import("../config/teachers");
+    
+    // For now, use default teacher for development
+    const teacherEmail = "teacher@test.com";
+    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    
+    if (!spreadsheetId) {
+      return res.status(404).json({
+        success: false,
+        error: "No spreadsheet configured",
+        message: `Teacher ${teacherEmail} needs to be configured with a Google Sheets ID`
+      });
+    }
+    
+    const sheetsService = await createSheetsService(spreadsheetId);
     const submissions = await sheetsService.getUngraduatedSubmissions();
     
     res.json({
@@ -112,7 +168,21 @@ export async function getAnswerKey(req: Request, res: Response) {
   try {
     const validatedData = validateData(getAnswerKeySchema, req.body);
     const { createSheetsService } = await import("../services/sheets");
-    const sheetsService = await createSheetsService();
+    const { getTeacherSpreadsheetId } = await import("../config/teachers");
+    
+    // For now, use default teacher for development
+    const teacherEmail = "teacher@test.com";
+    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    
+    if (!spreadsheetId) {
+      return res.status(404).json({
+        success: false,
+        error: "No spreadsheet configured",
+        message: `Teacher ${teacherEmail} needs to be configured with a Google Sheets ID`
+      });
+    }
+    
+    const sheetsService = await createSheetsService(spreadsheetId);
     const answerKey = await sheetsService.getAnswerKey(validatedData.formId);
     
     res.json({
@@ -136,7 +206,21 @@ export async function getAnswerKey(req: Request, res: Response) {
 export async function listSheetNames(req: Request, res: Response) {
   try {
     const { createSheetsService } = await import("../services/sheets");
-    const sheetsService = await createSheetsService();
+    const { getTeacherSpreadsheetId } = await import("../config/teachers");
+    
+    // For now, use default teacher for development
+    const teacherEmail = "teacher@test.com";
+    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    
+    if (!spreadsheetId) {
+      return res.status(404).json({
+        success: false,
+        error: "No spreadsheet configured",
+        message: `Teacher ${teacherEmail} needs to be configured with a Google Sheets ID`
+      });
+    }
+    
+    const sheetsService = await createSheetsService(spreadsheetId);
     const sheetNames = await sheetsService.listSheetNames();
     
     res.json({

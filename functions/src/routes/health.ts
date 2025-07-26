@@ -82,7 +82,21 @@ export async function testGeminiConnection(req: Request, res: Response) {
 export async function testSheetsConnection(req: Request, res: Response) {
   try {
     const { createSheetsService } = await import("../services/sheets");
-    const sheetsService = await createSheetsService();
+    const { getTeacherSpreadsheetId } = await import("../config/teachers");
+    
+    // For now, use default teacher for development
+    const teacherEmail = "teacher@test.com";
+    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    
+    if (!spreadsheetId) {
+      return res.status(404).json({
+        success: false,
+        error: "No spreadsheet configured",
+        message: `Teacher ${teacherEmail} needs to be configured with a Google Sheets ID`
+      });
+    }
+    
+    const sheetsService = await createSheetsService(spreadsheetId);
     const isConnected = await sheetsService.testConnection();
     
     res.json({

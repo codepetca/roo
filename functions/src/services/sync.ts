@@ -6,6 +6,7 @@
 import { logger } from "firebase-functions";
 import { db, getCurrentTimestamp } from "../config/firebase";
 import { createSheetsService } from "./sheets";
+import { getTeacherSpreadsheetId, getTeacherConfig } from "../config/teachers";
 import { sheetAssignmentToDomain, sheetSubmissionToDomain } from "../schemas/transformers";
 import { assignmentDomainSchema, submissionDomainSchema } from "../schemas/domain";
 import type { AssignmentDomain, SubmissionDomain } from "../schemas/domain";
@@ -24,17 +25,33 @@ export interface SyncResult {
 export class SyncService {
   
   /**
-   * Sync all assignments from Google Sheets to Firestore
+   * Sync all assignments from Google Sheets to Firestore for a specific teacher
    * Location: functions/src/services/sync.ts:25
    */
-  async syncAssignmentsToFirestore(): Promise<{ count: number; errors: string[] }> {
+  async syncAssignmentsToFirestore(teacherEmail: string): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
     try {
-      logger.info("Starting assignment sync from Sheets to Firestore");
+      logger.info("Starting assignment sync from Sheets to Firestore", { teacherEmail });
       
-      const sheetsService = await createSheetsService();
+      // Get teacher's spreadsheet ID
+      const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+      if (!spreadsheetId) {
+        const errorMsg = `No spreadsheet configured for teacher: ${teacherEmail}`;
+        errors.push(errorMsg);
+        return { count, errors };
+      }
+
+      // Get teacher configuration
+      const teacherConfig = getTeacherConfig(teacherEmail);
+      if (!teacherConfig) {
+        const errorMsg = `Failed to get teacher configuration for: ${teacherEmail}`;
+        errors.push(errorMsg);
+        return { count, errors };
+      }
+      
+      const sheetsService = await createSheetsService(spreadsheetId);
       const sheetAssignments = await sheetsService.getAssignments();
       
       logger.info(`Found ${sheetAssignments.length} assignments in Google Sheets`);
@@ -44,7 +61,7 @@ export class SyncService {
           // Transform sheet assignment to domain object
           const domainAssignment = sheetAssignmentToDomain(
             sheetAssignment, 
-            "default-classroom" // TODO: Use proper classroom ID
+            teacherConfig.classroomId || `${teacherEmail}-classroom`
           );
 
           // Add timestamps
@@ -103,17 +120,25 @@ export class SyncService {
   }
 
   /**
-   * Sync all submissions from Google Sheets to Firestore
+   * Sync all submissions from Google Sheets to Firestore for a specific teacher
    * Location: functions/src/services/sync.ts:85
    */
-  async syncSubmissionsToFirestore(): Promise<{ count: number; errors: string[] }> {
+  async syncSubmissionsToFirestore(teacherEmail: string): Promise<{ count: number; errors: string[] }> {
     const errors: string[] = [];
     let count = 0;
 
     try {
-      logger.info("Starting submission sync from Sheets to Firestore");
+      logger.info("Starting submission sync from Sheets to Firestore", { teacherEmail });
       
-      const sheetsService = await createSheetsService();
+      // Get teacher's spreadsheet ID
+      const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+      if (!spreadsheetId) {
+        const errorMsg = `No spreadsheet configured for teacher: ${teacherEmail}`;
+        errors.push(errorMsg);
+        return { count, errors };
+      }
+      
+      const sheetsService = await createSheetsService(spreadsheetId);
       const sheetSubmissions = await sheetsService.getAllSubmissions();
       
       logger.info(`Found ${sheetSubmissions.length} submissions in Google Sheets`);
@@ -197,10 +222,10 @@ export class SyncService {
   }
 
   /**
-   * Sync both assignments and submissions from Google Sheets to Firestore
+   * Sync both assignments and submissions from Google Sheets to Firestore for a specific teacher
    * Location: functions/src/services/sync.ts:169
    */
-  async syncAllData(): Promise<SyncResult> {
+  async syncAllData(teacherEmail: string): Promise<SyncResult> {
     logger.info("Starting full sync from Google Sheets to Firestore");
     
     const allErrors: string[] = [];
@@ -209,12 +234,12 @@ export class SyncService {
 
     try {
       // First sync assignments (submissions depend on assignments existing)
-      const assignmentResult = await this.syncAssignmentsToFirestore();
+      const assignmentResult = await this.syncAssignmentsToFirestore(teacherEmail);
       totalAssignments = assignmentResult.count;
       allErrors.push(...assignmentResult.errors);
 
       // Then sync submissions
-      const submissionResult = await this.syncSubmissionsToFirestore();
+      const submissionResult = await this.syncSubmissionsToFirestore(teacherEmail);
       totalSubmissions = submissionResult.count;
       allErrors.push(...submissionResult.errors);
 
