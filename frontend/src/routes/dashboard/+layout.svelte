@@ -9,29 +9,50 @@
 		icon: string;
 	}
 
-	const navItems: NavItem[] = [
-		{
-			href: '/dashboard',
-			label: 'Overview',
-			icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z'
-		},
-		{
-			href: '/dashboard/assignments',
-			label: 'Assignments',
-			icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
-		},
-		{
-			href: '/dashboard/grades',
-			label: 'Grades',
-			icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+	// Role-based navigation items
+	let navItems = $derived(() => {
+		const userRole = auth.user?.role;
+
+		if (userRole === 'teacher') {
+			return [
+				{
+					href: '/dashboard/teacher',
+					label: 'Overview',
+					icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z'
+				},
+				{
+					href: '/dashboard/teacher/assignments',
+					label: 'Assignments',
+					icon: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+				},
+				{
+					href: '/dashboard/teacher/grades',
+					label: 'Grades',
+					icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+				}
+			];
+		} else {
+			// Student navigation
+			return [
+				{
+					href: '/dashboard/student',
+					label: 'Overview',
+					icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z'
+				},
+				{
+					href: '/dashboard/student/grades',
+					label: 'My Grades',
+					icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
+				}
+			];
 		}
-	];
+	});
 
 	let sidebarOpen = $state(false);
 
 	function isActivePath(href: string): boolean {
-		if (href === '/dashboard') {
-			return $page.url.pathname === '/dashboard';
+		if (href.endsWith('/teacher') || href.endsWith('/student')) {
+			return $page.url.pathname === href;
 		}
 		return $page.url.pathname.startsWith(href);
 	}
@@ -120,12 +141,16 @@
 				<!-- Page title -->
 				<div class="flex-1 lg:flex-none">
 					<h2 class="text-lg font-semibold text-gray-900">
-						{#if $page.url.pathname === '/dashboard'}
-							Overview
-						{:else if $page.url.pathname.startsWith('/dashboard/assignments')}
-							Assignments
-						{:else if $page.url.pathname.startsWith('/dashboard/grades')}
-							Grades
+						{#if $page.url.pathname.includes('/teacher') || $page.url.pathname.includes('/student')}
+							{#if $page.url.pathname.endsWith('/teacher') || $page.url.pathname.endsWith('/student')}
+								Overview
+							{:else if $page.url.pathname.includes('/assignments')}
+								Assignments
+							{:else if $page.url.pathname.includes('/grades')}
+								{auth.user?.role === 'teacher' ? 'Grades' : 'My Grades'}
+							{:else}
+								Dashboard
+							{/if}
 						{:else}
 							Dashboard
 						{/if}
