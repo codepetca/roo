@@ -39,6 +39,9 @@
     "quality:check": "npm run lint && npm run type-check",
     "quality:complexity": "npx complexity-report functions/src/ && npx complexity-report frontend/src/",
     "quality:report": "npm run quality:check && npm run quality:complexity",
+    "health": "./scripts/health-check.sh",
+    "health:quick": "./scripts/quick-check.sh",
+    "check:quick": "./scripts/quick-check.sh",
     "deploy": "npm run build && cd functions && npm run deploy",
     "serve": "npm run build:backend && cd functions && npm run serve"
   },
