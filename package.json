@@ -3,6 +3,11 @@
   "private": true,
   "version": "1.0.0",
   "description": "AI-powered auto-grading system for educational assignments",
+  "workspaces": [
+    "frontend",
+    "functions", 
+    "shared"
+  ],
   "scripts": {
     "dev": "concurrently \"npm:dev:frontend\" \"npm:emulators\"",
     "dev:frontend": "cd frontend && npm run dev",
@@ -12,12 +17,13 @@
     "emulators:export": "firebase emulators:export ./emulator-data",
     "emulators:seed": "node scripts/seed-emulator-data.mjs",
     "build": "npm run build:shared && npm run build:frontend && npm run build:backend",
-    "build:shared": "tsc --project shared/tsconfig.json",
+    "build:shared": "cd shared && npm run build",
     "build:frontend": "cd frontend && npm run build",
     "build:backend": "cd functions && npm run build",
     "test": "npm run test:frontend && npm run test:backend",
     "test:frontend": "cd frontend && npm test",
-    "test:backend": "./test-all-endpoints.sh",
+    "test:backend": "./testing/manual/test-all-endpoints.sh",
+    "test:manual": "./testing/manual/test-all-endpoints.sh",
     "test:all": "npm run test:frontend && npm run test:backend",
     "lint": "npm run lint:frontend && npm run lint:backend",
     "lint:frontend": "cd frontend && npm run lint",
@@ -26,9 +32,10 @@
     "format:frontend": "cd frontend && npm run format",
     "format:backend": "cd functions && npm run format",
     "check": "npm run type-check",
-    "type-check": "npm run type-check:frontend && npm run type-check:backend",
+    "type-check": "npm run type-check:frontend && npm run type-check:backend && npm run type-check:shared",
     "type-check:frontend": "cd frontend && npm run check",
-    "type-check:backend": "cd functions && tsc --noEmit",
+    "type-check:backend": "cd functions && npm run type-check",
+    "type-check:shared": "cd shared && npm run type-check",
     "quality:check": "npm run lint && npm run type-check",
     "quality:complexity": "npx complexity-report functions/src/ && npx complexity-report frontend/src/",
     "quality:report": "npm run quality:check && npm run quality:complexity",
@@ -41,6 +48,7 @@
   "devDependencies": {
     "undici-types": "^7.12.0",
     "concurrently": "^8.2.2",
-    "complexity-report": "^2.0.0-alpha"
+    "complexity-report": "^2.0.0-alpha",
+    "typescript": "^5.0.0"
   }
 }

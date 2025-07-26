@@ -11,7 +11,9 @@
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write src/**/*.ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "engines": {
     "node": "18"
@@ -30,7 +32,8 @@
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.57.0",
-    "prettier": "^3.2.5"
+    "prettier": "^3.2.5",
+    "vitest": "^3.2.4"
   },
   "private": true
 }
