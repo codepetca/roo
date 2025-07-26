@@ -2,6 +2,11 @@
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores';
 	import LogoutButton from '$lib/components/auth/LogoutButton.svelte';
+	import { Badge } from '$lib/components/ui';
+	import type { Snippet } from 'svelte';
+
+	// Accept children snippet
+	let { children }: { children?: Snippet } = $props();
 
 	// NavItem interface removed - unused
 
@@ -65,9 +70,15 @@
 <div class="min-h-screen bg-gray-50">
 	<!-- Mobile sidebar overlay -->
 	{#if sidebarOpen}
-		<div class="fixed inset-0 z-40 lg:hidden" onclick={closeSidebar}>
+		<button
+			type="button"
+			class="fixed inset-0 z-40 lg:hidden"
+			onclick={closeSidebar}
+			onkeydown={(e) => e.key === 'Escape' && closeSidebar()}
+			aria-label="Close sidebar"
+		>
 			<div class="absolute inset-0 bg-gray-600 opacity-75"></div>
-		</div>
+		</button>
 	{/if}
 
 	<!-- Sidebar -->
@@ -76,8 +87,20 @@
 			? 'translate-x-0'
 			: '-translate-x-full'} transition-transform duration-300 ease-in-out lg:static lg:inset-0 lg:translate-x-0"
 	>
-		<div class="flex h-16 items-center justify-center bg-blue-600 text-white">
-			<h1 class="text-xl font-bold">Roo Dashboard</h1>
+		<div
+			class="flex h-16 items-center justify-center bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg"
+		>
+			<div class="flex items-center space-x-2">
+				<svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+					/>
+				</svg>
+				<h1 class="text-xl font-bold">Roo</h1>
+			</div>
 		</div>
 
 		<nav class="mt-8">
@@ -102,11 +125,15 @@
 		</nav>
 
 		<!-- User info and logout -->
-		<div class="absolute right-0 bottom-0 left-0 border-t border-gray-200 p-4">
+		<div class="absolute right-0 bottom-0 left-0 border-t border-gray-200 bg-gray-50 p-4">
 			<div class="flex items-center justify-between">
 				<div class="text-sm">
 					<p class="font-medium text-gray-900">{auth.user?.email || 'User'}</p>
-					<p class="text-gray-500 capitalize">{auth.user?.role || 'Student'}</p>
+					<div class="mt-1 flex items-center gap-2">
+						<Badge variant={auth.user?.role === 'teacher' ? 'info' : 'default'} size="sm">
+							{auth.user?.role || 'Student'}
+						</Badge>
+					</div>
 				</div>
 				<LogoutButton variant="link" size="sm" />
 			</div>
@@ -123,6 +150,7 @@
 					type="button"
 					class="p-2 text-gray-500 hover:text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none focus:ring-inset lg:hidden"
 					onclick={() => (sidebarOpen = !sidebarOpen)}
+					aria-label="Open navigation menu"
 				>
 					<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
@@ -171,7 +199,7 @@
 		<!-- Page content -->
 		<main class="py-6">
 			<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-				<slot />
+				{@render children?.()}
 			</div>
 		</main>
 	</div>
