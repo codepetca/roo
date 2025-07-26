@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Handle, RequestEvent } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
 
 // Mock Firebase Admin
 const mockVerifyIdToken = vi.fn();
@@ -29,14 +29,13 @@ vi.mock('$env/static/private', () => ({
 }));
 
 describe('SvelteKit Server Hooks Integration', () => {
-	let handle: Handle;
+	// let handle: Handle; // Used in tests below
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
 
-		// Import handle after mocks are set up
-		const hooksModule = await import('./hooks.server');
-		handle = hooksModule.handle;
+		// Hooks module imported dynamically for each test that needs it
+		// await import('./hooks.server');
 	});
 
 	afterEach(() => {
@@ -165,7 +164,7 @@ describe('SvelteKit Server Hooks Integration', () => {
 				cookies: {
 					get: vi.fn((name: string) => (name === 'auth-token' ? 'test.jwt.token' : undefined))
 				}
-			} as Partial<RequestEvent>;
+			} as unknown as Partial<RequestEvent>;
 
 			expect(mockEvent.url?.pathname).toBe('/dashboard');
 			expect(mockEvent.cookies?.get('auth-token')).toBe('test.jwt.token');
@@ -217,7 +216,7 @@ describe('SvelteKit Server Hooks Integration', () => {
 			const malformedTokens = ['incomplete.token', '', null, undefined];
 
 			malformedTokens.forEach((token) => {
-				const isValidJWTFormat = (token: any) => {
+				const isValidJWTFormat = (token: unknown) => {
 					if (typeof token !== 'string') return false;
 					return token.split('.').length === 3;
 				};
@@ -227,7 +226,7 @@ describe('SvelteKit Server Hooks Integration', () => {
 
 			// Test case that has 3 parts but is still invalid
 			const notARealToken = 'not.a.token';
-			const isValidJWTFormat = (token: any) => {
+			const isValidJWTFormat = (token: unknown) => {
 				if (typeof token !== 'string') return false;
 				return token.split('.').length === 3;
 			};

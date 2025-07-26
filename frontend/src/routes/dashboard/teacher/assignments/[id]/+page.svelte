@@ -80,7 +80,7 @@
 				});
 			}
 			return 'No date';
-		} catch (err) {
+		} catch {
 			return 'Invalid date';
 		}
 	}
@@ -91,7 +91,7 @@
 				return new Date(timestamp._seconds * 1000).toLocaleString();
 			}
 			return 'No date';
-		} catch (err) {
+		} catch {
 			return 'Invalid date';
 		}
 	}
@@ -377,7 +377,7 @@
 										<div class="mb-2">
 											<p class="mb-1 text-sm font-medium text-gray-700">Criteria:</p>
 											<div class="flex flex-wrap gap-2">
-												{#each assignment.gradingRubric.criteria as criterion}
+												{#each assignment.gradingRubric.criteria as criterion (criterion)}
 													<span
 														class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800"
 													>
@@ -409,7 +409,7 @@
 							</p>
 						{:else}
 							<div class="space-y-4">
-								{#each submissions as submission}
+								{#each submissions as submission (submission.id || submission.studentEmail)}
 									<div class="rounded-lg border border-gray-200 p-4">
 										<div class="flex items-center justify-between">
 											<div>
@@ -445,7 +445,7 @@
 							<p class="py-8 text-center text-gray-500">No grades available for this assignment.</p>
 						{:else}
 							<div class="space-y-4">
-								{#each grades as grade}
+								{#each grades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
 									<div class="rounded-lg border border-gray-200 p-4">
 										<div class="flex items-center justify-between">
 											<div>

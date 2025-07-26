@@ -284,7 +284,7 @@ export const responseFactories = {
     message
   }),
 
-  apiError: (error: string, details?: any) => ({
+  apiError: (error: string, details?: unknown) => ({
     success: false,
     error,
     details
@@ -389,7 +389,7 @@ export const testData = {
     negativePoints: () => requestFactories.createAssignment({ maxPoints: -10 }),
     invalidEmail: () => requestFactories.createSubmission({ studentEmail: "invalid-email" }),
     missingFields: () => ({ title: "Only Title" }), // Missing required fields
-    invalidEnum: () => ({ ...requestFactories.gradeCode(), gradingStrictness: "invalid" as any })
+    invalidEnum: () => ({ ...requestFactories.gradeCode(), gradingStrictness: "invalid" as "strict" | "standard" | "generous" })
   }
 };
 

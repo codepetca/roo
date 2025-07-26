@@ -18,7 +18,7 @@ export const auth = admin.auth();
 export const FieldValue = admin.firestore.FieldValue;
 
 // Export timestamp helper that handles emulator vs production
-export function getCurrentTimestamp(): any {
+export function getCurrentTimestamp(): Date | admin.firestore.FieldValue {
   if (isEmulator()) {
     return new Date();
   }
@@ -26,8 +26,8 @@ export function getCurrentTimestamp(): any {
 }
 
 // Document sanitization functions
-export function sanitizeDocument<T extends Record<string, any>>(doc: T): T {
-  const sanitized: any = { ...doc };
+export function sanitizeDocument<T extends Record<string, unknown>>(doc: T): T {
+  const sanitized: Record<string, unknown> = { ...doc };
   
   // Convert Firestore Timestamps to serializable format
   Object.keys(sanitized).forEach(key => {
@@ -51,6 +51,6 @@ export function sanitizeDocument<T extends Record<string, any>>(doc: T): T {
   return sanitized as T;
 }
 
-export function sanitizeDocuments<T extends Record<string, any>>(docs: T[]): T[] {
+export function sanitizeDocuments<T extends Record<string, unknown>>(docs: T[]): T[] {
   return docs.map(doc => sanitizeDocument(doc));
 }

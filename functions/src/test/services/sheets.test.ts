@@ -19,8 +19,8 @@ vi.mock("googleapis", () => ({
 
 describe("SheetsService", () => {
   let service: SheetsService;
-  let mockSheets: any;
-  let mockAuth: any;
+  let mockSheets: ReturnType<typeof mockSheetsApi>;
+  let mockAuth: { getClient: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockSheets = mockSheetsApi();
@@ -32,7 +32,7 @@ describe("SheetsService", () => {
     
     service = new SheetsService(mockAuth);
     // Override the sheets property with our mock
-    (service as any).sheets = mockSheets;
+    (service as { sheets: unknown }).sheets = mockSheets;
   });
 
   describe("testConnection", () => {

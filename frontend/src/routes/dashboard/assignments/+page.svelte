@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
 	import type { Assignment } from '@shared/types';
-	import { serializedTimestampToISO } from '@shared/types';
+	import type { SerializedTimestamp } from '@shared/types';
 
 	// State using Svelte 5 runes
 	let assignments = $state<Assignment[]>([]);
@@ -33,14 +33,13 @@
 		return filtered;
 	});
 
-	// Statistics for the current filter
-	let stats = $derived(() => {
-		const total = filteredAssignments.length;
-		const quizzes = filteredAssignments.filter((a) => a.isQuiz).length;
-		const regularAssignments = filteredAssignments.filter((a) => !a.isQuiz).length;
-
-		return { total, quizzes, regularAssignments };
-	});
+	// Statistics computed but not displayed in current UI
+	// let stats = $derived(() => {
+	//	const total = filteredAssignments.length;
+	//	const quizzes = filteredAssignments.filter((a) => a.isQuiz).length;
+	//	const regularAssignments = filteredAssignments.filter((a) => !a.isQuiz).length;
+	//	return { total, quizzes, regularAssignments };
+	// });
 
 	// Filter tabs configuration
 	const filterTabs = [
@@ -62,21 +61,21 @@
 			loading = true;
 			error = null;
 			assignments = await api.listAssignments();
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error('Failed to load assignments:', err);
-			error = err.message || 'Failed to load assignments';
+			error = (err as Error)?.message || 'Failed to load assignments';
 		} finally {
 			loading = false;
 		}
 	}
 
-	function formatDate(timestamp: any): string {
+	function formatDate(timestamp: SerializedTimestamp | null): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleDateString();
 			}
 			return 'No date';
-		} catch (err) {
+		} catch {
 			return 'Invalid date';
 		}
 	}
@@ -136,7 +135,7 @@
 			<div class="animate-pulse space-y-4">
 				<div class="h-4 w-1/4 rounded bg-gray-200"></div>
 				<div class="space-y-3">
-					{#each Array(5) as _}
+					{#each Array.from({ length: 5 }, (_, i) => i) as i (i)}
 						<div class="h-16 rounded bg-gray-200"></div>
 					{/each}
 				</div>
@@ -200,7 +199,7 @@
 
 				<!-- Filter Tabs -->
 				<div class="flex space-x-1">
-					{#each filterTabs as tab}
+					{#each filterTabs as tab (tab.key)}
 						<button
 							onclick={() => (activeFilter = tab.key)}
 							class="rounded-md px-4 py-2 text-sm font-medium transition-colors {activeFilter ===
@@ -259,7 +258,7 @@
 						</p>
 					</div>
 				{:else}
-					{#each filteredAssignments as assignment}
+					{#each filteredAssignments as assignment (assignment.id)}
 						<div class="p-6 transition-colors hover:bg-gray-50">
 							<div class="flex items-start justify-between">
 								<div class="flex items-start space-x-4">

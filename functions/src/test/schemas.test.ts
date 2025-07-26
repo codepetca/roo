@@ -452,7 +452,7 @@ describe("Schema Edge Cases", () => {
     const parsed = parseAssignmentRow(row);
     
     // parseInt returns NaN for invalid strings
-    expect(isNaN(parsed.maxPoints as any)).toBe(true);
+    expect(isNaN(parsed.maxPoints as number)).toBe(true);
   });
 
   it("should validate enum values strictly", () => {

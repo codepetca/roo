@@ -99,9 +99,9 @@
 			}
 
 			myGrades = allGrades;
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error('Failed to load student dashboard data:', err);
-			error = err.message || 'Failed to load dashboard data';
+			error = (err as Error)?.message || 'Failed to load dashboard data';
 		} finally {
 			loading = false;
 		}
@@ -125,7 +125,7 @@
 	{#if loading}
 		<!-- Loading State -->
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-			{#each Array(4) as _}
+			{#each Array.from({ length: 4 }, (_, i) => i) as i (i)}
 				<div class="animate-pulse rounded-lg bg-white p-6 shadow">
 					<div class="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
 					<div class="h-8 w-1/2 rounded bg-gray-200"></div>
@@ -162,7 +162,7 @@
 	{:else}
 		<!-- Quick Stats Cards -->
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-			{#each quickStats as stat}
+			{#each quickStats as stat (stat.title)}
 				<div class="rounded-lg bg-white p-6 shadow">
 					<div class="flex items-center justify-between">
 						<div>
@@ -196,7 +196,7 @@
 						<p class="py-4 text-center text-gray-500">No grades available</p>
 					{:else}
 						<div class="space-y-4">
-							{#each recentGrades as grade}
+							{#each recentGrades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
 								{@const percentage = Math.round((grade.score / grade.maxScore) * 100)}
 								{@const letterGrade = getLetterGrade(percentage)}
 								<div class="flex items-center justify-between rounded-lg bg-gray-50 p-3">
@@ -267,7 +267,7 @@
 						<p class="py-4 text-center text-gray-500">No assignments available</p>
 					{:else}
 						<div class="space-y-4">
-							{#each assignments.slice(0, 5) as assignment}
+							{#each assignments.slice(0, 5) as assignment (assignment.id)}
 								{@const hasGrade = myGrades.some((g) => g.assignmentId === assignment.id)}
 								<div class="flex items-center justify-between rounded-lg bg-gray-50 p-3">
 									<div class="flex items-center space-x-3">

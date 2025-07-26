@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
-	import type { Assignment, Submission, Grade } from '@shared/types';
+	import type { Assignment, Submission } from '@shared/types';
 
 	// State using Svelte 5 runes
 	let assignments = $state<Assignment[]>([]);
@@ -83,7 +83,7 @@
 	{#if loading}
 		<!-- Loading State -->
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-			{#each Array(4) as _}
+			{#each Array.from({ length: 4 }, (_, i) => i) as i (i)}
 				<div class="animate-pulse rounded-lg bg-white p-6 shadow">
 					<div class="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
 					<div class="h-8 w-1/2 rounded bg-gray-200"></div>
@@ -120,7 +120,7 @@
 	{:else}
 		<!-- Quick Stats Cards -->
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-			{#each quickStats as stat}
+			{#each quickStats as stat (stat.title)}
 				<div class="rounded-lg bg-white p-6 shadow">
 					<div class="flex items-center justify-between">
 						<div>
@@ -154,7 +154,7 @@
 						<p class="py-4 text-center text-gray-500">No assignments found</p>
 					{:else}
 						<div class="space-y-4">
-							{#each assignments.slice(0, 5) as assignment}
+							{#each assignments.slice(0, 5) as assignment (assignment.id)}
 								<div class="flex items-center justify-between rounded-lg bg-gray-50 p-3">
 									<div class="flex items-center space-x-3">
 										<div
@@ -213,7 +213,7 @@
 						<p class="py-4 text-center text-gray-500">No pending submissions</p>
 					{:else}
 						<div class="space-y-4">
-							{#each recentSubmissions.slice(0, 5) as submission}
+							{#each recentSubmissions.slice(0, 5) as submission (submission.id || submission.studentEmail)}
 								<div class="flex items-center justify-between rounded-lg bg-gray-50 p-3">
 									<div>
 										<p class="font-medium text-gray-900">{submission.studentName}</p>

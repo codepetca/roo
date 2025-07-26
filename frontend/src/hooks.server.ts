@@ -41,7 +41,7 @@ try {
 /**
  * Determine user role based on email domain or custom claims
  */
-function getUserRole(decodedToken: any): 'teacher' | 'student' {
+function getUserRole(decodedToken: { role?: string; email?: string }): 'teacher' | 'student' {
 	// First check custom claims
 	if (decodedToken.role === 'teacher' || decodedToken.role === 'student') {
 		return decodedToken.role;

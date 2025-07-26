@@ -16,6 +16,7 @@ module.exports = {
     "/lib/**/*", // Ignore built files.
     "/generated/**/*", // Ignore generated files.
     "src/index-original.ts", // Ignore backup file
+    "**/*.d.ts", // Ignore TypeScript declaration files
   ],
   plugins: [
     "@typescript-eslint",

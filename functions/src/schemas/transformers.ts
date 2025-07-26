@@ -239,7 +239,7 @@ export function gradesDomainToDto(domains: GradeDomain[]): GradeResponse[] {
  * Parse raw sheet rows into objects that match schema input expectations
  * These will be validated and transformed by the schemas
  */
-export function parseAssignmentRow(row: string[]): any {
+export function parseAssignmentRow(row: string[]): Partial<SheetAssignment> {
   return {
     id: row[0] || "",
     courseId: row[1] || "",
@@ -252,7 +252,7 @@ export function parseAssignmentRow(row: string[]): any {
   };
 }
 
-export function parseSubmissionRow(row: string[]): any {
+export function parseSubmissionRow(row: string[]): Partial<SheetSubmission> {
   return {
     id: row[0] || "",
     assignmentTitle: row[1] || "",
@@ -274,7 +274,7 @@ export function parseSubmissionRow(row: string[]): any {
   };
 }
 
-export function parseAnswerKeyRow(row: string[]): any {
+export function parseAnswerKeyRow(row: string[]): Partial<SheetAnswerKey> {
   return {
     formId: row[0] || "",
     assignmentTitle: row[1] || "",

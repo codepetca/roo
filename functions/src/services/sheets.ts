@@ -26,9 +26,9 @@ const SHEETS_SCOPES = [
 const spreadsheetId = "119EdfrPtA3G180b2EgkzVr5v-kxjNgYQjgDkLmuN02Y";
 
 export class SheetsService {
-  private sheets: any;
+  private sheets: any; // TODO: Type with proper Google Sheets API types
 
-  constructor(private serviceAccountAuth: any) {
+  constructor(private serviceAccountAuth: any) { // TODO: Type with proper auth type
     this.sheets = google.sheets({ version: "v4", auth: this.serviceAccountAuth });
   }
 
@@ -59,7 +59,7 @@ export class SheetsService {
         spreadsheetId: spreadsheetId
       });
       
-      const sheetNames = response.data.sheets?.map((sheet: any) => sheet.properties?.title).filter(Boolean) || [];
+      const sheetNames = response.data.sheets?.map((sheet: { properties?: { title?: string } }) => sheet.properties?.title).filter(Boolean) || [];
       logger.info(`Found ${sheetNames.length} sheets:`, sheetNames);
       return sheetNames;
     } catch (error) {

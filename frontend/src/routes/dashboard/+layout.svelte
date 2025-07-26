@@ -3,11 +3,7 @@
 	import { auth } from '$lib/stores/auth';
 	import LogoutButton from '$lib/components/auth/LogoutButton.svelte';
 
-	interface NavItem {
-		href: string;
-		label: string;
-		icon: string;
-	}
+	// NavItem interface removed - unused
 
 	// Role-based navigation items
 	let navItems = $derived(() => {
@@ -86,7 +82,7 @@
 
 		<nav class="mt-8">
 			<div class="space-y-2 px-4">
-				{#each navItems as item}
+				{#each navItems as item (item.href)}
 					<a
 						href={item.href}
 						class="group flex items-center rounded-md px-4 py-2 text-sm font-medium transition-colors {isActivePath(

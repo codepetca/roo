@@ -18,7 +18,7 @@ vi.mock("@google/generative-ai", () => ({
 
 describe("GeminiService", () => {
   let service: GeminiService;
-  let mockModel: any;
+  let mockModel: { generateContent: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockModel = {
@@ -495,7 +495,7 @@ describe("GeminiService", () => {
       const studentAnswer = "function hello() { console.log(\"Hello World\") }"; // Missing semicolon
       
       // Access private method for testing
-      const prompt = (service as any).buildQuestionGradingPrompt(question, studentAnswer);
+      const prompt = (service as { [key: string]: (...args: unknown[]) => unknown }).buildQuestionGradingPrompt(question, studentAnswer);
 
       expect(prompt).toContain("GENEROUS GRADING MODE");
       expect(prompt).toContain("Focus on understanding and logic over syntax");
@@ -511,7 +511,7 @@ describe("GeminiService", () => {
 
       const studentAnswer = "var x = 10";
       
-      const prompt = (service as any).buildQuestionGradingPrompt(question, studentAnswer);
+      const prompt = (service as { [key: string]: (...args: unknown[]) => unknown }).buildQuestionGradingPrompt(question, studentAnswer);
 
       expect(prompt).toContain("STRICT GRADING MODE");
       expect(prompt).toContain("Accuracy and precision are important");
@@ -527,7 +527,7 @@ describe("GeminiService", () => {
 
       const studentAnswer = "function test() { return \"Paris\"; }"; // Student wrote code
       
-      const prompt = (service as any).buildQuestionGradingPrompt(question, studentAnswer);
+      const prompt = (service as { [key: string]: (...args: unknown[]) => unknown }).buildQuestionGradingPrompt(question, studentAnswer);
 
       expect(prompt).toContain("GENEROUS GRADING MODE"); // Should detect code in answer
     });

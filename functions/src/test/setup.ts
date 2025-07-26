@@ -147,7 +147,7 @@ export const testUtils = {
   /**
    * Create a mock Express request object
    */
-  createMockRequest: (body: any = {}, params: any = {}, query: any = {}) => ({
+  createMockRequest: (body: Record<string, unknown> = {}, params: Record<string, unknown> = {}, query: Record<string, unknown> = {}) => ({
     body,
     params,
     query,

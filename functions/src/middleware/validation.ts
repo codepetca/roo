@@ -137,7 +137,7 @@ export function withResponseValidation<T>(
     // Override res.json to validate response
     const originalJson = res.json.bind(res);
     
-    res.json = function(data: any) {
+    res.json = function(data: unknown) {
       try {
         // Validate response data
         const validatedData = responseSchema.parse(data);
@@ -182,7 +182,7 @@ export function sendApiResponse<T>(
   res.json({
     success,
     data: success ? data : undefined,
-    error: !success ? (data as any).error : undefined,
+    error: !success ? (data as { error?: string }).error : undefined,
     message
   });
 }

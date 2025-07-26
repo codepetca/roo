@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
 	import { api } from '$lib/api';
-	import type { Assignment, Submission, Grade } from '@shared/types';
+	import type { Assignment, Submission, Grade, SerializedTimestamp } from '@shared/types';
 
 	// State using Svelte 5 runes
 	let assignment = $state<Assignment | null>(null);
@@ -62,15 +62,15 @@
 				console.warn('Could not load grades:', err);
 				grades = [];
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error('Failed to load assignment data:', err);
-			error = err.message || 'Failed to load assignment data';
+			error = (err as Error)?.message || 'Failed to load assignment data';
 		} finally {
 			loading = false;
 		}
 	}
 
-	function formatDate(timestamp: any): string {
+	function formatDate(timestamp: SerializedTimestamp | null): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleDateString('en-US', {
@@ -80,18 +80,18 @@
 				});
 			}
 			return 'No date';
-		} catch (err) {
+		} catch {
 			return 'Invalid date';
 		}
 	}
 
-	function formatDateTime(timestamp: any): string {
+	function formatDateTime(timestamp: SerializedTimestamp | null): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleString();
 			}
 			return 'No date';
-		} catch (err) {
+		} catch {
 			return 'Invalid date';
 		}
 	}
@@ -377,7 +377,7 @@
 										<div class="mb-2">
 											<p class="mb-1 text-sm font-medium text-gray-700">Criteria:</p>
 											<div class="flex flex-wrap gap-2">
-												{#each assignment.gradingRubric.criteria as criterion}
+												{#each assignment.gradingRubric.criteria as criterion (criterion)}
 													<span
 														class="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800"
 													>
@@ -409,7 +409,7 @@
 							</p>
 						{:else}
 							<div class="space-y-4">
-								{#each submissions as submission}
+								{#each submissions as submission (submission.id || submission.studentEmail)}
 									<div class="rounded-lg border border-gray-200 p-4">
 										<div class="flex items-center justify-between">
 											<div>
@@ -445,7 +445,7 @@
 							<p class="py-8 text-center text-gray-500">No grades available for this assignment.</p>
 						{:else}
 							<div class="space-y-4">
-								{#each grades as grade}
+								{#each grades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
 									<div class="rounded-lg border border-gray-200 p-4">
 										<div class="flex items-center justify-between">
 											<div>

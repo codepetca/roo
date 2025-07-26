@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { auth } from '$lib/stores/auth';
 	import { api } from '$lib/api';
-	import type { Assignment, Grade } from '@shared/types';
+	import type { Assignment, Grade, SerializedTimestamp } from '@shared/types';
 
 	// State using Svelte 5 runes
 	let myGrades = $state<Grade[]>([]);
@@ -52,21 +52,21 @@
 			}
 
 			myGrades = allGrades;
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error('Failed to load grades:', err);
-			error = err.message || 'Failed to load grades';
+			error = (err as Error)?.message || 'Failed to load grades';
 		} finally {
 			loading = false;
 		}
 	}
 
-	function formatDateTime(timestamp: any): string {
+	function formatDateTime(timestamp: SerializedTimestamp | null): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleString();
 			}
 			return 'No date';
-		} catch (err) {
+		} catch {
 			return 'Invalid date';
 		}
 	}
@@ -137,7 +137,7 @@
 	{#if loading}
 		<!-- Loading State -->
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-			{#each Array(2) as _}
+			{#each Array.from({ length: 2 }, (_, i) => i) as i (i)}
 				<div class="animate-pulse rounded-lg bg-white p-6 shadow">
 					<div class="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
 					<div class="h-8 w-1/2 rounded bg-gray-200"></div>
@@ -277,7 +277,7 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-gray-200 bg-white">
-							{#each myGrades as grade}
+							{#each myGrades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
 								{@const assignment = assignmentLookup[grade.assignmentId]}
 								{@const percentage = Math.round((grade.score / grade.maxScore) * 100)}
 								{@const letterGrade = getLetterGrade(percentage)}

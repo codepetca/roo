@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
-	import type { Assignment, Grade } from '@shared/types';
+	import type { Assignment, Grade, SerializedTimestamp } from '@shared/types';
 
 	// State using Svelte 5 runes
 	let assignments = $state<Assignment[]>([]);
@@ -64,21 +64,21 @@
 					console.warn(`Could not load grades for assignment ${assignment.id}:`, err);
 				}
 			}
-		} catch (err: any) {
+		} catch (err: unknown) {
 			console.error('Failed to load grades data:', err);
-			error = err.message || 'Failed to load grades data';
+			error = (err as Error)?.message || 'Failed to load grades data';
 		} finally {
 			loading = false;
 		}
 	}
 
-	function formatDateTime(timestamp: any): string {
+	function formatDateTime(timestamp: SerializedTimestamp | null): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleString();
 			}
 			return 'No date';
-		} catch (err) {
+		} catch {
 			return 'Invalid date';
 		}
 	}
@@ -149,7 +149,7 @@
 	{#if loading}
 		<!-- Loading State -->
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-4">
-			{#each Array(4) as _}
+			{#each Array.from({ length: 4 }, (_, i) => i) as i (i)}
 				<div class="animate-pulse rounded-lg bg-white p-6 shadow">
 					<div class="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
 					<div class="h-8 w-1/2 rounded bg-gray-200"></div>
@@ -276,7 +276,7 @@
 						class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
 					>
 						<option value="all">All Assignments ({allGrades.length} grades)</option>
-						{#each assignments as assignment}
+						{#each assignments as assignment (assignment.id)}
 							{@const gradeCount = allGrades.filter((g) => g.assignmentId === assignment.id).length}
 							<option value={assignment.id}>
 								{assignment.title} ({gradeCount} grades)
@@ -350,7 +350,7 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-gray-200 bg-white">
-							{#each filteredGrades as grade}
+							{#each filteredGrades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
 								{@const assignment = assignmentLookup[grade.assignmentId]}
 								{@const percentage = Math.round((grade.score / grade.maxScore) * 100)}
 								{@const letterGrade = getLetterGrade(percentage)}
