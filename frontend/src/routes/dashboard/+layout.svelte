@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { auth } from '$lib/stores/auth';
+	import { auth } from '$lib/stores';
 	import LogoutButton from '$lib/components/auth/LogoutButton.svelte';
 
 	// NavItem interface removed - unused

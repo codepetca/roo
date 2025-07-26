@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { auth } from '$lib/stores/auth';
+	import { auth } from '$lib/stores';
 	import { api } from '$lib/api';
 	import type { Assignment, Grade, SerializedTimestamp } from '@shared/types';
 

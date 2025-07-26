@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { auth } from '$lib/stores/auth';
+	import { auth } from '$lib/stores';
 
 	onMount(() => {
 		// Redirect authenticated users to dashboard
