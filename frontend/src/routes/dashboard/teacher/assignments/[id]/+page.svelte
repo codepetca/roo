@@ -62,15 +62,15 @@
 				console.warn('Could not load grades:', err);
 				grades = [];
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to load assignment data:', err);
-			error = err.message || 'Failed to load assignment data';
+			error = err instanceof Error ? err.message : 'Failed to load assignment data';
 		} finally {
 			loading = false;
 		}
 	}
 
-	function formatDate(timestamp: any): string {
+	function formatDate(timestamp: { _seconds: number; _nanoseconds: number } | null | undefined): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleDateString('en-US', {
@@ -85,7 +85,7 @@
 		}
 	}
 
-	function formatDateTime(timestamp: any): string {
+	function formatDateTime(timestamp: { _seconds: number; _nanoseconds: number } | null | undefined): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleString();

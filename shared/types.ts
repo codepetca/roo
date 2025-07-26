@@ -25,7 +25,7 @@ export type {
   AnswerKeyResponse as AnswerKey,
   UpdateSubmissionStatusRequest,
   HealthCheckResponse
-} from '../functions/src/schemas/dto';
+} from '../functions/lib/schemas/dto';
 
 // Legacy type aliases for backward compatibility
 export type SubmissionStatus = "pending" | "grading" | "graded" | "error";

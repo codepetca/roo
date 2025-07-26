@@ -195,11 +195,12 @@ export function sendApiResponse<T>(
 export function handleRouteError(error: unknown, req: Request, res: Response) {
   logger.error("Route error", { path: req.path, error });
   
-  // Handle validation errors
-  if (error instanceof ValidationError) {
+  // Handle validation errors - check type name instead of instanceof to avoid compilation issues
+  if (error && typeof error === 'object' && 'name' in error && error.name === 'ValidationError') {
+    const validationError = error as ValidationError;
     return res.status(400).json({
       error: "Validation failed",
-      details: error.issues.map(issue => ({
+      details: validationError.issues.map(issue => ({
         path: issue.path.join("."),
         message: issue.message
       }))

@@ -73,6 +73,14 @@
 	});
 </script>
 
+{#snippet actions()}
+	<Button variant="primary" onclick={loadDashboardData} {loading}>
+		{#snippet children()}
+			Refresh
+		{/snippet}
+	</Button>
+{/snippet}
+
 <div class="space-y-6">
 	<!-- Page Header -->
 	<PageHeader
@@ -317,11 +325,3 @@
 		</Card>
 	{/if}
 </div>
-
-{#snippet actions()}
-	<Button variant="primary" onclick={loadDashboardData} {loading}>
-		{#snippet children()}
-			Refresh
-		{/snippet}
-	</Button>
-{/snippet}

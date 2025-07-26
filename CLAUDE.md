@@ -11,6 +11,13 @@ This file provides core guidance to Claude Code (claude.ai/code) when working wi
 
 🚨 **MANDATORY**: Use Svelte 5 runes (`$state`, `$derived`, `$props`) - NOT Svelte 4 patterns!
 
+### Svelte 5 Snippets Pattern
+**IMPORTANT**: In Svelte 5, use `{#snippet name()}...{/snippet}` blocks instead of slots:
+- Define snippets BEFORE they are used in the component
+- Pass snippets as props: `let { children }: { children?: Snippet } = $props()`
+- Render with: `{@render children?.()}`
+- For named snippets: `{#snippet actions()}...{/snippet}` then pass as prop
+
 ## Essential Commands
 
 ```bash

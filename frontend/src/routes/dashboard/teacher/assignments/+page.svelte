@@ -61,15 +61,15 @@
 			loading = true;
 			error = null;
 			assignments = await api.listAssignments();
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to load assignments:', err);
-			error = err.message || 'Failed to load assignments';
+			error = err instanceof Error ? err.message : 'Failed to load assignments';
 		} finally {
 			loading = false;
 		}
 	}
 
-	function formatDate(timestamp: any): string {
+	function formatDate(timestamp: { _seconds: number; _nanoseconds: number } | null | undefined): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleDateString();

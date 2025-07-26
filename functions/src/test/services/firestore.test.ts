@@ -21,8 +21,8 @@ vi.mock("../../config/firebase", () => ({
 
 describe("FirestoreGradeService", () => {
   let service: FirestoreGradeService;
-  let mockCollection: ReturnType<typeof mockFirestore>['mockCollection'];
-  let mockDb: ReturnType<typeof mockFirestore>['mockDb'];
+  let mockCollection: ReturnType<typeof mockFirestore>["mockCollection"];
+  let mockDb: ReturnType<typeof mockFirestore>["mockDb"];
 
   beforeEach(async () => {
     const mocks = mockFirestore();

@@ -11,21 +11,19 @@
 	let selectedAssignment = $state<string>('all');
 
 	// Filtered grades based on selected assignment
-	let filteredGrades = $derived(() => {
-		if (selectedAssignment === 'all') {
-			return allGrades;
-		}
-		return allGrades.filter((grade) => grade.assignmentId === selectedAssignment);
-	});
+	let filteredGrades = $derived(
+		selectedAssignment === 'all'
+			? allGrades
+			: allGrades.filter((grade) => grade.assignmentId === selectedAssignment)
+	);
 
 	// Assignment lookup for grade display
-	let assignmentLookup = $derived(() => {
-		const lookup: Record<string, Assignment> = {};
-		assignments.forEach((assignment) => {
+	let assignmentLookup = $derived(
+		assignments.reduce((lookup, assignment) => {
 			lookup[assignment.id] = assignment;
-		});
-		return lookup;
-	});
+			return lookup;
+		}, {} as Record<string, Assignment>)
+	);
 
 	// Statistics
 	let totalGrades = $derived(filteredGrades.length);
@@ -64,15 +62,15 @@
 					console.warn(`Could not load grades for assignment ${assignment.id}:`, err);
 				}
 			}
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Failed to load grades data:', err);
-			error = err.message || 'Failed to load grades data';
+			error = err instanceof Error ? err.message : 'Failed to load grades data';
 		} finally {
 			loading = false;
 		}
 	}
 
-	function formatDateTime(timestamp: any): string {
+	function formatDateTime(timestamp: { _seconds: number; _nanoseconds: number } | null | undefined): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleString();
@@ -351,13 +349,14 @@
 						</thead>
 						<tbody class="divide-y divide-gray-200 bg-white">
 							{#each filteredGrades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
+								{@const studentName = (grade as any).studentName}
 								{@const assignment = assignmentLookup[grade.assignmentId]}
 								{@const percentage = Math.round((grade.score / grade.maxScore) * 100)}
 								{@const letterGrade = getLetterGrade(percentage)}
 								<tr class="hover:bg-gray-50">
 									<td class="px-6 py-4 whitespace-nowrap">
 										<div class="text-sm font-medium text-gray-900">
-											{grade.studentName || 'Unknown Student'}
+											{studentName || 'Unknown Student'}
 										</div>
 										<div class="text-sm text-gray-500">{grade.studentId}</div>
 									</td>

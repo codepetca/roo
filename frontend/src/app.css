@@ -2,6 +2,28 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
+/* Base Styles */
+@layer base {
+	html {
+		height: 100%;
+	}
+	body {
+		min-height: 100%;
+		margin: 0;
+	}
+	#app,
+	body > div {
+		min-height: 100vh;
+	}
+	/* Fix for sidebar rendering at different zoom levels */
+	.translate-x-full {
+		transform: translateX(100%) !important;
+	}
+	.-translate-x-full {
+		transform: translateX(-100%) !important;
+	}
+}
+
 /* Design Tokens */
 :root {
 	/* Colors */
