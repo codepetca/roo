@@ -82,10 +82,10 @@ export async function testGeminiConnection(req: Request, res: Response) {
 export async function testSheetsConnection(req: Request, res: Response) {
   try {
     const { createSheetsService } = await import("../services/sheets");
-    const { getTeacherSpreadsheetId } = await import("../config/teachers");
+    const { getTeacherSpreadsheetId, getPrimaryTeacherEmail } = await import("../config/teachers");
     
-    // For now, use default teacher for development
-    const teacherEmail = "teacher@test.com";
+    // Use real board account for testing
+    const teacherEmail = getPrimaryTeacherEmail();
     const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {

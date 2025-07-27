@@ -193,38 +193,46 @@ export function sendApiResponse<T>(
  * Usage: Consistent error response formatting
  */
 /**
- * Extract user information from request (simplified for now)
- * In production, this would validate Firebase Auth tokens
+ * Extract user information from request using Firebase Auth token verification
  */
 export async function getUserFromRequest(req: Request): Promise<{ uid: string; email: string; role: 'teacher' | 'student' } | null> {
-  // For now, use a simple header-based approach
-  // In production, this would validate Firebase Auth tokens
-  const authHeader = req.headers.authorization;
-  
-  if (!authHeader) {
+  try {
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return null;
+    }
+    
+    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    
+    // Import Firebase Admin here to avoid circular dependencies
+    const admin = await import('firebase-admin');
+    
+    // Verify the Firebase ID token
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    
+    // Determine user role based on real board account patterns (matching frontend logic)
+    const email = decodedToken.email;
+    let role: 'teacher' | 'student' = 'student';
+    
+    if (email) {
+      // Check if it's the school board domain (YRDSB) - these are teachers
+      if (email.endsWith('@gapps.yrdsb.ca')) {
+        role = 'teacher';
+      }
+      // For specific board account emails, role would be determined by environment config
+      // but since this is backend, we'll rely on the domain pattern for now
+    }
+    
+    return {
+      uid: decodedToken.uid,
+      email: email || '',
+      role
+    };
+  } catch (error) {
+    console.error('Failed to verify Firebase token:', error);
     return null;
   }
-  
-  // Simple mock implementation for development
-  if (authHeader.startsWith('Teacher ')) {
-    const email = authHeader.substring(8);
-    return {
-      uid: `teacher-${email}`,
-      email,
-      role: 'teacher'
-    };
-  }
-  
-  if (authHeader.startsWith('Student ')) {
-    const email = authHeader.substring(8);
-    return {
-      uid: `student-${email}`,
-      email,
-      role: 'student'
-    };
-  }
-  
-  return null;
 }
 
 export function handleRouteError(error: unknown, req: Request, res: Response) {

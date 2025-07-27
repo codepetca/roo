@@ -33,12 +33,33 @@ function getTeacherSheetsFromEnv(): Record<string, string> {
 }
 
 /**
+ * Get the primary teacher email for board testing
+ * This should be the real board account, not a test account
+ */
+export function getPrimaryTeacherEmail(): string {
+  const config = getTeacherSheetsConfig();
+  const emails = Object.keys(config);
+  
+  // Return the first configured teacher email, or fall back to environment variable
+  if (emails.length > 0) {
+    // Prefer @gapps.yrdsb.ca domain emails (real board accounts)
+    const boardEmail = emails.find(email => email.endsWith('@gapps.yrdsb.ca'));
+    if (boardEmail) return boardEmail;
+    
+    // Otherwise return the first configured email
+    return emails[0];
+  }
+  
+  // Fallback to environment variable if no config found
+  return process.env.VITE_TEST_TEACHER_BOARD_EMAIL || "teacher@example.com";
+}
+
+/**
  * Default fallback configuration for development
- * TODO: Remove this in production
+ * Uses real board account instead of test accounts
  */
 const DEFAULT_CONFIG: Record<string, string> = {
-  "teacher@test.com": "119EdfrPtA3G180b2EgkzVr5v-kxjNgYQjgDkLmuN02Y",
-  "demo@teacher.com": "119EdfrPtA3G180b2EgkzVr5v-kxjNgYQjgDkLmuN02Y"
+  // Will be populated with real board account if environment is configured
 };
 
 /**

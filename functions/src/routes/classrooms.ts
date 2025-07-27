@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
+import * as admin from "firebase-admin";
 import { db } from "../config/firebase";
 import { classroomDomainSchema, assignmentDomainSchema } from "../schemas/domain";
 import { type ClassroomResponse } from "../schemas/dto";
@@ -32,7 +33,18 @@ export async function getTeacherClassrooms(req: Request, res: Response): Promise
     for (const doc of classroomsSnapshot.docs) {
       try {
         const data = doc.data();
-        const classroom = classroomDomainSchema.parse({ ...data, id: doc.id });
+        logger.info("Raw classroom data:", { classroomId: doc.id, data });
+        
+        // Convert timestamp objects to Timestamp instances if needed
+        const processedData = { ...data, id: doc.id };
+        if (data.createdAt && typeof data.createdAt === 'object' && '_seconds' in data.createdAt) {
+          processedData.createdAt = new admin.firestore.Timestamp(data.createdAt._seconds, data.createdAt._nanoseconds);
+        }
+        if (data.updatedAt && typeof data.updatedAt === 'object' && '_seconds' in data.updatedAt) {
+          processedData.updatedAt = new admin.firestore.Timestamp(data.updatedAt._seconds, data.updatedAt._nanoseconds);
+        }
+        
+        const classroom = classroomDomainSchema.parse(processedData);
         
         // Get assignment count for this classroom
         const assignmentsSnapshot = await db
@@ -75,7 +87,8 @@ export async function getTeacherClassrooms(req: Request, res: Response): Promise
       } catch (error) {
         logger.error("Error parsing classroom:", { 
           classroomId: doc.id, 
-          error 
+          error: error instanceof Error ? error.message : error,
+          data: doc.data()
         });
       }
     }

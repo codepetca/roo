@@ -4,6 +4,7 @@ import {
   getAnswerKeySchema 
 } from "../schemas";
 import { handleRouteError, validateData } from "../middleware/validation";
+import { getPrimaryTeacherEmail } from "../config/teachers";
 
 /**
  * Get assignments from Google Sheets
@@ -16,7 +17,7 @@ export async function getSheetsAssignments(req: Request, res: Response) {
     const { getTeacherSpreadsheetId } = await import("../config/teachers");
     
     // For now, use default teacher for development
-    const teacherEmail = "teacher@test.com";
+    const teacherEmail = getPrimaryTeacherEmail();
     const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
@@ -56,7 +57,7 @@ export async function getSheetsSubmissions(req: Request, res: Response) {
     const { getTeacherSpreadsheetId } = await import("../config/teachers");
     
     // For now, use default teacher for development
-    const teacherEmail = "teacher@test.com";
+    const teacherEmail = getPrimaryTeacherEmail();
     const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
@@ -92,7 +93,7 @@ export async function getAllSubmissions(req: Request, res: Response) {
     const { getTeacherSpreadsheetId } = await import("../config/teachers");
     
     // For now, use default teacher for development
-    const teacherEmail = "teacher@test.com";
+    const teacherEmail = getPrimaryTeacherEmail();
     const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
@@ -131,7 +132,7 @@ export async function getUngradedSubmissions(req: Request, res: Response) {
     const { getTeacherSpreadsheetId } = await import("../config/teachers");
     
     // For now, use default teacher for development
-    const teacherEmail = "teacher@test.com";
+    const teacherEmail = getPrimaryTeacherEmail();
     const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
@@ -171,7 +172,7 @@ export async function getAnswerKey(req: Request, res: Response) {
     const { getTeacherSpreadsheetId } = await import("../config/teachers");
     
     // For now, use default teacher for development
-    const teacherEmail = "teacher@test.com";
+    const teacherEmail = getPrimaryTeacherEmail();
     const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
@@ -209,7 +210,7 @@ export async function listSheetNames(req: Request, res: Response) {
     const { getTeacherSpreadsheetId } = await import("../config/teachers");
     
     // For now, use default teacher for development
-    const teacherEmail = "teacher@test.com";
+    const teacherEmail = getPrimaryTeacherEmail();
     const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {

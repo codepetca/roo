@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { logger } from "firebase-functions";
 import { z } from "zod";
 import { createSyncService } from "../services/sync";
-import { isTeacherConfigured } from "../config/teachers";
+import { isTeacherConfigured, getPrimaryTeacherEmail } from "../config/teachers";
 import { handleRouteError, sendApiResponse, validateData } from "../middleware/validation";
 
 // Schema for sync requests with teacher identification
@@ -28,7 +28,7 @@ function getTeacherEmail(req: Request): string {
   }
   
   // Default fallback for development
-  return "teacher@test.com";
+  return getPrimaryTeacherEmail();
 }
 
 /**
