@@ -78,7 +78,7 @@ export async function listAssignments(req: Request, res: Response) {
         description: data.description || "",
         maxPoints: data.maxPoints || 100,
         isQuiz: data.isQuiz || false,
-        classroomId: data.classroomId,
+        classroomId: data.classroomId || undefined,
         dueDate: data.dueDate ? { _seconds: data.dueDate.seconds, _nanoseconds: data.dueDate.nanoseconds } : undefined,
         createdAt: { _seconds: data.createdAt.seconds, _nanoseconds: data.createdAt.nanoseconds },
         updatedAt: { _seconds: data.updatedAt.seconds, _nanoseconds: data.updatedAt.nanoseconds },
@@ -86,7 +86,9 @@ export async function listAssignments(req: Request, res: Response) {
           enabled: true,
           criteria: ["Content", "Grammar"],
           promptTemplate: "Grade this assignment"
-        }
+        },
+        formId: data.formId || undefined,
+        sourceFileId: data.sourceFileId || undefined
       };
     });
 

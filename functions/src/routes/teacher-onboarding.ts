@@ -1,137 +1,56 @@
 /**
- * Teacher onboarding API endpoints for automated Google Sheets setup
+ * Simplified teacher onboarding API endpoints - app owns all sheets
  * Location: functions/src/routes/teacher-onboarding.ts:1
  */
 
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
 import { z } from "zod";
-import { google } from "googleapis";
 import { handleRouteError, sendApiResponse, validateData } from "../middleware/validation";
-import { createSheetTemplateService, getServiceAccountEmail } from "../services/sheet-template";
-import { getTeacherSheetsConfig } from "../config/teachers";
+import { createSheetTemplateService } from "../services/sheet-template";
+import { getTeacherSheetsConfig, updateTeacherConfiguration } from "../config/teachers";
 
 // Validation schemas
-const startOnboardingSchema = z.object({
-  teacherEmail: z.string().email(),
-  teacherName: z.string().min(1).optional(),
-  redirectUri: z.string().url().optional()
-});
-
-const completeOnboardingSchema = z.object({
-  teacherEmail: z.string().email(),
-  authCode: z.string().min(1),
+const createTeacherSheetSchema = z.object({
+  boardAccountEmail: z.string().email(),
   sheetTitle: z.string().min(1).optional()
 });
 
-// OAuth client configuration (would come from environment in production)
-const OAUTH_CONFIG = {
-  clientId: process.env.GOOGLE_OAUTH_CLIENT_ID || "your-client-id.apps.googleusercontent.com",
-  clientSecret: process.env.GOOGLE_OAUTH_CLIENT_SECRET || "your-client-secret",
-  redirectUri: process.env.GOOGLE_OAUTH_REDIRECT_URI || "http://localhost:5173/teacher/onboarding/callback"
-};
-
-// Required scopes for sheet creation
-const REQUIRED_SCOPES = [
-  "https://www.googleapis.com/auth/spreadsheets",
-  "https://www.googleapis.com/auth/drive.file",
-  "openid",
-  "email",
-  "profile"
-];
-
 /**
- * Start the teacher onboarding process
- * Location: functions/src/routes/teacher-onboarding.ts:39
- * Route: POST /teacher/onboarding/start
+ * Create a Google Sheet for a teacher (simplified - no OAuth required)
+ * Location: functions/src/routes/teacher-onboarding.ts:18
+ * Route: POST /teacher/create-sheet
  */
-export async function startTeacherOnboarding(req: Request, res: Response) {
+export async function createTeacherSheet(req: Request, res: Response) {
   try {
-    const validatedData = validateData(startOnboardingSchema, req.body);
-    logger.info("Starting teacher onboarding", { teacherEmail: validatedData.teacherEmail });
+    const validatedData = validateData(createTeacherSheetSchema, req.body);
+    logger.info("Creating sheet for board account", { boardAccountEmail: validatedData.boardAccountEmail });
 
-    // Check if teacher is already configured
+    // Check if board account already has a sheet
     const existingConfig = getTeacherSheetsConfig();
-    if (existingConfig[validatedData.teacherEmail]) {
+    if (existingConfig[validatedData.boardAccountEmail]) {
       return sendApiResponse(
         res,
         { 
           alreadyConfigured: true,
-          spreadsheetId: existingConfig[validatedData.teacherEmail]
+          spreadsheetId: existingConfig[validatedData.boardAccountEmail],
+          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${existingConfig[validatedData.boardAccountEmail]}/edit`
         },
         true,
-        "Teacher is already configured with a Google Sheet"
+        "Board account already has a configured Google Sheet"
       );
     }
 
-    // Create OAuth2 client
-    const oauth2Client = new google.auth.OAuth2(
-      OAUTH_CONFIG.clientId,
-      OAUTH_CONFIG.clientSecret,
-      validatedData.redirectUri || OAUTH_CONFIG.redirectUri
-    );
-
-    // Generate authorization URL
-    const authUrl = oauth2Client.generateAuthUrl({
-      access_type: "offline",
-      scope: REQUIRED_SCOPES,
-      state: JSON.stringify({
-        teacherEmail: validatedData.teacherEmail,
-        teacherName: validatedData.teacherName
-      })
-    });
-
-    sendApiResponse(
-      res,
-      {
-        authUrl,
-        requiredScopes: REQUIRED_SCOPES,
-        teacherEmail: validatedData.teacherEmail
-      },
-      true,
-      "Authorization URL generated. Teacher should visit this URL to grant permissions."
-    );
-
-  } catch (error) {
-    handleRouteError(error, req, res);
-  }
-}
-
-/**
- * Complete the teacher onboarding process after OAuth callback
- * Location: functions/src/routes/teacher-onboarding.ts:79
- * Route: POST /teacher/onboarding/complete
- */
-export async function completeTeacherOnboarding(req: Request, res: Response) {
-  try {
-    const validatedData = validateData(completeOnboardingSchema, req.body);
-    logger.info("Completing teacher onboarding", { teacherEmail: validatedData.teacherEmail });
-
-    // Create OAuth2 client and exchange code for tokens
-    const oauth2Client = new google.auth.OAuth2(
-      OAUTH_CONFIG.clientId,
-      OAUTH_CONFIG.clientSecret,
-      OAUTH_CONFIG.redirectUri
-    );
-
-    const { tokens } = await oauth2Client.getToken(validatedData.authCode);
-    oauth2Client.setCredentials(tokens);
-
-    // Get service account email for sharing
-    const serviceAccountEmail = await getServiceAccountEmail();
-
-    // Create sheet template service
-    const sheetTemplateService = await createSheetTemplateService(oauth2Client);
+    // Create sheet template service using our service account
+    const sheetTemplateService = await createSheetTemplateService();
 
     // Generate sheet title
-    const teacherName = validatedData.teacherEmail.split('@')[0];
-    const sheetTitle = validatedData.sheetTitle || `Roo Auto-Grading - ${teacherName}`;
+    const sheetTitle = validatedData.sheetTitle || `Roo Auto-Grading - ${validatedData.boardAccountEmail.split('@')[0]}`;
 
-    // Create the teacher's sheet
+    // Create the sheet in our account and share with board account
     const sheetResult = await sheetTemplateService.createTeacherSheet({
       title: sheetTitle,
-      teacherEmail: validatedData.teacherEmail,
-      serviceAccountEmail
+      boardAccountEmail: validatedData.boardAccountEmail
     });
 
     if (!sheetResult.success) {
@@ -139,19 +58,19 @@ export async function completeTeacherOnboarding(req: Request, res: Response) {
         res,
         { error: sheetResult.error },
         false,
-        "Failed to create Google Sheet for teacher"
+        "Failed to create Google Sheet"
       );
     }
 
-    // Generate AppScript code for the teacher
+    // Update configuration (use board account as key)
+    await updateTeacherConfiguration(validatedData.boardAccountEmail, sheetResult.spreadsheetId);
+
+    // Generate AppScript code for the board account
     const appScriptCode = sheetTemplateService.generateAppScriptCode(
       sheetResult.spreadsheetId,
-      validatedData.teacherEmail
+      validatedData.boardAccountEmail
     );
 
-    // TODO: In production, you would save the teacher configuration to a database
-    // or update the environment variables programmatically
-    
     sendApiResponse(
       res,
       {
@@ -160,20 +79,22 @@ export async function completeTeacherOnboarding(req: Request, res: Response) {
         sheetTitle: sheetResult.title,
         appScriptCode,
         nextSteps: [
-          "Copy the provided AppScript code",
+          "Google Sheet created in our system",
+          `Sheet shared with board account: ${validatedData.boardAccountEmail}`,
+          "Copy the AppScript code below",
           "Open Google Apps Script in your board account",
           "Create a new project and paste the code",
-          "Run the 'setupTriggers' function once",
-          "Run the 'processAllSubmissions' function to test",
-          "Contact admin to complete system configuration"
+          "Run 'setupTriggers' function once",
+          "Run 'processAllSubmissions' to test",
+          "Board data will sync automatically"
         ]
       },
       true,
-      "Google Sheet created successfully! Follow the next steps to complete setup."
+      "Google Sheet created successfully!"
     );
 
-    logger.info("Teacher onboarding completed successfully", {
-      teacherEmail: validatedData.teacherEmail,
+    logger.info("Sheet created successfully", {
+      boardAccountEmail: validatedData.boardAccountEmail,
       spreadsheetId: sheetResult.spreadsheetId
     });
 
@@ -184,7 +105,7 @@ export async function completeTeacherOnboarding(req: Request, res: Response) {
 
 /**
  * Get teacher onboarding status
- * Location: functions/src/routes/teacher-onboarding.ts:142
+ * Location: functions/src/routes/teacher-onboarding.ts:85
  * Route: GET /teacher/onboarding/status/{email}
  */
 export async function getTeacherOnboardingStatus(req: Request, res: Response) {
@@ -212,10 +133,10 @@ export async function getTeacherOnboardingStatus(req: Request, res: Response) {
         spreadsheetId: isConfigured ? existingConfig[teacherEmail] : null,
         nextSteps: isConfigured 
           ? ["Teacher is fully configured and ready to sync"]
-          : ["Start onboarding process", "Complete OAuth flow", "Configure AppScript"]
+          : ["Create Google Sheet for this teacher", "Configure AppScript in board account"]
       },
       true,
-      isConfigured ? "Teacher is configured" : "Teacher needs onboarding"
+      isConfigured ? "Teacher is configured" : "Teacher needs sheet creation"
     );
 
   } catch (error) {
@@ -225,7 +146,7 @@ export async function getTeacherOnboardingStatus(req: Request, res: Response) {
 
 /**
  * List all configured teachers (admin endpoint)
- * Location: functions/src/routes/teacher-onboarding.ts:175
+ * Location: functions/src/routes/teacher-onboarding.ts:122
  * Route: GET /teacher/list
  */
 export async function listConfiguredTeachers(req: Request, res: Response) {
@@ -255,7 +176,7 @@ export async function listConfiguredTeachers(req: Request, res: Response) {
 
 /**
  * Generate fresh AppScript code for an existing teacher
- * Location: functions/src/routes/teacher-onboarding.ts:200
+ * Location: functions/src/routes/teacher-onboarding.ts:150
  * Route: GET /teacher/{email}/appscript
  */
 export async function generateAppScriptForTeacher(req: Request, res: Response) {
@@ -280,12 +201,12 @@ export async function generateAppScriptForTeacher(req: Request, res: Response) {
         res,
         { error: "Teacher is not configured" },
         false,
-        "Teacher needs to complete onboarding first"
+        "Teacher needs to have a sheet created first"
       );
     }
 
-    // Create a temporary sheet template service just for code generation
-    const sheetTemplateService = await createSheetTemplateService(null);
+    // Create sheet template service for code generation
+    const sheetTemplateService = await createSheetTemplateService();
     const appScriptCode = sheetTemplateService.generateAppScriptCode(spreadsheetId, teacherEmail);
 
     sendApiResponse(
@@ -309,3 +230,7 @@ export async function generateAppScriptForTeacher(req: Request, res: Response) {
     handleRouteError(error, req, res);
   }
 }
+
+// Keep these exports for compatibility but they now use the simplified flow
+export const startTeacherOnboarding = createTeacherSheet;
+export const completeTeacherOnboarding = createTeacherSheet;

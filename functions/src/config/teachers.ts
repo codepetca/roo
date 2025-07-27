@@ -102,3 +102,20 @@ export function getTeacherConfig(teacherEmail: string): TeacherConfig | null {
     classroomId: `${teacherEmail.split('@')[0]}-classroom` // Generate classroom ID
   };
 }
+
+/**
+ * Update teacher configuration with new spreadsheet ID
+ * In production, this would save to a database
+ */
+export async function updateTeacherConfiguration(teacherEmail: string, spreadsheetId: string): Promise<void> {
+  logger.info("Updating teacher configuration", { teacherEmail, spreadsheetId });
+  
+  // For development, we just log this
+  // In production, you would:
+  // 1. Save to Firestore database
+  // 2. Or update environment variables programmatically
+  // 3. Or update configuration management system
+  
+  logger.info(`Teacher ${teacherEmail} configured with sheet ${spreadsheetId}`);
+  logger.warn("Teacher configuration update - implement persistent storage in production");
+}

@@ -22,20 +22,19 @@ export interface SheetCreationResult {
 
 export interface TeacherSheetTemplate {
   title: string;
-  teacherEmail: string;
-  serviceAccountEmail: string;
+  boardAccountEmail: string;
 }
 
 /**
- * Service for creating and configuring Google Sheets for teachers
+ * Service for creating and configuring Google Sheets for teachers (app-owned)
  */
 export class SheetTemplateService {
   private sheets: any;
   private drive: any;
 
-  constructor(private teacherAuth: any, private serviceAccountAuth: any) {
-    this.sheets = google.sheets({ version: "v4", auth: teacherAuth });
-    this.drive = google.drive({ version: "v3", auth: teacherAuth });
+  constructor(serviceAccountAuth: any) {
+    this.sheets = google.sheets({ version: "v4", auth: serviceAccountAuth });
+    this.drive = google.drive({ version: "v3", auth: serviceAccountAuth });
   }
 
   /**
@@ -43,7 +42,7 @@ export class SheetTemplateService {
    */
   async createTeacherSheet(template: TeacherSheetTemplate): Promise<SheetCreationResult> {
     try {
-      logger.info("Creating teacher sheet", { teacherEmail: template.teacherEmail });
+      logger.info("Creating sheet for board account", { boardAccountEmail: template.boardAccountEmail });
 
       // Step 1: Create the spreadsheet
       const spreadsheet = await this.createSpreadsheet(template.title);
@@ -51,8 +50,8 @@ export class SheetTemplateService {
       // Step 2: Set up the sheet structure
       await this.setupSheetStructure(spreadsheet.spreadsheetId!);
       
-      // Step 3: Share with service account
-      await this.shareWithServiceAccount(spreadsheet.spreadsheetId!, template.serviceAccountEmail);
+      // Step 3: Share with the board account
+      await this.shareWithBoardAccount(spreadsheet.spreadsheetId!, template.boardAccountEmail);
       
       // Step 4: Set up data validation and formatting
       await this.applyFormattingAndValidation(spreadsheet.spreadsheetId!);
@@ -299,41 +298,41 @@ export class SheetTemplateService {
   }
 
   /**
-   * Share the sheet with the service account
+   * Share the sheet with the teacher's board account
    */
-  private async shareWithServiceAccount(spreadsheetId: string, serviceAccountEmail: string) {
+  private async shareWithBoardAccount(spreadsheetId: string, boardAccountEmail: string) {
     try {
       await this.drive.permissions.create({
         fileId: spreadsheetId,
         requestBody: {
-          role: "writer", // Editor access
+          role: "editor", // Full edit access for board account
           type: "user",
-          emailAddress: serviceAccountEmail
+          emailAddress: boardAccountEmail
         },
-        sendNotificationEmail: false // Don't email the service account
+        sendNotificationEmail: true // Notify the board account
       });
 
-      logger.info("Sheet shared with service account", { 
+      logger.info("Sheet shared with board account", { 
         spreadsheetId, 
-        serviceAccountEmail 
+        boardAccountEmail 
       });
     } catch (error) {
-      logger.error("Failed to share sheet with service account", { 
+      logger.error("Failed to share sheet with board account", { 
         error, 
         spreadsheetId, 
-        serviceAccountEmail 
+        boardAccountEmail 
       });
       throw error;
     }
   }
 
   /**
-   * Generate AppScript code for the teacher's specific sheet
+   * Generate AppScript code for the board account's specific sheet
    */
-  generateAppScriptCode(spreadsheetId: string, teacherEmail: string): string {
+  generateAppScriptCode(spreadsheetId: string, boardAccountEmail: string): string {
     return `/**
  * Roo Auto-Grading System - Board Account Apps Script
- * Generated for: ${teacherEmail}
+ * Generated for: ${boardAccountEmail}
  * Target Sheet: ${spreadsheetId}
  */
 
@@ -411,17 +410,17 @@ export async function getServiceAccountEmail(): Promise<string> {
 }
 
 /**
- * Create a SheetTemplateService with teacher OAuth credentials
+ * Create a SheetTemplateService using our service account (simplified - no teacher OAuth)
  */
-export async function createSheetTemplateService(teacherOAuthCredentials: any): Promise<SheetTemplateService> {
+export async function createSheetTemplateService(): Promise<SheetTemplateService> {
   try {
-    // Create service account auth for sharing
+    // Create service account auth (we own all sheets)
     const serviceAccountAuth = new google.auth.GoogleAuth({
       scopes: SHEET_CREATION_SCOPES
     });
     const serviceAuthInstance = await serviceAccountAuth.getClient();
 
-    return new SheetTemplateService(teacherOAuthCredentials, serviceAuthInstance);
+    return new SheetTemplateService(serviceAuthInstance);
   } catch (error) {
     logger.error("Failed to create SheetTemplateService", error);
     throw error;

@@ -43,7 +43,7 @@ export const createAssignmentRequestSchema = z.object({
 
 // Response DTO for assignments
 export const assignmentResponseSchema = baseDtoSchema.extend({
-  classroomId: z.string(),
+  classroomId: z.string().optional(),
   title: z.string(),
   description: z.string(),
   dueDate: serializedTimestampSchema.optional(),

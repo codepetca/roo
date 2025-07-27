@@ -3,43 +3,29 @@
 	import { api } from '$lib/api';
 	import { Card, Button, Alert, Badge } from '$lib/components/ui';
 	import { PageHeader } from '$lib/components/dashboard';
+	import { auth } from '$lib/stores';
 
 	// State using Svelte 5 runes
-	let teacherEmail = $state('');
-	let teacherName = $state('');
+	let boardAccountEmail = $state('');
+	let sheetTitle = $state('');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let success = $state<string | null>(null);
-	let currentStep = $state<'input' | 'auth' | 'complete'>('input');
+	let currentStep = $state<'input' | 'complete'>('input');
 	
-	// Results from onboarding process
-	let authUrl = $state<string | null>(null);
-	let onboardingResult = $state<any>(null);
-
-	// URL parameters (for OAuth callback)
-	let urlParams = $state<URLSearchParams | null>(null);
-
-	onMount(() => {
-		urlParams = new URLSearchParams(window.location.search);
-		const authCode = urlParams.get('code');
-		const state = urlParams.get('state');
-
-		if (authCode && state) {
-			// We're returning from OAuth - complete the onboarding
-			try {
-				const stateData = JSON.parse(state);
-				teacherEmail = stateData.teacherEmail;
-				teacherName = stateData.teacherName || '';
-				completeOnboarding(authCode);
-			} catch (e) {
-				error = 'Invalid OAuth response. Please try again.';
-			}
+	// Initialize board account email with logged-in user's email
+	$effect(() => {
+		if (auth.user?.email && !boardAccountEmail) {
+			boardAccountEmail = auth.user.email;
 		}
 	});
+	
+	// Results from sheet creation
+	let onboardingResult = $state<any>(null);
 
-	async function startOnboarding() {
-		if (!teacherEmail) {
-			error = 'Please enter your email address';
+	async function createSheet() {
+		if (!boardAccountEmail?.trim()) {
+			error = 'Please enter your board account email';
 			return;
 		}
 
@@ -47,39 +33,21 @@
 			loading = true;
 			error = null;
 
-			const result = await api.startTeacherOnboarding({
-				teacherEmail,
-				teacherName: teacherName || undefined,
-				redirectUri: `${window.location.origin}/teacher/onboarding`
-			});
-
-			authUrl = result.authUrl;
-			currentStep = 'auth';
-			success = 'Authorization URL generated! Click the button below to continue.';
-		} catch (err: unknown) {
-			error = err instanceof Error ? err.message : 'Failed to start onboarding';
-		} finally {
-			loading = false;
-		}
-	}
-
-	async function completeOnboarding(authCode: string) {
-		try {
-			loading = true;
-			error = null;
-			currentStep = 'complete';
-
-			const result = await api.completeTeacherOnboarding({
-				teacherEmail,
-				authCode,
-				sheetTitle: `Roo Auto-Grading - ${teacherName || teacherEmail.split('@')[0]}`
+			const result = await api.createTeacherSheet({
+				boardAccountEmail,
+				sheetTitle: sheetTitle || undefined
 			});
 
 			onboardingResult = result;
-			success = 'Google Sheet created successfully! Follow the instructions below to complete setup.';
+			currentStep = 'complete';
+			
+			if (result.alreadyConfigured) {
+				success = 'Board account already has a Google Sheet configured!';
+			} else {
+				success = 'Google Sheet created successfully!';
+			}
 		} catch (err: unknown) {
-			error = err instanceof Error ? err.message : 'Failed to complete onboarding';
-			currentStep = 'input';
+			error = err instanceof Error ? err.message : 'Failed to create Google Sheet';
 		} finally {
 			loading = false;
 		}
@@ -94,21 +62,18 @@
 
 	function resetOnboarding() {
 		currentStep = 'input';
-		teacherEmail = '';
-		teacherName = '';
-		authUrl = null;
+		boardAccountEmail = auth.user?.email || '';
+		sheetTitle = '';
 		onboardingResult = null;
 		error = null;
 		success = null;
-		// Clear URL parameters
-		window.history.replaceState({}, document.title, window.location.pathname);
 	}
 </script>
 
 <div class="space-y-6">
 	<PageHeader
-		title="Teacher Onboarding"
-		description="Set up your Google Sheets integration for automated assignment syncing"
+		title="Sheet Setup"
+		description="Create a Google Sheet for your account to sync assignment data"
 	/>
 
 	<!-- Progress indicator -->
@@ -117,21 +82,14 @@
 			<div class="flex items-center justify-center w-8 h-8 rounded-full {currentStep === 'input' ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}">
 				1
 			</div>
-			<span class="ml-2 text-sm font-medium {currentStep === 'input' ? 'text-blue-600' : 'text-gray-500'}">Enter Details</span>
-		</div>
-		<div class="w-16 h-0.5 bg-gray-300"></div>
-		<div class="flex items-center">
-			<div class="flex items-center justify-center w-8 h-8 rounded-full {currentStep === 'auth' ? 'bg-blue-600 text-white' : 'bg-gray-300 text-gray-600'}">
-				2
-			</div>
-			<span class="ml-2 text-sm font-medium {currentStep === 'auth' ? 'text-blue-600' : 'text-gray-500'}">Authorize Google</span>
+			<span class="ml-2 text-sm font-medium {currentStep === 'input' ? 'text-blue-600' : 'text-gray-500'}">Sheet Setup</span>
 		</div>
 		<div class="w-16 h-0.5 bg-gray-300"></div>
 		<div class="flex items-center">
 			<div class="flex items-center justify-center w-8 h-8 rounded-full {currentStep === 'complete' ? 'bg-green-600 text-white' : 'bg-gray-300 text-gray-600'}">
-				3
+				2
 			</div>
-			<span class="ml-2 text-sm font-medium {currentStep === 'complete' ? 'text-green-600' : 'text-gray-500'}">Complete Setup</span>
+			<span class="ml-2 text-sm font-medium {currentStep === 'complete' ? 'text-green-600' : 'text-gray-500'}">Sheet Created</span>
 		</div>
 	</div>
 
@@ -158,55 +116,76 @@
 			{#snippet children()}
 				<div class="space-y-6">
 					<div>
-						<h3 class="text-lg font-semibold text-gray-900 mb-4">Teacher Information</h3>
+						<h3 class="text-lg font-semibold text-gray-900 mb-4">Board Account Configuration</h3>
 						<p class="text-sm text-gray-600 mb-6">
-							We'll create a Google Sheet in your account and configure it for automatic syncing with the Roo system.
+							Configure which board account will receive the Google Sheet and run the AppScript.
 						</p>
 					</div>
 
-					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+					<div class="grid grid-cols-1 gap-6">
 						<div>
-							<label for="teacherEmail" class="block text-sm font-medium text-gray-700 mb-2">
-								Email Address *
+							<label for="boardAccountEmail" class="block text-sm font-medium text-gray-700 mb-2">
+								Board Account Email *
 							</label>
 							<input
-								id="teacherEmail"
+								id="boardAccountEmail"
 								type="email"
-								bind:value={teacherEmail}
+								bind:value={boardAccountEmail}
 								required
 								class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-								placeholder="your.email@school.com"
+								placeholder="your.board@schooldistrict.edu"
 							/>
+							<div class="mt-2 text-xs text-gray-600">
+								{#if auth.user?.email && boardAccountEmail === auth.user.email}
+									<span class="text-green-600">✓ Using your login email ({auth.user.email})</span>
+								{:else if auth.user?.email}
+									<span class="text-amber-600">⚠ Different from your login email ({auth.user.email})</span>
+								{/if}
+							</div>
+							<p class="text-xs text-gray-500 mt-1">The institutional account that will run the AppScript and access the shared sheet</p>
 						</div>
 
 						<div>
-							<label for="teacherName" class="block text-sm font-medium text-gray-700 mb-2">
-								Name (Optional)
+							<label for="sheetTitle" class="block text-sm font-medium text-gray-700 mb-2">
+								Sheet Title (Optional)
 							</label>
 							<input
-								id="teacherName"
+								id="sheetTitle"
 								type="text"
-								bind:value={teacherName}
+								bind:value={sheetTitle}
 								class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-								placeholder="Your Name"
+								placeholder="Custom sheet name"
 							/>
+							<p class="text-xs text-gray-500 mt-1">Leave blank for auto-generated name</p>
 						</div>
 					</div>
+
+					{#if auth.user?.email && boardAccountEmail && boardAccountEmail !== auth.user.email}
+						<div class="bg-amber-50 border border-amber-200 rounded-md p-4">
+							<h4 class="text-sm font-medium text-amber-900 mb-2">⚠ Different Email Detected</h4>
+							<p class="text-sm text-amber-800 mb-2">
+								You're logged in as <strong>{auth.user.email}</strong> but specified <strong>{boardAccountEmail}</strong> as your board account.
+							</p>
+							<p class="text-xs text-amber-700">
+								Make sure <strong>{boardAccountEmail}</strong> is the correct institutional account that will run the AppScript.
+							</p>
+						</div>
+					{/if}
 
 					<div class="bg-blue-50 border border-blue-200 rounded-md p-4">
 						<h4 class="text-sm font-medium text-blue-900 mb-2">What will happen:</h4>
 						<ul class="text-sm text-blue-800 space-y-1">
-							<li>• We'll create a new Google Sheet in your Drive</li>
-							<li>• The sheet will be automatically shared with our system</li>
-							<li>• You'll get custom AppScript code for your board account</li>
-							<li>• Your data stays private and under your control</li>
+							<li>• We'll create a new Google Sheet in our system</li>
+							<li>• The sheet will be shared with <strong>{boardAccountEmail || 'your board account'}</strong></li>
+							<li>• You'll get custom AppScript code for that account</li>
+							<li>• Run the AppScript in the board account to sync data</li>
 						</ul>
 					</div>
 
 					<div class="flex justify-end">
-						<Button variant="primary" onclick={startOnboarding} {loading}>
+						<Button variant="primary" onclick={createSheet} {loading}>
 							{#snippet children()}
-								{loading ? 'Starting...' : 'Start Setup'}
+								{loading ? 'Creating & Sharing Sheet...' : 'Create & Share Sheet'}
 							{/snippet}
 						</Button>
 					</div>
@@ -215,47 +194,7 @@
 		</Card>
 	{/if}
 
-	<!-- Step 2: Google OAuth authorization -->
-	{#if currentStep === 'auth' && authUrl}
-		<Card>
-			{#snippet children()}
-				<div class="text-center space-y-6">
-					<div>
-						<h3 class="text-lg font-semibold text-gray-900 mb-4">Authorize Google Access</h3>
-						<p class="text-sm text-gray-600 mb-6">
-							Click the button below to grant permission for us to create a Google Sheet in your account.
-							You'll be redirected to Google to sign in and authorize the required permissions.
-						</p>
-					</div>
-
-					<div class="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-						<h4 class="text-sm font-medium text-yellow-900 mb-2">Required Permissions:</h4>
-						<ul class="text-sm text-yellow-800 space-y-1">
-							<li>• Create and edit Google Sheets</li>
-							<li>• Create files in your Google Drive</li>
-							<li>• Access your basic profile information</li>
-						</ul>
-					</div>
-
-					<div class="space-y-4">
-						<Button variant="primary" onclick={() => window.location.href = authUrl!}>
-							{#snippet children()}
-								Continue to Google Authorization
-							{/snippet}
-						</Button>
-
-						<Button variant="secondary" onclick={resetOnboarding}>
-							{#snippet children()}
-								Cancel
-							{/snippet}
-						</Button>
-					</div>
-				</div>
-			{/snippet}
-		</Card>
-	{/if}
-
-	<!-- Step 3: Onboarding complete -->
+	<!-- Step 2: Sheet Creation Complete -->
 	{#if currentStep === 'complete' && onboardingResult}
 		<Card>
 			{#snippet children()}
@@ -268,7 +207,7 @@
 						</div>
 						<h3 class="text-lg font-semibold text-gray-900 mb-2">Google Sheet Created Successfully!</h3>
 						<p class="text-sm text-gray-600">
-							Your sheet has been created and configured. Complete the final steps below.
+							Your sheet has been created in our system. Complete the final step below.
 						</p>
 					</div>
 

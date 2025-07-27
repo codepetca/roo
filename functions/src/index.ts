@@ -15,7 +15,7 @@ import { testGrading, gradeQuiz, gradeQuizTest, gradeCode } from "./routes/gradi
 import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngradedSubmissions, getAnswerKey, listSheetNames } from "./routes/sheets";
 import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as getFirestoreUngradedSubmissions, createSubmission, getSubmissionsByAssignment, getSubmissionById, updateSubmissionStatus } from "./routes/grades";
 import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
-import { startTeacherOnboarding, completeTeacherOnboarding, getTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
+import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, getTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
 
 // Define secrets and parameters  
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
@@ -114,6 +114,9 @@ export const api = onRequest(
       }
 
       // Teacher onboarding routes
+      if (method === "POST" && path === "/teacher/create-sheet") {
+        return await createTeacherSheet(request, response);
+      }
       if (method === "POST" && path === "/teacher/onboarding/start") {
         return await startTeacherOnboarding(request, response);
       }
