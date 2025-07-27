@@ -16,6 +16,7 @@ import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngra
 import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as getFirestoreUngradedSubmissions, createSubmission, getSubmissionsByAssignment, getSubmissionById, updateSubmissionStatus } from "./routes/grades";
 import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
 import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, getTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
+import { getTeacherClassrooms, getClassroomAssignments } from "./routes/classrooms";
 
 // Define secrets and parameters  
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
@@ -136,6 +137,16 @@ export const api = onRequest(
         const email = pathParts[pathParts.indexOf("teacher") + 1];
         (request as RequestWithParams).params = { email };
         return await generateAppScriptForTeacher(request, response);
+      }
+
+      // Classroom routes
+      if (method === "GET" && path === "/classrooms/teacher") {
+        return await getTeacherClassrooms(request, response);
+      }
+      if (method === "GET" && path.startsWith("/classrooms/") && path.includes("/assignments")) {
+        const classroomId = path.split("/classrooms/")[1].split("/assignments")[0];
+        (request as RequestWithParams).params = { classroomId };
+        return await getClassroomAssignments(request, response);
       }
 
       // Firestore Grade Management Routes

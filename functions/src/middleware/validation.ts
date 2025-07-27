@@ -192,6 +192,41 @@ export function sendApiResponse<T>(
  * Location: functions/src/middleware/validation.ts:119
  * Usage: Consistent error response formatting
  */
+/**
+ * Extract user information from request (simplified for now)
+ * In production, this would validate Firebase Auth tokens
+ */
+export async function getUserFromRequest(req: Request): Promise<{ uid: string; email: string; role: 'teacher' | 'student' } | null> {
+  // For now, use a simple header-based approach
+  // In production, this would validate Firebase Auth tokens
+  const authHeader = req.headers.authorization;
+  
+  if (!authHeader) {
+    return null;
+  }
+  
+  // Simple mock implementation for development
+  if (authHeader.startsWith('Teacher ')) {
+    const email = authHeader.substring(8);
+    return {
+      uid: `teacher-${email}`,
+      email,
+      role: 'teacher'
+    };
+  }
+  
+  if (authHeader.startsWith('Student ')) {
+    const email = authHeader.substring(8);
+    return {
+      uid: `student-${email}`,
+      email,
+      role: 'student'
+    };
+  }
+  
+  return null;
+}
+
 export function handleRouteError(error: unknown, req: Request, res: Response) {
   logger.error("Route error", { path: req.path, error });
   

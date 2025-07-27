@@ -200,6 +200,22 @@ export const quizGradingResultResponseSchema = z.object({
 });
 
 // ============================================
+// Classroom DTOs
+// ============================================
+
+// Response DTO for classrooms with metadata
+export const classroomResponseSchema = baseDtoSchema.extend({
+  name: z.string(),
+  courseCode: z.string(),
+  teacherId: z.string(),
+  studentIds: z.array(z.string()).default([]),
+  // Additional metadata for dashboard
+  assignmentCount: z.number().optional(),
+  totalSubmissions: z.number().optional(),
+  ungradedSubmissions: z.number().optional()
+});
+
+// ============================================
 // Sheets Integration DTOs
 // ============================================
 
@@ -296,6 +312,7 @@ export const healthCheckResponseSchema = z.object({
 
 export type CreateAssignmentRequest = z.infer<typeof createAssignmentRequestSchema>;
 export type AssignmentResponse = z.infer<typeof assignmentResponseSchema>;
+export type ClassroomResponse = z.infer<typeof classroomResponseSchema>;
 export type CreateSubmissionRequest = z.infer<typeof createSubmissionRequestSchema>;
 export type UpdateSubmissionStatusRequest = z.infer<typeof updateSubmissionStatusRequestSchema>;
 export type SubmissionResponse = z.infer<typeof submissionResponseSchema>;

@@ -52,14 +52,23 @@ export async function createAssignment(req: Request, res: Response) {
 /**
  * List all assignments from Firestore
  * Location: functions/src/routes/assignments.ts:45
- * Route: GET /assignments
+ * Route: GET /assignments?classroomId=xxx
  */
 export async function listAssignments(req: Request, res: Response) {
   try {
-    logger.info("listAssignments called", { method: req.method });
+    logger.info("listAssignments called", { method: req.method, query: req.query });
+    
+    // Build query based on filters
+    let query = db.collection("assignments");
+    
+    // Filter by classroomId if provided
+    const classroomId = req.query.classroomId as string;
+    if (classroomId) {
+      query = query.where("classroomId", "==", classroomId);
+    }
     
     // Read assignments from Firestore
-    const assignmentsSnapshot = await db.collection("assignments")
+    const assignmentsSnapshot = await query
       .orderBy("createdAt", "desc")
       .get();
 
@@ -69,9 +78,27 @@ export async function listAssignments(req: Request, res: Response) {
       return;
     }
 
-    // Transform Firestore documents to API response format
-    const assignments = assignmentsSnapshot.docs.map(doc => {
+    // Transform Firestore documents to API response format with submission counts
+    const assignments = await Promise.all(assignmentsSnapshot.docs.map(async doc => {
       const data = doc.data();
+      
+      // Get submission count for this assignment
+      const submissionsSnapshot = await db
+        .collection("submissions")
+        .where("assignmentId", "==", doc.id)
+        .get();
+      
+      const submissionCount = submissionsSnapshot.size;
+      
+      // Get graded count
+      const gradedSnapshot = await db
+        .collection("submissions")
+        .where("assignmentId", "==", doc.id)
+        .where("status", "==", "graded")
+        .get();
+      
+      const gradedCount = gradedSnapshot.size;
+      
       return {
         id: doc.id,
         title: data.title,
@@ -88,9 +115,11 @@ export async function listAssignments(req: Request, res: Response) {
           promptTemplate: "Grade this assignment"
         },
         formId: data.formId || undefined,
-        sourceFileId: data.sourceFileId || undefined
+        sourceFileId: data.sourceFileId || undefined,
+        submissionCount,
+        gradedCount
       };
-    });
+    }));
 
     logger.info(`Retrieved ${assignments.length} assignments from Firestore`);
     sendApiResponse(res, assignments);

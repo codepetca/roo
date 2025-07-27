@@ -115,8 +115,23 @@
 		</nav>
 	</header>
 
-	<!-- Page Content -->
-	<main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-		{@render children?.()}
-	</main>
+	<!-- Page Content with Sidebar for Teachers -->
+	{#if auth.user?.role === 'teacher'}
+		<div class="flex">
+			<!-- Sidebar placeholder - will be filled by ClassroomSidebar component -->
+			<aside id="classroom-sidebar" class="w-64 bg-white shadow-sm border-r border-gray-200 h-[calc(100vh-4rem)] overflow-y-auto">
+				<!-- ClassroomSidebar will be rendered here -->
+			</aside>
+			
+			<!-- Main content area -->
+			<main class="flex-1 px-4 sm:px-6 lg:px-8 py-8">
+				{@render children?.()}
+			</main>
+		</div>
+	{:else}
+		<!-- Student layout - no sidebar -->
+		<main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+			{@render children?.()}
+		</main>
+	{/if}
 </div>

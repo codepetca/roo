@@ -9,13 +9,15 @@ import type {
   AssignmentDomain,
   SubmissionDomain,
   QuizAnswerKeyDomain,
-  GradeDomain
+  GradeDomain,
+  ClassroomDomain
 } from "./domain";
 import type {
   AssignmentResponse,
   SubmissionResponse,
   GradeResponse,
-  SerializedTimestamp
+  SerializedTimestamp,
+  ClassroomResponse
 } from "./dto";
 
 /**
@@ -203,6 +205,21 @@ export function gradeDomainToDto(domain: GradeDomain): GradeResponse {
     gradedBy: domain.gradedBy,
     gradedAt: serializeTimestamp(domain.gradedAt),
     postedToClassroom: domain.postedToClassroom
+  };
+}
+
+/**
+ * Transform ClassroomDomain to ClassroomResponse DTO
+ */
+export function classroomDomainToDto(domain: ClassroomDomain): ClassroomResponse {
+  return {
+    id: domain.id,
+    createdAt: serializeTimestamp(domain.createdAt),
+    updatedAt: serializeTimestamp(domain.updatedAt),
+    name: domain.name,
+    courseCode: domain.courseCode,
+    teacherId: domain.teacherId,
+    studentIds: domain.studentIds || []
   };
 }
 
