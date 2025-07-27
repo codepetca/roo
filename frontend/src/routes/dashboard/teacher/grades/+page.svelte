@@ -19,10 +19,13 @@
 
 	// Assignment lookup for grade display
 	let assignmentLookup = $derived(
-		assignments.reduce((lookup, assignment) => {
-			lookup[assignment.id] = assignment;
-			return lookup;
-		}, {} as Record<string, Assignment>)
+		assignments.reduce(
+			(lookup, assignment) => {
+				lookup[assignment.id] = assignment;
+				return lookup;
+			},
+			{} as Record<string, Assignment>
+		)
 	);
 
 	// Statistics
@@ -70,7 +73,9 @@
 		}
 	}
 
-	function formatDateTime(timestamp: { _seconds: number; _nanoseconds: number } | null | undefined): string {
+	function formatDateTime(
+		timestamp: { _seconds: number; _nanoseconds: number } | null | undefined
+	): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleString();

@@ -36,12 +36,12 @@ export async function getTeacherClassrooms(req: Request, res: Response): Promise
         logger.info("Raw classroom data:", { classroomId: doc.id, data });
         
         // Convert timestamp objects to Timestamp instances if needed
-        const processedData = { ...data, id: doc.id };
-        if (data.createdAt && typeof data.createdAt === 'object' && '_seconds' in data.createdAt) {
-          processedData.createdAt = new admin.firestore.Timestamp(data.createdAt._seconds, data.createdAt._nanoseconds);
+        const processedData: any = { ...data, id: doc.id };
+        if (data.createdAt && typeof data.createdAt === "object" && "_seconds" in data.createdAt) {
+          processedData.createdAt = admin.firestore.Timestamp.fromDate(new Date((data.createdAt as any)._seconds * 1000 + ((data.createdAt as any)._nanoseconds || 0) / 1000000));
         }
-        if (data.updatedAt && typeof data.updatedAt === 'object' && '_seconds' in data.updatedAt) {
-          processedData.updatedAt = new admin.firestore.Timestamp(data.updatedAt._seconds, data.updatedAt._nanoseconds);
+        if (data.updatedAt && typeof data.updatedAt === "object" && "_seconds" in data.updatedAt) {
+          processedData.updatedAt = admin.firestore.Timestamp.fromDate(new Date((data.updatedAt as any)._seconds * 1000 + ((data.updatedAt as any)._nanoseconds || 0) / 1000000));
         }
         
         const classroom = classroomDomainSchema.parse(processedData);

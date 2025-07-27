@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.healthCheckResponseSchema = exports.gradeCodeResponseSchema = exports.gradeQuizResponseSchema = exports.gradesListResponseSchema = exports.submissionsListResponseSchema = exports.assignmentsListResponseSchema = exports.errorResponseSchema = exports.apiResponseSchema = exports.answerKeyResponseSchema = exports.getAnswerKeyRequestSchema = exports.getSheetsSubmissionsRequestSchema = exports.quizGradingResultResponseSchema = exports.gradingResultResponseSchema = exports.testGradingRequestSchema = exports.gradeCodeRequestSchema = exports.gradeQuizRequestSchema = exports.gradeResponseSchema = exports.createGradeRequestSchema = exports.submissionResponseSchema = exports.updateSubmissionStatusRequestSchema = exports.createSubmissionRequestSchema = exports.assignmentResponseSchema = exports.createAssignmentRequestSchema = exports.baseDtoSchema = exports.serializedTimestampSchema = void 0;
+exports.healthCheckResponseSchema = exports.gradeCodeResponseSchema = exports.gradeQuizResponseSchema = exports.gradesListResponseSchema = exports.submissionsListResponseSchema = exports.assignmentsListResponseSchema = exports.errorResponseSchema = exports.apiResponseSchema = exports.answerKeyResponseSchema = exports.getAnswerKeyRequestSchema = exports.getSheetsSubmissionsRequestSchema = exports.classroomResponseSchema = exports.quizGradingResultResponseSchema = exports.gradingResultResponseSchema = exports.testGradingRequestSchema = exports.gradeCodeRequestSchema = exports.gradeQuizRequestSchema = exports.gradeResponseSchema = exports.createGradeRequestSchema = exports.submissionResponseSchema = exports.updateSubmissionStatusRequestSchema = exports.createSubmissionRequestSchema = exports.assignmentResponseSchema = exports.createAssignmentRequestSchema = exports.baseDtoSchema = exports.serializedTimestampSchema = void 0;
 const zod_1 = require("zod");
 /**
  * DTO (Data Transfer Object) schemas for API boundaries
@@ -38,7 +38,7 @@ exports.createAssignmentRequestSchema = zod_1.z.object({
 });
 // Response DTO for assignments
 exports.assignmentResponseSchema = exports.baseDtoSchema.extend({
-    classroomId: zod_1.z.string(),
+    classroomId: zod_1.z.string().optional(),
     title: zod_1.z.string(),
     description: zod_1.z.string(),
     dueDate: exports.serializedTimestampSchema.optional(),
@@ -178,6 +178,20 @@ exports.quizGradingResultResponseSchema = zod_1.z.object({
         correctAnswer: zod_1.z.string(),
         points: zod_1.z.number()
     }))
+});
+// ============================================
+// Classroom DTOs
+// ============================================
+// Response DTO for classrooms with metadata
+exports.classroomResponseSchema = exports.baseDtoSchema.extend({
+    name: zod_1.z.string(),
+    courseCode: zod_1.z.string(),
+    teacherId: zod_1.z.string(),
+    studentIds: zod_1.z.array(zod_1.z.string()).default([]),
+    // Additional metadata for dashboard
+    assignmentCount: zod_1.z.number().optional(),
+    totalSubmissions: zod_1.z.number().optional(),
+    ungradedSubmissions: zod_1.z.number().optional()
 });
 // ============================================
 // Sheets Integration DTOs

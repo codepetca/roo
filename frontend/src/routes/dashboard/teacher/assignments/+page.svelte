@@ -69,7 +69,9 @@
 		}
 	}
 
-	function formatDate(timestamp: { _seconds: number; _nanoseconds: number } | null | undefined): string {
+	function formatDate(
+		timestamp: { _seconds: number; _nanoseconds: number } | null | undefined
+	): string {
 		try {
 			if (timestamp && timestamp._seconds) {
 				return new Date(timestamp._seconds * 1000).toLocaleDateString();

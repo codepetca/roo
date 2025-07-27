@@ -15,8 +15,9 @@ import { testGrading, gradeQuiz, gradeQuizTest, gradeCode } from "./routes/gradi
 import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngradedSubmissions, getAnswerKey, listSheetNames } from "./routes/sheets";
 import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as getFirestoreUngradedSubmissions, createSubmission, getSubmissionsByAssignment, getSubmissionById, updateSubmissionStatus } from "./routes/grades";
 import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
-import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, getTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
+import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, getTeacherOnboardingStatus, checkTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
 import { getTeacherClassrooms, getClassroomAssignments } from "./routes/classrooms";
+import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
 
 // Define secrets and parameters  
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
@@ -118,6 +119,9 @@ export const api = onRequest(
       if (method === "POST" && path === "/teacher/create-sheet") {
         return await createTeacherSheet(request, response);
       }
+      if (method === "GET" && path === "/teacher/onboarding-status") {
+        return await checkTeacherOnboardingStatus(request, response);
+      }
       if (method === "POST" && path === "/teacher/onboarding/start") {
         return await startTeacherOnboarding(request, response);
       }
@@ -181,6 +185,20 @@ export const api = onRequest(
         const submissionId = pathParts[pathParts.indexOf("submissions") + 1];
         (request as RequestWithParams).params = { submissionId };
         return await updateSubmissionStatus(request, response);
+      }
+
+      // User profile routes
+      if (method === "POST" && path === "/users/profile") {
+        return await createUserProfile(request, response);
+      }
+      if (method === "GET" && path === "/users/profile") {
+        return await getUserProfile(request, response);
+      }
+      if (method === "PUT" && path === "/users/profile") {
+        return await updateUserProfile(request, response);
+      }
+      if (method === "GET" && path === "/users/profile/exists") {
+        return await checkUserProfileExists(request, response);
       }
 
       // Default 404

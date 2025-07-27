@@ -43,7 +43,7 @@ export function getPrimaryTeacherEmail(): string {
   // Return the first configured teacher email, or fall back to environment variable
   if (emails.length > 0) {
     // Prefer @gapps.yrdsb.ca domain emails (real board accounts)
-    const boardEmail = emails.find(email => email.endsWith('@gapps.yrdsb.ca'));
+    const boardEmail = emails.find(email => email.endsWith("@gapps.yrdsb.ca"));
     if (boardEmail) return boardEmail;
     
     // Otherwise return the first configured email
@@ -118,9 +118,9 @@ export function getTeacherConfig(teacherEmail: string): TeacherConfig | null {
   
   return {
     email: teacherEmail,
-    name: teacherEmail.split('@')[0], // Extract name from email
+    name: teacherEmail.split("@")[0], // Extract name from email
     spreadsheetId,
-    classroomId: `${teacherEmail.split('@')[0]}-classroom` // Generate classroom ID
+    classroomId: `${teacherEmail.split("@")[0]}-classroom` // Generate classroom ID
   };
 }
 

@@ -8,6 +8,9 @@
  */
 
 // Re-export types from the schema modules for backward compatibility
+// NOTE: These imports are temporarily commented out to fix build order issues
+// Frontend should import these types directly from functions/src/schemas/dto
+/*
 export type {
   SerializedTimestamp,
   CreateAssignmentRequest,
@@ -25,7 +28,14 @@ export type {
   AnswerKeyResponse as AnswerKey,
   UpdateSubmissionStatusRequest,
   HealthCheckResponse
-} from '../functions/lib/schemas/dto';
+} from '../functions/src/schemas/dto';
+*/
+
+// Temporary type definitions until build order is fixed
+export interface SerializedTimestamp {
+  _seconds: number;
+  _nanoseconds: number;
+}
 
 // Legacy type aliases for backward compatibility
 export type SubmissionStatus = "pending" | "grading" | "graded" | "error";

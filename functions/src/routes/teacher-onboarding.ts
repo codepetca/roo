@@ -6,9 +6,10 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
 import { z } from "zod";
-import { handleRouteError, sendApiResponse, validateData } from "../middleware/validation";
+import { handleRouteError, sendApiResponse, validateData, getUserFromRequest } from "../middleware/validation";
 import { createSheetTemplateService } from "../services/sheet-template";
 import { getTeacherSheetsConfig, updateTeacherConfiguration } from "../config/teachers";
+import { db } from "../config/firebase";
 
 // Validation schemas
 const createTeacherSheetSchema = z.object({
@@ -45,7 +46,7 @@ export async function createTeacherSheet(req: Request, res: Response) {
     const sheetTemplateService = await createSheetTemplateService();
 
     // Generate sheet title
-    const sheetTitle = validatedData.sheetTitle || `Roo Auto-Grading - ${validatedData.boardAccountEmail.split('@')[0]}`;
+    const sheetTitle = validatedData.sheetTitle || `Roo Auto-Grading - ${validatedData.boardAccountEmail.split("@")[0]}`;
 
     // Create the sheet in our account and share with board account
     const sheetResult = await sheetTemplateService.createTeacherSheet({
@@ -234,3 +235,59 @@ export async function generateAppScriptForTeacher(req: Request, res: Response) {
 // Keep these exports for compatibility but they now use the simplified flow
 export const startTeacherOnboarding = createTeacherSheet;
 export const completeTeacherOnboarding = createTeacherSheet;
+
+/**
+ * Check teacher onboarding status
+ * Location: functions/src/routes/teacher-onboarding.ts:240
+ * Route: GET /teacher/onboarding-status
+ */
+export async function checkTeacherOnboardingStatus(req: Request, res: Response) {
+  try {
+    // Get authenticated user
+    const user = await getUserFromRequest(req);
+    if (!user || user.role !== "teacher") {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Only teachers can check onboarding status" 
+      });
+    }
+
+    // Check if teacher has any classrooms
+    const classroomsSnapshot = await db
+      .collection("classrooms")
+      .where("teacherId", "==", user.uid)
+      .limit(1)
+      .get();
+    
+    const hasClassrooms = !classroomsSnapshot.empty;
+
+    // Check if teacher has sheet configured
+    const existingConfig = getTeacherSheetsConfig();
+    const boardAccountEmail = user.email || "";
+    const hasSheetConfigured = !!existingConfig[boardAccountEmail];
+
+    // Determine if onboarding is needed
+    const needsOnboarding = !hasClassrooms || !hasSheetConfigured;
+
+    logger.info("Teacher onboarding status checked", {
+      teacherId: user.uid,
+      hasClassrooms,
+      hasSheetConfigured,
+      needsOnboarding
+    });
+
+    sendApiResponse(
+      res,
+      {
+        hasClassrooms,
+        hasSheetConfigured,
+        needsOnboarding,
+        boardAccountEmail: hasSheetConfigured ? boardAccountEmail : undefined
+      },
+      true,
+      "Onboarding status retrieved"
+    );
+  } catch (error) {
+    return handleRouteError(error, req, res);
+  }
+}

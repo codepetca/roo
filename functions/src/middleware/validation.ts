@@ -194,43 +194,55 @@ export function sendApiResponse<T>(
  */
 /**
  * Extract user information from request using Firebase Auth token verification
+ * Now checks Firestore user profile for role instead of inferring from email
  */
-export async function getUserFromRequest(req: Request): Promise<{ uid: string; email: string; role: 'teacher' | 'student' } | null> {
+export async function getUserFromRequest(req: Request): Promise<{ uid: string; email: string; role: "teacher" | "student" } | null> {
   try {
     const authHeader = req.headers.authorization;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return null;
     }
     
     const token = authHeader.substring(7); // Remove 'Bearer ' prefix
     
     // Import Firebase Admin here to avoid circular dependencies
-    const admin = await import('firebase-admin');
+    const admin = await import("firebase-admin");
+    const { db } = await import("../config/firebase");
     
     // Verify the Firebase ID token
     const decodedToken = await admin.auth().verifyIdToken(token);
     
-    // Determine user role based on real board account patterns (matching frontend logic)
-    const email = decodedToken.email;
-    let role: 'teacher' | 'student' = 'student';
+    let role: "teacher" | "student" = "student";
     
-    if (email) {
-      // Check if it's the school board domain (YRDSB) - these are teachers
-      if (email.endsWith('@gapps.yrdsb.ca')) {
-        role = 'teacher';
+    // First try to get role from Firebase Auth custom claims (fastest)
+    if (decodedToken.role) {
+      role = decodedToken.role as "teacher" | "student";
+    } else {
+      // Get role from Firestore user profile
+      try {
+        const userDoc = await db.collection("users").doc(decodedToken.uid).get();
+        if (userDoc.exists) {
+          const userData = userDoc.data();
+          role = userData?.role || "student";
+        } else {
+          // User profile doesn't exist - they need to complete onboarding
+          console.error("User profile not found for UID:", decodedToken.uid);
+          return null;
+        }
+      } catch (firestoreError) {
+        console.error("Failed to fetch user profile from Firestore:", firestoreError);
+        return null;
       }
-      // For specific board account emails, role would be determined by environment config
-      // but since this is backend, we'll rely on the domain pattern for now
     }
     
     return {
       uid: decodedToken.uid,
-      email: email || '',
+      email: decodedToken.email || "",
       role
     };
   } catch (error) {
-    console.error('Failed to verify Firebase token:', error);
+    console.error("Failed to verify Firebase token:", error);
     return null;
   }
 }
@@ -239,7 +251,7 @@ export function handleRouteError(error: unknown, req: Request, res: Response) {
   logger.error("Route error", { path: req.path, error });
   
   // Handle validation errors - check type name instead of instanceof to avoid compilation issues
-  if (error && typeof error === 'object' && 'name' in error && error.name === 'ValidationError') {
+  if (error && typeof error === "object" && "name" in error && error.name === "ValidationError") {
     const validationError = error as ValidationError;
     return res.status(400).json({
       error: "Validation failed",

@@ -1,14 +1,8 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
-import { z } from "zod";
 import { createSyncService } from "../services/sync";
 import { isTeacherConfigured, getPrimaryTeacherEmail } from "../config/teachers";
-import { handleRouteError, sendApiResponse, validateData } from "../middleware/validation";
-
-// Schema for sync requests with teacher identification
-const syncRequestSchema = z.object({
-  teacherEmail: z.string().email().optional()
-});
+import { handleRouteError, sendApiResponse } from "../middleware/validation";
 
 /**
  * Get teacher email from request (header or body)
@@ -17,7 +11,7 @@ const syncRequestSchema = z.object({
 function getTeacherEmail(req: Request): string {
   // Check for teacher email in Authorization header (simple approach)
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Teacher ')) {
+  if (authHeader && authHeader.startsWith("Teacher ")) {
     return authHeader.substring(8); // Remove 'Teacher ' prefix
   }
   

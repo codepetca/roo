@@ -2,7 +2,7 @@
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores';
 	import LogoutButton from '$lib/components/auth/LogoutButton.svelte';
-	import { Badge, Button } from '$lib/components/ui';
+	import { Badge } from '$lib/components/ui';
 	import type { Snippet } from 'svelte';
 
 	// Accept children snippet
@@ -24,12 +24,13 @@
 	// Navigation items
 	let navItems = $derived(() => {
 		const userRole = auth.user?.role;
-		
+
 		if (userRole === 'teacher') {
 			return [
 				{ href: '/dashboard/teacher', label: 'Overview' },
 				{ href: '/dashboard/teacher/assignments', label: 'Assignments' },
-				{ href: '/dashboard/teacher/grades', label: 'Grades' }
+				{ href: '/dashboard/teacher/grades', label: 'Grades' },
+				{ href: '/teacher/onboarding', label: 'Sheet Setup' }
 			];
 		} else {
 			return [
@@ -53,13 +54,18 @@
 
 <div class="min-h-screen bg-gray-50">
 	<!-- Top Navigation Bar -->
-	<header class="bg-white shadow-sm border-b border-gray-200">
+	<header class="border-b border-gray-200 bg-white shadow-sm">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 			<div class="flex h-16 items-center justify-between">
 				<!-- Logo and Brand -->
 				<div class="flex items-center space-x-3">
 					<div class="flex items-center space-x-2">
-						<svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<svg
+							class="h-8 w-8 text-blue-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
 							<path
 								stroke-linecap="round"
 								stroke-linejoin="round"
@@ -72,11 +78,13 @@
 				</div>
 
 				<!-- Navigation Links -->
-				<nav class="hidden md:flex items-center space-x-1">
-					{#each navItems as item}
+				<nav class="hidden items-center space-x-1 md:flex">
+					{#each navItems as item (item.href)}
 						<a
 							href={item.href}
-							class="px-3 py-2 rounded-md text-sm font-medium transition-colors {isActivePath(item.href)
+							class="rounded-md px-3 py-2 text-sm font-medium transition-colors {isActivePath(
+								item.href
+							)
 								? 'bg-blue-100 text-blue-700'
 								: 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}"
 						>
@@ -87,7 +95,7 @@
 
 				<!-- User Info & Actions -->
 				<div class="flex items-center space-x-4">
-					<div class="hidden sm:flex items-center space-x-2 text-sm">
+					<div class="hidden items-center space-x-2 text-sm sm:flex">
 						<span class="text-gray-600">{auth.user?.email || 'User'}</span>
 						<Badge variant={auth.user?.role === 'teacher' ? 'info' : 'default'} size="sm">
 							{auth.user?.role || 'Student'}
@@ -99,12 +107,12 @@
 		</div>
 
 		<!-- Mobile Navigation -->
-		<nav class="md:hidden border-t border-gray-200">
-			<div class="px-2 py-2 space-y-1">
-				{#each navItems as item}
+		<nav class="border-t border-gray-200 md:hidden">
+			<div class="space-y-1 px-2 py-2">
+				{#each navItems as item (item.href)}
 					<a
 						href={item.href}
-						class="block px-3 py-2 rounded-md text-base font-medium {isActivePath(item.href)
+						class="block rounded-md px-3 py-2 text-base font-medium {isActivePath(item.href)
 							? 'bg-blue-100 text-blue-700'
 							: 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}"
 					>
@@ -119,18 +127,21 @@
 	{#if auth.user?.role === 'teacher'}
 		<div class="flex">
 			<!-- Sidebar placeholder - will be filled by ClassroomSidebar component -->
-			<aside id="classroom-sidebar" class="w-64 bg-white shadow-sm border-r border-gray-200 h-[calc(100vh-4rem)] overflow-y-auto">
+			<aside
+				id="classroom-sidebar"
+				class="h-[calc(100vh-4rem)] w-64 overflow-y-auto border-r border-gray-200 bg-white shadow-sm"
+			>
 				<!-- ClassroomSidebar will be rendered here -->
 			</aside>
-			
+
 			<!-- Main content area -->
-			<main class="flex-1 px-4 sm:px-6 lg:px-8 py-8">
+			<main class="flex-1 px-4 py-8 sm:px-6 lg:px-8">
 				{@render children?.()}
 			</main>
 		</div>
 	{:else}
 		<!-- Student layout - no sidebar -->
-		<main class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+		<main class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 			{@render children?.()}
 		</main>
 	{/if}

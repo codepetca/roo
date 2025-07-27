@@ -119,7 +119,7 @@ export declare const assignmentResponseSchema: z.ZodObject<{
         _nanoseconds: number;
     }>;
 } & {
-    classroomId: z.ZodString;
+    classroomId: z.ZodOptional<z.ZodString>;
     title: z.ZodString;
     description: z.ZodString;
     dueDate: z.ZodOptional<z.ZodObject<{
@@ -167,12 +167,12 @@ export declare const assignmentResponseSchema: z.ZodObject<{
         criteria: string[];
         promptTemplate?: string | undefined;
     };
-    classroomId: string;
     isQuiz: boolean;
     dueDate?: {
         _seconds: number;
         _nanoseconds: number;
     } | undefined;
+    classroomId?: string | undefined;
     formId?: string | undefined;
     sourceFileId?: string | undefined;
 }, {
@@ -193,12 +193,12 @@ export declare const assignmentResponseSchema: z.ZodObject<{
         criteria: string[];
         promptTemplate?: string | undefined;
     };
-    classroomId: string;
     isQuiz: boolean;
     dueDate?: {
         _seconds: number;
         _nanoseconds: number;
     } | undefined;
+    classroomId?: string | undefined;
     formId?: string | undefined;
     sourceFileId?: string | undefined;
 }>;
@@ -677,6 +677,71 @@ export declare const quizGradingResultResponseSchema: z.ZodObject<{
         points: number;
     }[];
 }>;
+export declare const classroomResponseSchema: z.ZodObject<{
+    id: z.ZodString;
+    createdAt: z.ZodObject<{
+        _seconds: z.ZodNumber;
+        _nanoseconds: z.ZodNumber;
+    }, "strip", z.ZodTypeAny, {
+        _seconds: number;
+        _nanoseconds: number;
+    }, {
+        _seconds: number;
+        _nanoseconds: number;
+    }>;
+    updatedAt: z.ZodObject<{
+        _seconds: z.ZodNumber;
+        _nanoseconds: z.ZodNumber;
+    }, "strip", z.ZodTypeAny, {
+        _seconds: number;
+        _nanoseconds: number;
+    }, {
+        _seconds: number;
+        _nanoseconds: number;
+    }>;
+} & {
+    name: z.ZodString;
+    courseCode: z.ZodString;
+    teacherId: z.ZodString;
+    studentIds: z.ZodDefault<z.ZodArray<z.ZodString, "many">>;
+    assignmentCount: z.ZodOptional<z.ZodNumber>;
+    totalSubmissions: z.ZodOptional<z.ZodNumber>;
+    ungradedSubmissions: z.ZodOptional<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    id: string;
+    createdAt: {
+        _seconds: number;
+        _nanoseconds: number;
+    };
+    updatedAt: {
+        _seconds: number;
+        _nanoseconds: number;
+    };
+    name: string;
+    courseCode: string;
+    teacherId: string;
+    studentIds: string[];
+    assignmentCount?: number | undefined;
+    totalSubmissions?: number | undefined;
+    ungradedSubmissions?: number | undefined;
+}, {
+    id: string;
+    createdAt: {
+        _seconds: number;
+        _nanoseconds: number;
+    };
+    updatedAt: {
+        _seconds: number;
+        _nanoseconds: number;
+    };
+    name: string;
+    courseCode: string;
+    teacherId: string;
+    studentIds?: string[] | undefined;
+    assignmentCount?: number | undefined;
+    totalSubmissions?: number | undefined;
+    ungradedSubmissions?: number | undefined;
+}>;
 export declare const getSheetsSubmissionsRequestSchema: z.ZodObject<{
     assignmentId: z.ZodString;
 }, "strip", z.ZodTypeAny, {
@@ -803,7 +868,7 @@ export declare const assignmentsListResponseSchema: z.ZodObject<{
             _nanoseconds: number;
         }>;
     } & {
-        classroomId: z.ZodString;
+        classroomId: z.ZodOptional<z.ZodString>;
         title: z.ZodString;
         description: z.ZodString;
         dueDate: z.ZodOptional<z.ZodObject<{
@@ -851,12 +916,12 @@ export declare const assignmentsListResponseSchema: z.ZodObject<{
             criteria: string[];
             promptTemplate?: string | undefined;
         };
-        classroomId: string;
         isQuiz: boolean;
         dueDate?: {
             _seconds: number;
             _nanoseconds: number;
         } | undefined;
+        classroomId?: string | undefined;
         formId?: string | undefined;
         sourceFileId?: string | undefined;
     }, {
@@ -877,12 +942,12 @@ export declare const assignmentsListResponseSchema: z.ZodObject<{
             criteria: string[];
             promptTemplate?: string | undefined;
         };
-        classroomId: string;
         isQuiz: boolean;
         dueDate?: {
             _seconds: number;
             _nanoseconds: number;
         } | undefined;
+        classroomId?: string | undefined;
         formId?: string | undefined;
         sourceFileId?: string | undefined;
     }>, "many">>;
@@ -910,12 +975,12 @@ export declare const assignmentsListResponseSchema: z.ZodObject<{
             criteria: string[];
             promptTemplate?: string | undefined;
         };
-        classroomId: string;
         isQuiz: boolean;
         dueDate?: {
             _seconds: number;
             _nanoseconds: number;
         } | undefined;
+        classroomId?: string | undefined;
         formId?: string | undefined;
         sourceFileId?: string | undefined;
     }[] | undefined;
@@ -941,12 +1006,12 @@ export declare const assignmentsListResponseSchema: z.ZodObject<{
             criteria: string[];
             promptTemplate?: string | undefined;
         };
-        classroomId: string;
         isQuiz: boolean;
         dueDate?: {
             _seconds: number;
             _nanoseconds: number;
         } | undefined;
+        classroomId?: string | undefined;
         formId?: string | undefined;
         sourceFileId?: string | undefined;
     }[] | undefined;
@@ -1532,6 +1597,7 @@ export declare const healthCheckResponseSchema: z.ZodObject<{
 }>;
 export type CreateAssignmentRequest = z.infer<typeof createAssignmentRequestSchema>;
 export type AssignmentResponse = z.infer<typeof assignmentResponseSchema>;
+export type ClassroomResponse = z.infer<typeof classroomResponseSchema>;
 export type CreateSubmissionRequest = z.infer<typeof createSubmissionRequestSchema>;
 export type UpdateSubmissionStatusRequest = z.infer<typeof updateSubmissionStatusRequestSchema>;
 export type SubmissionResponse = z.infer<typeof submissionResponseSchema>;

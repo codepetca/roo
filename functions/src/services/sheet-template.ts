@@ -103,7 +103,7 @@ export class SheetTemplateService {
     };
 
     const response = await this.sheets.spreadsheets.create({
-      requestBody,
+      resource: requestBody,
       fields: "spreadsheetId,spreadsheetUrl,properties.title"
     });
 
@@ -146,7 +146,7 @@ export class SheetTemplateService {
 
     await this.sheets.spreadsheets.batchUpdate({
       spreadsheetId,
-      requestBody: { requests }
+      resource: { requests }
     });
 
     // Add headers to each sheet
@@ -220,7 +220,7 @@ export class SheetTemplateService {
 
     await this.sheets.spreadsheets.values.batchUpdate({
       spreadsheetId,
-      requestBody
+      resource: requestBody
     });
   }
 
@@ -293,7 +293,7 @@ export class SheetTemplateService {
 
     await this.sheets.spreadsheets.batchUpdate({
       spreadsheetId,
-      requestBody: { requests }
+      resource: { requests }
     });
   }
 
@@ -304,7 +304,7 @@ export class SheetTemplateService {
     try {
       await this.drive.permissions.create({
         fileId: spreadsheetId,
-        requestBody: {
+        resource: {
           role: "editor", // Full edit access for board account
           type: "user",
           emailAddress: boardAccountEmail

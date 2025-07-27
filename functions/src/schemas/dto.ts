@@ -297,6 +297,34 @@ export const gradeCodeResponseSchema = apiResponseSchema(
 );
 
 // ============================================
+// User DTOs
+// ============================================
+
+import { userRoleSchema } from "./domain";
+
+// Request DTO for creating user profiles
+export const createUserProfileRequestSchema = z.object({
+  role: userRoleSchema,
+  displayName: z.string().min(1, "Display name is required").optional()
+});
+
+// Request DTO for updating user profiles
+export const updateUserProfileRequestSchema = z.object({
+  displayName: z.string().min(1).optional(),
+  role: userRoleSchema.optional()
+});
+
+// Response DTO for user profiles
+export const userProfileResponseSchema = baseDtoSchema.extend({
+  email: z.string().email(),
+  displayName: z.string(),
+  role: userRoleSchema,
+  classroomIds: z.array(z.string()),
+  isActive: z.boolean(),
+  lastLogin: serializedTimestampSchema.optional()
+});
+
+// ============================================
 // Health Check DTO
 // ============================================
 
@@ -326,5 +354,8 @@ export type QuizGradingResultResponse = z.infer<typeof quizGradingResultResponse
 export type GetSheetsSubmissionsRequest = z.infer<typeof getSheetsSubmissionsRequestSchema>;
 export type GetAnswerKeyRequest = z.infer<typeof getAnswerKeyRequestSchema>;
 export type AnswerKeyResponse = z.infer<typeof answerKeyResponseSchema>;
+export type CreateUserProfileRequest = z.infer<typeof createUserProfileRequestSchema>;
+export type UpdateUserProfileRequest = z.infer<typeof updateUserProfileRequestSchema>;
+export type UserProfileResponse = z.infer<typeof userProfileResponseSchema>;
 export type ErrorResponse = z.infer<typeof errorResponseSchema>;
 export type HealthCheckResponse = z.infer<typeof healthCheckResponseSchema>;

@@ -39,26 +39,56 @@ try {
 }
 
 /**
- * Determine user role based on email domain or custom claims
+ * Determine user role - now checks Firestore user profile first
  */
-function getUserRole(decodedToken: { role?: string; email?: string }): 'teacher' | 'student' {
-	// First check custom claims
-	if (decodedToken.role === 'teacher' || decodedToken.role === 'student') {
-		return decodedToken.role;
-	}
-
-	// Fallback to email-based role detection
-	if (decodedToken.email) {
-		if (
-			decodedToken.email.endsWith('@teacher.edu') ||
-			decodedToken.email.includes('teacher') ||
-			decodedToken.email === 'teacher@test.com'
-		) {
-			return 'teacher';
+async function getUserRole(decodedToken: { uid: string; role?: string; email?: string }): Promise<'teacher' | 'student'> {
+	try {
+		// First check custom claims (fastest)
+		if (decodedToken.role === 'teacher' || decodedToken.role === 'student') {
+			return decodedToken.role;
 		}
-	}
 
-	return 'student';
+		// Get Firestore instance (import here to avoid circular dependencies)
+		const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+		const { getFirestore } = await import('firebase-admin/firestore');
+		
+		let app;
+		if (getApps().length === 0) {
+			if (PUBLIC_USE_EMULATORS === 'true') {
+				process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
+				app = initializeApp({
+					projectId: PUBLIC_FIREBASE_PROJECT_ID
+				});
+			} else {
+				app = initializeApp({
+					credential: cert({
+						projectId: PUBLIC_FIREBASE_PROJECT_ID
+					})
+				});
+			}
+		} else {
+			app = getApps()[0];
+		}
+		
+		const db = getFirestore(app);
+		
+		// Try to get user profile from Firestore
+		const userDoc = await db.collection('users').doc(decodedToken.uid).get();
+		
+		if (userDoc.exists) {
+			const userData = userDoc.data();
+			if (userData?.role === 'teacher' || userData?.role === 'student') {
+				return userData.role;
+			}
+		}
+		
+		// User profile doesn't exist - they need to complete onboarding
+		console.error('User profile not found for UID:', decodedToken.uid);
+		throw new Error('User profile required - please complete onboarding');
+	} catch (error) {
+		console.error('Failed to get user role from Firestore:', error);
+		throw error;
+	}
 }
 
 /**
@@ -69,13 +99,14 @@ async function verifyToken(
 ): Promise<{ uid: string; email?: string; role: 'teacher' | 'student' } | null> {
 	try {
 		const decodedToken = await adminAuth.verifyIdToken(token);
+		const role = await getUserRole(decodedToken);
 		return {
 			uid: decodedToken.uid,
 			email: decodedToken.email,
-			role: getUserRole(decodedToken)
+			role: role
 		};
 	} catch (error) {
-		console.error('Token verification failed:', error);
+		console.error('Token verification or user profile retrieval failed:', error);
 		return null;
 	}
 }
@@ -102,7 +133,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	// Protected routes that require authentication
-	const protectedPaths = ['/dashboard'];
+	const protectedPaths = ['/dashboard', '/teacher'];
 	const isProtectedRoute = protectedPaths.some((path) => url.pathname.startsWith(path));
 
 	// Redirect unauthenticated users from protected routes
@@ -131,6 +162,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 			} else {
 				throw redirect(302, '/dashboard/student');
 			}
+		}
+	}
+
+	// Teacher-only routes outside dashboard
+	if (event.locals.user && url.pathname.startsWith('/teacher')) {
+		const userRole = event.locals.user.role;
+		if (userRole !== 'teacher') {
+			throw redirect(302, '/dashboard/student');
 		}
 	}
 

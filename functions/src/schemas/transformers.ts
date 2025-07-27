@@ -10,14 +10,16 @@ import type {
   SubmissionDomain,
   QuizAnswerKeyDomain,
   GradeDomain,
-  ClassroomDomain
+  ClassroomDomain,
+  UserDomain
 } from "./domain";
 import type {
   AssignmentResponse,
   SubmissionResponse,
   GradeResponse,
   SerializedTimestamp,
-  ClassroomResponse
+  ClassroomResponse,
+  UserProfileResponse
 } from "./dto";
 
 /**
@@ -303,5 +305,26 @@ export function parseAnswerKeyRow(row: string[]): Partial<SheetAnswerKey> {
     correctAnswer: row[7] || "",
     answerExplanation: row[8] || "",
     gradingStrictness: (row[9] as "strict" | "standard" | "generous") || "generous"
+  };
+}
+
+// ============================================
+// User Domain/DTO Transformers
+// ============================================
+
+/**
+ * Transform user domain object to DTO response
+ */
+export function userDomainToDto(user: UserDomain): UserProfileResponse {
+  return {
+    id: user.id,
+    email: user.email,
+    displayName: user.displayName,
+    role: user.role,
+    classroomIds: user.classroomIds,
+    isActive: user.isActive,
+    lastLogin: user.lastLogin ? serializeTimestamp(user.lastLogin) : undefined,
+    createdAt: serializeTimestamp(user.createdAt),
+    updatedAt: serializeTimestamp(user.updatedAt)
   };
 }
