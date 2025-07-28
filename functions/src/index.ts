@@ -29,9 +29,10 @@ import { testGrading, gradeQuiz, gradeQuizTest, gradeCode } from "./routes/gradi
 import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngradedSubmissions, getAnswerKey, listSheetNames } from "./routes/sheets";
 import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as getFirestoreUngradedSubmissions, createSubmission, getSubmissionsByAssignment, getSubmissionById, updateSubmissionStatus } from "./routes/grades";
 import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
-import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, getTeacherOnboardingStatus, checkTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
+import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, createTeacherSheetOAuth, getTeacherOnboardingStatus, checkTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
 import { getTeacherClassrooms, getClassroomAssignments } from "./routes/classrooms";
 import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
+import { createOrUpdateProfile, sendPasscode, verifyPasscode, resetStudentAuth } from "./routes/auth";
 import { debugSheetsPermissions } from "./routes/debug";
 
 // Define secrets and parameters  
@@ -163,6 +164,9 @@ export const api = onRequest(
       if (method === "POST" && path === "/teacher/create-sheet") {
         await createTeacherSheet(request, response); return;
       }
+      if (method === "POST" && path === "/teacher/create-sheet-oauth") {
+        await createTeacherSheetOAuth(request, response); return;
+      }
       if (method === "GET" && path === "/teacher/onboarding-status") {
         await checkTeacherOnboardingStatus(request, response); return;
       }
@@ -229,6 +233,20 @@ export const api = onRequest(
         const submissionId = pathParts[pathParts.indexOf("submissions") + 1];
         (request as RequestWithParams).params = { submissionId };
         await updateSubmissionStatus(request, response); return;
+      }
+
+      // Auth routes
+      if (method === "POST" && path === "/auth/profile") {
+        await createOrUpdateProfile(request, response); return;
+      }
+      if (method === "POST" && path === "/auth/send-passcode") {
+        await sendPasscode(request, response); return;
+      }
+      if (method === "POST" && path === "/auth/verify-passcode") {
+        await verifyPasscode(request, response); return;
+      }
+      if (method === "POST" && path === "/auth/reset-student") {
+        await resetStudentAuth(request, response); return;
       }
 
       // User profile routes

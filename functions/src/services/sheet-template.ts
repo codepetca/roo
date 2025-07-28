@@ -30,6 +30,353 @@ export interface TeacherSheetTemplate {
 }
 
 /**
+ * Service for creating and configuring Google Sheets for teachers using OAuth
+ */
+export class OAuthSheetTemplateService {
+  private sheets: any;
+  private drive: any;
+
+  constructor(accessToken: string) {
+    const oauth2Client = new google.auth.OAuth2();
+    oauth2Client.setCredentials({ access_token: accessToken });
+    
+    this.sheets = google.sheets({ version: "v4", auth: oauth2Client });
+    this.drive = google.drive({ version: "v3", auth: oauth2Client });
+  }
+
+  /**
+   * Create a complete Google Sheet for a teacher with proper structure using OAuth
+   */
+  async createTeacherSheet(template: TeacherSheetTemplate): Promise<SheetCreationResult> {
+    try {
+      logger.info("Creating sheet with OAuth for board account", { boardAccountEmail: template.boardAccountEmail });
+
+      // Step 1: Create the spreadsheet in teacher's personal Drive
+      const spreadsheet = await this.createSpreadsheet(template.title);
+      
+      // Step 2: Set up the sheet structure
+      await this.setupSheetStructure(spreadsheet.spreadsheetId!);
+      
+      // Step 3: Share with the board account
+      await this.shareWithBoardAccount(spreadsheet.spreadsheetId!, template.boardAccountEmail);
+      
+      // Step 4: Set up data validation and formatting
+      await this.applyFormattingAndValidation(spreadsheet.spreadsheetId!);
+
+      const result: SheetCreationResult = {
+        spreadsheetId: spreadsheet.spreadsheetId!,
+        spreadsheetUrl: spreadsheet.spreadsheetUrl!,
+        title: template.title,
+        success: true
+      };
+
+      logger.info("OAuth teacher sheet created successfully", result);
+      return result;
+
+    } catch (error) {
+      logger.error("Failed to create OAuth teacher sheet", { error, template });
+      return {
+        spreadsheetId: "",
+        spreadsheetUrl: "",
+        title: template.title,
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error"
+      };
+    }
+  }
+
+  // Use the same helper methods as the service account version
+  private async createSpreadsheet(title: string) {
+    const requestBody = {
+      properties: {
+        title: title,
+        locale: "en_US",
+        autoRecalc: "ON_CHANGE",
+        timeZone: "America/Los_Angeles"
+      },
+      sheets: [
+        {
+          properties: {
+            title: "Sheet1",
+            gridProperties: {
+              rowCount: 1000,
+              columnCount: 26
+            }
+          }
+        }
+      ]
+    };
+
+    const response = await this.sheets.spreadsheets.create({
+      resource: requestBody,
+      fields: "spreadsheetId,spreadsheetUrl,properties.title"
+    });
+
+    return response.data;
+  }
+
+  private async setupSheetStructure(spreadsheetId: string) {
+    // Create additional sheets
+    const requests = [
+      // Create Submissions sheet
+      {
+        addSheet: {
+          properties: {
+            title: "Submissions",
+            gridProperties: {
+              rowCount: 10000,
+              columnCount: 17,
+              frozenRowCount: 1
+            }
+          }
+        }
+      },
+      // Create Answer Keys sheet  
+      {
+        addSheet: {
+          properties: {
+            title: "Answer Keys",
+            gridProperties: {
+              rowCount: 1000,
+              columnCount: 10,
+              frozenRowCount: 1
+            }
+          }
+        }
+      }
+    ];
+
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: { requests }
+    });
+
+    // Add headers to each sheet
+    await this.addSheetHeaders(spreadsheetId);
+  }
+
+  private async addSheetHeaders(spreadsheetId: string) {
+    const updates = [
+      // Sheet1 headers (assignments)
+      {
+        range: "Sheet1!A1:H1",
+        values: [[
+          "Assignment ID",
+          "Course ID", 
+          "Title",
+          "Description",
+          "Due Date",
+          "Max Points",
+          "Submission Type",
+          "Created Date"
+        ]]
+      },
+      // Submissions headers
+      {
+        range: "Submissions!A1:Q1",
+        values: [[
+          "Submission ID",
+          "Assignment Title",
+          "Course ID",
+          "First Name",
+          "Last Name", 
+          "Email",
+          "Submission Text",
+          "Submission Date",
+          "Current Grade",
+          "Grading Status",
+          "Max Points",
+          "Source Sheet Name",
+          "Assignment Description",
+          "Last Processed",
+          "Source File ID",
+          "Is Quiz",
+          "Form ID"
+        ]]
+      },
+      // Answer Keys headers
+      {
+        range: "Answer Keys!A1:J1",
+        values: [[
+          "Form ID",
+          "Assignment Title",
+          "Course ID",
+          "Question Number",
+          "Question Text",
+          "Question Type",
+          "Points",
+          "Correct Answer",
+          "Answer Explanation",
+          "Grading Strictness"
+        ]]
+      }
+    ];
+
+    const requestBody = {
+      valueInputOption: "RAW",
+      data: updates
+    };
+
+    await this.sheets.spreadsheets.values.batchUpdate({
+      spreadsheetId,
+      resource: requestBody
+    });
+  }
+
+  private async applyFormattingAndValidation(spreadsheetId: string) {
+    const requests = [
+      // Format headers with bold and background color
+      {
+        repeatCell: {
+          range: {
+            sheetId: 0, // Sheet1
+            startRowIndex: 0,
+            endRowIndex: 1
+          },
+          cell: {
+            userEnteredFormat: {
+              backgroundColor: { red: 0.26, green: 0.52, blue: 0.96 },
+              textFormat: { 
+                foregroundColor: { red: 1.0, green: 1.0, blue: 1.0 },
+                bold: true 
+              }
+            }
+          },
+          fields: "userEnteredFormat(backgroundColor,textFormat)"
+        }
+      },
+      // Format Submissions headers
+      {
+        repeatCell: {
+          range: {
+            sheetId: 1, // Submissions sheet (second sheet created)
+            startRowIndex: 0,
+            endRowIndex: 1
+          },
+          cell: {
+            userEnteredFormat: {
+              backgroundColor: { red: 0.26, green: 0.52, blue: 0.96 },
+              textFormat: { 
+                foregroundColor: { red: 1.0, green: 1.0, blue: 1.0 },
+                bold: true 
+              }
+            }
+          },
+          fields: "userEnteredFormat(backgroundColor,textFormat)"
+        }
+      },
+      // Format Answer Keys headers
+      {
+        repeatCell: {
+          range: {
+            sheetId: 2, // Answer Keys sheet (third sheet created)
+            startRowIndex: 0,
+            endRowIndex: 1
+          },
+          cell: {
+            userEnteredFormat: {
+              backgroundColor: { red: 0.26, green: 0.52, blue: 0.96 },
+              textFormat: { 
+                foregroundColor: { red: 1.0, green: 1.0, blue: 1.0 },
+                bold: true 
+              }
+            }
+          },
+          fields: "userEnteredFormat(backgroundColor,textFormat)"
+        }
+      }
+    ];
+
+    await this.sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      resource: { requests }
+    });
+  }
+
+  private async shareWithBoardAccount(spreadsheetId: string, boardAccountEmail: string) {
+    try {
+      await this.drive.permissions.create({
+        fileId: spreadsheetId,
+        resource: {
+          role: "editor", // Full edit access for board account
+          type: "user",
+          emailAddress: boardAccountEmail
+        },
+        sendNotificationEmail: true // Notify the board account
+      });
+
+      logger.info("OAuth sheet shared with board account", { 
+        spreadsheetId, 
+        boardAccountEmail 
+      });
+    } catch (error) {
+      logger.error("Failed to share OAuth sheet with board account", { 
+        error, 
+        spreadsheetId, 
+        boardAccountEmail 
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Generate AppScript code for the board account's specific sheet
+   */
+  generateAppScriptCode(spreadsheetId: string, boardAccountEmail: string): string {
+    return `/**
+ * Roo Auto-Grading System - Board Account Apps Script
+ * Generated for: ${boardAccountEmail}
+ * Target Sheet: ${spreadsheetId}
+ */
+
+// Configuration - DO NOT MODIFY
+const CONFIG = {
+  PERSONAL_SPREADSHEET_ID: "${spreadsheetId}",
+  CLASSROOMS_PARENT_FOLDER_NAME: "classrooms",
+  ROO_SUFFIX: "-roo",
+  EXCLUDED_FOLDER_NAMES: ["_old_classrooms", "staff", "clubs"],
+};
+
+/**
+ * Main function - Run this to sync all data to your personal sheet
+ */
+function processAllSubmissions() {
+  console.log("Starting submission processing...");
+  
+  try {
+    const allData = processAllSubmissionTypes();
+    writeToPersonalSheets(allData);
+    console.log(\`Successfully processed \${allData.length} total submissions\`);
+  } catch (error) {
+    console.error("Error in processAllSubmissions:", error);
+  }
+}
+
+/**
+ * Set up automated triggers (run once)
+ */
+function setupTriggers() {
+  // Delete existing triggers
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach((trigger) => ScriptApp.deleteTrigger(trigger));
+
+  // Daily sync at 10 PM
+  ScriptApp.newTrigger("processAllSubmissions")
+    .timeBased()
+    .everyDays(1)
+    .atHour(22)
+    .create();
+
+  console.log("Triggers set up successfully - daily sync at 10 PM");
+}
+
+// [Include the rest of the AppScript code from board-appscript.gs]
+// This would include all the helper functions from the existing AppScript
+`;
+  }
+}
+
+/**
  * Service for creating and configuring Google Sheets for teachers (app-owned)
  */
 export class SheetTemplateService {
@@ -461,4 +808,17 @@ export async function createSheetTemplateService(googleCredentials?: string): Pr
     error: lastError?.message
   });
   throw lastError || new Error("Unknown authentication error");
+}
+
+/**
+ * Create an OAuthSheetTemplateService using teacher's OAuth access token
+ */
+export function createOAuthSheetTemplateService(accessToken: string): OAuthSheetTemplateService {
+  try {
+    logger.info("Creating OAuthSheetTemplateService with access token");
+    return new OAuthSheetTemplateService(accessToken);
+  } catch (error) {
+    logger.error("Failed to create OAuthSheetTemplateService", { error });
+    throw error;
+  }
 }

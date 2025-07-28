@@ -11,6 +11,7 @@
 		PageHeader,
 		LoadingSkeleton
 	} from '$lib/components/dashboard';
+	import StudentResetManager from '$lib/components/auth/StudentResetManager.svelte';
 
 	// State using Svelte 5 runes
 	let assignments = $state<AssignmentResponse[]>([]);
@@ -313,6 +314,17 @@
 							<p class="text-2xl font-semibold text-gray-900">{ungradedSubmissions}</p>
 						</div>
 					</div>
+				</div>
+			</div>
+
+			<!-- Student Management -->
+			<div class="rounded-lg border border-gray-200 bg-white">
+				<div class="border-b border-gray-200 px-6 py-4">
+					<h3 class="text-lg font-semibold text-gray-900">Student Management</h3>
+					<p class="text-sm text-gray-600">Help students with login issues and account access</p>
+				</div>
+				<div class="p-6">
+					<StudentResetManager />
 				</div>
 			</div>
 

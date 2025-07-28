@@ -7,7 +7,7 @@ import { Request, Response } from "express";
 import { logger } from "firebase-functions";
 import { z } from "zod";
 import { handleRouteError, sendApiResponse, validateData, getUserFromRequest } from "../middleware/validation";
-import { createSheetTemplateService } from "../services/sheet-template";
+import { createSheetTemplateService, createOAuthSheetTemplateService } from "../services/sheet-template";
 import { getTeacherSheetsConfig, updateTeacherConfiguration } from "../config/teachers";
 import { db } from "../config/firebase";
 
@@ -15,6 +15,12 @@ import { db } from "../config/firebase";
 const createTeacherSheetSchema = z.object({
   boardAccountEmail: z.string().email(),
   sheetTitle: z.string().min(1).optional()
+});
+
+const createTeacherSheetOAuthSchema = z.object({
+  boardAccountEmail: z.string().email(),
+  sheetTitle: z.string().min(1).optional(),
+  googleAccessToken: z.string().min(1)
 });
 
 /**
@@ -107,6 +113,129 @@ export async function createTeacherSheet(req: Request, res: Response) {
     );
 
     logger.info("Sheet created successfully", {
+      boardAccountEmail: validatedData.boardAccountEmail,
+      spreadsheetId: sheetResult.spreadsheetId
+    });
+
+  } catch (error) {
+    handleRouteError(error, req, res);
+  }
+}
+
+/**
+ * Create a Google Sheet for a teacher using OAuth (new approach)
+ * Location: functions/src/routes/teacher-onboarding.ts:125
+ * Route: POST /teacher/create-sheet-oauth
+ */
+export async function createTeacherSheetOAuth(req: Request, res: Response) {
+  try {
+    const validatedData = validateData(createTeacherSheetOAuthSchema, req.body);
+    logger.info("Creating OAuth sheet for board account", { boardAccountEmail: validatedData.boardAccountEmail });
+
+    // Get authenticated user from token
+    const user = await getUserFromRequest(req);
+    if (!user || user.role !== "teacher") {
+      return sendApiResponse(
+        res,
+        { error: "Only authenticated teachers can create sheets" },
+        false,
+        "Unauthorized - teacher authentication required"
+      );
+    }
+
+    // Check if board account already has a sheet
+    const existingConfig = getTeacherSheetsConfig();
+    if (existingConfig[validatedData.boardAccountEmail]) {
+      return sendApiResponse(
+        res,
+        { 
+          alreadyConfigured: true,
+          spreadsheetId: existingConfig[validatedData.boardAccountEmail],
+          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${existingConfig[validatedData.boardAccountEmail]}/edit`
+        },
+        true,
+        "Board account already has a configured Google Sheet"
+      );
+    }
+
+    // Create sheet template service using teacher's OAuth access token
+    let oauthSheetService;
+    try {
+      oauthSheetService = createOAuthSheetTemplateService(validatedData.googleAccessToken);
+    } catch (error) {
+      logger.error("Failed to initialize OAuth Google Sheets service", error);
+      return sendApiResponse(
+        res,
+        { error: "Failed to initialize Google Sheets service with your credentials. Please try signing in again." },
+        false,
+        "OAuth Sheets service initialization failed"
+      );
+    }
+
+    // Generate sheet title
+    const sheetTitle = validatedData.sheetTitle || `Roo Auto-Grading - ${validatedData.boardAccountEmail.split("@")[0]}`;
+
+    // Create the sheet in teacher's Drive and share with board account
+    const sheetResult = await oauthSheetService.createTeacherSheet({
+      title: sheetTitle,
+      boardAccountEmail: validatedData.boardAccountEmail
+    });
+
+    if (!sheetResult.success) {
+      return sendApiResponse(
+        res,
+        { error: sheetResult.error },
+        false,
+        "Failed to create Google Sheet using OAuth"
+      );
+    }
+
+    // Update configuration (use board account as key)
+    await updateTeacherConfiguration(validatedData.boardAccountEmail, sheetResult.spreadsheetId);
+
+    // Store the teacher's Google access token in their profile for future use
+    await db.collection("users").doc(user.uid).update({
+      "teacherData.googleAccessToken": validatedData.googleAccessToken,
+      "teacherData.configuredSheets": true,
+      "teacherData.sheetId": sheetResult.spreadsheetId,
+      "teacherData.boardAccountEmail": validatedData.boardAccountEmail,
+      "teacherData.lastSync": new Date(),
+      updatedAt: new Date()
+    });
+
+    // Generate AppScript code for the board account
+    const appScriptCode = oauthSheetService.generateAppScriptCode(
+      sheetResult.spreadsheetId,
+      validatedData.boardAccountEmail
+    );
+
+    sendApiResponse(
+      res,
+      {
+        spreadsheetId: sheetResult.spreadsheetId,
+        spreadsheetUrl: sheetResult.spreadsheetUrl,
+        sheetTitle: sheetResult.title,
+        appScriptCode,
+        method: "oauth",
+        teacherEmail: user.email,
+        nextSteps: [
+          "Google Sheet created in your personal Google Drive",
+          `Sheet shared with board account: ${validatedData.boardAccountEmail}`,
+          "Copy the AppScript code below",
+          "Open Google Apps Script in your board account",
+          "Create a new project and paste the code",
+          "Run 'setupTriggers' function once",
+          "Run 'processAllSubmissions' to test",
+          "Board data will sync automatically"
+        ]
+      },
+      true,
+      "Google Sheet created successfully using OAuth!"
+    );
+
+    logger.info("OAuth sheet created successfully", {
+      teacherUid: user.uid,
+      teacherEmail: user.email,
       boardAccountEmail: validatedData.boardAccountEmail,
       spreadsheetId: sheetResult.spreadsheetId
     });

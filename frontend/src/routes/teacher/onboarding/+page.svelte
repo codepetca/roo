@@ -11,6 +11,7 @@
 	let error = $state<string | null>(null);
 	let success = $state<string | null>(null);
 	let currentStep = $state<'input' | 'complete'>('input');
+	let useOAuth = $state(true); // Default to OAuth approach
 
 	// Initialize board account email with logged-in user's email
 	$effect(() => {
@@ -32,10 +33,29 @@
 			loading = true;
 			error = null;
 
-			const result = await api.createTeacherSheet({
-				boardAccountEmail,
-				sheetTitle: sheetTitle || undefined
-			});
+			let result;
+
+			if (useOAuth) {
+				// Get the Google access token from sessionStorage (stored during login)
+				const googleAccessToken = sessionStorage.getItem('google_access_token');
+				
+				if (!googleAccessToken) {
+					error = 'No Google access token found. Please sign out and sign in again to grant Google Drive access.';
+					return;
+				}
+
+				result = await api.createTeacherSheetOAuth({
+					boardAccountEmail,
+					sheetTitle: sheetTitle || undefined,
+					googleAccessToken
+				});
+			} else {
+				// Fall back to service account approach
+				result = await api.createTeacherSheet({
+					boardAccountEmail,
+					sheetTitle: sheetTitle || undefined
+				});
+			}
 
 			onboardingResult = result;
 			currentStep = 'complete';
@@ -43,7 +63,9 @@
 			if (result.alreadyConfigured) {
 				success = 'Board account already has a Google Sheet configured!';
 			} else {
-				success = 'Google Sheet created successfully!';
+				success = useOAuth 
+					? 'Google Sheet created successfully in your personal Drive!' 
+					: 'Google Sheet created successfully!';
 			}
 		} catch (err: unknown) {
 			error = err instanceof Error ? err.message : 'Failed to create Google Sheet';
@@ -195,22 +217,40 @@
 
 					<div class="rounded-md border border-blue-200 bg-blue-50 p-4">
 						<h4 class="mb-2 text-sm font-medium text-blue-900">What will happen:</h4>
-						<ul class="space-y-1 text-sm text-blue-800">
-							<li>• We'll create a new Google Sheet in our system</li>
-							<li>
-								• The sheet will be shared with <strong
-									>{boardAccountEmail || 'your board account'}</strong
-								>
-							</li>
-							<li>• You'll get custom AppScript code for that account</li>
-							<li>• Run the AppScript in the board account to sync data</li>
-						</ul>
+						{#if useOAuth}
+							<ul class="space-y-1 text-sm text-blue-800">
+								<li>• We'll create a new Google Sheet in your personal Google Drive</li>
+								<li>
+									• The sheet will be shared with <strong
+										>{boardAccountEmail || 'your board account'}</strong
+									>
+								</li>
+								<li>• You'll get custom AppScript code for that board account</li>
+								<li>• Run the AppScript in the board account to sync data</li>
+								<li>• Your personal Google account maintains ownership of the sheet</li>
+							</ul>
+						{:else}
+							<ul class="space-y-1 text-sm text-blue-800">
+								<li>• We'll create a new Google Sheet in our system</li>
+								<li>
+									• The sheet will be shared with <strong
+										>{boardAccountEmail || 'your board account'}</strong
+									>
+								</li>
+								<li>• You'll get custom AppScript code for that account</li>
+								<li>• Run the AppScript in the board account to sync data</li>
+							</ul>
+						{/if}
 					</div>
 
 					<div class="flex justify-end">
 						<Button variant="primary" onclick={createSheet} {loading}>
 							{#snippet children()}
-								{loading ? 'Creating & Sharing Sheet...' : 'Create & Share Sheet'}
+								{#if loading}
+									{useOAuth ? 'Creating Sheet in Your Drive...' : 'Creating & Sharing Sheet...'}
+								{:else}
+									{useOAuth ? 'Create Sheet in My Drive' : 'Create & Share Sheet'}
+								{/if}
 							{/snippet}
 						</Button>
 					</div>
@@ -255,6 +295,9 @@
 						<div>
 							<h4 class="text-sm font-medium text-gray-900">Sheet Details:</h4>
 							<p class="text-sm text-gray-600">Title: {onboardingResult.sheetTitle}</p>
+							{#if onboardingResult.method === 'oauth' && onboardingResult.teacherEmail}
+								<p class="text-sm text-gray-600">Owner: {onboardingResult.teacherEmail} (your personal Drive)</p>
+							{/if}
 							<div class="mt-2 flex items-center space-x-2">
 								<a
 									href={onboardingResult.spreadsheetUrl}
@@ -268,6 +311,13 @@
 										Ready
 									{/snippet}
 								</Badge>
+								{#if onboardingResult.method === 'oauth'}
+									<Badge variant="info" size="sm">
+										{#snippet children()}
+											OAuth
+										{/snippet}
+									</Badge>
+								{/if}
 							</div>
 						</div>
 					</div>
