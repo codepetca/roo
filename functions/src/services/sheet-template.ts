@@ -5,11 +5,15 @@
 
 import { google } from "googleapis";
 import { logger } from "firebase-functions";
+import { initializeCompatibility } from "../utils/compatibility";
+
+// Initialize compatibility fixes
+initializeCompatibility();
 
 // Required scopes for creating and managing sheets
 const SHEET_CREATION_SCOPES = [
   "https://www.googleapis.com/auth/spreadsheets",
-  "https://www.googleapis.com/auth/drive.file"
+  "https://www.googleapis.com/auth/drive"  // Broader scope needed for creating new files
 ];
 
 export interface SheetCreationResult {
@@ -412,17 +416,49 @@ export async function getServiceAccountEmail(): Promise<string> {
 /**
  * Create a SheetTemplateService using our service account (simplified - no teacher OAuth)
  */
-export async function createSheetTemplateService(): Promise<SheetTemplateService> {
-  try {
-    // Create service account auth (we own all sheets)
-    const serviceAccountAuth = new google.auth.GoogleAuth({
-      scopes: SHEET_CREATION_SCOPES
-    });
-    const serviceAuthInstance = await serviceAccountAuth.getClient();
-
-    return new SheetTemplateService(serviceAuthInstance);
-  } catch (error) {
-    logger.error("Failed to create SheetTemplateService", error);
-    throw error;
+export async function createSheetTemplateService(googleCredentials?: string): Promise<SheetTemplateService> {
+  let lastError: Error | undefined;
+  
+  // Retry authentication up to 3 times
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      logger.info(`Creating SheetTemplateService (attempt ${attempt}/3)`);
+      
+      // Production-only: Use service account from Firebase secret
+      if (!googleCredentials) {
+        throw new Error('Google credentials not provided. Please ensure GOOGLE_CREDENTIALS_JSON secret is configured.');
+      }
+      
+      const credentials = JSON.parse(googleCredentials);
+      const serviceAccountAuth = new google.auth.GoogleAuth({
+        credentials,
+        scopes: SHEET_CREATION_SCOPES
+      });
+      
+      // Test credentials before proceeding
+      const serviceAuthInstance = await serviceAccountAuth.getClient();
+      
+      // Test the authentication by getting an access token
+      await serviceAuthInstance.getAccessToken();
+      
+      logger.info("Successfully created SheetTemplateService");
+      return new SheetTemplateService(serviceAuthInstance);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      logger.warn(`SheetTemplateService creation attempt ${attempt} failed`, {
+        error: lastError.message,
+        attempt
+      });
+      
+      // Wait before retry (exponential backoff)
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
   }
+  
+  logger.error("Failed to create SheetTemplateService after all attempts", { 
+    error: lastError?.message
+  });
+  throw lastError || new Error("Unknown authentication error");
 }

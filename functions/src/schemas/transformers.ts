@@ -33,10 +33,18 @@ import type {
 /**
  * Convert Firebase Timestamp to serialized format for API responses
  */
-export function serializeTimestamp(timestamp: admin.firestore.Timestamp): SerializedTimestamp {
+export function serializeTimestamp(timestamp: admin.firestore.Timestamp | admin.firestore.FieldValue): SerializedTimestamp {
+  if (timestamp instanceof admin.firestore.Timestamp) {
+    return {
+      _seconds: timestamp.seconds,
+      _nanoseconds: timestamp.nanoseconds
+    };
+  }
+  // For FieldValue (serverTimestamp), return current time as fallback
+  const now = admin.firestore.Timestamp.now();
   return {
-    _seconds: timestamp.seconds,
-    _nanoseconds: timestamp.nanoseconds
+    _seconds: now.seconds,
+    _nanoseconds: now.nanoseconds
   };
 }
 

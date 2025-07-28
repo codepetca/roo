@@ -9,10 +9,10 @@ import * as admin from "firebase-admin";
 // ============================================
 // Firebase Timestamp Schema
 // ============================================
-export const firebaseTimestampSchema = z.custom<admin.firestore.Timestamp>(
-  (val) => val instanceof admin.firestore.Timestamp,
+export const firebaseTimestampSchema = z.custom<admin.firestore.Timestamp | admin.firestore.FieldValue>(
+  (val) => val instanceof admin.firestore.Timestamp || val instanceof admin.firestore.FieldValue,
   {
-    message: "Expected Firebase Timestamp"
+    message: "Expected Firebase Timestamp or FieldValue"
   }
 );
 

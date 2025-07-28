@@ -31,6 +31,8 @@ functions/.env
 # Service account keys
 *-service-account-key.json
 service-account-*.json
+*-service-account.json
+roo-app-*-firebase-adminsdk-*.json
 
 # Build outputs
 dist/

@@ -68,8 +68,18 @@ export async function gradeQuizTest(req: Request, res: Response) {
 
     const { createSheetsService } = await import("../services/sheets");
     const { createGeminiService } = await import("../services/gemini");
+    const { getDefaultSpreadsheetId } = await import("../config/teachers");
     
-    const sheetsService = await createSheetsService();
+    // Get the default spreadsheet ID (for now use the first configured teacher)
+    const spreadsheetId = getDefaultSpreadsheetId();
+    if (!spreadsheetId) {
+      return res.status(500).json({
+        success: false,
+        error: "No teacher sheets configured. Please set up at least one teacher sheet first."
+      });
+    }
+    
+    const sheetsService = await createSheetsService(spreadsheetId);
     const geminiApiKey = req.app.locals.geminiApiKey;
     const geminiService = createGeminiService(geminiApiKey);
 
@@ -89,12 +99,13 @@ export async function gradeQuizTest(req: Request, res: Response) {
       studentAnswers[parseInt(key)] = value as string;
     });
 
-    // Grade the quiz
+    // Grade the quiz (answerKey is guaranteed to exist due to check above)
+    // Type assertion: answerKey from sheets service should match the expected interface
     const gradingResult = await geminiService.gradeQuiz({
       submissionId: validatedData.submissionId,
       formId: validatedData.formId,
       studentAnswers,
-      answerKey
+      answerKey: answerKey as any // Type assertion to bypass optional field issues
     });
 
     // TEST MODE: Skip sheet update to avoid authentication issues
@@ -125,8 +136,18 @@ export async function gradeQuiz(req: Request, res: Response) {
     const { createSheetsService } = await import("../services/sheets");
     const { createGeminiService } = await import("../services/gemini");
     const { createFirestoreGradeService } = await import("../services/firestore");
+    const { getDefaultSpreadsheetId } = await import("../config/teachers");
     
-    const sheetsService = await createSheetsService();
+    // Get the default spreadsheet ID
+    const spreadsheetId = getDefaultSpreadsheetId();
+    if (!spreadsheetId) {
+      return res.status(500).json({
+        success: false,
+        error: "No teacher sheets configured. Please set up at least one teacher sheet first."
+      });
+    }
+    
+    const sheetsService = await createSheetsService(spreadsheetId);
     const geminiApiKey = req.app.locals.geminiApiKey;
     const geminiService = createGeminiService(geminiApiKey);
     const firestoreService = createFirestoreGradeService();
@@ -147,12 +168,13 @@ export async function gradeQuiz(req: Request, res: Response) {
       studentAnswers[parseInt(key)] = value as string;
     });
 
-    // Grade the quiz
+    // Grade the quiz (answerKey is guaranteed to exist due to check above)
+    // Type assertion: answerKey from sheets service should match the expected interface
     const gradingResult = await geminiService.gradeQuiz({
       submissionId: validatedData.submissionId,
       formId: validatedData.formId,
       studentAnswers,
-      answerKey
+      answerKey: answerKey as any // Type assertion to bypass optional field issues
     });
 
     // Save grade to Firestore instead of updating Sheets

@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
-import * as admin from "firebase-admin";
-import { db } from "../config/firebase";
+import { db, convertTimestampObject } from "../config/firebase";
 import { classroomDomainSchema, assignmentDomainSchema } from "../schemas/domain";
 import { type ClassroomResponse } from "../schemas/dto";
 import { classroomDomainToDto, assignmentDomainToDto } from "../schemas/transformers";
@@ -37,11 +36,11 @@ export async function getTeacherClassrooms(req: Request, res: Response): Promise
         
         // Convert timestamp objects to Timestamp instances if needed
         const processedData: any = { ...data, id: doc.id };
-        if (data.createdAt && typeof data.createdAt === "object" && "_seconds" in data.createdAt) {
-          processedData.createdAt = admin.firestore.Timestamp.fromDate(new Date((data.createdAt as any)._seconds * 1000 + ((data.createdAt as any)._nanoseconds || 0) / 1000000));
+        if (data.createdAt) {
+          processedData.createdAt = convertTimestampObject(data.createdAt) || data.createdAt;
         }
-        if (data.updatedAt && typeof data.updatedAt === "object" && "_seconds" in data.updatedAt) {
-          processedData.updatedAt = admin.firestore.Timestamp.fromDate(new Date((data.updatedAt as any)._seconds * 1000 + ((data.updatedAt as any)._nanoseconds || 0) / 1000000));
+        if (data.updatedAt) {
+          processedData.updatedAt = convertTimestampObject(data.updatedAt) || data.updatedAt;
         }
         
         const classroom = classroomDomainSchema.parse(processedData);

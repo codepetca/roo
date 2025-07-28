@@ -59,7 +59,7 @@ export async function listAssignments(req: Request, res: Response) {
     logger.info("listAssignments called", { method: req.method, query: req.query });
     
     // Build query based on filters
-    let query = db.collection("assignments");
+    let query: admin.firestore.Query = db.collection("assignments");
     
     // Filter by classroomId if provided
     const classroomId = req.query.classroomId as string;

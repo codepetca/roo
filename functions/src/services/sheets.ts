@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { logger } from "firebase-functions";
+import { initializeCompatibility } from "../utils/compatibility";
 import {
   sheetAssignmentsArraySchema,
   sheetSubmissionsArraySchema,
@@ -12,6 +13,9 @@ import {
   type SheetSubmission,
   type QuizAnswerKeyDomain as QuizAnswerKey
 } from "../schemas";
+
+// Initialize compatibility fixes
+initializeCompatibility();
 
 // Google Sheets API scopes - includes both read and write permissions
 // Required for:
@@ -32,6 +36,39 @@ export class SheetsService {
   }
 
   /**
+   * Handle Google API errors with better error messages
+   */
+  private handleApiError(error: unknown, operation: string): Error {
+    const baseMessage = `Google Sheets API error during ${operation}`;
+    
+    if (error instanceof Error) {
+      logger.error(baseMessage, {
+        error: error.message,
+        stack: error.stack,
+        operation,
+        spreadsheetId: this.spreadsheetId
+      });
+      
+      // Provide more helpful error messages for common issues
+      if (error.message.includes('URLSearchParams')) {
+        return new Error(`${baseMessage}: Node.js compatibility issue. Please ensure you're using Node.js 20.`);
+      }
+      if (error.message.includes('403')) {
+        return new Error(`${baseMessage}: Access denied. Check Google Sheets API permissions and service account access.`);
+      }
+      if (error.message.includes('404')) {
+        return new Error(`${baseMessage}: Spreadsheet not found. Check spreadsheet ID: ${this.spreadsheetId}`);
+      }
+      
+      return new Error(`${baseMessage}: ${error.message}`);
+    }
+    
+    const errorStr = String(error);
+    logger.error(baseMessage, { error: errorStr, operation, spreadsheetId: this.spreadsheetId });
+    return new Error(`${baseMessage}: ${errorStr}`);
+  }
+
+  /**
    * Test the connection to Google Sheets
    */
   async testConnection(): Promise<boolean> {
@@ -41,10 +78,10 @@ export class SheetsService {
         spreadsheetId: this.spreadsheetId
       });
       
-      logger.info(`Sheets connection test successful - spreadsheet: ${response.data.properties.title}`);
+      logger.info(`Sheets connection test successful - spreadsheet: ${response.data.properties?.title || 'Unknown'}`);
       return true;
     } catch (error) {
-      logger.error("Sheets connection test failed", error);
+      this.handleApiError(error, 'connection test');
       return false;
     }
   }
@@ -92,8 +129,7 @@ export class SheetsService {
       // Validate and transform the entire array at once
       return sheetAssignmentsArraySchema.parse(parsedRows);
     } catch (error) {
-      logger.error("Error fetching assignments from Sheets", error);
-      throw error;
+      throw this.handleApiError(error, 'fetching assignments');
     }
   }
 
@@ -240,16 +276,43 @@ export class SheetsService {
  * Create a Sheets service instance with service account authentication
  */
 export const createSheetsService = async (spreadsheetId: string): Promise<SheetsService> => {
-  try {
-    // Use Google Auth with default credentials (Firebase service account)
-    const authClient = new google.auth.GoogleAuth({
-      scopes: SHEETS_SCOPES
-    });
+  let lastError: Error | undefined;
+  
+  // Retry authentication up to 3 times
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      logger.info(`Creating Sheets service (attempt ${attempt}/3)`, { spreadsheetId });
+      
+      // Production-only: Use Firebase default service account credentials
+      const authClient = new google.auth.GoogleAuth({
+        scopes: SHEETS_SCOPES
+      });
 
-    const authInstance = await authClient.getClient();
-    return new SheetsService(authInstance, spreadsheetId);
-  } catch (error) {
-    logger.error("Failed to create Sheets service", error);
-    throw error;
+      const authInstance = await authClient.getClient();
+      
+      // Test the authentication by getting client info
+      await authInstance.getAccessToken();
+      
+      logger.info("Successfully created Sheets service", { spreadsheetId });
+      return new SheetsService(authInstance, spreadsheetId);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      logger.warn(`Sheets service creation attempt ${attempt} failed`, { 
+        error: lastError.message,
+        spreadsheetId,
+        attempt
+      });
+      
+      // Wait before retry (exponential backoff)
+      if (attempt < 3) {
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+      }
+    }
   }
+  
+  logger.error("Failed to create Sheets service after all attempts", { 
+    error: lastError?.message,
+    spreadsheetId 
+  });
+  throw lastError || new Error("Unknown authentication error");
 };

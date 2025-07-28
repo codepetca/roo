@@ -1,26 +1,23 @@
 import * as admin from "firebase-admin";
-import { getFirestoreSettings, logEmulatorStatus, isEmulator } from "../utils/emulator";
+import { getFirestore } from "firebase-admin/firestore";
+import { getFirestoreSettings, logEmulatorStatus, isEmulator, getAuthEmulatorUrl } from "../utils/emulator";
 
-// Initialize Firebase Admin SDK
-if (!admin.apps.length) {
-  admin.initializeApp();
-  logEmulatorStatus();
+// Configure Auth emulator BEFORE using Firebase Admin
+if (isEmulator()) {
+  const authEmulatorUrl = getAuthEmulatorUrl();
+  if (authEmulatorUrl) {
+    process.env.FIREBASE_AUTH_EMULATOR_HOST = "localhost:9099";
+  }
 }
 
-// Configure Firestore with emulator settings if applicable
-const firestoreSettings = getFirestoreSettings();
-if (Object.keys(firestoreSettings).length > 0) {
-  admin.firestore().settings(firestoreSettings);
-}
-
-export const db = admin.firestore();
-export const auth = admin.auth();
+// Get instances using the default app (initialized in index.ts)
+export const db = getFirestore();
 export const FieldValue = admin.firestore.FieldValue;
 
 // Export timestamp helper that handles emulator vs production
-export function getCurrentTimestamp(): Date | admin.firestore.FieldValue {
+export function getCurrentTimestamp(): admin.firestore.Timestamp | admin.firestore.FieldValue {
   if (isEmulator()) {
-    return new Date();
+    return admin.firestore.Timestamp.now();
   }
   return FieldValue.serverTimestamp();
 }
@@ -53,4 +50,21 @@ export function sanitizeDocument<T extends Record<string, unknown>>(doc: T): T {
 
 export function sanitizeDocuments<T extends Record<string, unknown>>(docs: T[]): T[] {
   return docs.map(doc => sanitizeDocument(doc));
+}
+
+// Convert timestamp objects back to Firestore Timestamps
+export function convertTimestampObject(timestampObj: any): admin.firestore.Timestamp | undefined {
+  if (!timestampObj || typeof timestampObj !== "object") return undefined;
+  
+  if (timestampObj instanceof admin.firestore.Timestamp) {
+    return timestampObj;
+  }
+  
+  if ("_seconds" in timestampObj) {
+    const seconds = timestampObj._seconds;
+    const nanoseconds = timestampObj._nanoseconds || 0;
+    return new admin.firestore.Timestamp(seconds, nanoseconds);
+  }
+  
+  return undefined;
 }

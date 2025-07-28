@@ -43,7 +43,19 @@ export async function createTeacherSheet(req: Request, res: Response) {
     }
 
     // Create sheet template service using our service account
-    const sheetTemplateService = await createSheetTemplateService();
+    let sheetTemplateService;
+    try {
+      const googleCredentials = req.app.locals.googleCredentials;
+      sheetTemplateService = await createSheetTemplateService(googleCredentials);
+    } catch (error) {
+      logger.error("Failed to initialize Google Sheets service", error);
+      return sendApiResponse(
+        res,
+        { error: "Google Sheets service is not available. Please contact administrator." },
+        false,
+        "Google Sheets service initialization failed"
+      );
+    }
 
     // Generate sheet title
     const sheetTitle = validatedData.sheetTitle || `Roo Auto-Grading - ${validatedData.boardAccountEmail.split("@")[0]}`;
@@ -241,7 +253,7 @@ export const completeTeacherOnboarding = createTeacherSheet;
  * Location: functions/src/routes/teacher-onboarding.ts:240
  * Route: GET /teacher/onboarding-status
  */
-export async function checkTeacherOnboardingStatus(req: Request, res: Response) {
+export async function checkTeacherOnboardingStatus(req: Request, res: Response): Promise<Response> {
   try {
     // Get authenticated user
     const user = await getUserFromRequest(req);

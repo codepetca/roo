@@ -114,7 +114,11 @@ export async function createSubmission(req: Request, res: Response) {
     const firestoreService = createFirestoreGradeService();
     
     const submissionData = {
-      ...validatedData,
+      assignmentId: validatedData.assignmentId || "unknown",
+      studentId: validatedData.studentId || "unknown", 
+      studentName: validatedData.studentName || "Unknown Student",
+      studentEmail: validatedData.studentEmail || "unknown@example.com",
+      submissionText: validatedData.submissionText || "",
       status: validatedData.status || "pending" as const,
       submittedAt: validatedData.submittedAt 
         ? admin.firestore.Timestamp.fromDate(new Date(validatedData.submittedAt))

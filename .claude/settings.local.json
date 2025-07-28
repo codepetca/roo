@@ -4,7 +4,9 @@
       "WebFetch(domain:claude.ai)",
       "Bash(find:*)",
       "Bash(npm run lint)",
-      "Bash(npm run type-check:*)"
+      "Bash(npm run type-check:*)",
+      "WebFetch(domain:medium.com)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

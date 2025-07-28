@@ -9,27 +9,24 @@ import { getAuth, type Auth } from 'firebase-admin/auth';
 import { PUBLIC_FIREBASE_PROJECT_ID, PUBLIC_USE_EMULATORS } from '$env/static/public';
 
 // Initialize Firebase Admin SDK
-let adminApp: App;
-let adminAuth: Auth;
+let adminApp: App | null = null;
+let adminAuth: Auth | null = null;
 
 try {
 	if (getApps().length === 0) {
 		if (PUBLIC_USE_EMULATORS === 'true') {
 			// Use emulator in development
 			process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
+			process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
 			adminApp = initializeApp({
 				projectId: PUBLIC_FIREBASE_PROJECT_ID
 			});
+			adminAuth = getAuth(adminApp);
 		} else {
-			// Use service account in production
-			adminApp = initializeApp({
-				credential: cert({
-					projectId: PUBLIC_FIREBASE_PROJECT_ID
-					// Add other credential fields as needed
-				})
-			});
+			// In production, don't initialize Admin SDK in frontend
+			// Token verification will be handled by the backend API
+			console.log('Production mode - skipping Firebase Admin initialization in frontend');
 		}
-		adminAuth = getAuth(adminApp);
 	} else {
 		adminApp = getApps()[0]!;
 		adminAuth = getAuth(adminApp);
@@ -60,11 +57,9 @@ async function getUserRole(decodedToken: { uid: string; role?: string; email?: s
 					projectId: PUBLIC_FIREBASE_PROJECT_ID
 				});
 			} else {
-				app = initializeApp({
-					credential: cert({
-						projectId: PUBLIC_FIREBASE_PROJECT_ID
-					})
-				});
+				// In production, don't try to initialize admin SDK
+				console.log('Production mode - cannot check user role from frontend');
+				return 'student'; // Default fallback
 			}
 		} else {
 			app = getApps()[0];
@@ -98,6 +93,12 @@ async function verifyToken(
 	token: string
 ): Promise<{ uid: string; email?: string; role: 'teacher' | 'student' } | null> {
 	try {
+		// In production mode, we don't have adminAuth initialized in frontend
+		if (!adminAuth) {
+			console.log('Admin auth not available - skipping token verification in production frontend');
+			return null;
+		}
+		
 		const decodedToken = await adminAuth.verifyIdToken(token);
 		const role = await getUserRole(decodedToken);
 		return {

@@ -76,6 +76,23 @@ export function getTeacherSheetsConfig(): Record<string, string> {
 }
 
 /**
+ * Get a default spreadsheet ID (first configured teacher) for operations that need a sheet
+ */
+export function getDefaultSpreadsheetId(): string | null {
+  const config = getTeacherSheetsConfig();
+  const spreadsheetIds = Object.values(config);
+  
+  if (spreadsheetIds.length === 0) {
+    logger.warn("No teacher sheets configured - cannot get default spreadsheet ID");
+    return null;
+  }
+  
+  const defaultId = spreadsheetIds[0];
+  logger.info(`Using default spreadsheet ID: ${defaultId}`);
+  return defaultId;
+}
+
+/**
  * Get spreadsheet ID for a specific teacher
  */
 export function getTeacherSpreadsheetId(teacherEmail: string): string | null {

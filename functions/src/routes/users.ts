@@ -33,6 +33,13 @@ export async function createUserProfile(req: Request, res: Response) {
     const token = authHeader.substring(7);
     const decodedToken = await admin.auth().verifyIdToken(token);
     
+    // Log incoming request data for debugging
+    logger.info("Incoming user profile creation request", { 
+      uid: decodedToken.uid, 
+      email: decodedToken.email,
+      body: req.body 
+    });
+
     // Validate request data
     const validatedData = validateData(createUserProfileRequestSchema, req.body);
     logger.info("Creating user profile", { 
@@ -67,7 +74,21 @@ export async function createUserProfile(req: Request, res: Response) {
     };
 
     // Validate with domain schema
-    const validatedUser = userDomainSchema.parse(userDomain);
+    let validatedUser;
+    try {
+      validatedUser = userDomainSchema.parse(userDomain);
+    } catch (validationError) {
+      logger.error("User domain validation failed", { 
+        userDomain, 
+        validationError: validationError instanceof Error ? validationError.message : String(validationError) 
+      });
+      return sendApiResponse(
+        res,
+        { error: "Invalid user data" },
+        false,
+        "User profile validation failed"
+      );
+    }
 
     // Save to Firestore
     await db.collection("users").doc(decodedToken.uid).set(validatedUser);
