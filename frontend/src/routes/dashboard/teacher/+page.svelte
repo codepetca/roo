@@ -4,6 +4,7 @@
 	import { api } from '$lib/api';
 	import type { AssignmentResponse } from '$lib/schemas';
 	import { Button, Alert } from '$lib/components/ui';
+	import AuthGuard from '$lib/components/auth/AuthGuard.svelte';
 	import {
 		ClassroomSidebar,
 		AssignmentListItem,

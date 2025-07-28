@@ -113,76 +113,18 @@ async function verifyToken(
 }
 
 /**
- * Handle authentication and route protection
+ * Handle requests and set security headers
+ * Note: Authentication is now handled client-side due to production Firebase limitations
  */
 export const handle: Handle = async ({ event, resolve }) => {
-	const { url, cookies } = event;
-
-	// Get auth token from cookies or Authorization header
-	const authToken =
-		cookies.get('auth-token') || event.request.headers.get('authorization')?.replace('Bearer ', '');
-
-	// Initialize user in locals
+	// Initialize user in locals (for any server-side code that might need it)
 	event.locals.user = null;
 
-	// Verify token if present
-	if (authToken && adminAuth) {
-		const user = await verifyToken(authToken);
-		if (user) {
-			event.locals.user = user;
-		}
-	}
+	const response = await resolve(event);
 
-	// Protected routes that require authentication
-	const protectedPaths = ['/dashboard', '/teacher'];
-	const isProtectedRoute = protectedPaths.some((path) => url.pathname.startsWith(path));
-
-	// Redirect unauthenticated users from protected routes
-	if (isProtectedRoute && !event.locals.user) {
-		throw redirect(302, '/login?redirect=' + encodeURIComponent(url.pathname));
-	}
-
-	// Role-based route protection and redirects
-	if (event.locals.user && url.pathname.startsWith('/dashboard')) {
-		const userRole = event.locals.user.role;
-
-		// Teacher-only routes
-		if (url.pathname.startsWith('/dashboard/teacher') && userRole !== 'teacher') {
-			throw redirect(302, '/dashboard/student');
-		}
-
-		// Student-only routes
-		if (url.pathname.startsWith('/dashboard/student') && userRole !== 'student') {
-			throw redirect(302, '/dashboard/teacher');
-		}
-
-		// Redirect base dashboard to role-specific dashboard
-		if (url.pathname === '/dashboard' || url.pathname === '/dashboard/') {
-			if (userRole === 'teacher') {
-				throw redirect(302, '/dashboard/teacher');
-			} else {
-				throw redirect(302, '/dashboard/student');
-			}
-		}
-	}
-
-	// Teacher-only routes outside dashboard
-	if (event.locals.user && url.pathname.startsWith('/teacher')) {
-		const userRole = event.locals.user.role;
-		if (userRole !== 'teacher') {
-			throw redirect(302, '/dashboard/student');
-		}
-	}
-
-	// Redirect authenticated users from login page to their role-specific dashboard
-	if (url.pathname === '/login' && event.locals.user) {
-		const userRole = event.locals.user.role;
-		if (userRole === 'teacher') {
-			throw redirect(302, '/dashboard/teacher');
-		} else {
-			throw redirect(302, '/dashboard/student');
-		}
-	}
-
-	return resolve(event);
+	// Set security headers that allow OAuth popups to work
+	response.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+	response.headers.set('Cross-Origin-Embedder-Policy', 'unsafe-none');
+	
+	return response;
 };

@@ -38,7 +38,7 @@
 	}
 
 	async function handleTeacherAuthSuccess(event: CustomEvent) {
-		const { user, accessToken, isSignup } = event.detail;
+		const { user, accessToken, idToken, isSignup } = event.detail;
 		
 		try {
 			// Store access token for later use with Google APIs
@@ -46,27 +46,28 @@
 				sessionStorage.setItem('google_access_token', accessToken);
 			}
 			
+			// Import the API client
+			const { api } = await import('$lib/api');
+			
 			// Create or update user profile in backend
-			const response = await fetch('/api/auth/profile', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Authorization': `Bearer ${await user.getIdToken()}`
-				},
-				body: JSON.stringify({
-					role: 'teacher',
-					email: user.email,
-					displayName: user.displayName,
-					isSignup
-				})
+			const profile = await api.createOrUpdateProfile({
+				role: 'teacher',
+				email: user.email,
+				displayName: user.displayName,
+				isSignup
 			});
 
-			if (!response.ok) {
-				throw new Error('Failed to create user profile');
-			}
+			console.log('Profile created successfully:', profile);
 
-			// Redirect to teacher dashboard
-			window.location.href = '/dashboard/teacher';
+			// Import auth store to trigger refresh
+			const { authStore } = await import('$lib/stores/auth');
+			await authStore.refresh();
+
+			// Import goto for navigation
+			const { goto } = await import('$app/navigation');
+			
+			// Navigate to teacher dashboard
+			await goto('/dashboard/teacher');
 			
 		} catch (error) {
 			console.error('Profile creation failed:', error);
@@ -81,8 +82,15 @@
 		
 		console.log('Student authentication successful', { user, isNewUser });
 		
-		// Redirect to student dashboard
-		window.location.href = '/dashboard/student';
+		// Import auth store to trigger refresh
+		const { authStore } = await import('$lib/stores/auth');
+		await authStore.refresh();
+
+		// Import goto for navigation
+		const { goto } = await import('$app/navigation');
+		
+		// Navigate to student dashboard
+		await goto('/dashboard/student');
 	}
 </script>
 

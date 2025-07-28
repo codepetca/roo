@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { auth } from '$lib/stores';
+	import { user } from '$lib/stores/auth';
+	import AuthGuard from '$lib/components/auth/AuthGuard.svelte';
 	import LogoutButton from '$lib/components/auth/LogoutButton.svelte';
 	import { Badge } from '$lib/components/ui';
 	import type { Snippet } from 'svelte';
@@ -16,14 +17,14 @@
 		} else if (path.includes('/assignments')) {
 			return 'Assignments';
 		} else if (path.includes('/grades')) {
-			return auth.user?.role === 'teacher' ? 'Grades' : 'My Grades';
+			return $user?.role === 'teacher' ? 'Grades' : 'My Grades';
 		}
 		return 'Dashboard';
 	});
 
 	// Navigation items
 	let navItems = $derived(() => {
-		const userRole = auth.user?.role;
+		const userRole = $user?.role;
 
 		if (userRole === 'teacher') {
 			return [
@@ -52,6 +53,7 @@
 	<title>{pageTitle} - Roo</title>
 </svelte:head>
 
+<AuthGuard>
 <div class="min-h-screen bg-gray-50">
 	<!-- Top Navigation Bar -->
 	<header class="border-b border-gray-200 bg-white shadow-sm">
@@ -96,9 +98,9 @@
 				<!-- User Info & Actions -->
 				<div class="flex items-center space-x-4">
 					<div class="hidden items-center space-x-2 text-sm sm:flex">
-						<span class="text-gray-600">{auth.user?.email || 'User'}</span>
-						<Badge variant={auth.user?.role === 'teacher' ? 'info' : 'default'} size="sm">
-							{auth.user?.role || 'Student'}
+						<span class="text-gray-600">{$user?.email || 'User'}</span>
+						<Badge variant={$user?.role === 'teacher' ? 'info' : 'default'} size="sm">
+							{$user?.role || 'Student'}
 						</Badge>
 					</div>
 					<LogoutButton size="sm" />
@@ -124,7 +126,7 @@
 	</header>
 
 	<!-- Page Content with Sidebar for Teachers -->
-	{#if auth.user?.role === 'teacher'}
+	{#if $user?.role === 'teacher'}
 		<div class="flex">
 			<!-- Sidebar placeholder - will be filled by ClassroomSidebar component -->
 			<aside
@@ -146,3 +148,4 @@
 		</main>
 	{/if}
 </div>
+</AuthGuard>
