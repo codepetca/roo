@@ -4,8 +4,9 @@
 	import TeacherGoogleAuth from '$lib/components/auth/TeacherGoogleAuth.svelte';
 	import StudentAuth from '$lib/components/auth/StudentAuth.svelte';
 	import { Alert } from '$lib/components/ui';
-	
-	let authMode: 'select' | 'teacher-login' | 'student-login' | 'teacher-signup' | 'student-signup' = 'select';
+
+	let authMode: 'select' | 'teacher-login' | 'student-login' | 'teacher-signup' | 'student-signup' =
+		'select';
 	let signupSuccess = false;
 	let successMessage = '';
 
@@ -39,16 +40,16 @@
 
 	async function handleTeacherAuthSuccess(event: CustomEvent) {
 		const { user, accessToken, idToken, isSignup } = event.detail;
-		
+
 		try {
 			// Store access token for later use with Google APIs
 			if (accessToken) {
 				sessionStorage.setItem('google_access_token', accessToken);
 			}
-			
+
 			// Import the API client
 			const { api } = await import('$lib/api');
-			
+
 			// Create or update user profile in backend
 			const profile = await api.createOrUpdateProfile({
 				role: 'teacher',
@@ -65,10 +66,9 @@
 
 			// Import goto for navigation
 			const { goto } = await import('$app/navigation');
-			
+
 			// Navigate to teacher dashboard
 			await goto('/dashboard/teacher');
-			
 		} catch (error) {
 			console.error('Profile creation failed:', error);
 			// Show error message but stay on login page
@@ -79,16 +79,16 @@
 
 	async function handleStudentAuthSuccess(event: CustomEvent) {
 		const { user, isNewUser } = event.detail;
-		
+
 		console.log('Student authentication successful', { user, isNewUser });
-		
+
 		// Import auth store to trigger refresh
 		const { authStore } = await import('$lib/stores/auth');
 		await authStore.refresh();
 
 		// Import goto for navigation
 		const { goto } = await import('$app/navigation');
-		
+
 		// Navigate to student dashboard
 		await goto('/dashboard/student');
 	}
@@ -117,21 +117,31 @@
 			<!-- Role Selection -->
 			<div class="space-y-6">
 				<div class="text-center">
-					<h3 class="text-lg font-medium text-gray-900 mb-4">How would you like to sign in?</h3>
+					<h3 class="mb-4 text-lg font-medium text-gray-900">How would you like to sign in?</h3>
 				</div>
-				
+
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<!-- Teacher Option -->
 					<button
 						type="button"
 						onclick={selectTeacher}
-						class="group relative rounded-lg border border-gray-300 bg-white px-6 py-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:border-gray-400 hover:shadow-md transition-all"
+						class="group relative rounded-lg border border-gray-300 bg-white px-6 py-4 shadow-sm transition-all hover:border-gray-400 hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 					>
 						<div class="flex items-center">
 							<div class="flex-shrink-0">
 								<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
-									<svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-1.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443a55.381 55.381 0 015.25 2.882V15" />
+									<svg
+										class="h-6 w-6 text-white"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M4.26 10.147a60.436 60.436 0 00-.491 6.347A48.627 48.627 0 0112 20.904a48.627 48.627 0 018.232-4.41 60.46 60.46 0 00-.491-6.347m-15.482 0a50.57 50.57 0 00-1.658-.813A59.905 59.905 0 0112 3.493a59.902 59.902 0 0110.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.697 50.697 0 0112 13.489a50.702 50.702 0 017.74-3.342M6.75 15a.75.75 0 100-1.5.75.75 0 000 1.5zm0 0v-3.675A55.378 55.378 0 0112 8.443a55.381 55.381 0 015.25 2.882V15"
+										/>
 									</svg>
 								</div>
 							</div>
@@ -146,13 +156,23 @@
 					<button
 						type="button"
 						onclick={selectStudent}
-						class="group relative rounded-lg border border-gray-300 bg-white px-6 py-4 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:border-gray-400 hover:shadow-md transition-all"
+						class="group relative rounded-lg border border-gray-300 bg-white px-6 py-4 shadow-sm transition-all hover:border-gray-400 hover:shadow-md focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none"
 					>
 						<div class="flex items-center">
 							<div class="flex-shrink-0">
 								<div class="flex h-10 w-10 items-center justify-center rounded-lg bg-green-600">
-									<svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+									<svg
+										class="h-6 w-6 text-white"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke-width="1.5"
+										stroke="currentColor"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"
+										/>
 									</svg>
 								</div>
 							</div>
@@ -172,7 +192,7 @@
 					<button
 						type="button"
 						onclick={backToSelect}
-						class="text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:underline"
+						class="text-sm text-gray-500 hover:text-gray-700 focus:underline focus:outline-none"
 					>
 						Back
 					</button>
@@ -181,9 +201,9 @@
 				<div class="text-center">
 					<p class="text-sm text-gray-600">
 						Need an account?
-						<button 
+						<button
 							type="button"
-							class="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline transition-colors"
+							class="font-medium text-blue-600 transition-colors hover:text-blue-500 focus:underline focus:outline-none"
 							onclick={showTeacherSignup}
 						>
 							Create teacher account
@@ -199,7 +219,7 @@
 					<button
 						type="button"
 						onclick={backToSelect}
-						class="text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:underline"
+						class="text-sm text-gray-500 hover:text-gray-700 focus:underline focus:outline-none"
 					>
 						Back
 					</button>
@@ -208,9 +228,9 @@
 				<div class="text-center">
 					<p class="text-sm text-gray-600">
 						Need an account?
-						<button 
+						<button
 							type="button"
-							class="font-medium text-blue-600 hover:text-blue-500 focus:outline-none focus:underline transition-colors"
+							class="font-medium text-blue-600 transition-colors hover:text-blue-500 focus:underline focus:outline-none"
 							onclick={showStudentSignup}
 						>
 							Create student account
@@ -226,7 +246,7 @@
 					<button
 						type="button"
 						onclick={backToSelect}
-						class="text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:underline"
+						class="text-sm text-gray-500 hover:text-gray-700 focus:underline focus:outline-none"
 					>
 						Back
 					</button>
@@ -241,16 +261,12 @@
 					<button
 						type="button"
 						onclick={backToSelect}
-						class="text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus:underline"
+						class="text-sm text-gray-500 hover:text-gray-700 focus:underline focus:outline-none"
 					>
 						Back
 					</button>
 				</div>
-				<SignupForm 
-					on:success={handleSignupSuccess} 
-					on:cancel={backToSelect}
-					userRole="student"
-				/>
+				<SignupForm on:success={handleSignupSuccess} on:cancel={backToSelect} userRole="student" />
 			</div>
 		{/if}
 	</div>

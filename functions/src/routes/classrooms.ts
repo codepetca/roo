@@ -1,14 +1,15 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
-import { db, convertTimestampObject } from "../config/firebase";
+import { db } from "../config/firebase";
 import { classroomDomainSchema, assignmentDomainSchema } from "../schemas/domain";
 import { type ClassroomResponse } from "../schemas/dto";
 import { classroomDomainToDto, assignmentDomainToDto } from "../schemas/transformers";
 import { getUserFromRequest } from "../middleware/validation";
+import { processDocumentTimestamps, serializeDocumentTimestamps } from "../utils/timestamps";
 
 /**
- * Get all classrooms for the authenticated teacher
- * Location: functions/src/routes/classrooms.ts:10
+ * Get all classrooms for the authenticated teacher (OPTIMIZED VERSION)
+ * Uses batch queries to avoid N+1 problem and proper timestamp handling
  */
 export async function getTeacherClassrooms(req: Request, res: Response): Promise<Response> {
   try {
@@ -21,91 +22,143 @@ export async function getTeacherClassrooms(req: Request, res: Response): Promise
       });
     }
 
-    // Query classrooms where teacherId matches
+    // Step 1: Get all classrooms for this teacher
     const classroomsSnapshot = await db
       .collection("classrooms")
       .where("teacherId", "==", user.uid)
       .orderBy("name")
       .get();
 
+    if (classroomsSnapshot.empty) {
+      return res.status(200).json({ 
+        success: true, 
+        data: [] 
+      });
+    }
+
+    const classroomIds = classroomsSnapshot.docs.map(doc => doc.id);
+    
+    // Step 2: Batch query all assignments for all classrooms
+    const assignmentsSnapshot = await db
+      .collection("assignments")
+      .where("classroomId", "in", classroomIds)
+      .get();
+
+    // Group assignments by classroom
+    const assignmentsByClassroom = new Map<string, string[]>();
+    for (const doc of assignmentsSnapshot.docs) {
+      const classroomId = doc.data().classroomId;
+      if (!assignmentsByClassroom.has(classroomId)) {
+        assignmentsByClassroom.set(classroomId, []);
+      }
+      assignmentsByClassroom.get(classroomId)!.push(doc.id);
+    }
+
+    // Step 3: Batch query submission counts
+    const allAssignmentIds = assignmentsSnapshot.docs.map(doc => doc.id);
+    
+    let totalSubmissionsData = new Map<string, number>();
+    let ungradedSubmissionsData = new Map<string, number>();
+
+    if (allAssignmentIds.length > 0) {
+      // Firebase 'in' queries are limited to 10 items, so we need to batch them
+      const batches = [];
+      for (let i = 0; i < allAssignmentIds.length; i += 10) {
+        batches.push(allAssignmentIds.slice(i, i + 10));
+      }
+
+      // Get total submissions
+      for (const batch of batches) {
+        const submissionsSnapshot = await db
+          .collection("submissions")
+          .where("assignmentId", "in", batch)
+          .get();
+
+        for (const doc of submissionsSnapshot.docs) {
+          const assignmentId = doc.data().assignmentId;
+          totalSubmissionsData.set(assignmentId, (totalSubmissionsData.get(assignmentId) || 0) + 1);
+        }
+      }
+
+      // Get ungraded submissions
+      for (const batch of batches) {
+        const ungradedSnapshot = await db
+          .collection("submissions")
+          .where("assignmentId", "in", batch)
+          .where("status", "==", "pending")
+          .get();
+
+        for (const doc of ungradedSnapshot.docs) {
+          const assignmentId = doc.data().assignmentId;
+          ungradedSubmissionsData.set(assignmentId, (ungradedSubmissionsData.get(assignmentId) || 0) + 1);
+        }
+      }
+    }
+
+    // Step 4: Process classrooms with aggregated data
     const classrooms: ClassroomResponse[] = [];
+    
     for (const doc of classroomsSnapshot.docs) {
       try {
-        const data = doc.data();
-        logger.info("Raw classroom data:", { classroomId: doc.id, data });
+        const rawData = { ...doc.data(), id: doc.id };
         
-        // Convert timestamp objects to Timestamp instances if needed
-        const processedData: any = { ...data, id: doc.id };
-        if (data.createdAt) {
-          processedData.createdAt = convertTimestampObject(data.createdAt) || data.createdAt;
-        }
-        if (data.updatedAt) {
-          processedData.updatedAt = convertTimestampObject(data.updatedAt) || data.updatedAt;
-        }
+        // Process timestamps using centralized function
+        const processedData = processDocumentTimestamps(rawData);
         
+        // Validate with domain schema
         const classroom = classroomDomainSchema.parse(processedData);
         
-        // Get assignment count for this classroom
-        const assignmentsSnapshot = await db
-          .collection("assignments")
-          .where("classroomId", "==", doc.id)
-          .get();
+        // Calculate aggregated metrics
+        const assignmentIds = assignmentsByClassroom.get(doc.id) || [];
+        const assignmentCount = assignmentIds.length;
         
-        const assignmentCount = assignmentsSnapshot.size;
-        
-        // Get submission counts
         let totalSubmissions = 0;
         let ungradedSubmissions = 0;
         
-        for (const assignmentDoc of assignmentsSnapshot.docs) {
-          const submissionsSnapshot = await db
-            .collection("submissions")
-            .where("assignmentId", "==", assignmentDoc.id)
-            .get();
-          
-          totalSubmissions += submissionsSnapshot.size;
-          
-          const ungradedSnapshot = await db
-            .collection("submissions")
-            .where("assignmentId", "==", assignmentDoc.id)
-            .where("status", "==", "pending")
-            .get();
-          
-          ungradedSubmissions += ungradedSnapshot.size;
+        for (const assignmentId of assignmentIds) {
+          totalSubmissions += totalSubmissionsData.get(assignmentId) || 0;
+          ungradedSubmissions += ungradedSubmissionsData.get(assignmentId) || 0;
         }
         
-        // Create response with additional metadata
+        // Convert to DTO and serialize timestamps for API response
+        const classroomDto = classroomDomainToDto(classroom);
+        const serializedClassroom = serializeDocumentTimestamps(classroomDto);
+        
         const classroomResponse = {
-          ...classroomDomainToDto(classroom),
+          ...serializedClassroom,
           assignmentCount,
           totalSubmissions,
           ungradedSubmissions
         };
         
         classrooms.push(classroomResponse);
+        
       } catch (error) {
-        logger.error("Error parsing classroom:", { 
+        logger.error("Error processing classroom:", { 
           classroomId: doc.id, 
           error: error instanceof Error ? error.message : error,
           data: doc.data()
         });
+        // Continue processing other classrooms instead of failing completely
       }
     }
 
-    logger.info("Retrieved teacher classrooms", { 
+    logger.info("Retrieved teacher classrooms (optimized)", { 
       teacherId: user.uid, 
-      count: classrooms.length 
+      count: classrooms.length
     });
 
     return res.status(200).json({ 
       success: true, 
       data: classrooms 
     });
+
   } catch (error) {
-    logger.error("Error fetching teacher classrooms:", error);
+    logger.error("Error fetching teacher classrooms (optimized):", error);
     return res.status(500).json({ 
       success: false, 
-      error: "Failed to fetch classrooms" 
+      error: "Failed to fetch classrooms",
+      details: error instanceof Error ? error.message : "Unknown error"
     });
   }
 }

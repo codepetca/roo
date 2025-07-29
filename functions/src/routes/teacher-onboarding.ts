@@ -7,7 +7,7 @@ import { Request, Response } from "express";
 import { logger } from "firebase-functions";
 import { z } from "zod";
 import { handleRouteError, sendApiResponse, validateData, getUserFromRequest } from "../middleware/validation";
-import { createSheetTemplateService, createOAuthSheetTemplateService } from "../services/sheet-template";
+import { createOAuthSheetTemplateService } from "../services/sheet-template";
 import { getTeacherSheetsConfig, updateTeacherConfiguration } from "../config/teachers";
 import { db } from "../config/firebase";
 
@@ -24,99 +24,22 @@ const createTeacherSheetOAuthSchema = z.object({
 });
 
 /**
- * Create a Google Sheet for a teacher (simplified - no OAuth required)
+ * Create a Google Sheet for a teacher (legacy endpoint - redirects to OAuth)
  * Location: functions/src/routes/teacher-onboarding.ts:18
  * Route: POST /teacher/create-sheet
  */
 export async function createTeacherSheet(req: Request, res: Response) {
   try {
-    const validatedData = validateData(createTeacherSheetSchema, req.body);
-    logger.info("Creating sheet for board account", { boardAccountEmail: validatedData.boardAccountEmail });
-
-    // Check if board account already has a sheet
-    const existingConfig = getTeacherSheetsConfig();
-    if (existingConfig[validatedData.boardAccountEmail]) {
-      return sendApiResponse(
-        res,
-        { 
-          alreadyConfigured: true,
-          spreadsheetId: existingConfig[validatedData.boardAccountEmail],
-          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${existingConfig[validatedData.boardAccountEmail]}/edit`
-        },
-        true,
-        "Board account already has a configured Google Sheet"
-      );
-    }
-
-    // Create sheet template service using our service account
-    let sheetTemplateService;
-    try {
-      const googleCredentials = req.app.locals.googleCredentials;
-      sheetTemplateService = await createSheetTemplateService(googleCredentials);
-    } catch (error) {
-      logger.error("Failed to initialize Google Sheets service", error);
-      return sendApiResponse(
-        res,
-        { error: "Google Sheets service is not available. Please contact administrator." },
-        false,
-        "Google Sheets service initialization failed"
-      );
-    }
-
-    // Generate sheet title
-    const sheetTitle = validatedData.sheetTitle || `Roo Auto-Grading - ${validatedData.boardAccountEmail.split("@")[0]}`;
-
-    // Create the sheet in our account and share with board account
-    const sheetResult = await sheetTemplateService.createTeacherSheet({
-      title: sheetTitle,
-      boardAccountEmail: validatedData.boardAccountEmail
-    });
-
-    if (!sheetResult.success) {
-      return sendApiResponse(
-        res,
-        { error: sheetResult.error },
-        false,
-        "Failed to create Google Sheet"
-      );
-    }
-
-    // Update configuration (use board account as key)
-    await updateTeacherConfiguration(validatedData.boardAccountEmail, sheetResult.spreadsheetId);
-
-    // Generate AppScript code for the board account
-    const appScriptCode = sheetTemplateService.generateAppScriptCode(
-      sheetResult.spreadsheetId,
-      validatedData.boardAccountEmail
-    );
-
     sendApiResponse(
       res,
-      {
-        spreadsheetId: sheetResult.spreadsheetId,
-        spreadsheetUrl: sheetResult.spreadsheetUrl,
-        sheetTitle: sheetResult.title,
-        appScriptCode,
-        nextSteps: [
-          "Google Sheet created in our system",
-          `Sheet shared with board account: ${validatedData.boardAccountEmail}`,
-          "Copy the AppScript code below",
-          "Open Google Apps Script in your board account",
-          "Create a new project and paste the code",
-          "Run 'setupTriggers' function once",
-          "Run 'processAllSubmissions' to test",
-          "Board data will sync automatically"
-        ]
+      { 
+        error: "This endpoint has been deprecated. Please use OAuth flow instead.",
+        redirectTo: "/teacher/create-sheet-oauth",
+        message: "Service account authentication is no longer supported. Please use the OAuth flow."
       },
-      true,
-      "Google Sheet created successfully!"
+      false,
+      "Deprecated endpoint - use OAuth flow instead"
     );
-
-    logger.info("Sheet created successfully", {
-      boardAccountEmail: validatedData.boardAccountEmail,
-      spreadsheetId: sheetResult.spreadsheetId
-    });
-
   } catch (error) {
     handleRouteError(error, req, res);
   }
@@ -221,12 +144,14 @@ export async function createTeacherSheetOAuth(req: Request, res: Response) {
         nextSteps: [
           "Google Sheet created in your personal Google Drive",
           `Sheet shared with board account: ${validatedData.boardAccountEmail}`,
-          "Copy the AppScript code below",
-          "Open Google Apps Script in your board account",
-          "Create a new project and paste the code",
-          "Run 'setupTriggers' function once",
-          "Run 'processAllSubmissions' to test",
-          "Board data will sync automatically"
+          "Copy the complete AppScript code below (scroll down to see all)",
+          "Open Google Apps Script (script.google.com) in your board account",
+          "Create a new project and name it 'roo'",
+          "Replace all default code with the code below",
+          "Save the project (Ctrl+S or Cmd+S)",
+          "Run 'setupTriggers' function once to enable daily sync",
+          "Run 'processAllSubmissions' to test immediately",
+          "Board data will sync automatically daily at 10 PM"
         ]
       },
       true,
@@ -347,9 +272,34 @@ export async function generateAppScriptForTeacher(req: Request, res: Response) {
       );
     }
 
-    // Create sheet template service for code generation
-    const sheetTemplateService = await createSheetTemplateService();
-    const appScriptCode = sheetTemplateService.generateAppScriptCode(spreadsheetId, teacherEmail);
+    // Get authenticated user from token
+    const user = await getUserFromRequest(req);
+    if (!user || user.role !== "teacher") {
+      return sendApiResponse(
+        res,
+        { error: "Only authenticated teachers can generate AppScript code" },
+        false,
+        "Unauthorized - teacher authentication required"
+      );
+    }
+
+    // Get teacher's stored access token
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    const userData = userDoc.data();
+    const googleAccessToken = userData?.teacherData?.googleAccessToken;
+
+    if (!googleAccessToken) {
+      return sendApiResponse(
+        res,
+        { error: "No Google access token found. Please re-authenticate with Google." },
+        false,
+        "Google access token required"
+      );
+    }
+
+    // Create OAuth sheet service for code generation
+    const oauthSheetService = createOAuthSheetTemplateService(googleAccessToken);
+    const appScriptCode = oauthSheetService.generateAppScriptCode(spreadsheetId, teacherEmail);
 
     sendApiResponse(
       res,

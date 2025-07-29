@@ -275,17 +275,15 @@ export async function createOrUpdateProfile(req: Request, res: Response): Promis
       profileExists
     });
 
-    // Return success response
+    // Return success response in format expected by frontend
     res.status(profileExists ? 200 : 201).json({
       success: true,
       message: `User profile ${profileExists ? 'updated' : 'created'} successfully`,
-      user: {
-        uid: decodedToken.uid,
-        email: email,
-        displayName: profileData.displayName,
-        role: role
-      },
-      isNewProfile: !profileExists
+      uid: decodedToken.uid,
+      email: email,
+      displayName: profileData.displayName,
+      role: role,
+      created: !profileExists
     });
 
   } catch (error: any) {
@@ -425,6 +423,8 @@ export async function sendPasscode(req: Request, res: Response): Promise<void> {
     
     res.status(200).json({
       success: true,
+      email: email,
+      sent: true,
       message: "Passcode sent to your email address",
       ...(isDevelopment && { passcode }) // Only include in development
     });
@@ -591,14 +591,16 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
     res.status(200).json({
       success: true,
       message: "Authentication successful",
-      customToken,
-      user: {
+      email: email,
+      valid: true,
+      firebaseToken: customToken,
+      isNewUser: !profileDoc.exists,
+      userProfile: {
         uid: userRecord.uid,
         email: email,
         displayName: profileData.displayName,
         role: 'student'
-      },
-      isNewUser: !profileDoc.exists
+      }
     });
 
   } catch (error: any) {

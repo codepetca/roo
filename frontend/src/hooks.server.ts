@@ -38,7 +38,11 @@ try {
 /**
  * Determine user role - now checks Firestore user profile first
  */
-async function getUserRole(decodedToken: { uid: string; role?: string; email?: string }): Promise<'teacher' | 'student'> {
+async function getUserRole(decodedToken: {
+	uid: string;
+	role?: string;
+	email?: string;
+}): Promise<'teacher' | 'student'> {
 	try {
 		// First check custom claims (fastest)
 		if (decodedToken.role === 'teacher' || decodedToken.role === 'student') {
@@ -48,7 +52,7 @@ async function getUserRole(decodedToken: { uid: string; role?: string; email?: s
 		// Get Firestore instance (import here to avoid circular dependencies)
 		const { initializeApp, getApps, cert } = await import('firebase-admin/app');
 		const { getFirestore } = await import('firebase-admin/firestore');
-		
+
 		let app;
 		if (getApps().length === 0) {
 			if (PUBLIC_USE_EMULATORS === 'true') {
@@ -64,19 +68,19 @@ async function getUserRole(decodedToken: { uid: string; role?: string; email?: s
 		} else {
 			app = getApps()[0];
 		}
-		
+
 		const db = getFirestore(app);
-		
+
 		// Try to get user profile from Firestore
 		const userDoc = await db.collection('users').doc(decodedToken.uid).get();
-		
+
 		if (userDoc.exists) {
 			const userData = userDoc.data();
 			if (userData?.role === 'teacher' || userData?.role === 'student') {
 				return userData.role;
 			}
 		}
-		
+
 		// User profile doesn't exist - they need to complete onboarding
 		console.error('User profile not found for UID:', decodedToken.uid);
 		throw new Error('User profile required - please complete onboarding');
@@ -98,7 +102,7 @@ async function verifyToken(
 			console.log('Admin auth not available - skipping token verification in production frontend');
 			return null;
 		}
-		
+
 		const decodedToken = await adminAuth.verifyIdToken(token);
 		const role = await getUserRole(decodedToken);
 		return {
@@ -125,6 +129,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Set security headers that allow OAuth popups to work
 	response.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
 	response.headers.set('Cross-Origin-Embedder-Policy', 'unsafe-none');
-	
+
 	return response;
 };

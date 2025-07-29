@@ -38,9 +38,10 @@
 			if (useOAuth) {
 				// Get the Google access token from sessionStorage (stored during login)
 				const googleAccessToken = sessionStorage.getItem('google_access_token');
-				
+
 				if (!googleAccessToken) {
-					error = 'No Google access token found. Please sign out and sign in again to grant Google Drive access.';
+					error =
+						'No Google access token found. Please sign out and sign in again to grant Google Drive access.';
 					return;
 				}
 
@@ -63,8 +64,8 @@
 			if (result.alreadyConfigured) {
 				success = 'Board account already has a Google Sheet configured!';
 			} else {
-				success = useOAuth 
-					? 'Google Sheet created successfully in your personal Drive!' 
+				success = useOAuth
+					? 'Google Sheet created successfully in your personal Drive!'
 					: 'Google Sheet created successfully!';
 			}
 		} catch (err: unknown) {
@@ -296,7 +297,9 @@
 							<h4 class="text-sm font-medium text-gray-900">Sheet Details:</h4>
 							<p class="text-sm text-gray-600">Title: {onboardingResult.sheetTitle}</p>
 							{#if onboardingResult.method === 'oauth' && onboardingResult.teacherEmail}
-								<p class="text-sm text-gray-600">Owner: {onboardingResult.teacherEmail} (your personal Drive)</p>
+								<p class="text-sm text-gray-600">
+									Owner: {onboardingResult.teacherEmail} (your personal Drive)
+								</p>
 							{/if}
 							<div class="mt-2 flex items-center space-x-2">
 								<a
