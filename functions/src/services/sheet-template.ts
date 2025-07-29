@@ -54,14 +54,15 @@ export class OAuthSheetTemplateService {
       // Step 1: Create the spreadsheet in teacher's personal Drive
       const spreadsheet = await this.createSpreadsheet(template.title);
       
-      // Step 2: Set up the sheet structure
-      await this.setupSheetStructure(spreadsheet.spreadsheetId!);
+      // Step 2: Set up the sheet structure and get sheet IDs
+      const sheet1Id = spreadsheet.sheets?.[0]?.properties?.sheetId ?? 0;
+      const sheetIds = await this.setupSheetStructure(spreadsheet.spreadsheetId!, sheet1Id);
       
       // Step 3: Share with the board account
       await this.shareWithBoardAccount(spreadsheet.spreadsheetId!, template.boardAccountEmail);
       
-      // Step 4: Set up data validation and formatting
-      await this.applyFormattingAndValidation(spreadsheet.spreadsheetId!);
+      // Step 4: Set up data validation and formatting using actual sheet IDs
+      await this.applyFormattingAndValidation(spreadsheet.spreadsheetId!, sheetIds);
 
       const result: SheetCreationResult = {
         spreadsheetId: spreadsheet.spreadsheetId!,
@@ -109,13 +110,13 @@ export class OAuthSheetTemplateService {
 
     const response = await this.sheets.spreadsheets.create({
       resource: requestBody,
-      fields: "spreadsheetId,spreadsheetUrl,properties.title"
+      fields: "spreadsheetId,spreadsheetUrl,properties.title,sheets.properties.sheetId"
     });
 
     return response.data;
   }
 
-  private async setupSheetStructure(spreadsheetId: string) {
+  private async setupSheetStructure(spreadsheetId: string, sheet1Id: number): Promise<{ sheet1Id: number; submissionsId: number; answerKeysId: number }> {
     // Create additional sheets
     const requests = [
       // Create Submissions sheet
@@ -146,13 +147,20 @@ export class OAuthSheetTemplateService {
       }
     ];
 
-    await this.sheets.spreadsheets.batchUpdate({
+    const response = await this.sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       resource: { requests }
     });
 
+    // Extract the actual sheet IDs from the response
+    // sheet1Id is passed as parameter from the createSpreadsheet response
+    const submissionsId = response.data.replies[0].addSheet.properties.sheetId;
+    const answerKeysId = response.data.replies[1].addSheet.properties.sheetId;
+
     // Add headers to each sheet
     await this.addSheetHeaders(spreadsheetId);
+
+    return { sheet1Id, submissionsId, answerKeysId };
   }
 
   private async addSheetHeaders(spreadsheetId: string) {
@@ -223,13 +231,13 @@ export class OAuthSheetTemplateService {
     });
   }
 
-  private async applyFormattingAndValidation(spreadsheetId: string) {
+  private async applyFormattingAndValidation(spreadsheetId: string, sheetIds: { sheet1Id: number; submissionsId: number; answerKeysId: number }) {
     const requests = [
       // Format headers with bold and background color
       {
         repeatCell: {
           range: {
-            sheetId: 0, // Sheet1
+            sheetId: sheetIds.sheet1Id, // Sheet1
             startRowIndex: 0,
             endRowIndex: 1
           },
@@ -249,7 +257,7 @@ export class OAuthSheetTemplateService {
       {
         repeatCell: {
           range: {
-            sheetId: 1, // Submissions sheet (second sheet created)
+            sheetId: sheetIds.submissionsId, // Submissions sheet
             startRowIndex: 0,
             endRowIndex: 1
           },
@@ -269,7 +277,7 @@ export class OAuthSheetTemplateService {
       {
         repeatCell: {
           range: {
-            sheetId: 2, // Answer Keys sheet (third sheet created)
+            sheetId: sheetIds.answerKeysId, // Answer Keys sheet
             startRowIndex: 0,
             endRowIndex: 1
           },
@@ -298,7 +306,7 @@ export class OAuthSheetTemplateService {
       await this.drive.permissions.create({
         fileId: spreadsheetId,
         resource: {
-          role: "editor", // Full edit access for board account
+          role: "writer", // Full edit access for board account
           type: "user",
           emailAddress: boardAccountEmail
         },
@@ -604,7 +612,7 @@ export class SheetTemplateService {
       {
         repeatCell: {
           range: {
-            sheetId: 1, // Submissions sheet (second sheet created)
+            sheetId: 1, // Submissions sheet
             startRowIndex: 0,
             endRowIndex: 1
           },
@@ -624,7 +632,7 @@ export class SheetTemplateService {
       {
         repeatCell: {
           range: {
-            sheetId: 2, // Answer Keys sheet (third sheet created)
+            sheetId: 2, // Answer Keys sheet
             startRowIndex: 0,
             endRowIndex: 1
           },
@@ -656,7 +664,7 @@ export class SheetTemplateService {
       await this.drive.permissions.create({
         fileId: spreadsheetId,
         resource: {
-          role: "editor", // Full edit access for board account
+          role: "writer", // Full edit access for board account
           type: "user",
           emailAddress: boardAccountEmail
         },
