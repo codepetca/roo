@@ -8,19 +8,19 @@ import { logger } from "firebase-functions";
 import { z } from "zod";
 import { handleRouteError, sendApiResponse, validateData, getUserFromRequest } from "../middleware/validation";
 import { createOAuthSheetTemplateService } from "../services/sheet-template";
-import { getTeacherSheetsConfig, updateTeacherConfiguration } from "../config/teachers";
+import { getTeacherSheetsConfig, updateTeacherConfiguration, verifyTeacherSheetAccess } from "../config/teachers";
 import { db } from "../config/firebase";
 
 // Validation schemas
 const createTeacherSheetSchema = z.object({
   boardAccountEmail: z.string().email(),
-  sheetTitle: z.string().min(1).optional()
+  sheetTitle: z.string().min(1).optional(),
 });
 
 const createTeacherSheetOAuthSchema = z.object({
   boardAccountEmail: z.string().email(),
   sheetTitle: z.string().min(1).optional(),
-  googleAccessToken: z.string().min(1)
+  googleAccessToken: z.string().min(1),
 });
 
 /**
@@ -32,10 +32,10 @@ export async function createTeacherSheet(req: Request, res: Response) {
   try {
     sendApiResponse(
       res,
-      { 
+      {
         error: "This endpoint has been deprecated. Please use OAuth flow instead.",
         redirectTo: "/teacher/create-sheet-oauth",
-        message: "Service account authentication is no longer supported. Please use the OAuth flow."
+        message: "Service account authentication is no longer supported. Please use the OAuth flow.",
       },
       false,
       "Deprecated endpoint - use OAuth flow instead"
@@ -67,14 +67,14 @@ export async function createTeacherSheetOAuth(req: Request, res: Response) {
     }
 
     // Check if board account already has a sheet
-    const existingConfig = getTeacherSheetsConfig();
+    const existingConfig = await getTeacherSheetsConfig();
     if (existingConfig[validatedData.boardAccountEmail]) {
       return sendApiResponse(
         res,
-        { 
+        {
           alreadyConfigured: true,
           spreadsheetId: existingConfig[validatedData.boardAccountEmail],
-          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${existingConfig[validatedData.boardAccountEmail]}/edit`
+          spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${existingConfig[validatedData.boardAccountEmail]}/edit`,
         },
         true,
         "Board account already has a configured Google Sheet"
@@ -96,25 +96,21 @@ export async function createTeacherSheetOAuth(req: Request, res: Response) {
     }
 
     // Generate sheet title
-    const sheetTitle = validatedData.sheetTitle || `Roo Auto-Grading - ${validatedData.boardAccountEmail.split("@")[0]}`;
+    const sheetTitle =
+      validatedData.sheetTitle || `Roo Auto-Grading - ${validatedData.boardAccountEmail.split("@")[0]}`;
 
     // Create the sheet in teacher's Drive and share with board account
     const sheetResult = await oauthSheetService.createTeacherSheet({
       title: sheetTitle,
-      boardAccountEmail: validatedData.boardAccountEmail
+      boardAccountEmail: validatedData.boardAccountEmail,
     });
 
     if (!sheetResult.success) {
-      return sendApiResponse(
-        res,
-        { error: sheetResult.error },
-        false,
-        "Failed to create Google Sheet using OAuth"
-      );
+      return sendApiResponse(res, { error: sheetResult.error }, false, "Failed to create Google Sheet using OAuth");
     }
 
-    // Update configuration (use board account as key)
-    await updateTeacherConfiguration(validatedData.boardAccountEmail, sheetResult.spreadsheetId);
+    // Update configuration (save to Firestore)
+    await updateTeacherConfiguration(user.uid, validatedData.boardAccountEmail, sheetResult.spreadsheetId, "oauth");
 
     // Store the teacher's Google access token in their profile for future use
     await db.collection("users").doc(user.uid).update({
@@ -123,7 +119,7 @@ export async function createTeacherSheetOAuth(req: Request, res: Response) {
       "teacherData.sheetId": sheetResult.spreadsheetId,
       "teacherData.boardAccountEmail": validatedData.boardAccountEmail,
       "teacherData.lastSync": new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
 
     // Generate AppScript code for the board account
@@ -151,8 +147,8 @@ export async function createTeacherSheetOAuth(req: Request, res: Response) {
           "Save the project (Ctrl+S or Cmd+S)",
           "Run 'setupTriggers' function once to enable daily sync",
           "Run 'processAllSubmissions' to test immediately",
-          "Board data will sync automatically daily at 10 PM"
-        ]
+          "Board data will sync automatically daily at 10 PM",
+        ],
       },
       true,
       "Google Sheet created successfully using OAuth!"
@@ -162,9 +158,8 @@ export async function createTeacherSheetOAuth(req: Request, res: Response) {
       teacherUid: user.uid,
       teacherEmail: user.email,
       boardAccountEmail: validatedData.boardAccountEmail,
-      spreadsheetId: sheetResult.spreadsheetId
+      spreadsheetId: sheetResult.spreadsheetId,
     });
-
   } catch (error) {
     handleRouteError(error, req, res);
   }
@@ -178,14 +173,9 @@ export async function createTeacherSheetOAuth(req: Request, res: Response) {
 export async function getTeacherOnboardingStatus(req: Request, res: Response) {
   try {
     const teacherEmail = req.params.email;
-    
+
     if (!teacherEmail) {
-      return sendApiResponse(
-        res,
-        { error: "Teacher email is required" },
-        false,
-        "Missing teacher email parameter"
-      );
+      return sendApiResponse(res, { error: "Teacher email is required" }, false, "Missing teacher email parameter");
     }
 
     // Check current configuration
@@ -198,14 +188,13 @@ export async function getTeacherOnboardingStatus(req: Request, res: Response) {
         teacherEmail,
         isConfigured,
         spreadsheetId: isConfigured ? existingConfig[teacherEmail] : null,
-        nextSteps: isConfigured 
+        nextSteps: isConfigured
           ? ["Teacher is fully configured and ready to sync"]
-          : ["Create Google Sheet for this teacher", "Configure AppScript in board account"]
+          : ["Create Google Sheet for this teacher", "Configure AppScript in board account"],
       },
       true,
       isConfigured ? "Teacher is configured" : "Teacher needs sheet creation"
     );
-
   } catch (error) {
     handleRouteError(error, req, res);
   }
@@ -219,23 +208,22 @@ export async function getTeacherOnboardingStatus(req: Request, res: Response) {
 export async function listConfiguredTeachers(req: Request, res: Response) {
   try {
     const teacherConfig = getTeacherSheetsConfig();
-    
+
     const teachers = Object.entries(teacherConfig).map(([email, spreadsheetId]) => ({
       email,
       spreadsheetId,
-      isConfigured: true
+      isConfigured: true,
     }));
 
     sendApiResponse(
       res,
       {
         teachers,
-        count: teachers.length
+        count: teachers.length,
       },
       true,
       `Found ${teachers.length} configured teachers`
     );
-
   } catch (error) {
     handleRouteError(error, req, res);
   }
@@ -249,14 +237,9 @@ export async function listConfiguredTeachers(req: Request, res: Response) {
 export async function generateAppScriptForTeacher(req: Request, res: Response) {
   try {
     const teacherEmail = req.params.email;
-    
+
     if (!teacherEmail) {
-      return sendApiResponse(
-        res,
-        { error: "Teacher email is required" },
-        false,
-        "Missing teacher email parameter"
-      );
+      return sendApiResponse(res, { error: "Teacher email is required" }, false, "Missing teacher email parameter");
     }
 
     // Get teacher's spreadsheet ID
@@ -311,13 +294,12 @@ export async function generateAppScriptForTeacher(req: Request, res: Response) {
           "Copy this code to your board account's Google Apps Script",
           "Create a new project if needed",
           "Run 'setupTriggers' function once to enable daily sync",
-          "Run 'processAllSubmissions' to test immediately"
-        ]
+          "Run 'processAllSubmissions' to test immediately",
+        ],
       },
       true,
       "AppScript code generated successfully"
     );
-
   } catch (error) {
     handleRouteError(error, req, res);
   }
@@ -337,34 +319,48 @@ export async function checkTeacherOnboardingStatus(req: Request, res: Response):
     // Get authenticated user
     const user = await getUserFromRequest(req);
     if (!user || user.role !== "teacher") {
-      return res.status(403).json({ 
-        success: false, 
-        error: "Only teachers can check onboarding status" 
+      return res.status(403).json({
+        success: false,
+        error: "Only teachers can check onboarding status",
       });
     }
 
     // Check if teacher has any classrooms
-    const classroomsSnapshot = await db
-      .collection("classrooms")
-      .where("teacherId", "==", user.uid)
-      .limit(1)
-      .get();
-    
+    const classroomsSnapshot = await db.collection("classrooms").where("teacherId", "==", user.uid).limit(1).get();
+
     const hasClassrooms = !classroomsSnapshot.empty;
 
-    // Check if teacher has sheet configured
-    const existingConfig = getTeacherSheetsConfig();
+    // Check if teacher has sheet configured (both env config and Firestore)
+    const existingConfig = await getTeacherSheetsConfig();
     const boardAccountEmail = user.email || "";
     const hasSheetConfigured = !!existingConfig[boardAccountEmail];
 
+    // Verify that the sheet actually exists and is accessible
+    let sheetVerification = null;
+    if (hasSheetConfigured) {
+      try {
+        sheetVerification = await verifyTeacherSheetAccess(boardAccountEmail);
+      } catch (error) {
+        logger.warn("Sheet verification failed during onboarding status check", {
+          teacherId: user.uid,
+          boardAccountEmail,
+          error,
+        });
+      }
+    }
+
     // Determine if onboarding is needed
-    const needsOnboarding = !hasClassrooms || !hasSheetConfigured;
+    // Sheet must be configured AND accessible for teacher to be fully onboarded
+    const sheetAccessible = sheetVerification?.exists && sheetVerification?.accessible;
+    const needsOnboarding = !hasClassrooms || !hasSheetConfigured || !sheetAccessible;
 
     logger.info("Teacher onboarding status checked", {
       teacherId: user.uid,
       hasClassrooms,
       hasSheetConfigured,
-      needsOnboarding
+      sheetAccessible,
+      needsOnboarding,
+      sheetVerificationError: sheetVerification?.error,
     });
 
     sendApiResponse(
@@ -372,8 +368,10 @@ export async function checkTeacherOnboardingStatus(req: Request, res: Response):
       {
         hasClassrooms,
         hasSheetConfigured,
+        sheetAccessible: !!sheetAccessible,
         needsOnboarding,
-        boardAccountEmail: hasSheetConfigured ? boardAccountEmail : undefined
+        boardAccountEmail: hasSheetConfigured ? boardAccountEmail : undefined,
+        sheetVerification: sheetVerification || undefined,
       },
       true,
       "Onboarding status retrieved"

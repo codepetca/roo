@@ -2,7 +2,7 @@
  * Shared type definitions for Roo application
  * These types are now generated from Zod schemas for consistency
  * They represent JSON-serializable versions of Firebase documents
- * 
+ *
  * DEPRECATED: This file is being migrated to use Zod-inferred types.
  * New code should import types from the respective schema files instead.
  */
@@ -43,8 +43,28 @@ export type GradedBy = "ai" | "manual";
 export type GradingStrictness = "strict" | "standard" | "generous";
 
 // Utility functions
-export function serializedTimestampToISO(timestamp: { _seconds: number; _nanoseconds: number }): string {
+export function serializedTimestampToISO(timestamp: {
+  _seconds: number;
+  _nanoseconds: number;
+}): string {
   return new Date(timestamp._seconds * 1000).toISOString();
+}
+
+// Teacher configuration types
+export interface TeacherConfiguration {
+  teacherId: string;
+  email: string;
+  spreadsheetId: string;
+  method: "oauth" | "service-account";
+  createdAt: SerializedTimestamp;
+  lastVerified?: SerializedTimestamp;
+}
+
+export interface SheetVerificationResult {
+  exists: boolean;
+  accessible: boolean;
+  error?: string;
+  verifiedAt: SerializedTimestamp;
 }
 
 // Legacy interfaces for backward compatibility - use schema types instead
