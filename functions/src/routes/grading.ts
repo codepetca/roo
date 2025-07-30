@@ -71,7 +71,7 @@ export async function gradeQuizTest(req: Request, res: Response) {
     const { getDefaultSpreadsheetId } = await import("../config/teachers");
     
     // Get the default spreadsheet ID (for now use the first configured teacher)
-    const spreadsheetId = getDefaultSpreadsheetId();
+    const spreadsheetId = await getDefaultSpreadsheetId();
     if (!spreadsheetId) {
       return res.status(500).json({
         success: false,
@@ -139,7 +139,7 @@ export async function gradeQuiz(req: Request, res: Response) {
     const { getDefaultSpreadsheetId } = await import("../config/teachers");
     
     // Get the default spreadsheet ID
-    const spreadsheetId = getDefaultSpreadsheetId();
+    const spreadsheetId = await getDefaultSpreadsheetId();
     if (!spreadsheetId) {
       return res.status(500).json({
         success: false,

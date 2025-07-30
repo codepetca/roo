@@ -309,4 +309,84 @@ export abstract class BaseSheetService {
 
     return { submissionsId, answerKeysId };
   }
+
+  /**
+   * Delete existing sheets with the name "_roo_data" from the teacher's Drive
+   */
+  protected async deleteExistingRooSheets() {
+    try {
+      // Search for files with the exact name "_roo_data" in the user's Drive
+      const response = await this.drive.files.list({
+        q: "name = '_roo_data' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
+        fields: "files(id, name)",
+        spaces: "drive"
+      });
+
+      if (response.data.files && response.data.files.length > 0) {
+        logger.info(`Found ${response.data.files.length} existing _roo_data sheets to delete`);
+        
+        // Delete each existing sheet
+        for (const file of response.data.files) {
+          try {
+            await this.drive.files.delete({ fileId: file.id });
+            logger.info(`Deleted existing _roo_data sheet: ${file.id}`);
+          } catch (error) {
+            logger.error(`Failed to delete sheet ${file.id}:`, error);
+          }
+        }
+      } else {
+        logger.info("No existing _roo_data sheets found");
+      }
+    } catch (error) {
+      logger.error("Error searching for existing _roo_data sheets:", error);
+      // Continue with sheet creation even if search fails
+    }
+  }
+
+  /**
+   * Check if a specific sheet exists in the teacher's Drive by ID
+   */
+  protected async verifySheetExists(spreadsheetId: string): Promise<boolean> {
+    try {
+      const response = await this.drive.files.get({
+        fileId: spreadsheetId,
+        fields: "id, name, mimeType, trashed"
+      });
+
+      // Check if the file exists, is a spreadsheet, and is not trashed
+      return response.data && 
+             response.data.mimeType === 'application/vnd.google-apps.spreadsheet' &&
+             !response.data.trashed;
+    } catch (error: any) {
+      if (error.code === 404) {
+        logger.info(`Sheet ${spreadsheetId} not found`);
+        return false;
+      }
+      logger.error(`Error verifying sheet ${spreadsheetId}:`, error);
+      return false;
+    }
+  }
+
+  /**
+   * Get the sheet ID of the _roo_data sheet in the teacher's Drive
+   */
+  protected async getRooDataSheetId(): Promise<string | null> {
+    try {
+      const response = await this.drive.files.list({
+        q: "name = '_roo_data' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
+        fields: "files(id)",
+        spaces: "drive",
+        orderBy: "modifiedTime desc",
+        pageSize: 1
+      });
+
+      if (response.data.files && response.data.files.length > 0) {
+        return response.data.files[0].id;
+      }
+      return null;
+    } catch (error) {
+      logger.error("Error getting _roo_data sheet ID:", error);
+      return null;
+    }
+  }
 }

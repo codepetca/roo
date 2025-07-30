@@ -222,16 +222,16 @@ export async function verifyTeacherSheetAccess(teacherEmail: string): Promise<Sh
  */
 export async function updateTeacherConfiguration(
   teacherId: string,
-  teacherEmail: string,
+  boardEmail: string,
   spreadsheetId: string,
   method: "oauth" | "service-account" = "oauth"
 ): Promise<void> {
-  logger.info("Updating teacher configuration", { teacherId, teacherEmail, spreadsheetId, method });
+  logger.info("Updating teacher configuration", { teacherId, boardEmail, spreadsheetId, method });
 
   try {
     const config: Omit<TeacherConfiguration, "lastVerified"> = {
       teacherId,
-      email: teacherEmail,
+      email: boardEmail,
       spreadsheetId,
       method,
       createdAt: serializeTimestamp(getCurrentTimestamp()) as SerializedTimestamp,
@@ -240,11 +240,11 @@ export async function updateTeacherConfiguration(
     // Save to Firestore
     await db.collection("teacherConfigurations").doc(teacherId).set(config);
 
-    logger.info("Teacher configuration saved to Firestore", { teacherId, teacherEmail, spreadsheetId });
+    logger.info("Teacher configuration saved to Firestore", { teacherId, boardEmail, spreadsheetId });
   } catch (error) {
     logger.error("Failed to save teacher configuration to Firestore", {
       teacherId,
-      teacherEmail,
+      boardEmail,
       spreadsheetId,
       error,
     });

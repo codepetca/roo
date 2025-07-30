@@ -6,7 +6,9 @@
       "Bash(npm run lint)",
       "Bash(npm run type-check:*)",
       "WebFetch(domain:medium.com)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "WebFetch(domain:firebase.google.com)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

@@ -86,7 +86,7 @@ export async function testSheetsConnection(req: Request, res: Response) {
     
     // Use real board account for testing
     const teacherEmail = getPrimaryTeacherEmail();
-    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    const spreadsheetId = await getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
       return res.status(404).json({

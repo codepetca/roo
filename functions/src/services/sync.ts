@@ -36,7 +36,7 @@ export class SyncService {
       logger.info("Starting assignment sync from Sheets to Firestore", { teacherEmail });
       
       // Get teacher's spreadsheet ID
-      const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+      const spreadsheetId = await getTeacherSpreadsheetId(teacherEmail);
       if (!spreadsheetId) {
         const errorMsg = `No spreadsheet configured for teacher: ${teacherEmail}`;
         errors.push(errorMsg);
@@ -44,7 +44,7 @@ export class SyncService {
       }
 
       // Get teacher configuration
-      const teacherConfig = getTeacherConfig(teacherEmail);
+      const teacherConfig = await getTeacherConfig(teacherEmail);
       if (!teacherConfig) {
         const errorMsg = `Failed to get teacher configuration for: ${teacherEmail}`;
         errors.push(errorMsg);
@@ -131,7 +131,7 @@ export class SyncService {
       logger.info("Starting submission sync from Sheets to Firestore", { teacherEmail });
       
       // Get teacher's spreadsheet ID
-      const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+      const spreadsheetId = await getTeacherSpreadsheetId(teacherEmail);
       if (!spreadsheetId) {
         const errorMsg = `No spreadsheet configured for teacher: ${teacherEmail}`;
         errors.push(errorMsg);

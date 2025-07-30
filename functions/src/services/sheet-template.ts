@@ -30,11 +30,17 @@ export class OAuthSheetTemplateService extends BaseSheetService {
    * Create a complete Google Sheet for a teacher with proper structure using OAuth
    */
   async createTeacherSheet(template: TeacherSheetTemplate): Promise<SheetCreationResult> {
+    // Enforce naming convention: always use "_roo_data" as the sheet name
+    const sheetTitle = "_roo_data";
+    
     try {
       logger.info("Creating sheet with OAuth for board account", { boardAccountEmail: template.boardAccountEmail });
-
-      // Step 1: Create the spreadsheet in teacher's personal Drive
-      const spreadsheet = await this.createSpreadsheet(template.title);
+      
+      // Step 1: Check for existing sheets with this name and delete them
+      await this.deleteExistingRooSheets();
+      
+      // Step 2: Create the spreadsheet in teacher's personal Drive
+      const spreadsheet = await this.createSpreadsheet(sheetTitle);
       
       // Step 2: Set up the sheet structure and get sheet IDs
       const sheet1Id = spreadsheet.sheets?.[0]?.properties?.sheetId ?? 0;
@@ -57,7 +63,7 @@ export class OAuthSheetTemplateService extends BaseSheetService {
       const result: SheetCreationResult = {
         spreadsheetId: spreadsheet.spreadsheetId!,
         spreadsheetUrl: spreadsheet.spreadsheetUrl!,
-        title: template.title,
+        title: sheetTitle,
         success: true
       };
 
@@ -69,7 +75,7 @@ export class OAuthSheetTemplateService extends BaseSheetService {
       return {
         spreadsheetId: "",
         spreadsheetUrl: "",
-        title: template.title,
+        title: sheetTitle,
         success: false,
         error: error instanceof Error ? error.message : "Unknown error"
       };
@@ -81,6 +87,13 @@ export class OAuthSheetTemplateService extends BaseSheetService {
    */
   generateAppScriptCode(spreadsheetId: string, boardAccountEmail: string): string {
     return super.generateAppScriptCode(spreadsheetId, boardAccountEmail);
+  }
+
+  /**
+   * Get the sheet ID of the _roo_data sheet in the teacher's Drive
+   */
+  async getRooDataSheetId(): Promise<string | null> {
+    return super.getRooDataSheetId();
   }
 }
 

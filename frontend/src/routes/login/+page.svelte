@@ -47,6 +47,10 @@
 				sessionStorage.setItem('google_access_token', accessToken);
 			}
 
+			// Force role refresh to ensure custom claims are up to date
+			const { authStore: authService } = await import('$lib/stores/auth');
+			await authService.refreshRole();
+
 			// Import the API client
 			const { api } = await import('$lib/api');
 

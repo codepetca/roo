@@ -314,15 +314,16 @@ export const completeTeacherOnboarding = createTeacherSheet;
  * Location: functions/src/routes/teacher-onboarding.ts:240
  * Route: GET /teacher/onboarding-status
  */
-export async function checkTeacherOnboardingStatus(req: Request, res: Response): Promise<Response> {
+export async function checkTeacherOnboardingStatus(req: Request, res: Response): Promise<void> {
   try {
     // Get authenticated user
     const user = await getUserFromRequest(req);
     if (!user || user.role !== "teacher") {
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: "Only teachers can check onboarding status",
       });
+      return;
     }
 
     // Check if teacher has any classrooms
@@ -330,46 +331,91 @@ export async function checkTeacherOnboardingStatus(req: Request, res: Response):
 
     const hasClassrooms = !classroomsSnapshot.empty;
 
-    // Check if teacher has sheet configured (both env config and Firestore)
+    // Check if teacher has sheet configured in their Firestore profile
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    const userData = userDoc.data();
+    const teacherData = userData?.teacherData || {};
+    
+    const hasSheetConfigured = !!teacherData.configuredSheets && !!teacherData.sheetId;
+    const boardAccountEmail = teacherData.boardAccountEmail || "";
+    
+    // Also check the global config to ensure consistency
     const existingConfig = await getTeacherSheetsConfig();
-    const boardAccountEmail = user.email || "";
-    const hasSheetConfigured = !!existingConfig[boardAccountEmail];
+    const sheetIdFromConfig = boardAccountEmail ? existingConfig[boardAccountEmail] : null;
 
-    // Verify that the sheet actually exists and is accessible
+    // Verify that the sheet actually exists in the teacher's Drive
     let sheetVerification = null;
-    if (hasSheetConfigured) {
-      try {
-        sheetVerification = await verifyTeacherSheetAccess(boardAccountEmail);
-      } catch (error) {
-        logger.warn("Sheet verification failed during onboarding status check", {
-          teacherId: user.uid,
-          boardAccountEmail,
-          error,
-        });
+    let sheetExistsInTeacherDrive = false;
+    
+    if (hasSheetConfigured && teacherData.sheetId) {
+      // First check if the sheet exists using the board account verification
+      if (boardAccountEmail) {
+        try {
+          sheetVerification = await verifyTeacherSheetAccess(boardAccountEmail);
+        } catch (error) {
+          logger.warn("Sheet verification failed during onboarding status check", {
+            teacherId: user.uid,
+            boardAccountEmail,
+            error,
+          });
+        }
+      }
+      
+      // Additionally, check if the _roo_data sheet exists in teacher's Drive using their access token
+      if (teacherData.googleAccessToken) {
+        try {
+          const oauthSheetService = createOAuthSheetTemplateService(teacherData.googleAccessToken);
+          const rooDataSheetId = await oauthSheetService.getRooDataSheetId();
+          
+          // Verify the sheet ID matches what we have stored
+          sheetExistsInTeacherDrive = rooDataSheetId === teacherData.sheetId;
+          
+          if (!sheetExistsInTeacherDrive && rooDataSheetId) {
+            // If there's a mismatch, log it for debugging
+            logger.warn("Sheet ID mismatch detected", {
+              teacherId: user.uid,
+              storedSheetId: teacherData.sheetId,
+              foundSheetId: rooDataSheetId
+            });
+          }
+        } catch (error) {
+          logger.warn("Failed to verify sheet in teacher's Drive", {
+            teacherId: user.uid,
+            error
+          });
+        }
+      } else {
+        // No access token means they haven't set up sheets yet
+        sheetExistsInTeacherDrive = false;
       }
     }
 
     // Determine if onboarding is needed
     // Sheet must be configured AND accessible for teacher to be fully onboarded
-    const sheetAccessible = sheetVerification?.exists && sheetVerification?.accessible;
-    const needsOnboarding = !hasClassrooms || !hasSheetConfigured || !sheetAccessible;
+    const sheetAccessible = Boolean(sheetVerification?.exists && sheetVerification?.accessible);
+    const needsOnboarding = !hasClassrooms || !hasSheetConfigured || !sheetAccessible || !sheetExistsInTeacherDrive;
 
     logger.info("Teacher onboarding status checked", {
       teacherId: user.uid,
       hasClassrooms,
       hasSheetConfigured,
       sheetAccessible,
+      sheetExistsInTeacherDrive,
       needsOnboarding,
+      boardAccountEmail,
+      sheetIdFromFirestore: teacherData.sheetId,
+      sheetIdFromConfig,
       sheetVerificationError: sheetVerification?.error,
     });
 
     sendApiResponse(
       res,
       {
-        hasClassrooms,
-        hasSheetConfigured,
-        sheetAccessible: !!sheetAccessible,
-        needsOnboarding,
+        hasClassrooms: Boolean(hasClassrooms),
+        hasSheetConfigured: Boolean(hasSheetConfigured),
+        sheetAccessible: Boolean(sheetAccessible),
+        sheetExistsInTeacherDrive: Boolean(sheetExistsInTeacherDrive),
+        needsOnboarding: Boolean(needsOnboarding),
         boardAccountEmail: hasSheetConfigured ? boardAccountEmail : undefined,
         sheetVerification: sheetVerification || undefined,
       },
@@ -377,6 +423,6 @@ export async function checkTeacherOnboardingStatus(req: Request, res: Response):
       "Onboarding status retrieved"
     );
   } catch (error) {
-    return handleRouteError(error, req, res);
+    handleRouteError(error, req, res);
   }
 }

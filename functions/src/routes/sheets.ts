@@ -18,7 +18,7 @@ export async function getSheetsAssignments(req: Request, res: Response) {
     
     // For now, use default teacher for development
     const teacherEmail = getPrimaryTeacherEmail();
-    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    const spreadsheetId = await getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
       return res.status(404).json({
@@ -58,7 +58,7 @@ export async function getSheetsSubmissions(req: Request, res: Response) {
     
     // For now, use default teacher for development
     const teacherEmail = getPrimaryTeacherEmail();
-    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    const spreadsheetId = await getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
       return res.status(404).json({
@@ -94,7 +94,7 @@ export async function getAllSubmissions(req: Request, res: Response) {
     
     // For now, use default teacher for development
     const teacherEmail = getPrimaryTeacherEmail();
-    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    const spreadsheetId = await getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
       return res.status(404).json({
@@ -133,7 +133,7 @@ export async function getUngradedSubmissions(req: Request, res: Response) {
     
     // For now, use default teacher for development
     const teacherEmail = getPrimaryTeacherEmail();
-    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    const spreadsheetId = await getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
       return res.status(404).json({
@@ -173,7 +173,7 @@ export async function getAnswerKey(req: Request, res: Response) {
     
     // For now, use default teacher for development
     const teacherEmail = getPrimaryTeacherEmail();
-    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    const spreadsheetId = await getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
       return res.status(404).json({
@@ -211,7 +211,7 @@ export async function listSheetNames(req: Request, res: Response) {
     
     // For now, use default teacher for development
     const teacherEmail = getPrimaryTeacherEmail();
-    const spreadsheetId = getTeacherSpreadsheetId(teacherEmail);
+    const spreadsheetId = await getTeacherSpreadsheetId(teacherEmail);
     
     if (!spreadsheetId) {
       return res.status(404).json({

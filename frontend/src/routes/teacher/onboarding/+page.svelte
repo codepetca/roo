@@ -6,7 +6,6 @@
 
 	// State using Svelte 5 runes
 	let boardAccountEmail = $state('');
-	let sheetTitle = $state('');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let success = $state<string | null>(null);
@@ -47,14 +46,12 @@
 
 				result = await api.createTeacherSheetOAuth({
 					boardAccountEmail,
-					sheetTitle: sheetTitle || undefined,
 					googleAccessToken
 				});
 			} else {
 				// Fall back to service account approach
 				result = await api.createTeacherSheet({
-					boardAccountEmail,
-					sheetTitle: sheetTitle || undefined
+					boardAccountEmail
 				});
 			}
 
@@ -85,7 +82,6 @@
 	function resetOnboarding() {
 		currentStep = 'input';
 		boardAccountEmail = auth.user?.email || '';
-		sheetTitle = '';
 		onboardingResult = null;
 		error = null;
 		success = null;
@@ -187,19 +183,6 @@
 							</p>
 						</div>
 
-						<div>
-							<label for="sheetTitle" class="mb-2 block text-sm font-medium text-gray-700">
-								Sheet Title (Optional)
-							</label>
-							<input
-								id="sheetTitle"
-								type="text"
-								bind:value={sheetTitle}
-								class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
-								placeholder="Custom sheet name"
-							/>
-							<p class="mt-1 text-xs text-gray-500">Leave blank for auto-generated name</p>
-						</div>
 					</div>
 
 					{#if auth.user?.email && boardAccountEmail && boardAccountEmail !== auth.user.email}
@@ -295,7 +278,7 @@
 					<div class="space-y-4 rounded-lg bg-gray-50 p-4">
 						<div>
 							<h4 class="text-sm font-medium text-gray-900">Sheet Details:</h4>
-							<p class="text-sm text-gray-600">Title: {onboardingResult.sheetTitle}</p>
+							<p class="text-sm text-gray-600">Title: _roo_data</p>
 							{#if onboardingResult.method === 'oauth' && onboardingResult.teacherEmail}
 								<p class="text-sm text-gray-600">
 									Owner: {onboardingResult.teacherEmail} (your personal Drive)

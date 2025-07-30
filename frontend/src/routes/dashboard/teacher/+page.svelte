@@ -4,7 +4,6 @@
 	import { api } from '$lib/api';
 	import type { AssignmentResponse } from '$lib/schemas';
 	import { Button, Alert } from '$lib/components/ui';
-	import AuthGuard from '$lib/components/auth/AuthGuard.svelte';
 	import {
 		ClassroomSidebar,
 		AssignmentListItem,
@@ -21,8 +20,6 @@
 	let error = $state<string | null>(null);
 	let syncing = $state(false);
 	let syncMessage = $state<string | null>(null);
-	let checkingOnboarding = $state(true);
-
 	// Derived statistics
 	let totalAssignments = $derived(assignments.length);
 	let quizCount = $derived(assignments.filter((a) => a.isQuiz).length);
@@ -90,32 +87,18 @@
 		}
 	}
 
-	// Check onboarding status on mount
-	async function checkOnboardingStatus() {
-		try {
-			const status = await api.getTeacherOnboardingStatus();
-			if (status.needsOnboarding) {
-				// Redirect to onboarding if needed
-				await goto('/teacher/onboarding');
-			}
-		} catch (err) {
-			console.error('Failed to check onboarding status:', err);
-		} finally {
-			checkingOnboarding = false;
-		}
-	}
-
 	// Move sidebar content to the sidebar area on mount
 	onMount(() => {
-		// Check onboarding status first
-		checkOnboardingStatus();
+		console.log('🚀 Teacher dashboard mounted');
 
 		const sidebarContent = document.getElementById('sidebar-content');
 		const sidebarTarget = document.getElementById('classroom-sidebar');
 
 		if (sidebarContent && sidebarTarget) {
-			const content = sidebarContent.innerHTML;
-			sidebarTarget.innerHTML = content;
+			// Move the entire component, not just innerHTML
+			while (sidebarContent.firstChild) {
+				sidebarTarget.appendChild(sidebarContent.firstChild);
+			}
 			sidebarContent.remove();
 		}
 	});
@@ -141,18 +124,7 @@
 	<ClassroomSidebar bind:selectedClassroomId onClassroomSelect={handleClassroomSelect} />
 </div>
 
-{#if checkingOnboarding}
-	<!-- Checking onboarding status -->
-	<div class="flex min-h-[400px] items-center justify-center">
-		<div class="text-center">
-			<div
-				class="mb-4 inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"
-			></div>
-			<p class="text-gray-600">Checking account status...</p>
-		</div>
-	</div>
-{:else}
-	<div class="space-y-6">
+<div class="space-y-6">
 		<!-- Page Header -->
 		<PageHeader
 			title="Teacher Dashboard"
@@ -329,6 +301,53 @@
 				</div>
 			</div>
 
+			<!-- Google Sheets Configuration -->
+			<div class="rounded-lg border border-gray-200 bg-white">
+				<div class="border-b border-gray-200 px-6 py-4">
+					<h3 class="text-lg font-semibold text-gray-900">Google Sheets Configuration</h3>
+					<p class="text-sm text-gray-600">
+						Manage your Google Sheet settings and retrieve AppScript code
+					</p>
+				</div>
+				<div class="p-6">
+					<div class="space-y-4">
+						<div class="flex items-start space-x-3">
+							<svg
+								class="h-8 w-8 flex-shrink-0 text-green-600"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2M9 5a2 2 0 012 2v6a2 2 0 01-2 2M9 5V3a2 2 0 012-2h4a2 2 0 012 2v2M9 13h6m-3-3v3"
+								/>
+							</svg>
+							<div class="flex-1">
+								<p class="text-sm text-gray-700">
+									Access your Google Sheet setup to retrieve the AppScript code, change sheet
+									settings, or configure a new sheet for your board account.
+								</p>
+								<ul class="mt-2 space-y-1 text-sm text-gray-600">
+									<li>• Retrieve AppScript code if you missed it during initial setup</li>
+									<li>• Update Google Sheet configuration</li>
+									<li>• Set up sheets for additional board accounts</li>
+								</ul>
+							</div>
+						</div>
+						<div class="flex justify-start">
+							<Button variant="primary" onclick={() => goto('/teacher/onboarding')}>
+								{#snippet children()}
+									Manage Sheet Setup
+								{/snippet}
+							</Button>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<!-- Assignments List -->
 			<div class="rounded-lg border border-gray-200 bg-white">
 				<div class="border-b border-gray-200 px-6 py-4">
@@ -355,5 +374,4 @@
 				</div>
 			</div>
 		{/if}
-	</div>
-{/if}
+</div>
