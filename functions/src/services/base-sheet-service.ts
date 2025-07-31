@@ -7,6 +7,36 @@ import { google } from "googleapis";
 import { logger } from "firebase-functions";
 import { APPSCRIPT_TEMPLATE } from "./appscript-template";
 
+// Fallback template in case the main template fails to load
+const FALLBACK_APPSCRIPT_TEMPLATE = `/**
+ * Fallback Roo Auto-Grading System - Board Account Apps Script
+ * This is a minimal fallback template in case the main template fails to load.
+ */
+
+const CONFIG = {
+  PERSONAL_SPREADSHEET_ID: "{{SPREADSHEET_ID}}",
+  CLASSROOMS_PARENT_FOLDER_NAME: "classrooms",
+  ROO_SUFFIX: "-roo",
+  EXCLUDED_FOLDER_NAMES: ["_old_classrooms", "staff", "clubs"],
+};
+
+function processAllSubmissions() {
+  console.log("Fallback template - minimal implementation");
+  console.log("Please check the main AppScript template for full functionality");
+  return [];
+}
+
+function setupTriggers() {
+  console.log("Setting up daily trigger...");
+  ScriptApp.newTrigger('processAllSubmissions')
+    .timeBased()
+    .everyDays(1)
+    .atHour(22) // 10 PM
+    .create();
+  console.log("Daily trigger created for 10 PM");
+}
+`;
+
 export interface SheetCreationResult {
   spreadsheetId: string;
   spreadsheetUrl: string;
@@ -252,14 +282,31 @@ export abstract class BaseSheetService {
    * Generate complete AppScript code for the board account's specific sheet
    */
   protected generateAppScriptCode(spreadsheetId: string, boardAccountEmail: string): string {
-    // Use the imported complete AppScript template
-    const completeCode = APPSCRIPT_TEMPLATE
+    let templateToUse = APPSCRIPT_TEMPLATE;
+    let usingFallback = false;
+    
+    // Check if the template is available
+    if (!APPSCRIPT_TEMPLATE || typeof APPSCRIPT_TEMPLATE !== 'string') {
+      logger.warn("APPSCRIPT_TEMPLATE is undefined or not a string, using fallback template", { 
+        templateType: typeof APPSCRIPT_TEMPLATE,
+        templateDefined: !!APPSCRIPT_TEMPLATE,
+        spreadsheetId, 
+        boardAccountEmail 
+      });
+      templateToUse = FALLBACK_APPSCRIPT_TEMPLATE;
+      usingFallback = true;
+    }
+
+    // Use the selected template (main or fallback)
+    const completeCode = templateToUse
       .replace(/\{\{SPREADSHEET_ID\}\}/g, spreadsheetId);
     
-    logger.info("Generated complete AppScript code from imported template", { 
+    logger.info("Generated complete AppScript code", { 
       spreadsheetId, 
       boardAccountEmail,
-      codeLength: completeCode.length
+      codeLength: completeCode.length,
+      templateLength: templateToUse.length,
+      usingFallback
     });
     
     return completeCode;

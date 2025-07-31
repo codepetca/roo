@@ -182,7 +182,6 @@
 								The institutional account that will run the AppScript and access the shared sheet
 							</p>
 						</div>
-
 					</div>
 
 					{#if auth.user?.email && boardAccountEmail && boardAccountEmail !== auth.user.email}

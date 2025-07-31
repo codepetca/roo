@@ -3,7 +3,7 @@
  * Location: functions/src/services/appscript-template.ts
  */
 
-export const APPSCRIPT_TEMPLATE = `/**
+/**
  * Roo Auto-Grading System - Board Account Apps Script (Dynamic Version)
  *
  * This script runs in your board Google account and:
@@ -29,18 +29,18 @@ export const APPSCRIPT_TEMPLATE = `/**
 function getSpreadsheetIdFromUrl() {
   try {
     // Try to get from URL parameters (when run as web app)
-    const params = getUrlParameters();
+    var params = getUrlParameters();
     if (params && params.spreadsheetId) {
       return params.spreadsheetId;
     }
-    
+
     // Fallback: try to get from script properties (can be set manually)
-    const properties = PropertiesService.getScriptProperties();
-    const storedId = properties.getProperty('SPREADSHEET_ID');
+    var properties = PropertiesService.getScriptProperties();
+    var storedId = properties.getProperty('SPREADSHEET_ID');
     if (storedId) {
       return storedId;
     }
-    
+
     return null;
   } catch (error) {
     console.error("Error getting spreadsheet ID:", error);
@@ -65,17 +65,17 @@ function getUrlParameters() {
  * Web app entry point - allows passing spreadsheet ID as URL parameter
  */
 function doGet(e) {
-  const spreadsheetId = e.parameter.spreadsheetId;
-  
+  var spreadsheetId = e.parameter.spreadsheetId;
+
   if (!spreadsheetId) {
     return ContentService
       .createTextOutput("Error: spreadsheetId parameter is required. Usage: ?spreadsheetId=YOUR_SHEET_ID")
       .setMimeType(ContentService.MimeType.TEXT);
   }
-  
+
   // Store the spreadsheet ID for use by other functions
   PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', spreadsheetId);
-  
+
   // Run the main processing function
   try {
     processAllSubmissions();
@@ -85,16 +85,38 @@ function doGet(e) {
   } catch (error) {
     console.error("Error in doGet:", error);
     return ContentService
-      .createTextOutput(\`Error processing submissions: \${error.toString()}\`)
+      .createTextOutput("Error processing submissions: " + error.toString())
       .setMimeType(ContentService.MimeType.TEXT);
   }
 }
 
+
+/**
+   * Test function to simulate doGet with parameters
+   */
+function testDoGet() {
+  // Simulate the parameter object that would come from URL
+  var mockEvent = {
+    parameter: {
+      spreadsheetId: "1Fgjm8Dz_LsjU36Wh8Va0nwo1y4aDWgm6hliW-01Q7_g" // Use your test spreadsheet ID
+    }
+  };
+
+  // Call doGet with the mock event
+  var result = doGet(mockEvent);
+
+  // Log the result
+  console.log("Test result:", result.getContent());
+
+  return result;
+}
+
+
 // Configuration - Update these values
-const CONFIG = {
+var CONFIG = {
   // Dynamic spreadsheet ID - will be retrieved from URL parameters or script properties
   get PERSONAL_SPREADSHEET_ID() {
-    const id = getSpreadsheetIdFromUrl();
+    var id = getSpreadsheetIdFromUrl();
     if (!id) {
       throw new Error("Spreadsheet ID not provided. Please run as web app with ?spreadsheetId=YOUR_SHEET_ID parameter");
     }
@@ -120,15 +142,15 @@ function processAllSubmissions() {
   try {
     // Validate spreadsheet access before processing
     try {
-      const spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
-      console.log(\`Using spreadsheet ID: \${spreadsheetId}\`);
+      var spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
+      console.log("Using spreadsheet ID: " + spreadsheetId);
     } catch (configError) {
       console.error("Configuration error:", configError);
-      throw new Error(\`Cannot proceed without valid spreadsheet ID: \${configError.message}\`);
+      throw new Error("Cannot proceed without valid spreadsheet ID: " + configError.message);
     }
 
     // Process all submission types
-    const allData = processAllSubmissionTypes();
+    var allData = processAllSubmissionTypes();
 
     if (allData.length === 0) {
       console.log("No submissions found to process");
@@ -138,7 +160,7 @@ function processAllSubmissions() {
     // Write to personal sheets (single tab)
     writeToPersonalSheets(allData);
 
-    console.log(\`Successfully processed \${allData.length} total submissions\`);
+    console.log("Successfully processed " + allData.length + " total submissions");
   } catch (error) {
     console.error("Error in processAllSubmissions:", error);
     throw error; // Re-throw for web app error handling
@@ -151,25 +173,25 @@ function processAllSubmissions() {
 function processAllSubmissionTypes() {
   console.log("Processing Google Forms response sheets...");
 
-  const allSubmissions = [];
+  var allSubmissions = [];
 
   // Auto-detect classroom folders
-  const classroomFolders = getActiveClassroomFolders();
+  var classroomFolders = getActiveClassroomFolders();
 
-  classroomFolders.forEach((classroomFolder) => {
+  classroomFolders.forEach(function (classroomFolder) {
     try {
-      const courseId = classroomFolder.getName().replace(CONFIG.ROO_SUFFIX, "");
-      console.log(\`Processing classroom: \${courseId}\`);
+      var courseId = classroomFolder.getName().replace(CONFIG.ROO_SUFFIX, "");
+      console.log("Processing classroom: " + courseId);
 
       // Process ONLY Google Sheets with "(responses)" pattern
-      const responseSheetData = processResponseSheets(classroomFolder, courseId);
-      allSubmissions.push(...responseSheetData.submissions);
+      var responseSheetData = processResponseSheets(classroomFolder, courseId);
+      allSubmissions.push.apply(allSubmissions, responseSheetData.submissions);
     } catch (error) {
-      console.error(\`Error processing classroom \${classroomFolder.getName()}:\`, error);
+      console.error("Error processing classroom " + classroomFolder.getName() + ":", error);
     }
   });
 
-  console.log(\`Processed \${allSubmissions.length} total submissions from response sheets\`);
+  console.log("Processed " + allSubmissions.length + " total submissions from response sheets");
   return allSubmissions;
 }
 
@@ -177,25 +199,25 @@ function processAllSubmissionTypes() {
  * Process Google Sheets with "(responses)" pattern - search more thoroughly
  */
 function processResponseSheets(classroomFolder, courseId) {
-  const result = {
+  var result = {
     submissions: [],
     answerKeys: [],
   };
 
   // Search in main folder
-  console.log(\`Searching for response sheets in: \${classroomFolder.getName()}\`);
-  const mainFolderData = findResponseSheetsInFolder(classroomFolder, courseId);
-  result.submissions.push(...mainFolderData.submissions);
-  result.answerKeys.push(...mainFolderData.answerKeys);
+  console.log("Searching for response sheets in: " + classroomFolder.getName());
+  var mainFolderData = findResponseSheetsInFolder(classroomFolder, courseId);
+  result.submissions.push.apply(result.submissions, mainFolderData.submissions);
+  result.answerKeys.push.apply(result.answerKeys, mainFolderData.answerKeys);
 
   // Also search in subfolders (response sheets might be in subfolders)
-  const subfolders = classroomFolder.getFolders();
+  var subfolders = classroomFolder.getFolders();
   while (subfolders.hasNext()) {
-    const subfolder = subfolders.next();
-    console.log(\`Searching subfolder: \${subfolder.getName()}\`);
-    const subfolderData = findResponseSheetsInFolder(subfolder, courseId);
-    result.submissions.push(...subfolderData.submissions);
-    result.answerKeys.push(...subfolderData.answerKeys);
+    var subfolder = subfolders.next();
+    console.log("Searching subfolder: " + subfolder.getName());
+    var subfolderData = findResponseSheetsInFolder(subfolder, courseId);
+    result.submissions.push.apply(result.submissions, subfolderData.submissions);
+    result.answerKeys.push.apply(result.answerKeys, subfolderData.answerKeys);
   }
 
   return result;
@@ -205,80 +227,80 @@ function processResponseSheets(classroomFolder, courseId) {
  * Find response sheets by checking Google Forms and their destinations
  */
 function findResponseSheetsInFolder(folder, courseId) {
-  const submissions = [];
-  const answerKeys = [];
-  const files = folder.getFiles();
+  var submissions = [];
+  var answerKeys = [];
+  var files = folder.getFiles();
 
   while (files.hasNext()) {
-    const file = files.next();
-    const fileName = file.getName();
+    var file = files.next();
+    var fileName = file.getName();
 
     try {
       // Check if it's a Google Form by trying to access it as a form
-      const form = FormApp.openById(file.getId());
-      console.log(\`Found Google Form: \${fileName}\`);
+      var form = FormApp.openById(file.getId());
+      console.log("Found Google Form: " + fileName);
 
       // Extract answer key if it's a quiz
       if (form.isQuiz()) {
-        console.log(\`  Form is a quiz - extracting answer key\`);
-        const answerKey = extractQuizAnswerKey(form, file.getId(), fileName, courseId);
+        console.log("  Form is a quiz - extracting answer key");
+        var answerKey = extractQuizAnswerKey(form, file.getId(), fileName, courseId);
         if (answerKey) {
           answerKeys.push(answerKey);
         }
       }
 
-      const destinationId = form.getDestinationId();
+      var destinationId = form.getDestinationId();
 
       if (destinationId) {
-        console.log(\`  Form has response sheet destination: \${destinationId}\`);
+        console.log("  Form has response sheet destination: " + destinationId);
 
         try {
-          const assignmentTitle = fileName.trim();
-          const sheetSubmissions = extractSubmissionsFromResponseSheet(
+          var assignmentTitle = fileName.trim();
+          var sheetSubmissions = extractSubmissionsFromResponseSheet(
             destinationId,
             assignmentTitle,
             courseId,
             file.getDateCreated(),
-            \`\${fileName} (Responses)\`,
+            fileName + " (Responses)",
             form.isQuiz(),
             file.getId()
           );
-          submissions.push(...sheetSubmissions);
-          console.log(\`✓ Extracted \${sheetSubmissions.length} submissions from form: \${fileName}\`);
+          submissions.push.apply(submissions, sheetSubmissions);
+          console.log("✓ Extracted " + sheetSubmissions.length + " submissions from form: " + fileName);
         } catch (sheetError) {
-          console.error(\`Error processing response sheet for form \${fileName}:\`, sheetError);
+          console.error("Error processing response sheet for form " + fileName + ":", sheetError);
         }
       } else {
-        console.log(\`  Form \${fileName} has no response sheet configured\`);
+        console.log("  Form " + fileName + " has no response sheet configured");
       }
     } catch (notAFormError) {
       // Not a Google Form, check if it's a response sheet
       if (fileName.toLowerCase().includes("(responses)")) {
         try {
-          const contentType = file.getBlob().getContentType();
+          var contentType = file.getBlob().getContentType();
           if (contentType === "application/vnd.google-apps.spreadsheet") {
-            console.log(\`✓ Found standalone response sheet: \${fileName}\`);
+            console.log("✓ Found standalone response sheet: " + fileName);
 
-            const assignmentTitle = fileName.replace(/\\s*\\(responses\\)\\s*$/i, "").trim();
+            var assignmentTitle = fileName.replace(/\s*\(responses\)\s*$/i, "").trim();
 
             try {
-              const sheetSubmissions = extractSubmissionsFromResponseSheet(
+              var sheetSubmissions = extractSubmissionsFromResponseSheet(
                 file.getId(),
                 assignmentTitle,
                 courseId,
                 file.getDateCreated(),
                 fileName
               );
-              submissions.push(...sheetSubmissions);
-              console.log(\`✓ Extracted \${sheetSubmissions.length} submissions from standalone sheet: \${fileName}\`);
+              submissions.push.apply(submissions, sheetSubmissions);
+              console.log("✓ Extracted " + sheetSubmissions.length + " submissions from standalone sheet: " + fileName);
             } catch (sheetError) {
-              console.error(\`Error processing response sheet \${fileName}:\`, sheetError);
+              console.error("Error processing response sheet " + fileName + ":", sheetError);
             }
           } else {
-            console.log(\`✗ Skipping PDF export: \${fileName} (\${contentType})\`);
+            console.log("✗ Skipping PDF export: " + fileName + " (" + contentType + ")");
           }
         } catch (contentError) {
-          console.log(\`✗ Could not determine content type for: \${fileName}\`);
+          console.log("✗ Could not determine content type for: " + fileName);
         }
       }
     }
@@ -299,7 +321,7 @@ function findResponseSheetsInFolder(folder, courseId) {
  * Extract answer key from a Google Form quiz
  */
 function extractQuizAnswerKey(form, formId, formTitle, courseId) {
-  const answerKeyData = {
+  var answerKeyData = {
     formId: formId,
     assignmentTitle: formTitle,
     courseId: courseId,
@@ -308,11 +330,11 @@ function extractQuizAnswerKey(form, formId, formTitle, courseId) {
   };
 
   try {
-    const items = form.getItems();
-    let questionCounter = 0;
+    var items = form.getItems();
+    var questionCounter = 0;
 
-    items.forEach((item, index) => {
-      const questionType = item.getType();
+    items.forEach(function (item, index) {
+      var questionType = item.getType();
 
       // Skip non-question items
       if (
@@ -325,13 +347,13 @@ function extractQuizAnswerKey(form, formId, formTitle, courseId) {
       }
 
       // Skip items without titles (like name/email fields)
-      const questionTitle = item.getTitle();
+      var questionTitle = item.getTitle();
       if (!questionTitle || questionTitle.trim() === "") {
         return;
       }
 
       // Skip name and email fields
-      const titleLower = questionTitle.toLowerCase();
+      var titleLower = questionTitle.toLowerCase();
       if (
         titleLower.includes("first name") ||
         titleLower.includes("last name") ||
@@ -342,10 +364,10 @@ function extractQuizAnswerKey(form, formId, formTitle, courseId) {
       }
 
       questionCounter++;
-      const questionNumber = questionCounter;
-      let points = 0;
-      let correctAnswer = "";
-      let answerExplanation = "";
+      var questionNumber = questionCounter;
+      var points = 0;
+      var correctAnswer = "";
+      var answerExplanation = "";
 
       // Try to get points (might not be available for all question types)
       try {
@@ -369,14 +391,14 @@ function extractQuizAnswerKey(form, formId, formTitle, courseId) {
 
       // Extract answer based on question type
       if (questionType === FormApp.ItemType.MULTIPLE_CHOICE) {
-        const mcItem = item.asMultipleChoiceItem();
-        const choices = mcItem.getChoices();
-        const correctChoice = choices.find((choice) => choice.isCorrectAnswer());
+        var mcItem = item.asMultipleChoiceItem();
+        var choices = mcItem.getChoices();
+        var correctChoice = choices.find(function (choice) { return choice.isCorrectAnswer(); });
         if (correctChoice) {
           correctAnswer = correctChoice.getValue();
           // Get feedback for correct answer if available
           try {
-            const feedback = correctChoice.getFeedback();
+            var feedback = correctChoice.getFeedback();
             if (feedback && feedback.getText) {
               answerExplanation = feedback.getText();
             }
@@ -385,10 +407,10 @@ function extractQuizAnswerKey(form, formId, formTitle, courseId) {
           }
         }
       } else if (questionType === FormApp.ItemType.CHECKBOX) {
-        const cbItem = item.asCheckboxItem();
-        const choices = cbItem.getChoices();
-        const correctChoices = choices.filter((choice) => choice.isCorrectAnswer());
-        correctAnswer = correctChoices.map((c) => c.getValue()).join("; ");
+        var cbItem = item.asCheckboxItem();
+        var choices = cbItem.getChoices();
+        var correctChoices = choices.filter(function (choice) { return choice.isCorrectAnswer(); });
+        correctAnswer = correctChoices.map(function (c) { return c.getValue(); }).join("; ");
       } else if (questionType === FormApp.ItemType.TEXT) {
         // For text questions, we can't get the exact answer
         correctAnswer = "[Short answer - AI grading]";
@@ -402,7 +424,7 @@ function extractQuizAnswerKey(form, formId, formTitle, courseId) {
         correctAnswer = "[Grid question]";
       } else {
         // Other question types
-        correctAnswer = \`[\${questionType} - check manually]\`;
+        correctAnswer = "[" + questionType + " - check manually]";
       }
 
       answerKeyData.totalPoints += points;
@@ -416,12 +438,12 @@ function extractQuizAnswerKey(form, formId, formTitle, courseId) {
         gradingStrictness: "generous", // Default for all questions
       });
 
-      console.log(\`    Q\${questionNumber}: \${points} points - \${questionType}\`);
+      console.log("    Q" + questionNumber + ": " + points + " points - " + questionType);
     });
 
     return answerKeyData;
   } catch (error) {
-    console.error(\`Error extracting answer key from form \${formTitle}:\`, error);
+    console.error("Error extracting answer key from form " + formTitle + ":", error);
     return null;
   }
 }
@@ -435,15 +457,17 @@ function extractSubmissionsFromResponseSheet(
   courseId,
   createdDate,
   fileName,
-  isQuiz = false,
-  formId = null
+  isQuiz,
+  formId
 ) {
-  const submissions = [];
+  isQuiz = isQuiz || false;
+  formId = formId || null;
+  var submissions = [];
 
   try {
-    const spreadsheet = SpreadsheetApp.openById(fileId);
-    const sheet = spreadsheet.getActiveSheet();
-    const data = sheet.getDataRange().getValues();
+    var spreadsheet = SpreadsheetApp.openById(fileId);
+    var sheet = spreadsheet.getActiveSheet();
+    var data = sheet.getDataRange().getValues();
 
     if (data.length < 2) {
       console.log("Response sheet appears to be empty or has no data rows");
@@ -451,27 +475,27 @@ function extractSubmissionsFromResponseSheet(
     }
 
     // First row should be headers
-    const headers = data[0];
-    console.log(\`Response sheet headers: \${headers.join(", ")}\`);
+    var headers = data[0];
+    console.log("Response sheet headers: " + headers.join(", "));
 
     // Process each response row (skip header)
-    for (let i = 1; i < data.length; i++) {
-      const row = data[i];
+    for (var i = 1; i < data.length; i++) {
+      var row = data[i];
 
       try {
         // Extract basic info
-        const timestamp = row[0] || new Date();
-        let studentEmail = "";
-        let studentName = "";
+        var timestamp = row[0] || new Date();
+        var studentEmail = "";
+        var studentName = "";
 
         // Try to intelligently identify email and name fields
-        let firstName = "";
-        let lastName = "";
-        let fullName = "";
+        var firstName = "";
+        var lastName = "";
+        var fullName = "";
 
-        for (let j = 0; j < headers.length; j++) {
-          const header = headers[j].toLowerCase().trim();
-          const value = row[j] || "";
+        for (var j = 0; j < headers.length; j++) {
+          var header = headers[j].toLowerCase().trim();
+          var value = row[j] || "";
 
           // Email detection - fairly reliable patterns
           if (
@@ -520,7 +544,7 @@ function extractSubmissionsFromResponseSheet(
 
         // Build student name from available parts
         if (firstName && lastName) {
-          studentName = \`\${firstName} \${lastName}\`.trim();
+          studentName = (firstName + " " + lastName).trim();
         } else if (fullName) {
           studentName = fullName;
         } else if (firstName) {
@@ -530,32 +554,32 @@ function extractSubmissionsFromResponseSheet(
         }
 
         // Combine ALL response columns as submission content (except timestamp)
-        const contentParts = [];
-        for (let j = 1; j < row.length; j++) {
+        var contentParts = [];
+        for (var j = 1; j < row.length; j++) {
           // Skip j=0 (timestamp)
-          const value = row[j];
+          var value = row[j];
 
           if (value && value.toString().trim()) {
-            contentParts.push(\`\${headers[j]}: \${value}\`);
+            contentParts.push(headers[j] + ": " + value);
           }
         }
 
         // If we couldn't find a name, try to extract from email
         if (!firstName && !lastName && !fullName && studentEmail) {
-          const emailName = getStudentName(studentEmail);
+          var emailName = getStudentName(studentEmail);
           if (emailName) {
             firstName = emailName;
           }
         }
 
-        const submission = {
-          submissionId: \`sheet_\${fileId}_\${i}\`,
+        var submission = {
+          submissionId: "sheet_" + fileId + "_" + i,
           assignmentTitle: assignmentTitle,
           courseId: courseId,
           studentFirstName: firstName || "Unknown",
           studentLastName: lastName || "",
-          studentEmail: studentEmail || \`student\${i}@unknown.com\`,
-          submissionText: contentParts.join("\\n\\n"),
+          studentEmail: studentEmail || ("student" + i + "@unknown.com"),
+          submissionText: contentParts.join("\n\n"),
           submissionDate: new Date(timestamp).toISOString(),
           submissionType: "forms",
           sourceFileId: fileId,
@@ -563,7 +587,7 @@ function extractSubmissionsFromResponseSheet(
           currentGrade: "", // Empty = needs grading
           gradingStatus: "pending",
           maxPoints: 100, // Default - will be updated if quiz
-          assignmentDescription: \`Google Forms responses: \${assignmentTitle}\`,
+          assignmentDescription: "Google Forms responses: " + assignmentTitle,
           lastProcessed: new Date().toISOString(),
           isQuiz: isQuiz,
           formId: formId || fileId,
@@ -571,11 +595,11 @@ function extractSubmissionsFromResponseSheet(
 
         submissions.push(submission);
       } catch (rowError) {
-        console.error(\`Error processing row \${i + 1} in response sheet:\`, rowError);
+        console.error("Error processing row " + (i + 1) + " in response sheet:", rowError);
       }
     }
   } catch (error) {
-    console.error(\`Error reading response sheet \${fileId}:\`, error);
+    console.error("Error reading response sheet " + fileId + ":", error);
   }
 
   return submissions;
@@ -586,30 +610,30 @@ function extractSubmissionsFromResponseSheet(
  */
 function validateSpreadsheetAccess(spreadsheetId) {
   try {
-    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
     // Try to get the name to verify access
-    const name = spreadsheet.getName();
-    console.log(\`✓ Successfully validated access to spreadsheet: \${name}\`);
+    var name = spreadsheet.getName();
+    console.log("✓ Successfully validated access to spreadsheet: " + name);
     return true;
   } catch (error) {
-    console.error(\`✗ Cannot access spreadsheet with ID: \${spreadsheetId}\`);
+    console.error("✗ Cannot access spreadsheet with ID: " + spreadsheetId);
     console.error("Error details:", error);
-    throw new Error(\`Spreadsheet access failed: \${error.toString()}. Please ensure the spreadsheet exists and you have edit permissions.\`);
+    throw new Error("Spreadsheet access failed: " + error.toString() + ". Please ensure the spreadsheet exists and you have edit permissions.");
   }
 }
 
 /**
- * Write all submissions to single "Submissions" tab with rich metadata
+ * Write all submissions to single "Submissions" tab with rich metadata - OPTIMIZED VERSION
  */
 function writeToPersonalSheets(submissions) {
   console.log("Writing to personal Google Sheets...");
 
   try {
-    const spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
+    var spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
     validateSpreadsheetAccess(spreadsheetId);
-    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
 
-    let sheet = spreadsheet.getSheetByName("Submissions");
+    var sheet = spreadsheet.getSheetByName("Submissions");
 
     // Create sheet if it doesn't exist
     if (!sheet) {
@@ -621,7 +645,7 @@ function writeToPersonalSheets(submissions) {
     sheet.clear();
 
     // Rich headers for teacher frontend
-    const headers = [
+    var headers = [
       "Submission ID", // A - Unique identifier
       "Assignment Title", // B - What assignment is this
       "Course ID", // C - Which class
@@ -641,51 +665,69 @@ function writeToPersonalSheets(submissions) {
       "Form ID", // Q - Form ID for quiz answer key lookup
     ];
 
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-
-    // Write submission data
+    // Pre-process all data and collect formatting ranges
+    var pendingRanges = [];
+    var gradedRanges = [];
+    var allData = [headers]; // Start with headers
+    
     if (submissions.length > 0) {
-      const rows = submissions.map((s) => [
-        s.submissionId,
-        s.assignmentTitle,
-        s.courseId,
-        s.studentFirstName,
-        s.studentLastName,
-        s.studentEmail,
-        s.submissionText,
-        s.submissionDate,
-        s.currentGrade,
-        s.gradingStatus,
-        s.maxPoints,
-        s.sourceFileName,
-        s.assignmentDescription,
-        s.lastProcessed,
-        s.sourceFileId,
-        s.isQuiz || false,
-        s.formId || "",
-      ]);
-
-      sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
-
-      // Add conditional formatting for grading status
-      // Color code grading status (Column J = index 9)
-      for (let i = 0; i < rows.length; i++) {
-        const row = i + 2;
-        const gradingStatus = rows[i][9]; // Grading Status column (index 9)
-
-        if (gradingStatus === "pending") {
-          sheet.getRange(row, 10).setBackground("#ffcccc"); // Light red
-        } else if (gradingStatus === "graded") {
-          sheet.getRange(row, 10).setBackground("#ccffcc"); // Light green
+      // Process all rows and collect formatting info
+      submissions.forEach(function(s, index) {
+        var rowData = [
+          s.submissionId,
+          s.assignmentTitle,
+          s.courseId,
+          s.studentFirstName,
+          s.studentLastName,
+          s.studentEmail,
+          s.submissionText,
+          s.submissionDate,
+          s.currentGrade,
+          s.gradingStatus,
+          s.maxPoints,
+          s.sourceFileName,
+          s.assignmentDescription,
+          s.lastProcessed,
+          s.sourceFileId,
+          s.isQuiz || false,
+          s.formId || "",
+        ];
+        
+        allData.push(rowData);
+        
+        // Collect cells that need formatting (row index + 2 because of header)
+        var rowNum = index + 2;
+        if (s.gradingStatus === "pending") {
+          pendingRanges.push("J" + rowNum); // Column J for grading status
+        } else if (s.gradingStatus === "graded") {
+          gradedRanges.push("J" + rowNum);
         }
-      }
+      });
     }
 
-    // Format headers
-    const headerRange = sheet.getRange(1, 1, 1, headers.length);
-    headerRange.setFontWeight("bold");
-    headerRange.setBackground("#4285f4");
-    headerRange.setFontColor("white");
+    // Single write operation for all data
+    if (allData.length > 1) { // More than just headers
+      sheet.getRange(1, 1, allData.length, headers.length).setValues(allData);
+    } else {
+      // Just write headers if no data
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+
+    // Batch formatting operations
+    
+    // Format headers in one operation
+    var headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setFontWeight("bold")
+              .setBackground("#4285f4")
+              .setFontColor("white");
+
+    // Apply conditional formatting in batch
+    if (pendingRanges.length > 0) {
+      sheet.getRangeList(pendingRanges).setBackground("#ffcccc"); // Light red
+    }
+    if (gradedRanges.length > 0) {
+      sheet.getRangeList(gradedRanges).setBackground("#ccffcc"); // Light green
+    }
 
     // Auto-resize columns
     sheet.autoResizeColumns(1, headers.length);
@@ -693,7 +735,7 @@ function writeToPersonalSheets(submissions) {
     // Freeze header row
     sheet.setFrozenRows(1);
 
-    console.log(\`Successfully wrote \${submissions.length} submissions to Submissions sheet\`);
+    console.log("Successfully wrote " + submissions.length + " submissions to Submissions sheet");
   } catch (error) {
     console.error("Error writing to personal sheets:", error);
     throw error;
@@ -701,17 +743,17 @@ function writeToPersonalSheets(submissions) {
 }
 
 /**
- * Write answer keys to personal sheets
+ * Write answer keys to personal sheets - OPTIMIZED VERSION
  */
 function writeAnswerKeysToSheets(answerKeys) {
   console.log("Writing answer keys to personal Google Sheets...");
 
   try {
-    const spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
+    var spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
     validateSpreadsheetAccess(spreadsheetId);
-    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
 
-    let sheet = spreadsheet.getSheetByName("Answer Keys");
+    var sheet = spreadsheet.getSheetByName("Answer Keys");
 
     // Create sheet if it doesn't exist
     if (!sheet) {
@@ -723,7 +765,7 @@ function writeAnswerKeysToSheets(answerKeys) {
     sheet.clear();
 
     // Headers for answer keys
-    const headers = [
+    var headers = [
       "Form ID",
       "Assignment Title",
       "Course ID",
@@ -736,13 +778,14 @@ function writeAnswerKeysToSheets(answerKeys) {
       "Grading Strictness",
     ];
 
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-
+    // Pre-process all data
+    var allData = [headers]; // Start with headers
+    var summaryData = []; // Collect summary rows
+    
     // Flatten answer keys into rows
-    const rows = [];
-    answerKeys.forEach((answerKey) => {
-      answerKey.questions.forEach((question) => {
-        rows.push([
+    answerKeys.forEach(function (answerKey) {
+      answerKey.questions.forEach(function (question) {
+        allData.push([
           answerKey.formId,
           answerKey.assignmentTitle,
           answerKey.courseId,
@@ -755,25 +798,40 @@ function writeAnswerKeysToSheets(answerKeys) {
           question.gradingStrictness,
         ]);
       });
+      
+      // Collect summary info for later
+      summaryData.push({
+        title: answerKey.assignmentTitle,
+        totalPoints: answerKey.totalPoints
+      });
     });
 
-    if (rows.length > 0) {
-      sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
-
-      // Add summary row with total points
-      answerKeys.forEach((answerKey, index) => {
-        const summaryRow = index + rows.length + 3;
-        sheet
-          .getRange(summaryRow, 1)
-          .setValue(\`Total points for \${answerKey.assignmentTitle}: \${answerKey.totalPoints}\`);
-      });
+    // Single write operation for all data
+    if (allData.length > 1) { // More than just headers
+      sheet.getRange(1, 1, allData.length, headers.length).setValues(allData);
+      
+      // Batch write summary rows
+      if (summaryData.length > 0) {
+        var summaryStartRow = allData.length + 2; // Leave a blank row
+        var summaryValues = summaryData.map(function(summary) {
+          return ["Total points for " + summary.title + ": " + summary.totalPoints];
+        });
+        
+        // Write all summaries in one operation
+        sheet.getRange(summaryStartRow, 1, summaryValues.length, 1).setValues(summaryValues);
+      }
+    } else {
+      // Just write headers if no data
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     }
 
-    // Format headers
-    const headerRange = sheet.getRange(1, 1, 1, headers.length);
-    headerRange.setFontWeight("bold");
-    headerRange.setBackground("#4285f4");
-    headerRange.setFontColor("white");
+    // Batch formatting operations
+    
+    // Format headers in one operation
+    var headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setFontWeight("bold")
+              .setBackground("#4285f4")
+              .setFontColor("white");
 
     // Auto-resize columns
     sheet.autoResizeColumns(1, headers.length);
@@ -781,7 +839,7 @@ function writeAnswerKeysToSheets(answerKeys) {
     // Freeze header row
     sheet.setFrozenRows(1);
 
-    console.log(\`Successfully wrote \${rows.length} answer key questions to Answer Keys sheet\`);
+    console.log("Successfully wrote " + (allData.length - 1) + " answer key questions to Answer Keys sheet");
   } catch (error) {
     console.error("Error writing answer keys to sheets:", error);
     throw error;
@@ -795,11 +853,11 @@ function clearPersonalSheets() {
   console.log("Clearing existing data from personal sheets...");
 
   try {
-    const spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
+    var spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
     validateSpreadsheetAccess(spreadsheetId);
-    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-    const submissionsSheet = spreadsheet.getSheetByName("Submissions");
-    const answerKeysSheet = spreadsheet.getSheetByName("Answer Keys");
+    var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    var submissionsSheet = spreadsheet.getSheetByName("Submissions");
+    var answerKeysSheet = spreadsheet.getSheetByName("Answer Keys");
 
     if (submissionsSheet) {
       submissionsSheet.clear();
@@ -818,12 +876,14 @@ function clearPersonalSheets() {
 function setupTriggers() {
   try {
     // Verify we have a valid spreadsheet ID before setting up triggers
-    const spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
-    console.log(\`Setting up triggers for spreadsheet: \${spreadsheetId}\`);
-    
+    var spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
+    console.log("Setting up triggers for spreadsheet: " + spreadsheetId);
+
     // Delete existing triggers
-    const triggers = ScriptApp.getProjectTriggers();
-    triggers.forEach((trigger) => ScriptApp.deleteTrigger(trigger));
+    var triggers = ScriptApp.getProjectTriggers();
+    triggers.forEach(function (trigger) {
+      ScriptApp.deleteTrigger(trigger);
+    });
 
     // Daily full sync at 10 PM
     ScriptApp.newTrigger("processAllSubmissions").timeBased().everyDays(1).atHour(22).create();
@@ -842,17 +902,17 @@ function setupForSpreadsheet(spreadsheetId) {
   if (!spreadsheetId) {
     throw new Error("Spreadsheet ID is required");
   }
-  
+
   // Store the spreadsheet ID
   PropertiesService.getScriptProperties().setProperty('SPREADSHEET_ID', spreadsheetId);
-  
+
   // Validate access
   validateSpreadsheetAccess(spreadsheetId);
-  
+
   // Set up triggers
   setupTriggers();
-  
-  console.log(\`Successfully configured script for spreadsheet: \${spreadsheetId}\`);
+
+  console.log("Successfully configured script for spreadsheet: " + spreadsheetId);
   return "Setup complete! The script will now run automatically.";
 }
 
@@ -861,10 +921,10 @@ function setupForSpreadsheet(spreadsheetId) {
  */
 function getStatus() {
   try {
-    const spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
-    const spreadsheet = SpreadsheetApp.openById(spreadsheetId);
-    const triggers = ScriptApp.getProjectTriggers();
-    
+    var spreadsheetId = CONFIG.PERSONAL_SPREADSHEET_ID;
+    var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+    var triggers = ScriptApp.getProjectTriggers();
+
     return {
       spreadsheetId: spreadsheetId,
       spreadsheetName: spreadsheet.getName(),
@@ -888,34 +948,34 @@ function getActiveClassroomFolders() {
   console.log("Auto-detecting classroom folders...");
 
   try {
-    const folders = DriveApp.getFoldersByName(CONFIG.CLASSROOMS_PARENT_FOLDER_NAME);
+    var folders = DriveApp.getFoldersByName(CONFIG.CLASSROOMS_PARENT_FOLDER_NAME);
 
     if (!folders.hasNext()) {
-      console.error(\`Parent folder "\${CONFIG.CLASSROOMS_PARENT_FOLDER_NAME}" not found\`);
+      console.error("Parent folder \"" + CONFIG.CLASSROOMS_PARENT_FOLDER_NAME + "\" not found");
       return [];
     }
 
-    const classroomsParent = folders.next();
-    const classroomFolders = [];
-    const subfolders = classroomsParent.getFolders();
+    var classroomsParent = folders.next();
+    var classroomFolders = [];
+    var subfolders = classroomsParent.getFolders();
 
     while (subfolders.hasNext()) {
-      const folder = subfolders.next();
-      const folderName = folder.getName();
+      var folder = subfolders.next();
+      var folderName = folder.getName();
 
       // Skip excluded folders
       if (CONFIG.EXCLUDED_FOLDER_NAMES.includes(folderName)) {
-        console.log(\`Skipping excluded folder: \${folderName}\`);
+        console.log("Skipping excluded folder: " + folderName);
         continue;
       }
 
       // Only process folders ending with the ROO_SUFFIX
       if (!folder.getName().endsWith(CONFIG.ROO_SUFFIX)) {
-        console.log(\`Skipping folder without -roo suffix: \${folderName}\`);
+        console.log("Skipping folder without -roo suffix: " + folderName);
         continue;
       }
 
-      console.log(\`Found active classroom: \${folderName}\`);
+      console.log("Found active classroom: " + folderName);
       classroomFolders.push(folder);
     }
 
@@ -940,49 +1000,49 @@ function testSystem() {
   console.log("Testing Google Forms response sheet processing...");
 
   // Test classroom folder detection
-  const classrooms = getActiveClassroomFolders();
-  console.log(\`Found \${classrooms.length} classrooms with -roo suffix\`);
+  var classrooms = getActiveClassroomFolders();
+  console.log("Found " + classrooms.length + " classrooms with -roo suffix");
 
   // Test response sheet processing
   if (classrooms.length > 0) {
     console.log("Testing response sheet detection...");
 
-    classrooms.forEach((folder) => {
-      const courseId = folder.getName().replace(CONFIG.ROO_SUFFIX, "");
-      console.log(\`\\nChecking classroom: \${courseId}\`);
+    classrooms.forEach(function (folder) {
+      var courseId = folder.getName().replace(CONFIG.ROO_SUFFIX, "");
+      console.log("\nChecking classroom: " + courseId);
 
       // Use the same search logic as the main function
-      const responseData = findResponseSheetsInFolder(folder, courseId);
-      console.log(\`  Found \${responseData.submissions.length} response sheets in main folder\`);
-      console.log(\`  Found \${responseData.answerKeys.length} quiz answer keys\`);
+      var responseData = findResponseSheetsInFolder(folder, courseId);
+      console.log("  Found " + responseData.submissions.length + " response sheets in main folder");
+      console.log("  Found " + responseData.answerKeys.length + " quiz answer keys");
 
       // Also check subfolders
-      const subfolders = folder.getFolders();
-      let subfolderSheetCount = 0;
-      let subfolderKeyCount = 0;
+      var subfolders = folder.getFolders();
+      var subfolderSheetCount = 0;
+      var subfolderKeyCount = 0;
       while (subfolders.hasNext()) {
-        const subfolder = subfolders.next();
-        const subfolderData = findResponseSheetsInFolder(subfolder, courseId);
+        var subfolder = subfolders.next();
+        var subfolderData = findResponseSheetsInFolder(subfolder, courseId);
         subfolderSheetCount += subfolderData.submissions.length;
         subfolderKeyCount += subfolderData.answerKeys.length;
         if (subfolderData.submissions.length > 0) {
           console.log(
-            \`  Found \${subfolderData.submissions.length} response sheets in subfolder: \${subfolder.getName()}\`
+            "  Found " + subfolderData.submissions.length + " response sheets in subfolder: " + subfolder.getName()
           );
         }
       }
 
-      console.log(\`  Total response sheets: \${responseData.submissions.length + subfolderSheetCount}\`);
-      console.log(\`  Total answer keys: \${responseData.answerKeys.length + subfolderKeyCount}\`);
+      console.log("  Total response sheets: " + (responseData.submissions.length + subfolderSheetCount));
+      console.log("  Total answer keys: " + (responseData.answerKeys.length + subfolderKeyCount));
     });
 
     // Test full processing
-    const submissions = processAllSubmissionTypes();
-    console.log(\`\\nTotal submissions processed: \${submissions.length}\`);
+    var submissions = processAllSubmissionTypes();
+    console.log("\nTotal submissions processed: " + submissions.length);
 
     // Show sample data
     if (submissions.length > 0) {
-      console.log("\\nSample submission data:");
+      console.log("\nSample submission data:");
       console.log("Assignment:", submissions[0].assignmentTitle);
       console.log("Course:", submissions[0].courseId);
       console.log("Student:", submissions[0].studentName);
@@ -990,7 +1050,7 @@ function testSystem() {
     }
   }
 
-  console.log("\\nTest completed - check logs for details");
+  console.log("\nTest completed - check logs for details");
 }
 
 /**
@@ -999,41 +1059,41 @@ function testSystem() {
 function debugResponseSheets() {
   console.log("=== DEBUGGING RESPONSE SHEET LOCATIONS ===");
 
-  const classrooms = getActiveClassroomFolders();
+  var classrooms = getActiveClassroomFolders();
 
-  classrooms.forEach((folder) => {
-    const courseId = folder.getName().replace(CONFIG.ROO_SUFFIX, "");
-    console.log(\`\\n--- Debugging classroom: \${courseId} ---\`);
+  classrooms.forEach(function (folder) {
+    var courseId = folder.getName().replace(CONFIG.ROO_SUFFIX, "");
+    console.log("\n--- Debugging classroom: " + courseId + " ---");
 
-    const files = folder.getFiles();
-    let foundAnyResponses = false;
+    var files = folder.getFiles();
+    var foundAnyResponses = false;
 
     while (files.hasNext()) {
-      const file = files.next();
-      const fileName = file.getName();
+      var file = files.next();
+      var fileName = file.getName();
 
       if (fileName.toLowerCase().includes("(responses)")) {
         foundAnyResponses = true;
-        console.log(\`\\nFound file: \${fileName}\`);
-        console.log(\`  File ID: \${file.getId()}\`);
-        console.log(\`  Content Type: \${file.getBlob().getContentType()}\`);
-        console.log(\`  Created: \${file.getDateCreated()}\`);
-        console.log(\`  Modified: \${file.getLastUpdated()}\`);
-        console.log(\`  Size: \${file.getSize()} bytes\`);
+        console.log("\nFound file: " + fileName);
+        console.log("  File ID: " + file.getId());
+        console.log("  Content Type: " + file.getBlob().getContentType());
+        console.log("  Created: " + file.getDateCreated());
+        console.log("  Modified: " + file.getLastUpdated());
+        console.log("  Size: " + file.getSize() + " bytes");
 
         // Try to check if it's a shortcut
         try {
-          const mimeType = file.getBlob().getContentType();
+          var mimeType = file.getBlob().getContentType();
           if (mimeType === "application/vnd.google-apps.shortcut") {
             console.log("  *** This appears to be a shortcut! ***");
             // Try to get the target
             try {
-              const targetId = file.getTargetId();
+              var targetId = file.getTargetId();
               if (targetId) {
-                console.log(\`  Target ID: \${targetId}\`);
-                const targetFile = DriveApp.getFileById(targetId);
-                console.log(\`  Target name: \${targetFile.getName()}\`);
-                console.log(\`  Target type: \${targetFile.getBlob().getContentType()}\`);
+                console.log("  Target ID: " + targetId);
+                var targetFile = DriveApp.getFileById(targetId);
+                console.log("  Target name: " + targetFile.getName());
+                console.log("  Target type: " + targetFile.getBlob().getContentType());
               }
             } catch (shortcutError) {
               console.log("  Could not resolve shortcut target:", shortcutError);
@@ -1050,36 +1110,36 @@ function debugResponseSheets() {
     }
 
     // Also check if we can find any Google Forms and check their response destinations
-    console.log("\\n  Checking for Google Forms in this folder...");
-    const formFiles = folder.getFiles();
-    let foundForms = false;
+    console.log("\n  Checking for Google Forms in this folder...");
+    var formFiles = folder.getFiles();
+    var foundForms = false;
 
     while (formFiles.hasNext()) {
-      const file = formFiles.next();
-      const contentType = file.getBlob().getContentType();
+      var file = formFiles.next();
+      var contentType = file.getBlob().getContentType();
 
       if (contentType === "application/vnd.google-apps.form") {
         foundForms = true;
-        console.log(\`  Found form: \${file.getName()}\`);
+        console.log("  Found form: " + file.getName());
 
         try {
-          const form = FormApp.openById(file.getId());
-          const destinationId = form.getDestinationId();
+          var form = FormApp.openById(file.getId());
+          var destinationId = form.getDestinationId();
 
           if (destinationId) {
-            console.log(\`    Form has destination sheet ID: \${destinationId}\`);
+            console.log("    Form has destination sheet ID: " + destinationId);
             try {
-              const destSheet = SpreadsheetApp.openById(destinationId);
-              console.log(\`    Destination sheet name: \${destSheet.getName()}\`);
-              console.log(\`    Destination sheet URL: \${destSheet.getUrl()}\`);
+              var destSheet = SpreadsheetApp.openById(destinationId);
+              console.log("    Destination sheet name: " + destSheet.getName());
+              console.log("    Destination sheet URL: " + destSheet.getUrl());
             } catch (destError) {
-              console.log(\`    Could not access destination sheet: \${destError}\`);
+              console.log("    Could not access destination sheet: " + destError);
             }
           } else {
-            console.log(\`    Form has no destination sheet configured\`);
+            console.log("    Form has no destination sheet configured");
           }
         } catch (formError) {
-          console.log(\`    Error accessing form: \${formError}\`);
+          console.log("    Error accessing form: " + formError);
         }
       }
     }
@@ -1089,6 +1149,5 @@ function debugResponseSheets() {
     }
   });
 
-  console.log("\\n=== END DEBUG ===");
+  console.log("\n=== END DEBUG ===");
 }
-`;

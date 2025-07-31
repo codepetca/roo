@@ -125,253 +125,253 @@
 </div>
 
 <div class="space-y-6">
-		<!-- Page Header -->
-		<PageHeader
-			title="Teacher Dashboard"
-			description="Manage assignments, review submissions, and track student progress with AI-powered grading."
-			{actions}
-		/>
+	<!-- Page Header -->
+	<PageHeader
+		title="Teacher Dashboard"
+		description="Manage assignments, review submissions, and track student progress with AI-powered grading."
+		{actions}
+	/>
 
-		<!-- Sync Message -->
-		{#if syncMessage}
-			<Alert
-				variant="success"
-				title="Sync Complete"
-				dismissible
-				onDismiss={() => (syncMessage = null)}
+	<!-- Sync Message -->
+	{#if syncMessage}
+		<Alert
+			variant="success"
+			title="Sync Complete"
+			dismissible
+			onDismiss={() => (syncMessage = null)}
+		>
+			{#snippet children()}
+				{syncMessage}
+			{/snippet}
+		</Alert>
+	{/if}
+
+	<!-- Main Content -->
+	{#if !selectedClassroomId}
+		<!-- No classroom selected -->
+		<div class="py-12 text-center">
+			<svg
+				class="mx-auto h-12 w-12 text-gray-400"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
 			>
-				{#snippet children()}
-					{syncMessage}
-				{/snippet}
-			</Alert>
-		{/if}
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+				/>
+			</svg>
+			<h3 class="mt-2 text-sm font-medium text-gray-900">Select a Class</h3>
+			<p class="mt-1 text-sm text-gray-500">
+				Choose a class from the sidebar to view its assignments and manage submissions.
+			</p>
+		</div>
+	{:else if loading}
+		<!-- Loading State -->
+		<LoadingSkeleton type="card" rows={3} />
+	{:else if error}
+		<!-- Error State -->
+		<Alert
+			variant="error"
+			title="Error loading assignments"
+			dismissible
+			onDismiss={() => (error = null)}
+		>
+			{#snippet children()}
+				{error}
+				<div class="mt-3">
+					<Button variant="secondary" size="sm" onclick={loadAssignments}>
+						{#snippet children()}
+							Try Again
+						{/snippet}
+					</Button>
+				</div>
+			{/snippet}
+		</Alert>
+	{:else}
+		<!-- Quick Stats -->
+		<div class="grid grid-cols-1 gap-6 md:grid-cols-4">
+			<div class="rounded-lg border border-gray-200 bg-white p-6">
+				<div class="flex items-center">
+					<div class="flex-shrink-0">
+						<svg
+							class="h-8 w-8 text-blue-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+							/>
+						</svg>
+					</div>
+					<div class="ml-4">
+						<p class="text-sm font-medium text-gray-600">Total Assignments</p>
+						<p class="text-2xl font-semibold text-gray-900">{totalAssignments}</p>
+					</div>
+				</div>
+			</div>
 
-		<!-- Main Content -->
-		{#if !selectedClassroomId}
-			<!-- No classroom selected -->
-			<div class="py-12 text-center">
-				<svg
-					class="mx-auto h-12 w-12 text-gray-400"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-					/>
-				</svg>
-				<h3 class="mt-2 text-sm font-medium text-gray-900">Select a Class</h3>
-				<p class="mt-1 text-sm text-gray-500">
-					Choose a class from the sidebar to view its assignments and manage submissions.
+			<div class="rounded-lg border border-gray-200 bg-white p-6">
+				<div class="flex items-center">
+					<div class="flex-shrink-0">
+						<svg
+							class="h-8 w-8 text-teal-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2M9 5a2 2 0 012 2v6a2 2 0 01-2 2M9 5V3a2 2 0 012-2h4a2 2 0 012 2v2M9 13h6m-3-3v3"
+							/>
+						</svg>
+					</div>
+					<div class="ml-4">
+						<p class="text-sm font-medium text-gray-600">Quizzes</p>
+						<p class="text-2xl font-semibold text-gray-900">{quizCount}</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="rounded-lg border border-gray-200 bg-white p-6">
+				<div class="flex items-center">
+					<div class="flex-shrink-0">
+						<svg
+							class="h-8 w-8 text-green-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
+						</svg>
+					</div>
+					<div class="ml-4">
+						<p class="text-sm font-medium text-gray-600">Total Submissions</p>
+						<p class="text-2xl font-semibold text-gray-900">{totalSubmissions}</p>
+					</div>
+				</div>
+			</div>
+
+			<div class="rounded-lg border border-gray-200 bg-white p-6">
+				<div class="flex items-center">
+					<div class="flex-shrink-0">
+						<svg
+							class="h-8 w-8 text-orange-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z"
+							/>
+						</svg>
+					</div>
+					<div class="ml-4">
+						<p class="text-sm font-medium text-gray-600">Pending Review</p>
+						<p class="text-2xl font-semibold text-gray-900">{ungradedSubmissions}</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Student Management -->
+		<div class="rounded-lg border border-gray-200 bg-white">
+			<div class="border-b border-gray-200 px-6 py-4">
+				<h3 class="text-lg font-semibold text-gray-900">Student Management</h3>
+				<p class="text-sm text-gray-600">Help students with login issues and account access</p>
+			</div>
+			<div class="p-6">
+				<StudentResetManager />
+			</div>
+		</div>
+
+		<!-- Google Sheets Configuration -->
+		<div class="rounded-lg border border-gray-200 bg-white">
+			<div class="border-b border-gray-200 px-6 py-4">
+				<h3 class="text-lg font-semibold text-gray-900">Google Sheets Configuration</h3>
+				<p class="text-sm text-gray-600">
+					Manage your Google Sheet settings and retrieve AppScript code
 				</p>
 			</div>
-		{:else if loading}
-			<!-- Loading State -->
-			<LoadingSkeleton type="card" rows={3} />
-		{:else if error}
-			<!-- Error State -->
-			<Alert
-				variant="error"
-				title="Error loading assignments"
-				dismissible
-				onDismiss={() => (error = null)}
-			>
-				{#snippet children()}
-					{error}
-					<div class="mt-3">
-						<Button variant="secondary" size="sm" onclick={loadAssignments}>
+			<div class="p-6">
+				<div class="space-y-4">
+					<div class="flex items-start space-x-3">
+						<svg
+							class="h-8 w-8 flex-shrink-0 text-green-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2M9 5a2 2 0 012 2v6a2 2 0 01-2 2M9 5V3a2 2 0 012-2h4a2 2 0 012 2v2M9 13h6m-3-3v3"
+							/>
+						</svg>
+						<div class="flex-1">
+							<p class="text-sm text-gray-700">
+								Access your Google Sheet setup to retrieve the AppScript code, change sheet
+								settings, or configure a new sheet for your board account.
+							</p>
+							<ul class="mt-2 space-y-1 text-sm text-gray-600">
+								<li>• Retrieve AppScript code if you missed it during initial setup</li>
+								<li>• Update Google Sheet configuration</li>
+								<li>• Set up sheets for additional board accounts</li>
+							</ul>
+						</div>
+					</div>
+					<div class="flex justify-start">
+						<Button variant="primary" onclick={() => goto('/teacher/onboarding')}>
 							{#snippet children()}
-								Try Again
+								Manage Sheet Setup
 							{/snippet}
 						</Button>
 					</div>
-				{/snippet}
-			</Alert>
-		{:else}
-			<!-- Quick Stats -->
-			<div class="grid grid-cols-1 gap-6 md:grid-cols-4">
-				<div class="rounded-lg border border-gray-200 bg-white p-6">
-					<div class="flex items-center">
-						<div class="flex-shrink-0">
-							<svg
-								class="h-8 w-8 text-blue-600"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-								/>
-							</svg>
-						</div>
-						<div class="ml-4">
-							<p class="text-sm font-medium text-gray-600">Total Assignments</p>
-							<p class="text-2xl font-semibold text-gray-900">{totalAssignments}</p>
-						</div>
-					</div>
-				</div>
-
-				<div class="rounded-lg border border-gray-200 bg-white p-6">
-					<div class="flex items-center">
-						<div class="flex-shrink-0">
-							<svg
-								class="h-8 w-8 text-teal-600"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2M9 5a2 2 0 012 2v6a2 2 0 01-2 2M9 5V3a2 2 0 012-2h4a2 2 0 012 2v2M9 13h6m-3-3v3"
-								/>
-							</svg>
-						</div>
-						<div class="ml-4">
-							<p class="text-sm font-medium text-gray-600">Quizzes</p>
-							<p class="text-2xl font-semibold text-gray-900">{quizCount}</p>
-						</div>
-					</div>
-				</div>
-
-				<div class="rounded-lg border border-gray-200 bg-white p-6">
-					<div class="flex items-center">
-						<div class="flex-shrink-0">
-							<svg
-								class="h-8 w-8 text-green-600"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-								/>
-							</svg>
-						</div>
-						<div class="ml-4">
-							<p class="text-sm font-medium text-gray-600">Total Submissions</p>
-							<p class="text-2xl font-semibold text-gray-900">{totalSubmissions}</p>
-						</div>
-					</div>
-				</div>
-
-				<div class="rounded-lg border border-gray-200 bg-white p-6">
-					<div class="flex items-center">
-						<div class="flex-shrink-0">
-							<svg
-								class="h-8 w-8 text-orange-600"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z"
-								/>
-							</svg>
-						</div>
-						<div class="ml-4">
-							<p class="text-sm font-medium text-gray-600">Pending Review</p>
-							<p class="text-2xl font-semibold text-gray-900">{ungradedSubmissions}</p>
-						</div>
-					</div>
 				</div>
 			</div>
+		</div>
 
-			<!-- Student Management -->
-			<div class="rounded-lg border border-gray-200 bg-white">
-				<div class="border-b border-gray-200 px-6 py-4">
-					<h3 class="text-lg font-semibold text-gray-900">Student Management</h3>
-					<p class="text-sm text-gray-600">Help students with login issues and account access</p>
-				</div>
-				<div class="p-6">
-					<StudentResetManager />
-				</div>
+		<!-- Assignments List -->
+		<div class="rounded-lg border border-gray-200 bg-white">
+			<div class="border-b border-gray-200 px-6 py-4">
+				<h3 class="text-lg font-semibold text-gray-900">Assignments & Tests</h3>
+				<p class="text-sm text-gray-600">Manage assignments for the selected class</p>
 			</div>
 
-			<!-- Google Sheets Configuration -->
-			<div class="rounded-lg border border-gray-200 bg-white">
-				<div class="border-b border-gray-200 px-6 py-4">
-					<h3 class="text-lg font-semibold text-gray-900">Google Sheets Configuration</h3>
-					<p class="text-sm text-gray-600">
-						Manage your Google Sheet settings and retrieve AppScript code
-					</p>
-				</div>
-				<div class="p-6">
+			<div class="p-6">
+				{#if assignments.length === 0}
+					<EmptyState
+						icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+						title="No assignments yet"
+						description="Create your first assignment to get started with AI-powered grading."
+						actionLabel="Create Assignment"
+						onAction={() => (window.location.href = '/dashboard/teacher/assignments')}
+					/>
+				{:else}
 					<div class="space-y-4">
-						<div class="flex items-start space-x-3">
-							<svg
-								class="h-8 w-8 flex-shrink-0 text-green-600"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2M9 5a2 2 0 012 2v6a2 2 0 01-2 2M9 5V3a2 2 0 012-2h4a2 2 0 012 2v2M9 13h6m-3-3v3"
-								/>
-							</svg>
-							<div class="flex-1">
-								<p class="text-sm text-gray-700">
-									Access your Google Sheet setup to retrieve the AppScript code, change sheet
-									settings, or configure a new sheet for your board account.
-								</p>
-								<ul class="mt-2 space-y-1 text-sm text-gray-600">
-									<li>• Retrieve AppScript code if you missed it during initial setup</li>
-									<li>• Update Google Sheet configuration</li>
-									<li>• Set up sheets for additional board accounts</li>
-								</ul>
-							</div>
-						</div>
-						<div class="flex justify-start">
-							<Button variant="primary" onclick={() => goto('/teacher/onboarding')}>
-								{#snippet children()}
-									Manage Sheet Setup
-								{/snippet}
-							</Button>
-						</div>
+						{#each assignments as assignment (assignment.id)}
+							<AssignmentListItem {assignment} onView={handleViewAssignment} />
+						{/each}
 					</div>
-				</div>
+				{/if}
 			</div>
-
-			<!-- Assignments List -->
-			<div class="rounded-lg border border-gray-200 bg-white">
-				<div class="border-b border-gray-200 px-6 py-4">
-					<h3 class="text-lg font-semibold text-gray-900">Assignments & Tests</h3>
-					<p class="text-sm text-gray-600">Manage assignments for the selected class</p>
-				</div>
-
-				<div class="p-6">
-					{#if assignments.length === 0}
-						<EmptyState
-							icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-							title="No assignments yet"
-							description="Create your first assignment to get started with AI-powered grading."
-							actionLabel="Create Assignment"
-							onAction={() => (window.location.href = '/dashboard/teacher/assignments')}
-						/>
-					{:else}
-						<div class="space-y-4">
-							{#each assignments as assignment (assignment.id)}
-								<AssignmentListItem {assignment} onView={handleViewAssignment} />
-							{/each}
-						</div>
-					{/if}
-				</div>
-			</div>
-		{/if}
+		</div>
+	{/if}
 </div>
