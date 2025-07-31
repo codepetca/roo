@@ -39,7 +39,9 @@ export async function getApiStatus(req: Request, res: Response) {
         "POST /submissions": "Create a new submission in Firestore",
         "GET /submissions/assignment/{id}": "Get all submissions for an assignment",
         "GET /submissions/{id}": "Get a specific submission by ID",
-        "PATCH /submissions/{id}/status": "Update submission status"
+        "PATCH /submissions/{id}/status": "Update submission status",
+        "POST /webhooks/classroom-sync": "Sync classrooms from Google Sheets (webhook)",
+        "GET /webhooks/status": "Get webhook status"
       }
     });
   } catch (error) {

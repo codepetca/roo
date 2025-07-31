@@ -31,6 +31,7 @@ import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as 
 import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
 import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, createTeacherSheetOAuth, getTeacherOnboardingStatus, checkTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
 import { getTeacherClassrooms, getClassroomAssignments, syncClassroomsFromSheets } from "./routes/classrooms";
+import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
 import { createOrUpdateProfile, sendPasscode, verifyPasscode, resetStudentAuth } from "./routes/auth";
 import { debugSheetsPermissions } from "./routes/debug";
@@ -264,6 +265,14 @@ export const api = onRequest(
       }
       if (method === "GET" && path === "/users/profile/exists") {
         await checkUserProfileExists(request, response); return;
+      }
+
+      // Webhook routes  
+      if (method === "POST" && path === "/webhooks/classroom-sync") {
+        await handleClassroomSyncWebhook(request, response); return;
+      }
+      if (method === "GET" && path === "/webhooks/status") {
+        await getWebhookStatus(request, response); return;
       }
 
       // Default 404
