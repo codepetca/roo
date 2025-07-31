@@ -6,6 +6,7 @@ import { type ClassroomResponse } from "../schemas/dto";
 import { classroomDomainToDto, assignmentDomainToDto } from "../schemas/transformers";
 import { getUserFromRequest } from "../middleware/validation";
 import { processDocumentTimestamps, serializeDocumentTimestamps } from "../utils/timestamps";
+import { createClassroomSyncService } from "../services/classroom-sync";
 
 /**
  * Get all classrooms for the authenticated teacher (OPTIMIZED VERSION)
@@ -275,6 +276,88 @@ export async function getClassroomAssignments(req: Request, res: Response): Prom
     return res.status(500).json({ 
       success: false, 
       error: "Failed to fetch assignments" 
+    });
+  }
+}
+
+/**
+ * Sync classrooms and students from Google Sheets submissions data
+ * Location: functions/src/routes/classrooms.ts:281
+ * Route: POST /classrooms/sync-from-sheets
+ */
+export async function syncClassroomsFromSheets(req: Request, res: Response): Promise<Response> {
+  try {
+    // Get authenticated user
+    const user = await getUserFromRequest(req);
+    if (!user || user.role !== "teacher") {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Only teachers can sync classrooms from sheets" 
+      });
+    }
+
+    // Validate request body
+    const { spreadsheetId } = req.body;
+    if (!spreadsheetId || typeof spreadsheetId !== "string") {
+      return res.status(400).json({ 
+        success: false, 
+        error: "spreadsheetId is required and must be a string" 
+      });
+    }
+
+    logger.info("Starting classroom sync from sheets", { 
+      teacherId: user.uid, 
+      spreadsheetId 
+    });
+
+    // Perform the sync
+    const syncService = createClassroomSyncService();
+    const result = await syncService.syncClassroomsFromSheets(user.uid, spreadsheetId);
+
+    if (result.success) {
+      logger.info("Classroom sync completed successfully", {
+        teacherId: user.uid,
+        spreadsheetId,
+        result
+      });
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          classroomsCreated: result.classroomsCreated,
+          classroomsUpdated: result.classroomsUpdated,
+          studentsCreated: result.studentsCreated,
+          studentsUpdated: result.studentsUpdated,
+          totalErrors: result.errors.length
+        },
+        message: `Successfully synced ${result.classroomsCreated + result.classroomsUpdated} classrooms and ${result.studentsCreated + result.studentsUpdated} students`
+      });
+    } else {
+      logger.warn("Classroom sync completed with errors", {
+        teacherId: user.uid,
+        spreadsheetId,
+        errors: result.errors
+      });
+
+      return res.status(207).json({ // 207 Multi-Status for partial success
+        success: false,
+        data: {
+          classroomsCreated: result.classroomsCreated,
+          classroomsUpdated: result.classroomsUpdated,
+          studentsCreated: result.studentsCreated,
+          studentsUpdated: result.studentsUpdated,
+          errors: result.errors
+        },
+        error: "Sync completed with some errors. Check the errors array for details."
+      });
+    }
+
+  } catch (error) {
+    logger.error("Error syncing classrooms from sheets:", error);
+    return res.status(500).json({ 
+      success: false, 
+      error: "Failed to sync classrooms from sheets",
+      details: error instanceof Error ? error.message : "Unknown error"
     });
   }
 }

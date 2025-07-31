@@ -30,7 +30,7 @@ import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngra
 import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as getFirestoreUngradedSubmissions, createSubmission, getSubmissionsByAssignment, getSubmissionById, updateSubmissionStatus } from "./routes/grades";
 import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
 import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, createTeacherSheetOAuth, getTeacherOnboardingStatus, checkTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
-import { getTeacherClassrooms, getClassroomAssignments } from "./routes/classrooms";
+import { getTeacherClassrooms, getClassroomAssignments, syncClassroomsFromSheets } from "./routes/classrooms";
 import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
 import { createOrUpdateProfile, sendPasscode, verifyPasscode, resetStudentAuth } from "./routes/auth";
 import { debugSheetsPermissions } from "./routes/debug";
@@ -199,6 +199,9 @@ export const api = onRequest(
         const classroomId = path.split("/classrooms/")[1].split("/assignments")[0];
         (request as RequestWithParams).params = { classroomId };
         await getClassroomAssignments(request, response); return;
+      }
+      if (method === "POST" && path === "/classrooms/sync-from-sheets") {
+        await syncClassroomsFromSheets(request, response); return;
       }
 
       // Firestore Grade Management Routes
