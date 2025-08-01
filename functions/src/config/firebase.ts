@@ -14,6 +14,9 @@ if (isEmulator()) {
 export const db = getFirestore();
 export const FieldValue = admin.firestore.FieldValue;
 
+// Service Account Configuration
+export const SERVICE_ACCOUNT_EMAIL = "firebase-adminsdk-fbsvc@roo-app-3d24e.iam.gserviceaccount.com";
+
 // Export timestamp helper that handles emulator vs production
 export function getCurrentTimestamp(): admin.firestore.Timestamp | admin.firestore.FieldValue {
   if (isEmulator()) {

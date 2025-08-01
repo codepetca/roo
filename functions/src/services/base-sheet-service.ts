@@ -5,7 +5,8 @@
 
 import { google } from "googleapis";
 import { logger } from "firebase-functions";
-import { APPSCRIPT_TEMPLATE } from "./appscript-template";
+import { APPSCRIPT_TEMPLATE } from "../integration/appscript-code";
+import { SERVICE_ACCOUNT_EMAIL } from "../config/firebase";
 
 // Fallback template in case the main template fails to load
 const FALLBACK_APPSCRIPT_TEMPLATE = `/**
@@ -82,7 +83,7 @@ export abstract class BaseSheetService {
         title: title,
         locale: "en_US",
         autoRecalc: "ON_CHANGE",
-        timeZone: "America/Los_Angeles"
+        timeZone: "America/Los_Angeles",
       },
       sheets: [
         {
@@ -90,16 +91,16 @@ export abstract class BaseSheetService {
             title: "Sheet1",
             gridProperties: {
               rowCount: 1000,
-              columnCount: 26
-            }
-          }
-        }
-      ]
+              columnCount: 26,
+            },
+          },
+        },
+      ],
     };
 
     const response = await this.sheets.spreadsheets.create({
       resource: requestBody,
-      fields: "spreadsheetId,spreadsheetUrl,properties.title,sheets.properties.sheetId"
+      fields: "spreadsheetId,spreadsheetUrl,properties.title,sheets.properties.sheetId",
     });
 
     return response.data;
@@ -113,66 +114,72 @@ export abstract class BaseSheetService {
       // Sheet1 headers (assignments)
       {
         range: "Sheet1!A1:H1",
-        values: [[
-          "Assignment ID",
-          "Course ID", 
-          "Title",
-          "Description",
-          "Due Date",
-          "Max Points",
-          "Submission Type",
-          "Created Date"
-        ]]
+        values: [
+          [
+            "Assignment ID",
+            "Course ID",
+            "Title",
+            "Description",
+            "Due Date",
+            "Max Points",
+            "Submission Type",
+            "Created Date",
+          ],
+        ],
       },
       // Submissions headers
       {
         range: "Submissions!A1:Q1",
-        values: [[
-          "Submission ID",
-          "Assignment Title",
-          "Course ID",
-          "First Name",
-          "Last Name", 
-          "Email",
-          "Submission Text",
-          "Submission Date",
-          "Current Grade",
-          "Grading Status",
-          "Max Points",
-          "Source Sheet Name",
-          "Assignment Description",
-          "Last Processed",
-          "Source File ID",
-          "Is Quiz",
-          "Form ID"
-        ]]
+        values: [
+          [
+            "Submission ID",
+            "Assignment Title",
+            "Course ID",
+            "First Name",
+            "Last Name",
+            "Email",
+            "Submission Text",
+            "Submission Date",
+            "Current Grade",
+            "Grading Status",
+            "Max Points",
+            "Source Sheet Name",
+            "Assignment Description",
+            "Last Processed",
+            "Source File ID",
+            "Is Quiz",
+            "Form ID",
+          ],
+        ],
       },
       // Answer Keys headers
       {
         range: "Answer Keys!A1:J1",
-        values: [[
-          "Form ID",
-          "Assignment Title",
-          "Course ID",
-          "Question Number",
-          "Question Text",
-          "Question Type",
-          "Points",
-          "Correct Answer",
-          "Answer Explanation",
-          "Grading Strictness"
-        ]]
-      }
+        values: [
+          [
+            "Form ID",
+            "Assignment Title",
+            "Course ID",
+            "Question Number",
+            "Question Text",
+            "Question Type",
+            "Points",
+            "Correct Answer",
+            "Answer Explanation",
+            "Grading Strictness",
+          ],
+        ],
+      },
     ];
 
     const requestBody = {
       valueInputOption: "RAW",
-      data: updates
+      data: updates,
     };
 
     await this.sheets.spreadsheets.values.batchUpdate({
       spreadsheetId,
-      resource: requestBody
+      resource: requestBody,
     });
   }
 
@@ -187,19 +194,19 @@ export abstract class BaseSheetService {
           range: {
             sheetId: sheetIds.sheet1Id,
             startRowIndex: 0,
-            endRowIndex: 1
+            endRowIndex: 1,
           },
           cell: {
             userEnteredFormat: {
               backgroundColor: { red: 0.26, green: 0.52, blue: 0.96 },
-              textFormat: { 
+              textFormat: {
                 foregroundColor: { red: 1.0, green: 1.0, blue: 1.0 },
-                bold: true 
-              }
-            }
+                bold: true,
+              },
+            },
           },
-          fields: "userEnteredFormat(backgroundColor,textFormat)"
-        }
+          fields: "userEnteredFormat(backgroundColor,textFormat)",
+        },
       },
       // Format Submissions headers
       {
@@ -207,19 +214,19 @@ export abstract class BaseSheetService {
           range: {
             sheetId: sheetIds.submissionsId,
             startRowIndex: 0,
-            endRowIndex: 1
+            endRowIndex: 1,
           },
           cell: {
             userEnteredFormat: {
               backgroundColor: { red: 0.26, green: 0.52, blue: 0.96 },
-              textFormat: { 
+              textFormat: {
                 foregroundColor: { red: 1.0, green: 1.0, blue: 1.0 },
-                bold: true 
-              }
-            }
+                bold: true,
+              },
+            },
           },
-          fields: "userEnteredFormat(backgroundColor,textFormat)"
-        }
+          fields: "userEnteredFormat(backgroundColor,textFormat)",
+        },
       },
       // Format Answer Keys headers
       {
@@ -227,52 +234,65 @@ export abstract class BaseSheetService {
           range: {
             sheetId: sheetIds.answerKeysId,
             startRowIndex: 0,
-            endRowIndex: 1
+            endRowIndex: 1,
           },
           cell: {
             userEnteredFormat: {
               backgroundColor: { red: 0.26, green: 0.52, blue: 0.96 },
-              textFormat: { 
+              textFormat: {
                 foregroundColor: { red: 1.0, green: 1.0, blue: 1.0 },
-                bold: true 
-              }
-            }
+                bold: true,
+              },
+            },
           },
-          fields: "userEnteredFormat(backgroundColor,textFormat)"
-        }
-      }
+          fields: "userEnteredFormat(backgroundColor,textFormat)",
+        },
+      },
     ];
 
     await this.sheets.spreadsheets.batchUpdate({
       spreadsheetId,
-      resource: { requests }
+      resource: { requests },
     });
   }
 
   /**
-   * Share the sheet with the teacher's board account
+   * Share the sheet with the teacher's board account and service account
    */
   protected async shareWithBoardAccount(spreadsheetId: string, boardAccountEmail: string) {
     try {
+      // Share with board account (user-facing notifications)
       await this.drive.permissions.create({
         fileId: spreadsheetId,
         resource: {
           role: "writer", // Full edit access for board account
           type: "user",
-          emailAddress: boardAccountEmail
+          emailAddress: boardAccountEmail,
         },
-        sendNotificationEmail: true // Notify the board account
+        sendNotificationEmail: true, // Notify the board account
       });
 
-      logger.info("Sheet shared with board account", { 
-        spreadsheetId, 
-        boardAccountEmail 
+      // Share with service account (for webhook access) - No notification needed
+      await this.drive.permissions.create({
+        fileId: spreadsheetId,
+        resource: {
+          role: "writer", // Full edit access for service account
+          type: "user",
+          emailAddress: SERVICE_ACCOUNT_EMAIL,
+        },
+        sendNotificationEmail: false, // No notification for service account
+      });
+
+      logger.info("Sheet shared with board account and service account", {
+        spreadsheetId,
+        boardAccountEmail,
+        serviceAccountEmail: SERVICE_ACCOUNT_EMAIL,
       });
     } catch (error) {
-      logger.error("Failed to share sheet with board account", { 
-        error, 
-        spreadsheetId, 
-        boardAccountEmail 
+      logger.error("Failed to share sheet with board account and service account", {
+        error,
+        spreadsheetId,
+        boardAccountEmail,
       });
       throw error;
     }
@@ -284,38 +304,39 @@ export abstract class BaseSheetService {
   protected generateAppScriptCode(spreadsheetId: string, boardAccountEmail: string): string {
     let templateToUse = APPSCRIPT_TEMPLATE;
     let usingFallback = false;
-    
+
     // Check if the template is available
-    if (!APPSCRIPT_TEMPLATE || typeof APPSCRIPT_TEMPLATE !== 'string') {
-      logger.warn("APPSCRIPT_TEMPLATE is undefined or not a string, using fallback template", { 
+    if (!APPSCRIPT_TEMPLATE || typeof APPSCRIPT_TEMPLATE !== "string") {
+      logger.warn("APPSCRIPT_TEMPLATE is undefined or not a string, using fallback template", {
         templateType: typeof APPSCRIPT_TEMPLATE,
         templateDefined: !!APPSCRIPT_TEMPLATE,
-        spreadsheetId, 
-        boardAccountEmail 
+        spreadsheetId,
+        boardAccountEmail,
       });
       templateToUse = FALLBACK_APPSCRIPT_TEMPLATE;
       usingFallback = true;
     }
 
     // Use the selected template (main or fallback)
-    const completeCode = templateToUse
-      .replace(/\{\{SPREADSHEET_ID\}\}/g, spreadsheetId);
-    
-    logger.info("Generated complete AppScript code", { 
-      spreadsheetId, 
+    const completeCode = templateToUse.replace(/\{\{SPREADSHEET_ID\}\}/g, spreadsheetId);
+
+    logger.info("Generated complete AppScript code", {
+      spreadsheetId,
       boardAccountEmail,
       codeLength: completeCode.length,
       templateLength: templateToUse.length,
-      usingFallback
+      usingFallback,
     });
-    
+
     return completeCode;
   }
 
   /**
    * Create additional sheets (Submissions and Answer Keys)
    */
-  protected async createAdditionalSheets(spreadsheetId: string): Promise<{ submissionsId: number; answerKeysId: number }> {
+  protected async createAdditionalSheets(
+    spreadsheetId: string
+  ): Promise<{ submissionsId: number; answerKeysId: number }> {
     const requests = [
       // Create Submissions sheet
       {
@@ -325,12 +346,12 @@ export abstract class BaseSheetService {
             gridProperties: {
               rowCount: 10000,
               columnCount: 17,
-              frozenRowCount: 1
-            }
-          }
-        }
+              frozenRowCount: 1,
+            },
+          },
+        },
       },
-      // Create Answer Keys sheet  
+      // Create Answer Keys sheet
       {
         addSheet: {
           properties: {
@@ -338,16 +359,16 @@ export abstract class BaseSheetService {
             gridProperties: {
               rowCount: 1000,
               columnCount: 10,
-              frozenRowCount: 1
-            }
-          }
-        }
-      }
+              frozenRowCount: 1,
+            },
+          },
+        },
+      },
     ];
 
     const response = await this.sheets.spreadsheets.batchUpdate({
       spreadsheetId,
-      resource: { requests }
+      resource: { requests },
     });
 
     // Extract the actual sheet IDs from the response
@@ -366,12 +387,12 @@ export abstract class BaseSheetService {
       const response = await this.drive.files.list({
         q: "name = '_roo_data' and mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false",
         fields: "files(id, name)",
-        spaces: "drive"
+        spaces: "drive",
       });
 
       if (response.data.files && response.data.files.length > 0) {
         logger.info(`Found ${response.data.files.length} existing _roo_data sheets to delete`);
-        
+
         // Delete each existing sheet
         for (const file of response.data.files) {
           try {
@@ -397,13 +418,13 @@ export abstract class BaseSheetService {
     try {
       const response = await this.drive.files.get({
         fileId: spreadsheetId,
-        fields: "id, name, mimeType, trashed"
+        fields: "id, name, mimeType, trashed",
       });
 
       // Check if the file exists, is a spreadsheet, and is not trashed
-      return response.data && 
-             response.data.mimeType === 'application/vnd.google-apps.spreadsheet' &&
-             !response.data.trashed;
+      return (
+        response.data && response.data.mimeType === "application/vnd.google-apps.spreadsheet" && !response.data.trashed
+      );
     } catch (error: any) {
       if (error.code === 404) {
         logger.info(`Sheet ${spreadsheetId} not found`);
@@ -424,7 +445,7 @@ export abstract class BaseSheetService {
         fields: "files(id)",
         spaces: "drive",
         orderBy: "modifiedTime desc",
-        pageSize: 1
+        pageSize: 1,
       });
 
       if (response.data.files && response.data.files.length > 0) {

@@ -6,6 +6,7 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
 import { createClassroomSyncService } from "../services/classroom-sync";
+import { SERVICE_ACCOUNT_EMAIL } from "../config/firebase";
 
 /**
  * Webhook for classroom sync from AppScript
@@ -110,10 +111,30 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
       timestamp: new Date().toISOString()
     });
 
+    // Check for specific permission errors and provide helpful guidance
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    if (errorMessage.includes('403') || errorMessage.includes('permission') || errorMessage.includes('Access denied')) {
+      return res.status(403).json({
+        success: false,
+        error: "Permission denied accessing Google Sheet",
+        details: errorMessage,
+        guidance: `Please ensure your Google Sheet is shared with the Firebase service account: ${SERVICE_ACCOUNT_EMAIL}`,
+        troubleshooting: [
+          "1. Open your Google Sheet",
+          "2. Click the 'Share' button", 
+          `3. Add this email: ${SERVICE_ACCOUNT_EMAIL}`,
+          "4. Give 'Editor' permissions",
+          "5. Try the webhook again"
+        ],
+        timestamp: new Date().toISOString()
+      });
+    }
+
     return res.status(500).json({
       success: false,
       error: "Internal server error during classroom sync",
-      details: error instanceof Error ? error.message : "Unknown error",
+      details: errorMessage,
       timestamp: new Date().toISOString()
     });
   }

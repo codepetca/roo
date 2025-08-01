@@ -199,4 +199,37 @@ Your deployment is working when:
 
 ---
 
+## 🎯 **Complete Working Flow (August 2025)**
+
+### **✅ Permission Fix Implemented**
+The major permission issue has been **RESOLVED**! New sheets automatically include service account permissions.
+
+### **End-to-End Working Process**
+1. **Teacher Onboarding**: Complete via `/teacher/onboarding` 
+   - Creates `_roo_data` sheet in teacher's Drive
+   - **Automatically shares with service account** (no manual sharing required!)
+   - Provides custom AppScript code
+
+2. **AppScript Setup**: Teachers deploy the provided AppScript
+   - Contains webhook integration code
+   - Includes API key authentication  
+   - Ready for data processing
+
+3. **Data Processing**: Teachers run `processAllSubmissions()`
+   - Processes Google Forms data
+   - Writes to `_roo_data` sheet
+   - **Automatically calls webhook** for Firestore sync
+
+4. **Webhook Integration**: Seamless Firebase sync
+   - Service account has automatic sheet access
+   - No permission errors
+   - Real-time data synchronization
+
+### **For Complete Flow Documentation**
+See detailed technical documentation:
+- 📋 **Complete Flow**: `/docs/flows/teacher-onboarding-complete-flow.md`
+- 🔗 **Webhook Architecture**: `/docs/flows/webhook-integration-architecture.md`
+
+---
+
 **Next Steps**: Once deployed, teachers just need the web app URL and their sheet IDs. No API key management required!
