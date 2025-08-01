@@ -186,15 +186,19 @@ function getValidApiKeys(): string[] {
     return envApiKeys.split(',').map(key => key.trim());
   }
 
-  // Fallback - use a stable development key
+  // Fallback - use stable development keys
   // In production, this should be set via environment variables
-  const defaultKey = "roo-webhook-dev-stable123456";
-  logger.warn("Using hardcoded API key for development", { 
-    apiKeyPreview: defaultKey.substring(0, 12) + "...",
+  const defaultKeys = [
+    "roo-webhook-dev-stable123456",     // Individual teacher testing
+    "roo-board-integration-stable456"  // Board web app integration
+  ];
+  
+  logger.warn("Using hardcoded API keys for development", { 
+    keyCount: defaultKeys.length,
     note: "Set WEBHOOK_API_KEYS environment variable for production"
   });
   
-  return [defaultKey];
+  return defaultKeys;
 }
 
 /**
