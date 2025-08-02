@@ -5,96 +5,92 @@
 
 ## Current Status
 
-### ✅ **Production Ready**
-- **Teacher Dashboard**: Complete Svelte 5 interface with authentication
-- **Quiz Grading**: AI-powered grading with answer key integration
-- **Type Safety**: Bulletproof validation across all layers
-- **Testing**: Comprehensive unit, integration, and E2E test coverage
-- **Firebase Infrastructure**: Production-ready backend with emulator development
+### ✅ **Fully Implemented & Working**
+- **Teacher Onboarding**: OAuth-based Google Sheet creation with automatic permissions
+- **AppScript Integration**: Daily automated data extraction from Google Forms to personal sheets
+- **Firebase Backend**: Secure webhook-based sync from AppScript to Firestore
+- **AI Grading**: Gemini 1.5 Flash with generous grading for programming assignments
+- **Type Safety**: Comprehensive Zod validation and shared type system across all boundaries
+- **Testing Infrastructure**: 90+ tests covering services, schemas, and business logic
 
-### 🚧 **In Active Development**
-- **Code Assignment Grading**: AI grading for programming assignments
-- **Automated Pipeline**: Scheduled grading jobs and notifications
-- **Real-time Dashboard**: Live updates and data synchronization
+### 🚧 **In Development**
+- **Teacher Frontend**: Basic dashboard exists, needs submission summaries and manual grading UI
+- **Student Frontend**: Authentication implemented, needs grade/feedback display
+- **Production Scheduling**: AppScript nightly automation needs formal scheduling setup
 
-### 📋 **Next Phase**
-- **Student Interface**: Student-facing submission and grade viewing
-- **Grade Export**: Automated posting to Google Classroom
-- **Advanced Analytics**: Grading insights and performance metrics
+### 📋 **Planned Development**
+- **Complete Teacher Dashboard**: Full student management and grading interface
+- **Complete Student Portal**: Grade viewing with detailed AI feedback
+- **Enhanced Automation**: Robust nightly processing with error recovery
 
 ## Development Phases
 
-### Phase 1: Core Grading System ✅
-**Status**: Complete  
-**Key Achievements**:
-- AI grading with generous mode for student code
-- Google Sheets integration for data synchronization
-- Teacher dashboard with comprehensive management tools
-- Bulletproof type safety and error handling
+### **Phase 1: Complete Teacher Frontend** (Current Priority)
+**Goal**: Full-featured teacher dashboard for managing students and grading  
+**Key Components**:
+- Student submission summaries and status tracking
+- Manual AI grading interface with grade override capabilities
+- Analytics dashboard with class performance metrics
+- Complete classroom workflow management
 
-### Phase 2: Production Readiness 🚧
-**Status**: 80% Complete  
-**Current Work**:
-- Automated grading pipeline implementation
-- Enhanced error recovery and fallback systems
-- Performance optimization and caching
-- Production deployment and monitoring
+### **Phase 2: Complete Student Frontend** (Next Priority)
+**Goal**: Student portal for viewing grades and AI feedback  
+**Key Components**:
+- Grade viewing with detailed AI feedback display
+- Progress tracking and assignment history
+- Interactive feedback features and grade appeals
+- Student authentication and course access
 
-### Phase 3: Student Experience 📋
-**Status**: Planned  
-**Scope**:
-- Student dashboard for assignment submission
-- Real-time grade notifications
-- Progress tracking and analytics
-- Mobile-responsive interface improvements
+### **Phase 3: Production Hardening** (Future)
+**Goal**: Robust production-ready automation  
+**Key Components**:
+- Reliable nightly AppScript scheduling with fallbacks
+- Advanced student management (dropped/transferred handling)
+- Performance optimization and comprehensive monitoring
+- Multi-teacher support and scalability improvements
 
-### Phase 4: Advanced Features 🔮
-**Status**: Future Planning  
-**Vision**:
-- Advanced AI grading capabilities
-- Integration with multiple LMS platforms
-- Custom rubric creation tools
-- Plagiarism detection integration
+### **Phase 4: Advanced Features** (Long-term Vision)
+**Goal**: Enhanced capabilities and institutional integration  
+**Key Components**:
+- Document submission grading (Google Docs/Sheets)
+- Rubric-based assessment and plagiarism detection
+- Learning analytics and advanced insights
+- School information system integrations
 
-## Key Metrics & Goals
+## System Architecture Overview
 
-### Current Performance
-- **Grading Accuracy**: 95%+ satisfaction with AI generous grading
-- **Response Time**: <2 seconds for dashboard operations
-- **Uptime**: 99.9% availability target
-- **Test Coverage**: 85%+ across all components
+### **Data Flow**
+```
+Board Forms → Personal Google Sheets → AppScript (nightly) → Firebase → Frontend View
+```
 
-### Success Criteria
-- [ ] Grade 1000+ assignments monthly
-- [ ] Support 10+ concurrent teachers
-- [ ] Maintain <1% error rate in grading
-- [ ] Achieve <500ms average API response time
+### **Key Technologies**
+- **Frontend**: SvelteKit + Svelte 5 + TypeScript + TailwindCSS
+- **Backend**: Firebase Functions + TypeScript + Zod validation
+- **Database**: Firestore (primary) + Google Sheets (data source)
+- **AI**: Google Gemini 1.5 Flash with generous grading
+- **AppScript**: Essential for teacher data collection and nightly sync
 
-## Technical Priorities
+### **Current Capabilities**
+- **Teacher Onboarding**: Automated OAuth sheet creation with service account permissions
+- **Data Sync**: Secure webhook-based synchronization from AppScript to Firebase
+- **AI Grading**: Generous programming assignment grading with detailed feedback
+- **Type Safety**: Comprehensive Zod schemas at all system boundaries
+- **Testing**: 90+ tests ensuring system reliability and correctness
 
-### Infrastructure
-1. **Scalability**: Auto-scaling Firebase Functions
-2. **Monitoring**: Comprehensive logging and alerting
-3. **Backup**: Automated data backup and recovery
-4. **Security**: Regular security audits and updates
+## Development Principles
 
-### Quality Assurance
-1. **Testing**: Maintain 90%+ test coverage
-2. **Performance**: Regular performance profiling
-3. **Documentation**: Keep all documentation current
-4. **Code Quality**: Automated quality checks in CI/CD
+### **Quality Gates**
+- **Test-Driven Development**: Red-Green-Refactor cycle for all new features
+- **Type Safety First**: No `any` types, comprehensive Zod validation
+- **Schema-First Design**: API boundaries drive development decisions
+- **Quality Checks**: All tests + linting + type checking must pass before commits
 
-## Resource Allocation
-
-### Current Focus (80% effort)
-- Code assignment grading completion
-- Automated pipeline reliability
-- Production monitoring and optimization
-
-### Maintenance (20% effort)
-- Bug fixes and minor improvements
-- Documentation updates
-- Security patches and dependency updates
+### **Current Focus Areas**
+1. **Teacher Dashboard Completion**: Full submission management and grading interface
+2. **Student Portal Development**: Grade viewing and feedback display
+3. **Production Scheduling**: Reliable nightly AppScript automation
+4. **System Monitoring**: Error recovery and performance optimization
 
 ---
 

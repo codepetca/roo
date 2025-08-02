@@ -142,7 +142,7 @@ Teacher receives complete AppScript code including:
 1. Use Firebase default service account
 2. Access Google Sheets API with full permissions
 3. Read submissions, assignments, answer keys
-4. Write back grades and status updates
+4. Process data for Firestore storage (no write-back to sheets)
 ```
 
 ### **Step 3: Firestore Sync**
@@ -195,9 +195,9 @@ Multiple Classroom Sheets → Consolidated _roo_data Sheet
 _roo_data Sheet → Firebase Functions → Firestore Database
 ```
 
-### **4. Grade Return**
+### **4. Grade Display**
 ```
-Firestore Grades → Firebase Functions → Google Sheets Updates
+Firestore Grades → Firebase Functions → Teacher & Student Dashboards
 ```
 
 ---
@@ -220,7 +220,7 @@ Firestore Grades → Firebase Functions → Google Sheets Updates
 - ✅ Classrooms created/updated in Firestore
 - ✅ Students created/updated in Firestore
 - ✅ Submissions synced with proper metadata
-- ✅ Grades written back to Google Sheets
+- ✅ Grades stored in Firestore for frontend display
 
 ---
 

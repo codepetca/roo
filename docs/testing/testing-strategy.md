@@ -6,12 +6,12 @@ This document outlines our comprehensive testing approach designed for **rapid d
 
 ## 🎯 **Current Test Coverage**
 
-- **90 Tests Total** ✅ (100% passing)
-- **Schema Tests**: 23 tests (data validation & transformation)
-- **Firestore Tests**: 15 tests (database operations & mocking)
-- **Sheets Tests**: 24 tests (Google Sheets integration)
-- **Gemini Tests**: 25 tests (AI service & rate limiting)
-- **Example Tests**: 3 tests (basic infrastructure)
+- **90+ Tests Total** ✅ (100% passing)
+- **Schema Tests**: Comprehensive data validation & transformation
+- **Firestore Tests**: Database operations & mocking
+- **Sheets Tests**: Google Sheets integration & AppScript sync
+- **Gemini Tests**: AI service integration & rate limiting
+- **Service Tests**: Business logic & external service integration
 
 ## 🏗 **Test Architecture**
 

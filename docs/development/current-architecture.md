@@ -23,180 +23,163 @@ Roo is a full-stack AI-powered auto-grading system with three main components:
 
 ## Data Flow Architecture
 
-### 1. Assignment Creation & Management
+### **Complete System Flow**
 ```
-Google Sheets (Source of Truth)
-    ↓ (Apps Script Sync)
-Firestore (Assignments Collection)
-    ↓ (API Layer)
-Frontend Dashboard (Teacher View)
+Board Forms → Personal Google Sheets → AppScript (nightly) → Firebase → Frontend View
 ```
 
-### 2. Student Submissions
+### **1. Teacher Onboarding & Setup**
 ```
-Google Forms/Sheets (Student Submissions)
-    ↓ (Periodic Sync)
+Teacher Signup (OAuth)
+    ↓
+Google Sheet Creation (_roo_data)
+    ↓ (Auto-share with service accounts)
+AppScript Code Generation
+    ↓
+Teacher Board Account Setup
+```
+
+### **2. Daily Data Collection & Processing**
+```
+Google Forms (Student Submissions)
+    ↓ (Board account collection)
+AppScript Nightly Processing
+    ↓ (Consolidate classroom data)
+Personal Google Sheets (_roo_data)
+    ↓ (Webhook with API auth)
+Firebase Functions (Data Sync)
+```
+
+### **3. AI Grading & Storage**
+```
 Firestore (Submissions Collection)
-    ↓ (Grading Trigger)
-AI Grading Service (Gemini 1.5 Flash)
-    ↓ (Results Storage)
-Firestore (Grades Collection)
-    ↓ (Display/Export)
-Teacher Dashboard & Google Sheets
+    ↓ (AI processing trigger)
+Gemini 1.5 Flash (Generous grading)
+    ↓ (Results storage)
+Firestore (Grades & Feedback)
+    ↓ (Display only - no write-back)
+Teacher & Student Dashboards
 ```
 
 ## Current Component Status
 
 ### ✅ **Fully Implemented**
-- **Teacher Dashboard**: Svelte 5 with authentication, assignment viewing, statistics
-- **API Layer**: Firebase Functions with comprehensive validation
-- **Type Safety**: Shared types, Zod schemas, bulletproof validation
-- **Testing**: Comprehensive unit, integration, and E2E tests
-- **Firebase Emulator**: Local development environment with test data
+
+**Core Infrastructure:**
+- **Teacher Onboarding**: OAuth-based Google Sheet creation with automatic permissions
+- **AppScript Integration**: Daily automated data extraction and webhook sync
+- **Firebase Functions**: Secure API endpoints with comprehensive error handling
+- **AI Grading Service**: Gemini 1.5 Flash with generous grading for programming
+- **Type Safety**: Comprehensive Zod validation and shared type system
+- **Testing**: 90+ tests covering all services and business logic
+
+**Key Services:**
+- **Classroom Sync**: Webhook-based data synchronization from AppScript
+- **Student Management**: Firestore-based tracking with roster updates
+- **Authentication**: Firebase Auth integration for teachers and students
+- **Database**: Firestore collections for classrooms, students, submissions, grades
 
 ### 🚧 **In Development**
-- **Automated Grading Pipeline**: Scheduled grading jobs
-- **Assignment Grading**: Code assignment grading (quiz grading complete)
-- **Real-time Updates**: Live dashboard updates
 
-### 📋 **Planned**
-- **Student Dashboard**: Student-facing assignment submission interface
-- **Grade Export**: Automated grade posting to Google Classroom
-- **Analytics**: Advanced grading analytics and insights
+**Frontend Interfaces:**
+- **Teacher Dashboard**: Basic structure exists, needs full submission management
+- **Student Portal**: Authentication working, needs grade/feedback display
+- **Manual Grading**: Infrastructure ready, needs user interface
+
+**Automation:**
+- **Nightly Scheduling**: AppScript automation needs production scheduling setup
+- **Error Monitoring**: Basic logging exists, needs comprehensive alerting
+
+### 📋 **Planned Development**
+
+**Phase 1 - Teacher Frontend:**
+- Student submission summaries and status tracking
+- Manual AI grading interface and grade override capabilities  
+- Analytics dashboard with class performance metrics
+
+**Phase 2 - Student Frontend:**
+- Grade viewing with detailed AI feedback display
+- Progress tracking and assignment history
+- Interactive feedback features
+
+**Phase 3 - Production Hardening:**
+- Robust nightly processing with error recovery
+- Advanced student management (dropped/transferred handling)
+- Performance optimization and monitoring
 
 ## Technology Stack Details
 
-### Frontend (SvelteKit + Svelte 5)
-```
-frontend/
-├── src/routes/                 # SvelteKit routing
-│   ├── dashboard/             # Teacher dashboard pages
-│   └── login/                 # Authentication pages
-├── src/lib/
-│   ├── components/            # Reusable Svelte components
-│   ├── stores/               # Svelte 5 runes-based state
-│   └── api.ts                # Type-safe API client
-└── tests/                    # Comprehensive test suite
-```
+### **Frontend (SvelteKit + Svelte 5)**
+- **Framework**: SvelteKit 2.x with Svelte 5 runes (`$state`, `$derived`, `$props`)
+- **Styling**: TailwindCSS for consistent design system
+- **Type Safety**: TypeScript with strict mode + shared types from `@shared/types`
+- **API Client**: Runtime validation of all responses using Zod schemas
+- **Authentication**: Firebase Auth integration with SvelteKit hooks
 
-**Key Patterns**:
-- Svelte 5 runes for state management (`$state`, `$derived`, `$props`)
-- Server-side authentication via SvelteKit hooks
-- Type-safe API integration with runtime validation
+### **Backend (Firebase Functions)**
+- **Runtime**: Node.js with TypeScript compilation
+- **Validation**: Centralized Zod schemas for all API boundaries
+- **Database**: Firestore with comprehensive error handling
+- **AI Service**: Google Gemini 1.5 Flash for generous grading
+- **Testing**: 90+ Vitest tests with mocked external services
 
-### Backend (Firebase Functions)
-```
-functions/src/
-├── routes/                   # API endpoint handlers
-│   ├── assignments.ts        # Assignment CRUD operations
-│   ├── grading.ts           # AI grading endpoints
-│   └── grades.ts            # Grade management
-├── services/                # Business logic
-│   ├── gemini.ts            # AI grading service
-│   └── firestore.ts         # Database operations
-├── schemas/                 # Centralized Zod validation
-└── middleware/              # Request validation & error handling
-```
-
-**Key Patterns**:
-- Centralized validation with Zod schemas
-- Consistent error handling and API responses
-- Environment-aware Firebase configuration
-
-### Shared Types
-```
-shared/
-├── types.ts                 # All shared type definitions
-├── converters.ts            # Firebase timestamp handling
-└── index.ts                 # Main exports
-```
+### **AppScript Integration**
+- **Location**: Runs in teacher's board account (institutional Google account)
+- **Frequency**: Nightly automated processing (needs production scheduling)
+- **Purpose**: Extract Google Forms data and sync to personal sheets
+- **Security**: Webhook authentication with API keys
+- **Data Flow**: One-way from forms → sheets → Firebase (no write-back)
 
 ## Database Schema (Firestore)
 
-### Collections Structure
-```
-assignments/                 # Assignment definitions
-├── {assignmentId}
-│   ├── id: string
-│   ├── title: string
-│   ├── isQuiz: boolean
-│   ├── formId?: string     # For Google Forms quizzes
-│   └── gradingRubric: object
+### **Primary Collections**
+- **`teachers/`**: Teacher profiles, OAuth tokens, sheet configurations
+- **`classrooms/`**: Classroom definitions synced from Google Sheets
+- **`students/`**: Student roster with status tracking (active/dropped/not-submitted)
+- **`assignments/`**: Assignment metadata from Google Forms
+- **`submissions/`**: Student submission data from forms
+- **`grades/`**: AI-generated grades and feedback (no write-back to sheets)
 
-submissions/                 # Student submissions
-├── {submissionId}
-│   ├── assignmentId: string
-│   ├── studentId: string
-│   ├── status: 'pending' | 'grading' | 'graded'
-│   └── content: string
+### **Key Schema Patterns**
+- **Comprehensive Zod Validation**: All data validated at API boundaries
+- **Shared Types**: Single source of truth in `shared/types.ts`
+- **Timestamp Handling**: Environment-aware converters for emulator vs production
+- **Error Resilience**: Graceful handling of missing documents and malformed data
 
-grades/                     # Grading results
-├── {gradeId}
-│   ├── submissionId: string
-│   ├── score: number
-│   ├── feedback: string
-│   └── gradingDetails: object
-```
+## Security Architecture
 
-## AI Grading Architecture
+### **Authentication Flow**
+- **Teachers**: Google OAuth during onboarding, Firebase Auth tokens
+- **Students**: Firebase Auth with email/password (planned)
+- **API Protection**: All endpoints validate Firebase Auth tokens
+- **Role-Based Access**: Teacher/student permissions via Firestore security rules
 
-### Current Implementation
-- **Model**: Google Gemini 1.5 Flash
-- **Mode**: Generous grading (focuses on logic over syntax)
-- **Rate Limiting**: 15 requests/minute per assignment
-- **Fallback**: Graceful error handling with manual review flagging
-
-### Grading Types
-1. **Quiz Grading**: Answer key comparison with partial credit
-2. **Code Grading**: Logic and implementation assessment (in development)
-
-## Authentication & Security
-
-### Current Setup
-- **Frontend**: Firebase Auth with role-based access control
-- **Backend**: Firebase Admin SDK for token verification
-- **Roles**: Teacher/Student distinction based on email patterns
-- **Route Protection**: SvelteKit hooks for server-side auth
-
-### Security Patterns
-- Server-side token validation for all protected routes
-- Environment-aware configuration (development/production)
-- Comprehensive input validation via Zod schemas
+### **Data Security**
+- **Webhook Authentication**: API key validation for AppScript sync
+- **Service Account Permissions**: Limited to specific Google Sheets only
+- **Input Validation**: Comprehensive Zod schemas prevent malicious data
+- **Environment Isolation**: Separate dev/prod configurations
 
 ## Development Workflow
 
-### Local Development
+### **Quality Gates (All Must Pass Before Commits)**
 ```bash
-npm run dev              # Start frontend + emulators
-npm run emulators:seed   # Populate test data
-npm run quality:check    # Lint + type check
-npm run test            # Run all tests
+npm run test             # 90+ comprehensive tests
+npm run quality:check    # ESLint + TypeScript validation  
+npm run build           # Full compilation check
 ```
 
-### Deployment Pipeline
+### **Local Development Environment**
 ```bash
-npm run build           # Build all packages
-npm run deploy          # Deploy to Firebase
+npm run emulators       # Firebase emulators with data persistence
+npm run dev            # Frontend + emulators (separate terminal)
 ```
 
-## Known Issues & Technical Debt
-
-### Current Challenges
-1. **Firebase Emulator Timestamps**: serverTimestamp() behaves differently in emulators
-2. **Manual Testing Scripts**: Backend still relies on shell scripts for API testing
-3. **Real-time Updates**: Dashboard doesn't automatically refresh data
-4. **Error Recovery**: Some API failures don't have graceful fallbacks
-
-### Planned Improvements
-1. **Automated Backend Testing**: Replace shell scripts with proper test framework
-2. **Real-time Subscriptions**: Add Firestore listeners for live updates
-3. **Enhanced Error Handling**: Better user feedback for API failures
-4. **Performance Optimization**: Implement caching for frequently accessed data
+### **Test-Driven Development**
+- **Red-Green-Refactor**: All new features start with failing tests
+- **Schema-First**: Zod validation drives API design
+- **Mocked Services**: Firebase, Google Sheets, and Gemini all mocked for testing
 
 ---
 
-**Update Triggers**: Update this document when:
-- New major features are added
-- Architecture patterns change
-- Technology choices are modified
-- Database schema evolves
+**Last Updated**: January 2025 - Update when core architecture changes

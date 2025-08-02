@@ -44,7 +44,14 @@
     "health:quick": "./scripts/quick-check.sh",
     "check:quick": "./scripts/quick-check.sh",
     "deploy": "npm run build && cd functions && npm run deploy",
-    "serve": "npm run build:backend && cd functions && npm run serve"
+    "serve": "npm run build:backend && cd functions && npm run serve",
+    "claude:setup": "npm run emulators:kill && concurrently \"npm:emulators\" \"npm:dev:frontend\"",
+    "claude:check": "npm run quality:check && npm run test",
+    "claude:test-watch": "cd frontend && npm test -- --watch",
+    "claude:commit": "npm run claude:check && git add -A",
+    "claude:dev": "npm run dev",
+    "claude:build": "npm run build",
+    "claude:deploy": "npm run deploy"
   },
   "dependencies": {
     "googleapis": "^154.0.0"
