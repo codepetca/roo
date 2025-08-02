@@ -354,7 +354,7 @@
 						</thead>
 						<tbody class="divide-y divide-gray-200 bg-white">
 							{#each filteredGrades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
-								{@const studentName = (grade as any).studentName}
+								{@const studentName = (grade as { studentName?: string }).studentName}
 								{@const assignment = assignmentLookup[grade.assignmentId]}
 								{@const percentage = Math.round((grade.score / grade.maxScore) * 100)}
 								{@const letterGrade = getLetterGrade(percentage)}

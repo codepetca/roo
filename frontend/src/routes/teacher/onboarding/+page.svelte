@@ -20,7 +20,18 @@
 	});
 
 	// Results from sheet creation
-	let onboardingResult = $state<any>(null);
+	let onboardingResult = $state<{
+		success: boolean;
+		sheetId: string;
+		message: string;
+		appScriptCode: string;
+		boardAccountEmail?: string;
+		alreadyConfigured?: boolean;
+		method?: string;
+		teacherEmail?: string;
+		spreadsheetUrl?: string;
+		nextSteps?: string[];
+	} | null>(null);
 
 	async function createSheet() {
 		if (!boardAccountEmail?.trim()) {
@@ -45,13 +56,14 @@
 				}
 
 				result = await api.createTeacherSheetOAuth({
-					boardAccountEmail,
-					googleAccessToken
+					teacherName: auth.user?.displayName || auth.user?.email || boardAccountEmail,
+					accessToken: googleAccessToken
 				});
 			} else {
 				// Fall back to service account approach
 				result = await api.createTeacherSheet({
-					boardAccountEmail
+					boardAccountEmail,
+					teacherName: auth.user?.displayName || auth.user?.email || boardAccountEmail
 				});
 			}
 
@@ -331,7 +343,7 @@
 							<Button
 								variant="secondary"
 								size="sm"
-								onclick={() => copyToClipboard(onboardingResult.appScriptCode)}
+								onclick={() => copyToClipboard(onboardingResult?.appScriptCode || '')}
 							>
 								{#snippet children()}
 									Copy Code
@@ -341,7 +353,7 @@
 						<div
 							class="max-h-64 overflow-x-auto rounded-lg bg-gray-900 p-4 font-mono text-xs text-green-400"
 						>
-							<pre>{onboardingResult.appScriptCode}</pre>
+							<pre>{onboardingResult?.appScriptCode || ''}</pre>
 						</div>
 					</div>
 

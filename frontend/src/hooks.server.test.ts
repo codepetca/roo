@@ -171,7 +171,7 @@ describe('SvelteKit Server Hooks Integration', () => {
 		});
 
 		it('should handle locals user assignment', () => {
-			const mockLocals = { user: null };
+			const mockLocals: { user: any } = { user: null };
 			const mockUser = {
 				uid: 'test-uid',
 				email: 'teacher@test.com',

@@ -1,5 +1,4 @@
 <script lang="ts">
-	import LoginForm from '$lib/components/auth/LoginForm.svelte';
 	import SignupForm from '$lib/components/auth/SignupForm.svelte';
 	import TeacherGoogleAuth from '$lib/components/auth/TeacherGoogleAuth.svelte';
 	import StudentAuth from '$lib/components/auth/StudentAuth.svelte';
@@ -39,7 +38,7 @@
 	}
 
 	async function handleTeacherAuthSuccess(event: CustomEvent) {
-		const { user, accessToken, idToken, isSignup } = event.detail;
+		const { user, accessToken, isSignup } = event.detail;
 
 		try {
 			// Store access token for later use with Google APIs

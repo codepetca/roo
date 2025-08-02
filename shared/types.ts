@@ -8,34 +8,55 @@
  */
 
 // Re-export types from the schema modules for backward compatibility
-// NOTE: These imports are temporarily commented out to fix build order issues
-// Frontend should import these types directly from functions/src/schemas/dto
-/*
+// Import from local schemas to avoid build order issues
+import type {
+  SerializedTimestamp,
+  CreateAssignmentRequest,
+  AssignmentResponse,
+  CreateSubmissionRequest,
+  SubmissionResponse,
+  CreateGradeRequest,
+  GradeResponse,
+  GradeQuizRequest,
+  GradeCodeRequest,
+  GradingResultResponse,
+  QuizGradingResultResponse,
+  GetSheetsSubmissionsRequest,
+  GetAnswerKeyRequest,
+  AnswerKeyResponse,
+  UpdateSubmissionStatusRequest,
+  HealthCheckResponse
+} from './schemas/dto';
+
+// Re-export all imported types
 export type {
   SerializedTimestamp,
   CreateAssignmentRequest,
-  AssignmentResponse as Assignment,
+  AssignmentResponse,
   CreateSubmissionRequest,
-  SubmissionResponse as Submission,
+  SubmissionResponse,
   CreateGradeRequest,
-  GradeResponse as Grade,
+  GradeResponse,
   GradeQuizRequest,
   GradeCodeRequest,
-  GradingResultResponse as GradingResult,
-  QuizGradingResultResponse as QuizGradingResult,
+  GradingResultResponse,
+  QuizGradingResultResponse,
   GetSheetsSubmissionsRequest,
   GetAnswerKeyRequest,
-  AnswerKeyResponse as AnswerKey,
+  AnswerKeyResponse,
   UpdateSubmissionStatusRequest,
   HealthCheckResponse
-} from '../functions/src/schemas/dto';
-*/
+};
 
-// Temporary type definitions until build order is fixed
-export interface SerializedTimestamp {
-  _seconds: number;
-  _nanoseconds: number;
-}
+// Frontend-friendly aliases
+export type Assignment = AssignmentResponse;
+export type Submission = SubmissionResponse;
+export type Grade = GradeResponse;
+export type GradingResult = GradingResultResponse;
+export type QuizGradingResult = QuizGradingResultResponse;
+export type AnswerKey = AnswerKeyResponse;
+
+// SerializedTimestamp is now imported from schemas/dto
 
 // Legacy type aliases for backward compatibility
 export type SubmissionStatus = "pending" | "grading" | "graded" | "error";
