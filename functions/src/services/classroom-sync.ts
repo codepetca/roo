@@ -384,9 +384,13 @@ export class ClassroomSyncService {
       logger.info("Starting classroom sync from Google Sheets", { teacherId, spreadsheetId });
 
       // Step 1: Read submissions from Google Sheets
+      logger.info("Creating Sheets service for spreadsheet", { spreadsheetId });
+      
       const { createSheetsService } = await import("./sheets");
       const sheetsService = await createSheetsService(spreadsheetId);
-
+      
+      logger.info("Sheets service created, fetching submissions");
+      
       const submissions = await sheetsService.getAllSubmissions();
       if (submissions.length === 0) {
         logger.info("No submissions found in spreadsheet");

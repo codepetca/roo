@@ -6,7 +6,7 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
 import { createClassroomSyncService } from "../services/classroom-sync";
-import { SERVICE_ACCOUNT_EMAIL } from "../config/firebase";
+import { SERVICE_ACCOUNT_EMAIL, db, getCurrentTimestamp } from "../config/firebase";
 
 /**
  * Webhook for classroom sync from AppScript
@@ -57,6 +57,51 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
       timestamp: new Date().toISOString()
     });
 
+    // Check if teacher exists, create if not
+    const teacherSnapshot = await db.collection('users')
+      .where('email', '==', actualTeacherId)
+      .where('role', '==', 'teacher')
+      .limit(1)
+      .get();
+
+    if (teacherSnapshot.empty) {
+      logger.info("Teacher not found, creating new teacher user", {
+        teacherId: actualTeacherId
+      });
+
+      try {
+        await db.collection('users').add({
+          email: actualTeacherId,
+          role: 'teacher',
+          displayName: actualTeacherId.split('@')[0],
+          isActive: true,
+          createdAt: getCurrentTimestamp(),
+          updatedAt: getCurrentTimestamp()
+        });
+
+        logger.info("Teacher user created successfully", {
+          teacherId: actualTeacherId
+        });
+      } catch (error) {
+        logger.error("Failed to create teacher user", {
+          teacherId: actualTeacherId,
+          error: error instanceof Error ? error.message : String(error)
+        });
+        
+        return res.status(500).json({
+          success: false,
+          error: "Failed to create teacher user",
+          details: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString()
+        });
+      }
+    } else {
+      logger.info("Teacher found in database", {
+        teacherId: actualTeacherId,
+        teacherDocId: teacherSnapshot.docs[0].id
+      });
+    }
+
     // Perform the sync using existing service
     const syncService = createClassroomSyncService();
     const result = await syncService.syncClassroomsFromSheets(actualTeacherId, spreadsheetId);
@@ -72,6 +117,30 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
       studentsUpdated: result.studentsUpdated,
       errorCount: result.errors.length
     });
+
+    // Store sync history for debugging
+    try {
+      await db.collection('webhook_sync_history').add({
+        teacherId: actualTeacherId,
+        spreadsheetId,
+        timestamp: getCurrentTimestamp(),
+        source: 'appscript-webhook',
+        success: result.success,
+        results: {
+          classroomsCreated: result.classroomsCreated,
+          classroomsUpdated: result.classroomsUpdated,
+          studentsCreated: result.studentsCreated,
+          studentsUpdated: result.studentsUpdated,
+          errors: result.errors
+        },
+        apiKeyUsed: apiKey.substring(0, 12) + '...' // Don't store full API key
+      });
+    } catch (historyError) {
+      logger.error("Failed to store sync history", {
+        error: historyError instanceof Error ? historyError.message : String(historyError)
+      });
+      // Don't fail the request if history storage fails
+    }
 
     // Return success response
     if (result.success) {
@@ -110,6 +179,23 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
       requestBody: req.body,
       timestamp: new Date().toISOString()
     });
+
+    // Store failed sync in history
+    try {
+      await db.collection('webhook_sync_history').add({
+        teacherId: req.body?.teacherId || 'unknown',
+        spreadsheetId: req.body?.spreadsheetId || 'unknown',
+        timestamp: getCurrentTimestamp(),
+        source: 'appscript-webhook',
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        apiKeyUsed: (req.headers['x-api-key'] as string)?.substring(0, 12) + '...' || 'none'
+      });
+    } catch (historyError) {
+      logger.error("Failed to store error sync history", {
+        error: historyError instanceof Error ? historyError.message : String(historyError)
+      });
+    }
 
     // Check for specific permission errors and provide helpful guidance
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -165,7 +251,7 @@ export async function getWebhookStatus(req: Request, res: Response): Promise<Res
           "GET /webhooks/status - Get webhook status"
         ],
         authentication: "API Key required in X-API-Key header",
-        lastUpdated: "2025-07-31"
+        lastUpdated: "2025-08-01"
       },
       timestamp: new Date().toISOString()
     });

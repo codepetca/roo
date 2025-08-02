@@ -9,6 +9,7 @@
     "target": "es2017",
     "skipLibCheck": true,
     "baseUrl": ".",
+    "moduleResolution": "node",
     "paths": {
       "@shared/*": ["../shared/*"]
     }
@@ -20,6 +21,7 @@
   "exclude": [
     "node_modules",
     "lib",
+    "../shared",
     "src/index-original.ts",
     "src/test/**/*.ts"
   ]

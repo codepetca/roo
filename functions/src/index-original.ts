@@ -3,7 +3,7 @@ import {logger} from "firebase-functions";
 import {defineSecret} from "firebase-functions/params";
 import {db, FieldValue} from "./config/firebase";
 import {Assignment} from "./types";
-import {createAssignmentSchema, testWriteSchema, testGradingSchema} from "./schemas";
+import {createAssignmentSchema, testWriteSchema, testGradingSchema} from "../schemas";
 import {z} from "zod";
 // Define secrets and parameters  
 const geminiApiKey = defineSecret("GEMINI_API_KEY");

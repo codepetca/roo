@@ -5,7 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { ClassroomSyncService, type ExtractedClassroom, type ExtractedStudent } from "../../services/classroom-sync";
-import { type SheetSubmission } from "../../schemas/source";
+import { type SheetSubmission } from "../schemas/source";
 import { db, getCurrentTimestamp } from "../../config/firebase";
 
 // Mock Firebase dependencies using the same pattern as other tests

@@ -21,7 +21,6 @@
   "main": "lib/index.js",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
-    "firebase-admin": "^13.4.0",
     "firebase-functions": "^6.4.0",
     "googleapis": "128.0.0",
     "zod": "^3.22.4"
@@ -32,6 +31,7 @@
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
     "eslint": "^8.57.0",
+    "firebase-admin": "^13.4.0",
     "firebase-functions-test": "^3.4.1",
     "prettier": "^3.2.5",
     "typescript": "^5.1.6",

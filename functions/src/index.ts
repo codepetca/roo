@@ -35,6 +35,7 @@ import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks"
 import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
 import { createOrUpdateProfile, sendPasscode, verifyPasscode, resetStudentAuth } from "./routes/auth";
 import { debugSheetsPermissions } from "./routes/debug";
+import { getServiceAccountInfo, testSheetAccess } from "./routes/webhook-debug";
 
 // Define secrets and parameters  
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
@@ -273,6 +274,13 @@ export const api = onRequest(
       }
       if (method === "GET" && path === "/webhooks/status") {
         await getWebhookStatus(request, response); return;
+      }
+      // Webhook debug routes
+      if (method === "GET" && path === "/webhooks/debug/service-account") {
+        await getServiceAccountInfo(request, response); return;
+      }
+      if (method === "GET" && path === "/webhooks/debug/test-sheet") {
+        await testSheetAccess(request, response); return;
       }
 
       // Default 404
