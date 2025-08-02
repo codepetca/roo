@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Roo Classroom Viewer</title>
+    <?!= include('styles'); ?>
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <header class="header">
+        <div class="header-content">
+          <h1 class="app-title">
+            <span class="logo">🦘</span>
+            Roo Classroom Viewer
+          </h1>
+          <div class="header-actions">
+            <button id="refresh-btn" class="btn btn-secondary" onclick="loadClassrooms()">
+              <span class="icon">🔄</span> Refresh
+            </button>
+            <button id="export-btn" class="btn btn-primary" onclick="exportData()">
+              <span class="icon">📥</span> Export CSV
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- Stats Cards -->
+      <div class="stats-container" id="stats-container" style="display: none;">
+        <div class="stat-card">
+          <div class="stat-value" id="total-classrooms">-</div>
+          <div class="stat-label">Classrooms</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="total-students">-</div>
+          <div class="stat-label">Total Enrollments</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="unique-students">-</div>
+          <div class="stat-label">Unique Students</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="avg-class-size">-</div>
+          <div class="stat-label">Avg Class Size</div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="loading" class="loading-container">
+        <div class="spinner"></div>
+        <p>Loading classrooms...</p>
+      </div>
+
+      <!-- Error State -->
+      <div id="error" class="error-container" style="display: none;">
+        <div class="error-icon">❌</div>
+        <h2>Error Loading Classrooms</h2>
+        <p id="error-message"></p>
+        <button class="btn btn-primary" onclick="loadClassrooms()">Try Again</button>
+      </div>
+
+      <!-- Classrooms Grid -->
+      <div id="classrooms-container" class="classrooms-grid" style="display: none;">
+        <!-- Classroom cards will be inserted here -->
+      </div>
+
+      <!-- Student Modal -->
+      <div id="student-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 id="modal-title">Students</h2>
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <table class="student-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Student Number</th>
+                </tr>
+              </thead>
+              <tbody id="student-list">
+                <!-- Student rows will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <?!= include('javascript'); ?>
+  </body>
+</html>

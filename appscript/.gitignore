@@ -1,0 +1,7 @@
+# AppScript specific ignores
+.clasp.json
+*.log
+.DS_Store
+
+# Keep templates
+!.clasp.json.template

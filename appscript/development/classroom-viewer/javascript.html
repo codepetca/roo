@@ -1,0 +1,210 @@
+<script>
+  // Global variables
+  let classroomsData = [];
+
+  // Initialize on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    loadClassrooms();
+    loadStats();
+  });
+
+  // Load classrooms from backend
+  function loadClassrooms() {
+    showLoading(true);
+    hideError();
+    
+    google.script.run
+      .withSuccessHandler(handleClassroomsSuccess)
+      .withFailureHandler(handleClassroomsError)
+      .getClassroomsWithStudents();
+  }
+
+  // Load statistics
+  function loadStats() {
+    google.script.run
+      .withSuccessHandler(handleStatsSuccess)
+      .withFailureHandler(console.error)
+      .getClassroomStats();
+  }
+
+  // Handle successful classroom load
+  function handleClassroomsSuccess(result) {
+    showLoading(false);
+    
+    if (!result.success) {
+      showError(result.message || 'Failed to load classrooms');
+      return;
+    }
+    
+    classroomsData = result.data;
+    displayClassrooms(classroomsData);
+    document.getElementById('classrooms-container').style.display = 'grid';
+  }
+
+  // Handle classroom load error
+  function handleClassroomsError(error) {
+    showLoading(false);
+    showError('Failed to load classrooms: ' + error.toString());
+  }
+
+  // Handle successful stats load
+  function handleStatsSuccess(result) {
+    if (result.success) {
+      document.getElementById('total-classrooms').textContent = result.data.totalClassrooms;
+      document.getElementById('total-students').textContent = result.data.totalEnrollments;
+      document.getElementById('unique-students').textContent = result.data.uniqueStudents;
+      document.getElementById('avg-class-size').textContent = result.data.averageClassSize;
+      document.getElementById('stats-container').style.display = 'grid';
+    }
+  }
+
+  // Display classrooms in grid
+  function displayClassrooms(classrooms) {
+    const container = document.getElementById('classrooms-container');
+    container.innerHTML = '';
+    
+    if (classrooms.length === 0) {
+      container.innerHTML = '<p style="text-align: center; color: #6b7280;">No active classrooms found</p>';
+      return;
+    }
+    
+    classrooms.forEach(classroom => {
+      const card = createClassroomCard(classroom);
+      container.appendChild(card);
+    });
+  }
+
+  // Create classroom card element
+  function createClassroomCard(classroom) {
+    const card = document.createElement('div');
+    card.className = 'classroom-card';
+    card.onclick = () => showStudents(classroom);
+    
+    card.innerHTML = `
+      <div class="classroom-header">
+        <div class="classroom-name">${escapeHtml(classroom.name)}</div>
+        <div class="classroom-code">Code: ${escapeHtml(classroom.enrollmentCode)}</div>
+      </div>
+      <div class="classroom-body">
+        <div class="classroom-stats">
+          <div>
+            <div class="student-count">${classroom.studentCount}</div>
+            <div class="student-label">Students</div>
+          </div>
+          <a href="#" class="view-students-btn" onclick="event.stopPropagation(); showStudents(${JSON.stringify(classroom).replace(/"/g, '&quot;')})">
+            View Students →
+          </a>
+        </div>
+      </div>
+    `;
+    
+    return card;
+  }
+
+  // Show students in modal
+  function showStudents(classroom) {
+    const modal = document.getElementById('student-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const studentList = document.getElementById('student-list');
+    
+    modalTitle.textContent = classroom.name + ' - Students';
+    studentList.innerHTML = '';
+    
+    if (classroom.students.length === 0) {
+      studentList.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #6b7280;">No students enrolled</td></tr>';
+    } else {
+      classroom.students.forEach(student => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${escapeHtml(student.fullName)}</td>
+          <td>${escapeHtml(student.email)}</td>
+          <td>${escapeHtml(student.studentNumber)}</td>
+        `;
+        studentList.appendChild(row);
+      });
+    }
+    
+    modal.style.display = 'flex';
+  }
+
+  // Close modal
+  function closeModal() {
+    document.getElementById('student-modal').style.display = 'none';
+  }
+
+  // Export data as CSV
+  function exportData() {
+    const exportBtn = document.getElementById('export-btn');
+    exportBtn.disabled = true;
+    exportBtn.textContent = 'Exporting...';
+    
+    google.script.run
+      .withSuccessHandler(function(result) {
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = '<span class="icon">📥</span> Export CSV';
+        
+        if (result.success) {
+          downloadCSV(result.data, result.filename);
+        } else {
+          alert('Export failed: ' + result.error);
+        }
+      })
+      .withFailureHandler(function(error) {
+        exportBtn.disabled = false;
+        exportBtn.innerHTML = '<span class="icon">📥</span> Export CSV';
+        alert('Export failed: ' + error.toString());
+      })
+      .exportClassroomData();
+  }
+
+  // Download CSV file
+  function downloadCSV(csvContent, filename) {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Show/hide loading state
+  function showLoading(show) {
+    document.getElementById('loading').style.display = show ? 'flex' : 'none';
+    document.getElementById('classrooms-container').style.display = show ? 'none' : 'grid';
+  }
+
+  // Show error message
+  function showError(message) {
+    document.getElementById('error-message').textContent = message;
+    document.getElementById('error').style.display = 'flex';
+    document.getElementById('classrooms-container').style.display = 'none';
+  }
+
+  // Hide error message
+  function hideError() {
+    document.getElementById('error').style.display = 'none';
+  }
+
+  // Escape HTML to prevent XSS
+  function escapeHtml(unsafe) {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Close modal on outside click
+  window.onclick = function(event) {
+    const modal = document.getElementById('student-modal');
+    if (event.target === modal) {
+      closeModal();
+    }
+  }
+</script>
