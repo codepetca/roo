@@ -1,6 +1,9 @@
 /**
- * Setup instructions and helpers for enabling APIs
+ * DEPRECATED: Setup instructions and helpers for enabling APIs
  * Location: setup-instructions.gs
+ * 
+ * NOTE: Most functions in this file use the deprecated complex Drive folder approach.
+ * Use the main generateTestClassroom() function instead, which uses the simplified approach.
  */
 
 /**

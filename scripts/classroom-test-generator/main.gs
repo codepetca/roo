@@ -4,67 +4,50 @@
  */
 
 /**
- * Main function to generate complete test classroom
- * Run this function to create everything
+ * MAIN FUNCTION: Generate test classroom with simplified approach
+ * This is the recommended function to use - it creates a working classroom
+ * without the complex Drive folder management that causes issues.
  */
 function generateTestClassroom() {
-  console.log("🚀 Starting Classroom Test Data Generation...");
+  console.log("🚀 Starting Simplified Classroom Generation...");
   
   try {
-    // Step 1: Create main Drive folder structure
-    console.log("📁 Creating Drive folder structure...");
-    const folders = createDriveFolders();
-    
-    // Step 2: Create the classroom
+    // Step 1: Create the classroom first
     console.log("🏫 Creating test classroom...");
     const classroom = createTestClassroom();
     
-    // Step 3: Add fake students
-    console.log("👥 Adding fake students...");
-    const students = addFakeStudents(classroom.id);
+    // Skip students for now - add them manually after activation
+    console.log("⏭️ Skipping student enrollment (add manually after activation)");
     
-    // Step 4: Create programming assignment documents
-    console.log("📝 Creating programming assignment documents...");
-    const assignmentDocs = createProgrammingDocuments(folders.assignments);
+    // Step 2: Create submission-based assignments (no documents needed)
+    console.log("📝 Creating student submission assignments...");
+    const assignments = createStudentSubmissionAssignments(classroom.id);
     
-    // Step 5: Create programming assignments in classroom
-    console.log("💻 Creating programming assignments...");
-    const programmingAssignments = createProgrammingAssignments(classroom.id, assignmentDocs);
-    
-    // Step 6: Create quiz forms with answer keys
+    // Step 3: Create quiz forms with answer keys (let Google handle folder organization)
     console.log("📋 Creating quiz forms with answer keys...");
-    const quizForms = createQuizForms(folders.quizzes);
+    const quizForms = createImprovedQuizForms();
     
-    // Step 7: Create quiz assignments in classroom
+    // Step 4: Create quiz assignments in classroom (with form links)
     console.log("🧮 Creating quiz assignments...");
-    const quizAssignments = createQuizAssignments(classroom.id, quizForms);
+    const quizAssignments = createQuizAssignmentsWithLinks(classroom.id, quizForms);
     
-    // Step 8: Generate summary
-    console.log("📊 Generating summary...");
-    const summary = generateSummary(classroom, students, programmingAssignments, quizAssignments);
-    
-    console.log("✅ Test classroom generation complete!");
-    console.log("📋 Summary:", summary);
-    
-    // Additional instructions for provisional classrooms
-    if (classroom.courseState === "PROVISIONED") {
-      console.log("\n⚠️ IMPORTANT: Your classroom was created in PROVISIONED state.");
-      console.log("To activate it:");
-      console.log("1. Go to: " + summary.classroom.link);
-      console.log("2. Click 'Accept' to activate the classroom");
-      console.log("3. Share the enrollment code with test accounts: " + classroom.enrollmentCode);
-    }
+    console.log("\n✅ Classroom generation complete!");
+    console.log("\n📋 Next Steps:");
+    console.log("1. Go to: https://classroom.google.com/c/" + classroom.id);
+    console.log("2. Accept/Activate the classroom");
+    console.log("3. Enrollment code: " + classroom.enrollmentCode);
+    console.log("4. Add test students manually or share enrollment code");
+    console.log("\n📁 All materials will be organized automatically by Google Classroom");
     
     return {
       classroom: classroom,
-      students: students,
-      programmingAssignments: programmingAssignments,
-      quizAssignments: quizAssignments,
-      summary: summary
+      assignments: assignments,
+      quizForms: quizForms,
+      quizAssignments: quizAssignments
     };
     
   } catch (error) {
-    console.error("❌ Error generating test classroom:", error);
+    console.error("❌ Error:", error);
     throw error;
   }
 }
@@ -188,48 +171,103 @@ function getClassroomInfo() {
 }
 
 /**
- * Simplified version - just create classroom and materials without students
+ * DEPRECATED: Use generateTestClassroom() instead
+ * This function remains for backward compatibility but is no longer needed
  */
 function generateTestClassroomSimple() {
-  console.log("🚀 Starting Simplified Classroom Generation (no students)...");
+  console.log("⚠️ generateTestClassroomSimple() is deprecated.");
+  console.log("🔄 Redirecting to generateTestClassroom()...");
+  return generateTestClassroom();
+}
+
+/**
+ * Add fake students to an ACTIVE classroom
+ * Run this AFTER you have activated your classroom manually
+ * Note: Only works on ACTIVE classrooms, not PROVISIONED ones
+ */
+function addFakeStudentsToActiveClassroom(classroomId = null) {
+  console.log("👥 Adding fake students to active classroom...");
+  
+  // If no classroom ID provided, find the test classroom
+  if (!classroomId) {
+    const courses = Classroom.Courses.list();
+    if (courses.courses) {
+      const testCourse = courses.courses.find(course => 
+        course.name && course.name.includes("CS101 Test") && course.courseState === "ACTIVE"
+      );
+      
+      if (testCourse) {
+        classroomId = testCourse.id;
+        console.log(`📚 Found active classroom: ${testCourse.name}`);
+      } else {
+        console.error("❌ No active test classroom found. Please activate your classroom first.");
+        console.log("💡 Go to https://classroom.google.com and activate your classroom, then try again.");
+        return null;
+      }
+    }
+  }
   
   try {
-    // Step 1: Create the classroom first
-    console.log("🏫 Creating test classroom...");
-    const classroom = createTestClassroom();
+    // Get classroom info to verify it's active
+    const classroom = Classroom.Courses.get(classroomId);
+    if (classroom.courseState !== "ACTIVE") {
+      console.error("❌ Classroom is not ACTIVE. Current state:", classroom.courseState);
+      console.log("💡 Please activate your classroom first:");
+      console.log("1. Go to: https://classroom.google.com/c/" + classroomId);
+      console.log("2. Click 'Accept' to activate");
+      return null;
+    }
     
-    // Skip students for now - add them manually after activation
-    console.log("⏭️ Skipping student enrollment (add manually after activation)");
+    // Add a small number of fake students (5 instead of 20)
+    const studentCount = 5;
+    const students = generateFakeStudents(studentCount);
+    const addedStudents = [];
     
-    // Step 2: Create submission-based assignments (no documents needed)
-    console.log("📝 Creating student submission assignments...");
-    const assignments = createStudentSubmissionAssignments(classroom.id);
+    console.log(`📧 Adding ${studentCount} fake students...`);
     
-    // Step 3: Create quiz forms with answer keys (let Google handle folder organization)
-    console.log("📋 Creating quiz forms with answer keys...");
-    const quizForms = createImprovedQuizForms();
+    students.forEach((student, index) => {
+      try {
+        // Add student to classroom using invitation
+        const invitation = {
+          courseId: classroomId,
+          userId: student.email,
+          role: "STUDENT"
+        };
+        
+        const sentInvitation = Classroom.Invitations.create(invitation);
+        console.log(`✉️  Invited: ${student.name} (${student.email})`);
+        
+        addedStudents.push({
+          ...student,
+          invitationId: sentInvitation.id
+        });
+        
+        // Small delay to avoid rate limiting
+        Utilities.sleep(500);
+        
+      } catch (error) {
+        console.error(`❌ Failed to invite ${student.name}:`, error.message);
+      }
+    });
     
-    // Step 5: Create quiz assignments in classroom (with form links)
-    console.log("🧮 Creating quiz assignments...");
-    const quizAssignments = createQuizAssignmentsWithLinks(classroom.id, quizForms);
-    
-    console.log("\n✅ Simplified classroom generation complete!");
+    console.log(`\n✅ Successfully sent ${addedStudents.length} student invitations!`);
     console.log("\n📋 Next Steps:");
-    console.log("1. Go to: https://classroom.google.com/c/" + classroom.id);
-    console.log("2. Accept/Activate the classroom");
-    console.log("3. Enrollment code: " + classroom.enrollmentCode);
-    console.log("4. Add test students manually or share enrollment code");
-    console.log("\n📁 All materials will be organized automatically by Google Classroom");
+    console.log("1. Students will receive email invitations");
+    console.log("2. They need to accept invitations to join");
+    console.log("3. For testing, you can create test Google accounts with these emails");
+    console.log("\n👥 Added Students:");
+    addedStudents.forEach(student => {
+      console.log(`   • ${student.name} - ${student.email}`);
+    });
     
     return {
-      classroom: classroom,
-      assignments: assignments,
-      quizForms: quizForms,
-      quizAssignments: quizAssignments
+      classroomId: classroomId,
+      studentsInvited: addedStudents.length,
+      students: addedStudents
     };
     
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error("❌ Error adding students:", error);
     throw error;
   }
 }

@@ -1,10 +1,15 @@
 /**
- * Programming assignment generation with Google Drive document links
+ * DEPRECATED: Programming assignment generation with Google Drive document links
  * Location: assignment-generator.gs
+ * 
+ * NOTE: These functions are deprecated. Use createStudentSubmissionAssignments() 
+ * from new-assignment-generator.gs instead, which creates assignments that let
+ * students submit their own documents without complex Drive folder management.
  */
 
 /**
- * Create Google Drive documents for programming assignments
+ * DEPRECATED: Use createStudentSubmissionAssignments() instead
+ * Creates Google Drive documents for programming assignments
  */
 function createProgrammingDocuments(classroomFolderId) {
   console.log("Creating programming assignment documents...");
@@ -286,6 +291,10 @@ function createProgrammingDocuments(classroomFolderId) {
 
 /**
  * Create programming assignments in Google Classroom with Drive links
+ */
+/**
+ * DEPRECATED: Use createStudentSubmissionAssignments() instead
+ * Creates programming assignments linked to Google Drive documents
  */
 function createProgrammingAssignments(classroomId, assignmentDocs) {
   console.log("Creating programming assignments in classroom...");

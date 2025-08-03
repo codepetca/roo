@@ -32,11 +32,14 @@ Go to Google Cloud Console for your project and enable:
 // Test API access first
 testApiAccess();
 
-// Generate complete test classroom
+// Generate test classroom (simplified approach)
 generateTestClassroom();
 
 // Get classroom info and invite links
 getClassroomInfo();
+
+// AFTER activating the classroom manually, add fake students
+addFakeStudentsToActiveClassroom();
 ```
 
 ## Project Structure
@@ -56,21 +59,21 @@ classroom-test-generator/
 ## Generated Content
 
 ### Classroom: "CS101 Test - Programming Fundamentals"
-- 20 fake students with emails like `alex.johnson@student.testschool.edu`
-- Organized course materials in Google Drive folders
+- Created in PROVISIONED state (requires manual activation)
+- 5 fake students can be added after activation
+- Google Classroom handles all document organization automatically
 - Realistic assignment due dates spread over semester
 
-### Programming Assignments (5 total)
-1. **Karel Navigation Challenge** → Google Doc with problem description
-2. **Grade Calculator Spreadsheet** → Google Sheets with formulas
-3. **Algorithm Visualization Presentation** → Google Slides template
-4. **Python Basics Notebook** → Instructions for Google Colab
-5. **Data Analysis Project** → Google Sheets with sample survey data
+### Programming Assignments (3 total)
+Student submission-based assignments (no pre-created documents):
+1. **Karel Programming Challenge** → Students submit Google Docs
+2. **Algorithm Presentation** → Students submit Google Slides
+3. **Personal Portfolio Website** → Students submit website URLs
 
-### Quiz Assignments (3 total)
-1. **Programming Concepts Quiz** (10 questions, 20 points)
-2. **Logic and Control Structures** (8 questions, 24 points)
-3. **Functions and Parameters** (6 questions, 24 points)
+### Quiz Assignments (2 total)
+Auto-graded Google Forms with answer keys:
+1. **Programming Fundamentals Test** (8 questions, 40 points)
+2. **Comprehensive Programming Assessment** (6 questions, 60 points)
 
 All quizzes include:
 - Multiple choice and short answer questions
@@ -80,7 +83,7 @@ All quizzes include:
 ## Key Features
 
 ### Realistic Test Data
-- Student names from diverse backgrounds
+- Student names from diverse backgrounds (5 students)
 - Proper email formatting for educational institutions
 - Assignment content that matches real CS101 coursework
 - Due dates spread realistically across a semester
@@ -91,20 +94,22 @@ All quizzes include:
 - Feedback messages for student responses
 - Forms linked directly to Classroom assignments
 
-### Drive Integration
-- All materials stored in organized folder structure
-- Programming assignments link to actual Google Docs/Sheets/Slides
-- Proper sharing permissions for student access
-- Easy transfer between Google accounts
+### Simplified Approach
+- No complex Drive folder management required
+- Student submission-based assignments (students create their own documents)
+- Google Classroom handles organization automatically
+- Fewer API permission requirements
+- More reliable and easier to maintain
 
 ## Usage Functions
 
 ### Main Functions
 ```javascript
-generateTestClassroom()     // Create everything
-testApiAccess()            // Verify API permissions
-getClassroomInfo()         // Get classroom details and links
-cleanupTestData()          // Delete test data (use carefully!)
+generateTestClassroom()              // Create classroom and assignments (MAIN FUNCTION)
+addFakeStudentsToActiveClassroom()   // Add 5 fake students after classroom activation
+testApiAccess()                     // Verify API permissions
+getClassroomInfo()                  // Get classroom details and links
+cleanupTestData()                   // Delete test data (use carefully!)
 ```
 
 ### Testing Functions
@@ -118,10 +123,11 @@ listClassroomAssignments(id) // List assignments in classroom
 
 Edit `config.gs` to customize:
 - Classroom name and description
-- Number of fake students (up to 20)
 - Assignment topics and due dates
 - Quiz question content
 - Email domain for student accounts
+
+**Note**: Student count is fixed at 5 in `addFakeStudentsToActiveClassroom()` function for optimal testing.
 
 ## Transfer to Production Account
 

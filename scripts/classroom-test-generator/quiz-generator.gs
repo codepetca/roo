@@ -1,10 +1,15 @@
 /**
- * Google Forms quiz generator with answer keys and auto-grading
+ * DEPRECATED: Google Forms quiz generator with answer keys and auto-grading
  * Location: quiz-generator.gs
+ * 
+ * NOTE: These functions are deprecated due to API issues. Use createImprovedQuizForms() 
+ * and createFormWithFixedAnswerKey() from new-assignment-generator.gs instead,
+ * which have proper Forms API implementation.
  */
 
 /**
- * Create Google Forms with quiz questions and answer keys
+ * DEPRECATED: Use createImprovedQuizForms() instead
+ * Creates Google Forms with quiz questions and answer keys
  */
 function createQuizForms(classroomFolderId) {
   console.log("Creating quiz forms with answer keys...");
@@ -87,6 +92,10 @@ function createQuizForms(classroomFolderId) {
 
 /**
  * Create a single form with questions and answer key using Forms API
+ */
+/**
+ * DEPRECATED: Use createFormWithFixedAnswerKey() instead
+ * Creates Google Form with answer key using old API approach
  */
 function createFormWithAnswerKey(title, description, questions, folderId) {
   const token = ScriptApp.getOAuthToken();

@@ -73,6 +73,10 @@ function addFakeStudents(classroomId) {
 /**
  * Create Drive folder structure for storing materials
  */
+/**
+ * DEPRECATED: Creates complex Drive folder structure
+ * The simplified approach lets Google Classroom handle organization automatically
+ */
 function createDriveFolders(classroomName) {
   console.log("Creating Drive folder structure...");
   
