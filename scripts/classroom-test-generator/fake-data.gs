@@ -176,7 +176,7 @@ Use Google Sheets functions and charting tools for analysis.
  */
 function generateQuizQuestions() {
   return {
-    programmingConcepts: [
+    multipleChoiceOnly: [
       {
         question: "Which of the following is a valid variable name in Python?",
         type: "MULTIPLE_CHOICE",
@@ -203,8 +203,9 @@ function generateQuizQuestions() {
       },
       {
         question: "What will print(len('Hello')) output?",
-        type: "SHORT_ANSWER",
-        correctAnswer: "5",
+        type: "MULTIPLE_CHOICE",
+        options: ["3", "4", "5", "6"],
+        correctAnswer: 2,
         points: 2,
         feedback: "The len() function returns the number of characters in a string. 'Hello' has 5 characters."
       },
@@ -215,23 +216,53 @@ function generateQuizQuestions() {
         correctAnswer: 0,
         points: 2,
         feedback: "Python is case-sensitive, meaning 'Variable' and 'variable' are different."
-      }
-    ],
-    
-    logicAndControl: [
+      },
       {
-        question: "What is the output of: if 5 > 3: print('True')",
-        type: "SHORT_ANSWER",
-        correctAnswer: "True",
-        points: 3,
-        feedback: "Since 5 is greater than 3, the condition is true and 'True' is printed."
+        question: "What data type is the value 3.14?",
+        type: "MULTIPLE_CHOICE",
+        options: ["integer", "float", "string", "boolean"],
+        correctAnswer: 1,
+        points: 5,
+        feedback: "3.14 is a decimal number, which is represented as a float data type."
+      },
+      {
+        question: "Which operator is used for string concatenation in Python?",
+        type: "MULTIPLE_CHOICE",
+        options: ["&", "*", "+", "||"],
+        correctAnswer: 2,
+        points: 5,
+        feedback: "The + operator concatenates (joins) strings together in Python."
+      },
+      {
+        question: "What will len('Hello World') return?",
+        type: "MULTIPLE_CHOICE",
+        options: ["10", "11", "12", "Error"],
+        correctAnswer: 1,
+        points: 5,
+        feedback: "The len() function counts all characters including spaces. 'Hello World' has 11 characters."
+      },
+      {
+        question: "Which of these is NOT a Python data type?",
+        type: "MULTIPLE_CHOICE",
+        options: ["list", "tuple", "array", "dictionary"],
+        correctAnswer: 2,
+        points: 5,
+        feedback: "While Python has lists, tuples, and dictionaries built-in, 'array' is not a basic Python data type (though arrays exist in the numpy library)."
+      },
+      {
+        question: "What does the 'if' statement do?",
+        type: "MULTIPLE_CHOICE",
+        options: ["Repeats code", "Makes decisions", "Defines functions", "Imports modules"],
+        correctAnswer: 1,
+        points: 5,
+        feedback: "The 'if' statement allows programs to make decisions by executing code only when certain conditions are true."
       },
       {
         question: "Which loop is best for iterating over a list?",
         type: "MULTIPLE_CHOICE",
         options: ["while loop", "for loop", "do-while loop", "repeat loop"],
         correctAnswer: 1,
-        points: 3,
+        points: 5,
         feedback: "For loops are designed for iterating over sequences like lists."
       },
       {
@@ -239,17 +270,18 @@ function generateQuizQuestions() {
         type: "MULTIPLE_CHOICE",
         options: ["Pauses the loop", "Exits the loop", "Restarts the loop", "Skips to next iteration"],
         correctAnswer: 1,
-        points: 3,
+        points: 5,
         feedback: "The 'break' statement immediately exits the current loop."
       }
     ],
     
-    functionsAndParameters: [
+    mixedFormat: [
       {
         question: "What keyword is used to define a function in Python?",
-        type: "SHORT_ANSWER",
-        correctAnswer: "def",
-        points: 4,
+        type: "MULTIPLE_CHOICE",
+        options: ["function", "def", "define", "func"],
+        correctAnswer: 1,
+        points: 10,
         feedback: "Functions are defined using the 'def' keyword followed by the function name."
       },
       {
@@ -257,16 +289,36 @@ function generateQuizQuestions() {
         type: "MULTIPLE_CHOICE",
         options: ["Prints a value", "Sends a value back to caller", "Defines a variable", "Starts a loop"],
         correctAnswer: 1,
-        points: 4,
+        points: 10,
         feedback: "The return statement sends a value back to whoever called the function."
       },
       {
-        question: "Can a function have multiple parameters?",
-        type: "MULTIPLE_CHOICE",
-        options: ["Yes", "No"],
-        correctAnswer: 0,
-        points: 4,
-        feedback: "Functions can have zero, one, or many parameters separated by commas."
+        question: "Write a Python function that takes two numbers and returns their sum.",
+        type: "SHORT_ANSWER",
+        correctAnswer: "def add(a, b):\n    return a + b",
+        points: 10,
+        feedback: "Your function should use 'def' keyword, take two parameters, and return their sum using the + operator."
+      },
+      {
+        question: "What is the output of this code: print(len([1, 2, 3, 4, 5]))?",
+        type: "SHORT_ANSWER",
+        correctAnswer: "5",
+        points: 10,
+        feedback: "The len() function counts the number of items in a list. Count the elements in the list."
+      },
+      {
+        question: "Explain the difference between a list and a tuple in Python. Include when you would use each one.",
+        type: "PARAGRAPH",
+        correctAnswer: "Lists are mutable (can be changed) and use square brackets []. Tuples are immutable (cannot be changed) and use parentheses (). Use lists when you need to modify data, tuples when data should stay constant.",
+        points: 10,
+        feedback: "Consider mutability (can it be changed?), syntax (brackets vs parentheses), and use cases (when would you want unchangeable data?)."
+      },
+      {
+        question: "Write a detailed explanation of how a for loop works in Python. Include an example and explain each part of the loop structure.",
+        type: "PARAGRAPH",
+        correctAnswer: "A for loop iterates over a sequence. Example: for i in range(5): print(i). The 'for' keyword starts the loop, 'i' is the variable that takes each value, 'in' specifies iteration, 'range(5)' creates numbers 0-4, and the indented code runs for each iteration.",
+        points: 10,
+        feedback: "Include: 1) What a for loop does, 2) A specific code example, 3) Explanation of each part (for, variable, in, sequence, indented code)."
       }
     ]
   };

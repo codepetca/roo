@@ -42,61 +42,47 @@ const CONFIG = {
   },
   
   // Assignment Topics
-  PROGRAMMING_ASSIGNMENTS: [
+  ASSIGNMENTS: [
     {
-      title: "Karel Navigation Challenge",
-      description: "Program Karel to navigate through a maze and collect beepers",
-      type: "docs",
-      dueInDays: 7
+      title: "Karel Programming Challenge",
+      description: "Write a Karel program to solve the maze puzzle. Your program should:\n\n• Navigate Karel through the maze\n• Collect all beepers\n• Return to starting position\n• Use proper functions and comments\n\nSubmit your solution as a Google Doc with your code and explanation of your approach.\n\nGrading:\n- Correct solution (40 pts)\n- Code organization (30 pts)\n- Comments and explanation (30 pts)",
+      submissionType: "GOOGLE_DOC",
+      dueInDays: 7,
+      maxPoints: 100
     },
     {
-      title: "Grade Calculator Spreadsheet",
-      description: "Create formulas to calculate student grades from assignment scores",
-      type: "sheets",
-      dueInDays: 10
+      title: "Algorithm Presentation",
+      description: "Create a presentation explaining how sorting algorithms work. Choose TWO algorithms from:\n\n• Bubble Sort\n• Selection Sort\n• Insertion Sort\n• Quick Sort\n\nYour presentation should include:\n- How each algorithm works (step-by-step)\n- Visual examples with data\n- Time complexity analysis\n- When to use each algorithm\n\nSubmit as Google Slides (8-12 slides total).\n\nGrading:\n- Algorithm explanations (50 pts)\n- Visual clarity (25 pts)\n- Analysis and comparisons (25 pts)",
+      submissionType: "GOOGLE_SLIDES",
+      dueInDays: 14,
+      maxPoints: 100
     },
     {
-      title: "Algorithm Visualization Presentation",
-      description: "Create slides explaining sorting algorithms with visual examples",
-      type: "slides",
-      dueInDays: 14
-    },
-    {
-      title: "Python Basics Notebook",
-      description: "Complete Python exercises covering variables, loops, and functions",
-      type: "colab",
-      dueInDays: 5
-    },
-    {
-      title: "Data Analysis Project",
-      description: "Analyze student survey data and create charts",
-      type: "sheets",
-      dueInDays: 21
+      title: "Personal Portfolio Website",
+      description: "Create a personal portfolio website showcasing your programming projects. Your site should include:\n\n• About Me section\n• 3+ coding projects with descriptions\n• Skills and technologies you know\n• Contact information\n• Professional design and layout\n\nHost your site on GitHub Pages, Netlify, or similar platform.\n\nSubmit the PUBLIC URL to your live website.\n\nGrading:\n- Content completeness (40 pts)\n- Design and usability (30 pts)\n- Technical implementation (30 pts)",
+      submissionType: "LINK",
+      dueInDays: 21,
+      maxPoints: 100
     }
   ],
   
   // Quiz Topics
   QUIZ_ASSIGNMENTS: [
     {
-      title: "Programming Concepts Quiz",
-      description: "Test your understanding of variables, data types, and basic syntax",
-      questionCount: 10,
-      pointsPerQuestion: 2,
-      dueInDays: 3
-    },
-    {
-      title: "Logic and Control Structures",
-      description: "Quiz on if statements, loops, and boolean logic",
+      title: "Programming Fundamentals Test",
+      description: "Multiple choice test covering basic programming concepts",
       questionCount: 8,
-      pointsPerQuestion: 3,
-      dueInDays: 12
+      pointsPerQuestion: 5,
+      dueInDays: 10,
+      type: "MULTIPLE_CHOICE_ONLY"
     },
     {
-      title: "Functions and Parameters",
-      description: "Understanding function definitions, parameters, and return values",
+      title: "Comprehensive Programming Assessment",
+      description: "Mixed format test with multiple choice, short answer, and essay questions",
       questionCount: 6,
-      pointsPerQuestion: 4,
-      dueInDays: 18
+      pointsPerQuestion: 10,
+      dueInDays: 20,
+      type: "MIXED_FORMAT"
     }
   ],
   
@@ -107,9 +93,7 @@ const CONFIG = {
   
   // Folder Settings
   DRIVE_FOLDERS: {
-    mainFolder: "CS101 Test Materials",
-    assignments: "Programming Assignments",
-    quizzes: "Quiz Forms"
+    classroomsFolder: "Classrooms"  // Capital C to match Google's default
   }
 };
 

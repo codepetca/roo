@@ -6,7 +6,7 @@
 /**
  * Create Google Drive documents for programming assignments
  */
-function createProgrammingDocuments(assignmentsFolderId) {
+function createProgrammingDocuments(classroomFolderId) {
   console.log("Creating programming assignment documents...");
   
   const assignmentContent = generateProgrammingContent();
@@ -18,11 +18,11 @@ function createProgrammingDocuments(assignmentsFolderId) {
       title: "Karel Navigation Challenge - Instructions"
     });
     
-    // Move to assignments folder
-    Drive.Files.update({}, karelDoc.documentId, null, {
-      addParents: assignmentsFolderId,
+    // Move to classroom folder
+    Drive.Files.update({
+      addParents: classroomFolderId,
       removeParents: "root"
-    });
+    }, karelDoc.documentId);
     
     // Add content to document
     const karelRequests = [
@@ -71,11 +71,11 @@ function createProgrammingDocuments(assignmentsFolderId) {
       }]
     });
     
-    // Move to assignments folder
-    Drive.Files.update({}, gradeSheet.spreadsheetId, null, {
-      addParents: assignmentsFolderId,
+    // Move to classroom folder
+    Drive.Files.update({
+      addParents: classroomFolderId,
       removeParents: "root"
-    });
+    }, gradeSheet.spreadsheetId);
     
     // Add instructions to first sheet
     const instructionsData = [
@@ -87,7 +87,9 @@ function createProgrammingDocuments(assignmentsFolderId) {
     
     Sheets.Spreadsheets.Values.update({
       values: instructionsData
-    }, gradeSheet.spreadsheetId, "Instructions!A1");
+    }, gradeSheet.spreadsheetId, "Instructions!A1", {
+      valueInputOption: "USER_ENTERED"
+    });
     
     // Add sample data structure
     const sampleHeaders = [
@@ -96,7 +98,9 @@ function createProgrammingDocuments(assignmentsFolderId) {
     
     Sheets.Spreadsheets.Values.update({
       values: sampleHeaders
-    }, gradeSheet.spreadsheetId, "Grade Calculator!A1");
+    }, gradeSheet.spreadsheetId, "Grade Calculator!A1", {
+      valueInputOption: "USER_ENTERED"
+    });
     
     // Add sample student data
     const sampleData = [
@@ -107,7 +111,9 @@ function createProgrammingDocuments(assignmentsFolderId) {
     
     Sheets.Spreadsheets.Values.update({
       values: sampleData
-    }, gradeSheet.spreadsheetId, "Sample Data!A1");
+    }, gradeSheet.spreadsheetId, "Sample Data!A1", {
+      valueInputOption: "USER_ENTERED"
+    });
     
     createdDocs.push({
       type: 'sheets',
@@ -129,11 +135,11 @@ function createProgrammingDocuments(assignmentsFolderId) {
       title: "Algorithm Visualization Template"
     });
     
-    // Move to assignments folder
-    Drive.Files.update({}, algoSlides.presentationId, null, {
-      addParents: assignmentsFolderId,
+    // Move to classroom folder
+    Drive.Files.update({
+      addParents: classroomFolderId,
       removeParents: "root"
-    });
+    }, algoSlides.presentationId);
     
     // Add title slide content
     const titleSlideRequests = [
@@ -175,11 +181,11 @@ function createProgrammingDocuments(assignmentsFolderId) {
       title: "Python Basics Notebook - Instructions"
     });
     
-    // Move to assignments folder
-    Drive.Files.update({}, pythonDoc.documentId, null, {
-      addParents: assignmentsFolderId,
+    // Move to classroom folder
+    Drive.Files.update({
+      addParents: classroomFolderId,
       removeParents: "root"
-    });
+    }, pythonDoc.documentId);
     
     // Add Python content
     const pythonRequests = [
@@ -228,11 +234,11 @@ function createProgrammingDocuments(assignmentsFolderId) {
       }]
     });
     
-    // Move to assignments folder
-    Drive.Files.update({}, dataSheet.spreadsheetId, null, {
-      addParents: assignmentsFolderId,
+    // Move to classroom folder
+    Drive.Files.update({
+      addParents: classroomFolderId,
       removeParents: "root"
-    });
+    }, dataSheet.spreadsheetId);
     
     // Add instructions
     const dataInstructions = [
@@ -243,7 +249,9 @@ function createProgrammingDocuments(assignmentsFolderId) {
     
     Sheets.Spreadsheets.Values.update({
       values: dataInstructions
-    }, dataSheet.spreadsheetId, "Instructions!A1");
+    }, dataSheet.spreadsheetId, "Instructions!A1", {
+      valueInputOption: "USER_ENTERED"
+    });
     
     // Add sample survey data
     const surveyHeaders = [
@@ -254,7 +262,9 @@ function createProgrammingDocuments(assignmentsFolderId) {
     
     Sheets.Spreadsheets.Values.update({
       values: surveyHeaders.concat(surveyData)
-    }, dataSheet.spreadsheetId, "Survey Data!A1");
+    }, dataSheet.spreadsheetId, "Survey Data!A1", {
+      valueInputOption: "USER_ENTERED"
+    });
     
     createdDocs.push({
       type: 'sheets',
@@ -280,14 +290,20 @@ function createProgrammingDocuments(assignmentsFolderId) {
 function createProgrammingAssignments(classroomId, assignmentDocs) {
   console.log("Creating programming assignments in classroom...");
   
-  const assignments = CONFIG.PROGRAMMING_ASSIGNMENTS;
+  const assignments = CONFIG.ASSIGNMENTS || CONFIG.PROGRAMMING_ASSIGNMENTS || [];
   const createdAssignments = [];
   
   assignments.forEach((assignment, index) => {
     try {
       // Find matching document
       const doc = assignmentDocs.find(d => {
-        return assignment.title.toLowerCase().includes(d.assignmentKey.toLowerCase().replace(/([A-Z])/g, ' $1').trim().toLowerCase());
+        // Match based on assignment key
+        if (assignment.title.includes("Karel") && d.assignmentKey === 'karel') return true;
+        if (assignment.title.includes("Grade Calculator") && d.assignmentKey === 'gradeCalculator') return true;
+        if (assignment.title.includes("Algorithm") && d.assignmentKey === 'algorithmPresentation') return true;
+        if (assignment.title.includes("Python") && d.assignmentKey === 'pythonBasics') return true;
+        if (assignment.title.includes("Data Analysis") && d.assignmentKey === 'dataAnalysis') return true;
+        return false;
       });
       
       if (!doc) {
@@ -309,6 +325,8 @@ function createProgrammingAssignments(classroomId, assignmentDocs) {
             shareMode: "VIEW"
           }
         }],
+        assigneeMode: "ALL_STUDENTS",
+        submissionModificationMode: "MODIFIABLE_UNTIL_TURNED_IN",
         workType: "ASSIGNMENT",
         state: "PUBLISHED",
         maxPoints: 100,

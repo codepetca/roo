@@ -15,7 +15,7 @@ function createTestClassroom() {
     description: CONFIG.CLASSROOM.description,
     room: CONFIG.CLASSROOM.room,
     ownerId: CONFIG.CLASSROOM.ownerId,
-    courseState: "ACTIVE"
+    courseState: "PROVISIONED"  // Changed from ACTIVE to PROVISIONED
   };
   
   try {
@@ -73,45 +73,143 @@ function addFakeStudents(classroomId) {
 /**
  * Create Drive folder structure for storing materials
  */
-function createDriveFolders() {
+function createDriveFolders(classroomName) {
   console.log("Creating Drive folder structure...");
   
   try {
-    // Create main folder
-    const mainFolder = Drive.Files.insert({
-      title: CONFIG.DRIVE_FOLDERS.mainFolder,
-      mimeType: 'application/vnd.google-apps.folder'
-    });
+    // Create or find /Classrooms folder (Google's default)
+    let classroomsFolder = findOrCreateFolder(CONFIG.DRIVE_FOLDERS.classroomsFolder, null);
     
-    // Create assignments subfolder
-    const assignmentsFolder = Drive.Files.insert({
-      title: CONFIG.DRIVE_FOLDERS.assignments,
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: [{id: mainFolder.id}]
-    });
+    // Create folder for this specific classroom (just the class name, no timestamp)
+    const classroomFolderName = classroomName || CONFIG.CLASSROOM.name;
     
-    // Create quizzes subfolder
-    const quizzesFolder = Drive.Files.insert({
-      title: CONFIG.DRIVE_FOLDERS.quizzes,
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: [{id: mainFolder.id}]
-    });
+    // Check if classroom folder already exists
+    let classroomFolder = findExistingFolder(classroomFolderName, classroomsFolder.id);
     
-    console.log(`✅ Created folder structure:`);
-    console.log(`   Main: ${mainFolder.title} (${mainFolder.id})`);
-    console.log(`   Assignments: ${assignmentsFolder.title} (${assignmentsFolder.id})`);
-    console.log(`   Quizzes: ${quizzesFolder.title} (${quizzesFolder.id})`);
+    if (!classroomFolder) {
+      // Create new classroom folder
+      classroomFolder = Drive.Files.create({
+        name: classroomFolderName,
+        mimeType: 'application/vnd.google-apps.folder',
+        parents: [classroomsFolder.id]
+      });
+      
+      // Make folder shareable
+      Drive.Permissions.create({
+        role: 'reader',
+        type: 'anyone',
+        allowFileDiscovery: false
+      }, classroomFolder.id);
+      
+      console.log(`✅ Created new classroom folder: ${classroomFolderName}`);
+    } else {
+      console.log(`📁 Using existing classroom folder: ${classroomFolderName}`);
+    }
+    
+    console.log(`✅ Folder structure ready:`);
+    console.log(`   Path: /Classrooms/${classroomFolderName}`);
+    console.log(`   Folder ID: ${classroomFolder.id}`);
+    console.log(`   View in Drive: https://drive.google.com/drive/folders/${classroomFolder.id}`);
     
     return {
-      main: mainFolder,
-      assignments: assignmentsFolder,
-      quizzes: quizzesFolder
+      classroomFolder: classroomFolder,
+      classroomsFolder: classroomsFolder,
+      folderUrl: `https://drive.google.com/drive/folders/${classroomFolder.id}`
     };
     
   } catch (error) {
     console.error("❌ Error creating folders:", error);
     throw error;
   }
+}
+
+/**
+ * Helper function to find existing folder (returns null if not found)
+ */
+function findExistingFolder(folderName, parentId) {
+  let query = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  if (parentId) {
+    query += ` and '${parentId}' in parents`;
+  } else {
+    query += ` and 'root' in parents`;
+  }
+  
+  const folders = Drive.Files.list({
+    q: query,
+    fields: 'files(id, name)'
+  });
+  
+  return (folders.files && folders.files.length > 0) ? folders.files[0] : null;
+}
+
+/**
+ * Find Google Classroom's automatically created folder (in root)
+ */
+function findClassroomAutoFolder(classroomName) {
+  console.log(`Looking for Classroom's auto-created folder: ${classroomName}`);
+  
+  // Look in root for the classroom folder (Google's default)
+  let classroomFolder = findExistingFolder(classroomName, null);
+  
+  if (!classroomFolder) {
+    // If not found, create a simple folder in root (matching Google's behavior)
+    console.log("📁 Classroom folder not found, creating in root...");
+    classroomFolder = Drive.Files.create({
+      name: classroomName,
+      mimeType: 'application/vnd.google-apps.folder'
+      // No parents = root folder
+    });
+    
+    console.log(`✅ Created classroom folder in root: ${classroomName}`);
+  } else {
+    console.log(`✅ Found existing classroom folder: ${classroomName}`);
+  }
+  
+  console.log(`   Folder ID: ${classroomFolder.id}`);
+  console.log(`   View in Drive: https://drive.google.com/drive/folders/${classroomFolder.id}`);
+  
+  return {
+    classroomFolder: classroomFolder,
+    folderUrl: `https://drive.google.com/drive/folders/${classroomFolder.id}`
+  };
+}
+
+/**
+ * Helper function to find or create a folder
+ */
+function findOrCreateFolder(folderName, parentId) {
+  // Build query
+  let query = `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+  if (parentId) {
+    query += ` and '${parentId}' in parents`;
+  } else {
+    query += ` and 'root' in parents`;
+  }
+  
+  // Search for existing folder
+  const folders = Drive.Files.list({
+    q: query,
+    fields: 'files(id, name)'
+  });
+  
+  if (folders.files && folders.files.length > 0) {
+    console.log(`📁 Found existing folder: ${folderName}`);
+    return folders.files[0];
+  }
+  
+  // Create new folder if not found
+  const folderMetadata = {
+    name: folderName,
+    mimeType: 'application/vnd.google-apps.folder'
+  };
+  
+  if (parentId) {
+    folderMetadata.parents = [parentId];
+  }
+  
+  const newFolder = Drive.Files.create(folderMetadata);
+  console.log(`📁 Created new folder: ${folderName}`);
+  return newFolder;
 }
 
 /**
@@ -189,4 +287,63 @@ function listClassroomAssignments(classroomId) {
     console.error("Error listing assignments:", error);
     return [];
   }
+}
+
+/**
+ * Add fake students to an existing classroom (after it's activated)
+ */
+function addFakeStudentsToClassroom(classroomId) {
+  if (!classroomId) {
+    console.log("❌ Please provide a classroom ID");
+    console.log("Tip: Run getClassroomInfo() to find your classroom ID");
+    return;
+  }
+  
+  console.log(`📚 Adding fake students to classroom ${classroomId}...`);
+  
+  try {
+    // Check if classroom exists and is active
+    const classroom = Classroom.Courses.get(classroomId);
+    
+    if (classroom.courseState !== "ACTIVE") {
+      console.log("⚠️ Classroom is not active. Please activate it first at:");
+      console.log(`https://classroom.google.com/c/${classroomId}`);
+      return;
+    }
+    
+    // Add students
+    const students = addFakeStudents(classroomId);
+    
+    console.log(`\n✅ Successfully added ${students.length} fake students!`);
+    console.log("📋 Student list:");
+    students.forEach(s => {
+      console.log(`   - ${s.fullName} (${s.email})`);
+    });
+    
+    return students;
+    
+  } catch (error) {
+    console.error("❌ Error adding students:", error);
+    
+    if (error.toString().includes("courseState")) {
+      console.log("\n⚠️ Make sure the classroom is activated first!");
+    }
+  }
+}
+
+/**
+ * Create a complete test classroom with students (requires manual activation)
+ */
+function generateCompleteTestClassroom() {
+  console.log("🚀 Creating complete test classroom...");
+  
+  // First create classroom and materials
+  const result = generateTestClassroomSimple();
+  
+  console.log("\n📋 IMPORTANT: Manual steps required:");
+  console.log("1. Activate the classroom at: https://classroom.google.com/c/" + result.classroom.id);
+  console.log("2. Once activated, run: addFakeStudentsToClassroom('" + result.classroom.id + "')");
+  console.log("3. Enrollment code for real test accounts: " + result.classroom.enrollmentCode);
+  
+  return result;
 }

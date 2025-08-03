@@ -15,7 +15,8 @@
       "Bash(firebase projects:list:*)",
       "Bash(rm:*)",
       "Bash(npm run build:*)",
-      "Bash(diff:*)"
+      "Bash(diff:*)",
+      "WebFetch(domain:developers.google.com)"
     ],
     "deny": []
   }

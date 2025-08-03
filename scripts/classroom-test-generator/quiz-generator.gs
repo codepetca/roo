@@ -6,7 +6,7 @@
 /**
  * Create Google Forms with quiz questions and answer keys
  */
-function createQuizForms(quizzesFolderId) {
+function createQuizForms(classroomFolderId) {
   console.log("Creating quiz forms with answer keys...");
   
   const quizQuestions = generateQuizQuestions();
@@ -18,7 +18,7 @@ function createQuizForms(quizzesFolderId) {
       "Programming Concepts Quiz",
       "Test your understanding of variables, data types, and basic syntax",
       quizQuestions.programmingConcepts,
-      quizzesFolderId
+      classroomFolderId
     );
     
     createdForms.push({
@@ -41,7 +41,7 @@ function createQuizForms(quizzesFolderId) {
       "Logic and Control Structures Quiz",
       "Quiz on if statements, loops, and boolean logic",
       quizQuestions.logicAndControl,
-      quizzesFolderId
+      classroomFolderId
     );
     
     createdForms.push({
@@ -64,7 +64,7 @@ function createQuizForms(quizzesFolderId) {
       "Functions and Parameters Quiz",
       "Understanding function definitions, parameters, and return values",
       quizQuestions.functionsAndParameters,
-      quizzesFolderId
+      classroomFolderId
     );
     
     createdForms.push({
@@ -95,8 +95,7 @@ function createFormWithAnswerKey(title, description, questions, folderId) {
   const createFormUrl = CONFIG.FORMS_API.baseUrl;
   const createFormPayload = {
     info: {
-      title: title,
-      description: description
+      title: title
     }
   };
   
@@ -111,9 +110,17 @@ function createFormWithAnswerKey(title, description, questions, folderId) {
   
   const form = JSON.parse(createFormResponse.getContentText());
   
-  // Step 2: Convert to quiz
+  // Step 2: Convert to quiz and add description
   const batchUpdateUrl = `${CONFIG.FORMS_API.baseUrl}/${form.formId}:batchUpdate`;
   const quizSettingsRequests = [
+    {
+      updateFormInfo: {
+        info: {
+          description: description
+        },
+        updateMask: "description"
+      }
+    },
     {
       updateSettings: {
         settings: {
@@ -213,17 +220,11 @@ function createFormWithAnswerKey(title, description, questions, folderId) {
         }
       });
       
-      // Add grading (answer key)
+      // Add grading (answer key) - no feedback for short answer
       const grading = {
         pointValue: question.points,
         correctAnswers: {
           answers: [{ value: question.correctAnswer }]
-        },
-        whenRight: {
-          text: question.feedback
-        },
-        whenWrong: {
-          text: "Incorrect. " + question.feedback
         }
       };
       
@@ -258,10 +259,10 @@ function createFormWithAnswerKey(title, description, questions, folderId) {
   // Step 4: Move form to folder
   if (folderId) {
     try {
-      Drive.Files.update({}, form.formId, null, {
+      Drive.Files.update({
         addParents: folderId,
         removeParents: "root"
-      });
+      }, form.formId);
     } catch (error) {
       console.log(`Warning: Could not move form to folder: ${error}`);
     }
@@ -302,15 +303,7 @@ function createQuizAssignments(classroomId, quizForms) {
       
       const assignmentData = {
         title: assignment.title,
-        description: assignment.description,
-        materials: [{
-          form: {
-            formUrl: `https://docs.google.com/forms/d/${form.formId}/edit`,
-            responseUrl: `https://docs.google.com/forms/d/${form.formId}/edit#responses`,
-            title: form.title,
-            thumbnailUrl: ""
-          }
-        }],
+        description: assignment.description + `\n\n📋 Take the quiz: https://docs.google.com/forms/d/${form.formId}/viewform`,
         workType: "ASSIGNMENT",
         state: "PUBLISHED",
         maxPoints: form.totalPoints,
@@ -323,7 +316,6 @@ function createQuizAssignments(classroomId, quizForms) {
           hours: 23,
           minutes: 59
         },
-        associatedWithDeveloper: true,
         submissionModificationMode: "MODIFIABLE_UNTIL_TURNED_IN"
       };
       
@@ -363,8 +355,8 @@ function testFormsApi() {
     const testFormUrl = CONFIG.FORMS_API.baseUrl;
     const testPayload = {
       info: {
-        title: "API Test Form",
-        description: "Testing Forms API access"
+        title: "API Test Form"
+        // Note: description must be set via batchUpdate, not on creation
       }
     };
     
@@ -374,15 +366,31 @@ function testFormsApi() {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       },
-      payload: JSON.stringify(testPayload)
+      payload: JSON.stringify(testPayload),
+      muteHttpExceptions: true
     });
     
-    const result = JSON.parse(response.getContentText());
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+    
+    if (responseCode !== 200) {
+      console.error("❌ Forms API Error Response:", responseText);
+      
+      if (responseText.includes("not been used in project")) {
+        console.log("\n⚠️ Forms API Issue Detected!");
+        console.log("The Apps Script project is using a different Cloud Project.");
+        console.log("Run showSetupInstructions() for detailed fix instructions.");
+      }
+      
+      return false;
+    }
+    
+    const result = JSON.parse(responseText);
     console.log("✅ Forms API test successful:", result.formId);
     
     // Clean up test form
     try {
-      Drive.Files.remove(result.formId);
+      Drive.Files.delete(result.formId);
       console.log("✅ Test form cleaned up");
     } catch (error) {
       console.log("Warning: Could not delete test form");

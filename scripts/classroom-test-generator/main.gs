@@ -46,6 +46,15 @@ function generateTestClassroom() {
     console.log("✅ Test classroom generation complete!");
     console.log("📋 Summary:", summary);
     
+    // Additional instructions for provisional classrooms
+    if (classroom.courseState === "PROVISIONED") {
+      console.log("\n⚠️ IMPORTANT: Your classroom was created in PROVISIONED state.");
+      console.log("To activate it:");
+      console.log("1. Go to: " + summary.classroom.link);
+      console.log("2. Click 'Accept' to activate the classroom");
+      console.log("3. Share the enrollment code with test accounts: " + classroom.enrollmentCode);
+    }
+    
     return {
       classroom: classroom,
       students: students,
@@ -79,7 +88,19 @@ function testApiAccess() {
     const token = ScriptApp.getOAuthToken();
     console.log("✅ OAuth Token: Obtained");
     
-    console.log("🎉 All APIs accessible!");
+    // Get project info
+    console.log("\n📋 Project Information:");
+    console.log("Script ID: " + ScriptApp.getScriptId());
+    
+    // Test Forms API
+    const testFormsResult = testFormsApi();
+    if (testFormsResult) {
+      console.log("✅ Forms API: Working");
+    } else {
+      console.log("❌ Forms API: Not working - check Cloud Project settings");
+    }
+    
+    console.log("🎉 API test complete!");
     return true;
     
   } catch (error) {
@@ -118,21 +139,24 @@ function cleanupTestData() {
       });
     }
     
-    // Find and delete test folders
-    const folders = Drive.Files.list({
-      q: "name='CS101 Test Materials' and mimeType='application/vnd.google-apps.folder'"
+    // Find and delete test folders in /roo/test-classrooms
+    const testFolders = Drive.Files.list({
+      q: "name contains 'CS101 Test Materials' and mimeType='application/vnd.google-apps.folder' and trashed=false"
     });
     
-    if (folders.files) {
-      folders.files.forEach(folder => {
+    if (testFolders.files) {
+      testFolders.files.forEach(folder => {
         try {
-          Drive.Files.remove(folder.id);
+          Drive.Files.delete(folder.id);
           console.log(`📁 Deleted folder: ${folder.name}`);
         } catch (error) {
           console.error(`Failed to delete folder ${folder.name}:`, error);
         }
       });
     }
+    
+    // Optionally clean up empty parent folders
+    console.log("💡 Tip: Empty /roo/test-classrooms/ folder remains for future tests");
     
     console.log("✅ Cleanup complete!");
   }
@@ -161,4 +185,51 @@ function getClassroomInfo() {
   
   console.log("No test classroom found. Run generateTestClassroom() first.");
   return null;
+}
+
+/**
+ * Simplified version - just create classroom and materials without students
+ */
+function generateTestClassroomSimple() {
+  console.log("🚀 Starting Simplified Classroom Generation (no students)...");
+  
+  try {
+    // Step 1: Create the classroom first
+    console.log("🏫 Creating test classroom...");
+    const classroom = createTestClassroom();
+    
+    // Skip students for now - add them manually after activation
+    console.log("⏭️ Skipping student enrollment (add manually after activation)");
+    
+    // Step 2: Create submission-based assignments (no documents needed)
+    console.log("📝 Creating student submission assignments...");
+    const assignments = createStudentSubmissionAssignments(classroom.id);
+    
+    // Step 3: Create quiz forms with answer keys (let Google handle folder organization)
+    console.log("📋 Creating quiz forms with answer keys...");
+    const quizForms = createImprovedQuizForms();
+    
+    // Step 5: Create quiz assignments in classroom (with form links)
+    console.log("🧮 Creating quiz assignments...");
+    const quizAssignments = createQuizAssignmentsWithLinks(classroom.id, quizForms);
+    
+    console.log("\n✅ Simplified classroom generation complete!");
+    console.log("\n📋 Next Steps:");
+    console.log("1. Go to: https://classroom.google.com/c/" + classroom.id);
+    console.log("2. Accept/Activate the classroom");
+    console.log("3. Enrollment code: " + classroom.enrollmentCode);
+    console.log("4. Add test students manually or share enrollment code");
+    console.log("\n📁 All materials will be organized automatically by Google Classroom");
+    
+    return {
+      classroom: classroom,
+      assignments: assignments,
+      quizForms: quizForms,
+      quizAssignments: quizAssignments
+    };
+    
+  } catch (error) {
+    console.error("❌ Error:", error);
+    throw error;
+  }
 }
