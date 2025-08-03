@@ -70,7 +70,7 @@ function createImprovedQuizForms() {
   // Multiple Choice Only Quiz
   try {
     const mcForm = createFormWithFixedAnswerKey(
-      "Programming Fundamentals Test",
+      "Quiz: Python Fundamentals",
       "Multiple choice test covering basic programming concepts",
       quizQuestions.multipleChoiceOnly
     );
@@ -78,7 +78,7 @@ function createImprovedQuizForms() {
     createdForms.push({
       type: 'multiple_choice_only',
       formId: mcForm.formId,
-      title: "Programming Fundamentals Test",
+      title: "Quiz: Python Fundamentals",
       questionCount: quizQuestions.multipleChoiceOnly.length,
       totalPoints: quizQuestions.multipleChoiceOnly.reduce((sum, q) => sum + q.points, 0)
     });
@@ -92,7 +92,7 @@ function createImprovedQuizForms() {
   // Mixed Format Quiz
   try {
     const mixedForm = createFormWithFixedAnswerKey(
-      "Comprehensive Programming Assessment",
+      "Quiz: Programming Concepts",
       "Mixed format test with multiple choice, short answer, and essay questions",
       quizQuestions.mixedFormat
     );
@@ -100,7 +100,7 @@ function createImprovedQuizForms() {
     createdForms.push({
       type: 'mixed_format',
       formId: mixedForm.formId,
-      title: "Comprehensive Programming Assessment",
+      title: "Quiz: Programming Concepts",
       questionCount: quizQuestions.mixedFormat.length,
       totalPoints: quizQuestions.mixedFormat.reduce((sum, q) => sum + q.points, 0)
     });
@@ -125,7 +125,8 @@ function createFormWithFixedAnswerKey(title, description, questions) {
   const createFormUrl = CONFIG.FORMS_API.baseUrl;
   const createFormPayload = {
     info: {
-      title: title
+      title: title,           // Form title for respondents
+      documentTitle: title    // File name in Google Drive
     }
   };
   
@@ -216,20 +217,37 @@ function createFormWithFixedAnswerKey(title, description, questions) {
       });
       
     } else {
-      // Create text questions WITHOUT grading (manual grading only)
+      // Create text questions WITH grading and generalFeedback
+      const questionItem = {
+        title: question.question,
+        questionItem: {
+          question: {
+            required: true,
+            grading: {
+              pointValue: question.points
+            },
+            textQuestion: {
+              paragraph: question.type === 'PARAGRAPH'
+            }
+          }
+        }
+      };
+      
+      // Add correctAnswers only for SHORT_ANSWER (not PARAGRAPH)
+      if (question.type === 'SHORT_ANSWER' && question.correctAnswer) {
+        questionItem.questionItem.question.grading.correctAnswers = {
+          answers: [{ value: question.correctAnswer }]
+        };
+      }
+      
+      // Add correct answer as general feedback for AI grading
+      if (question.correctAnswer) {
+        questionItem.questionItem.question.grading.generalFeedback = { text: question.correctAnswer };
+      }
+      
       createRequests.push({
         createItem: {
-          item: {
-            title: question.question,
-            questionItem: {
-              question: {
-                required: true,
-                textQuestion: {
-                  paragraph: question.type === 'PARAGRAPH'
-                }
-              }
-            }
-          },
+          item: questionItem,
           location: location
         }
       });
