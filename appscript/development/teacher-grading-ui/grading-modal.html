@@ -1,0 +1,486 @@
+<!-- Grading Modal -->
+<div id="grading-modal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <div class="modal-title-section">
+        <h2 id="modal-assignment-title">Grade Submission</h2>
+        <div class="student-info">
+          <span class="student-name" id="modal-student-name">Student Name</span>
+          <span class="submission-time" id="modal-submission-time">Submitted: --</span>
+        </div>
+      </div>
+      <button class="btn-icon close-btn" onclick="closeGradingModal()" title="Close">
+        ×
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="modal-body">
+      <!-- Submission Content -->
+      <div class="submission-section">
+        <div class="section-header">
+          <h3>Student Submission</h3>
+          <div class="submission-meta">
+            <span class="submission-status-badge" id="modal-status-badge">Pending</span>
+            <span class="late-indicator" id="modal-late-indicator" style="display: none;">Late</span>
+          </div>
+        </div>
+        
+        <!-- Code Submission (for coding assignments) -->
+        <div class="code-container" id="code-container" style="display: none;">
+          <div class="code-header">
+            <span class="code-language">JavaScript</span>
+            <button class="btn btn-secondary btn-sm" onclick="copyCode()">📋 Copy</button>
+          </div>
+          <pre class="code-content" id="code-content"></pre>
+        </div>
+
+        <!-- Quiz Answers (for quiz assignments) -->
+        <div class="quiz-container" id="quiz-container" style="display: none;">
+          <div class="quiz-answers" id="quiz-answers">
+            <!-- Quiz answers will be populated here -->
+          </div>
+        </div>
+
+        <!-- General Content (fallback) -->
+        <div class="content-container" id="content-container" style="display: none;">
+          <div class="content-text" id="content-text"></div>
+        </div>
+      </div>
+
+      <!-- Grading Section -->
+      <div class="grading-section">
+        <div class="section-header">
+          <h3>Grading</h3>
+          <div class="ai-grading-controls">
+            <button class="btn btn-primary" onclick="gradeWithAI()" id="ai-grade-btn">
+              🤖 Grade with AI
+            </button>
+          </div>
+        </div>
+
+        <!-- AI Grading Progress -->
+        <div class="ai-progress" id="ai-progress" style="display: none;">
+          <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+          </div>
+          <div class="progress-text" id="progress-text">Analyzing submission...</div>
+        </div>
+
+        <!-- Grade Input -->
+        <div class="grade-inputs">
+          <div class="grade-row">
+            <div class="grade-field">
+              <label for="score-input">Score</label>
+              <div class="score-input-group">
+                <input type="number" id="score-input" min="0" max="100" placeholder="0">
+                <span class="score-max">/ <span id="max-score">100</span></span>
+              </div>
+            </div>
+            <div class="grade-field">
+              <label for="percentage-display">Percentage</label>
+              <div class="percentage-display" id="percentage-display">0%</div>
+            </div>
+          </div>
+
+          <div class="feedback-field">
+            <label for="feedback-input">Feedback</label>
+            <textarea id="feedback-input" rows="4" placeholder="Enter feedback for the student..."></textarea>
+          </div>
+
+          <!-- AI Suggestions (shown after AI grading) -->
+          <div class="ai-suggestions" id="ai-suggestions" style="display: none;">
+            <div class="suggestion-header">
+              <h4>AI Suggestions</h4>
+              <div class="confidence-badge" id="confidence-badge">Confidence: 85%</div>
+            </div>
+            <div class="suggestion-content" id="suggestion-content">
+              <!-- AI suggestions will be populated here -->
+            </div>
+            <div class="suggestion-actions">
+              <button class="btn btn-secondary btn-sm" onclick="acceptAISuggestions()">
+                ✓ Accept Suggestions
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="clearAISuggestions()">
+                ✗ Clear Suggestions
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="modal-footer">
+      <div class="footer-left">
+        <button class="btn btn-secondary" onclick="previousSubmission()" id="prev-btn" disabled>
+          ← Previous
+        </button>
+        <button class="btn btn-secondary" onclick="nextSubmission()" id="next-btn" disabled>
+          Next →
+        </button>
+      </div>
+      <div class="footer-right">
+        <button class="btn btn-secondary" onclick="closeGradingModal()">
+          Cancel
+        </button>
+        <button class="btn btn-primary" onclick="saveGradeAndClose()" id="save-btn">
+          Save Grade
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Modal-specific styles */
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .modal-title-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+  }
+
+  .student-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .student-info .student-name {
+    font-weight: 500;
+    color: var(--text-primary);
+  }
+
+  .student-info .submission-time {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .close-btn {
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    padding: 0.5rem;
+  }
+
+  .close-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-tertiary);
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    gap: 2rem;
+  }
+
+  .submission-section,
+  .grading-section {
+    flex: 1;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .section-header h3 {
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
+
+  .submission-meta {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  .submission-status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .late-indicator {
+    color: var(--danger-color);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  /* Code Container */
+  .code-container {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .code-header {
+    background: var(--bg-tertiary);
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .code-language {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  .code-content {
+    background: var(--bg-primary);
+    padding: 1rem;
+    margin: 0;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  /* Quiz Container */
+  .quiz-container {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .quiz-answer {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .quiz-answer:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  .quiz-question {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+  }
+
+  .quiz-student-answer {
+    color: var(--text-secondary);
+    margin-left: 1rem;
+  }
+
+  /* Content Container */
+  .content-container {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .content-text {
+    white-space: pre-wrap;
+    line-height: 1.6;
+  }
+
+  /* AI Progress */
+  .ai-progress {
+    margin: 1rem 0;
+    padding: 1rem;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    width: 0%;
+    transition: width 0.3s ease;
+    animation: shimmer 2s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200px 0; }
+    100% { background-position: 200px 0; }
+  }
+
+  .progress-text {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+
+  /* Grade Inputs */
+  .grade-inputs {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .grade-row {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .grade-field {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .grade-field label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary);
+  }
+
+  .score-input-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  #score-input {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+
+  .score-max {
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .percentage-display {
+    padding: 0.5rem;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+    font-weight: 600;
+    color: var(--primary-color);
+    text-align: center;
+  }
+
+  .feedback-field textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.875rem;
+    resize: vertical;
+  }
+
+  /* AI Suggestions */
+  .ai-suggestions {
+    background: #f0f9ff;
+    border: 1px solid #0ea5e9;
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .suggestion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .suggestion-header h4 {
+    font-size: 0.875rem;
+    color: var(--text-primary);
+  }
+
+  .confidence-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .suggestion-content {
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  .suggestion-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  /* Modal Footer */
+  .modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-left,
+  .footer-right {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .modal-content {
+      width: 95%;
+      max-height: 95vh;
+    }
+
+    .modal-body {
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .grade-row {
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .modal-footer {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .footer-left,
+    .footer-right {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+</style>

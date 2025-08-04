@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Roo Teacher Grading Portal</title>
+    
+    <!-- Include styles -->
+    <?!= include('styles'); ?>
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- Header -->
+      <header class="app-header">
+        <div class="header-content">
+          <div class="header-left">
+            <h1 class="app-title">
+              <span class="logo">🦘</span>
+              Roo Teacher Grading Portal
+            </h1>
+          </div>
+          <div class="header-right">
+            <div class="user-info">
+              <span class="user-name" id="user-name">Loading...</span>
+              <button class="btn btn-icon" onclick="showSettings()" title="Settings">
+                ⚙️
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Content Area -->
+      <div class="main-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+          <?!= include('sidebar'); ?>
+        </aside>
+
+        <!-- Content Area -->
+        <main class="content-area" id="content-area">
+          <!-- Welcome Screen (shown initially) -->
+          <div id="welcome-screen" class="welcome-screen">
+            <div class="welcome-content">
+              <h2>Welcome to Roo Grading Portal</h2>
+              <p>Select a classroom from the sidebar to get started</p>
+              <div class="welcome-stats" id="welcome-stats">
+                <!-- Recent activity will be loaded here -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Assignment View (hidden initially) -->
+          <div id="assignment-view" class="assignment-view" style="display: none;">
+            <!-- Assignment Header -->
+            <div class="assignment-header" id="assignment-header">
+              <h2 class="assignment-title" id="assignment-title">Select an assignment</h2>
+              <div class="assignment-actions">
+                <button class="btn btn-secondary" onclick="refreshSubmissions()">
+                  🔄 Refresh
+                </button>
+                <button class="btn btn-secondary" onclick="exportCurrentGrades()">
+                  📥 Export
+                </button>
+                <button class="btn btn-primary" onclick="batchGradeSelected()" id="batch-grade-btn" disabled>
+                  🤖 Batch Grade Selected
+                </button>
+              </div>
+            </div>
+
+            <!-- Assignment Stats -->
+            <div class="stats-container" id="stats-container" style="display: none;">
+              <div class="stat-card">
+                <div class="stat-value" id="stat-submitted">-</div>
+                <div class="stat-label">Submitted</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-graded">-</div>
+                <div class="stat-label">Graded</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-pending">-</div>
+                <div class="stat-label">Pending</div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-value" id="stat-average">-</div>
+                <div class="stat-label">Average Score</div>
+              </div>
+            </div>
+
+            <!-- Submissions List -->
+            <div class="submissions-container" id="submissions-container" style="display: none;">
+              <div class="submissions-header">
+                <div class="select-all-wrapper">
+                  <input type="checkbox" id="select-all" onchange="toggleSelectAll()">
+                  <label for="select-all">Select All</label>
+                </div>
+                <div class="filter-controls">
+                  <select id="status-filter" onchange="filterSubmissions()">
+                    <option value="all">All Status</option>
+                    <option value="graded">Graded</option>
+                    <option value="pending">Pending</option>
+                    <option value="grading">Grading</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div class="submissions-list" id="submissions-list">
+                <!-- Submissions will be loaded here -->
+              </div>
+            </div>
+
+            <!-- Empty State -->
+            <div class="empty-state" id="empty-state" style="display: none;">
+              <div class="empty-icon">📝</div>
+              <h3>No submissions yet</h3>
+              <p>Students haven't submitted their work for this assignment</p>
+            </div>
+          </div>
+
+          <!-- Loading State -->
+          <div class="loading-container" id="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p id="loading-message">Loading...</p>
+          </div>
+
+          <!-- Error State -->
+          <div class="error-container" id="error" style="display: none;">
+            <div class="error-icon">❌</div>
+            <h2>Error</h2>
+            <p id="error-message"></p>
+            <button class="btn btn-primary" onclick="retryLastAction()">Try Again</button>
+          </div>
+        </main>
+      </div>
+
+      <!-- Grading Modal -->
+      <?!= include('grading-modal'); ?>
+
+      <!-- Toast Container -->
+      <div class="toast-container" id="toast-container"></div>
+    </div>
+
+    <!-- Include JavaScript -->
+    <?!= include('javascript'); ?>
+  </body>
+</html>

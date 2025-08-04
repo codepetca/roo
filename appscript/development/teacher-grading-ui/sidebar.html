@@ -1,0 +1,203 @@
+<!-- Classroom Selection -->
+<div class="sidebar-section">
+  <div class="section-title">Classroom</div>
+  <select class="classroom-select" id="classroom-select" onchange="onClassroomChange()">
+    <option value="">Select a classroom...</option>
+  </select>
+</div>
+
+<!-- Assignments List -->
+<div class="sidebar-section">
+  <div class="section-title">Assignments</div>
+  <div class="assignments-list" id="assignments-list">
+    <div class="assignment-item empty-message">
+      <span>Select a classroom to view assignments</span>
+    </div>
+  </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="sidebar-section">
+  <div class="section-title">Quick Stats</div>
+  <div class="quick-stats" id="quick-stats">
+    <div class="quick-stat-item">
+      <div class="quick-stat-value" id="total-assignments">-</div>
+      <div class="quick-stat-label">Total Assignments</div>
+    </div>
+    <div class="quick-stat-item">
+      <div class="quick-stat-value" id="pending-grades">-</div>
+      <div class="quick-stat-label">Need Grading</div>
+    </div>
+  </div>
+</div>
+
+<!-- Actions -->
+<div class="sidebar-section">
+  <div class="section-title">Actions</div>
+  <div class="sidebar-actions">
+    <button class="btn btn-secondary" onclick="refreshAllData()" style="width: 100%; margin-bottom: 0.5rem;">
+      🔄 Refresh All
+    </button>
+    <button class="btn btn-secondary" onclick="showSettings()" style="width: 100%; margin-bottom: 0.5rem;">
+      ⚙️ Settings
+    </button>
+    <button class="btn btn-secondary" onclick="exportAllGrades()" style="width: 100%;">
+      📥 Export All
+    </button>
+  </div>
+</div>
+
+<style>
+  /* Additional sidebar-specific styles */
+  .empty-message {
+    color: var(--text-secondary);
+    font-style: italic;
+    padding: 1rem;
+    text-align: center;
+    background: none !important;
+    cursor: default !important;
+  }
+
+  .quick-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .quick-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem;
+    background: var(--bg-tertiary);
+    border-radius: 6px;
+  }
+
+  .quick-stat-value {
+    font-weight: 600;
+    color: var(--primary-color);
+  }
+
+  .quick-stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+  }
+
+  .sidebar-actions {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Assignment type icons */
+  .assignment-item[data-type="coding"] .assignment-icon::before {
+    content: "💻";
+  }
+
+  .assignment-item[data-type="quiz"] .assignment-icon::before {
+    content: "📝";
+  }
+
+  .assignment-item[data-type="assignment"] .assignment-icon::before {
+    content: "📋";
+  }
+
+  /* Assignment status styles */
+  .assignment-item[data-status="graded"] {
+    border-left: 3px solid var(--success-color);
+  }
+
+  .assignment-item[data-status="partial"] {
+    border-left: 3px solid var(--warning-color);
+  }
+
+  .assignment-item[data-status="pending"] {
+    border-left: 3px solid var(--text-secondary);
+  }
+
+  .assignment-item[data-status="graded"] .assignment-status::after {
+    content: "✓";
+    color: var(--success-color);
+  }
+
+  .assignment-item[data-status="partial"] .assignment-status::after {
+    content: "🔄";
+  }
+
+  .assignment-item[data-status="pending"] .assignment-status::after {
+    content: "⏳";
+  }
+
+  /* Hover effects for assignments */
+  .assignment-item:not(.empty-message):hover {
+    background: var(--bg-tertiary);
+    transform: translateX(2px);
+  }
+
+  .assignment-item.active {
+    background: var(--primary-color);
+    color: white;
+    transform: translateX(4px);
+  }
+
+  .assignment-item.active .assignment-status::after {
+    color: white;
+  }
+
+  /* Loading state for assignments */
+  .assignments-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+  }
+
+  .assignments-loading .spinner {
+    width: 20px;
+    height: 20px;
+    margin-right: 0.5rem;
+  }
+
+  /* Scrollbar styling for sidebar */
+  .sidebar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .sidebar::-webkit-scrollbar-track {
+    background: var(--bg-tertiary);
+  }
+
+  .sidebar::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+  }
+
+  .sidebar::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+  }
+
+  /* Badge for pending count */
+  .assignment-item .pending-badge {
+    background: var(--warning-color);
+    color: white;
+    font-size: 0.625rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 10px;
+    margin-left: 0.5rem;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .sidebar-section {
+      padding: 0.75rem;
+    }
+    
+    .assignment-item {
+      padding: 0.5rem 0.75rem;
+    }
+    
+    .quick-stats {
+      gap: 0.5rem;
+    }
+  }
+</style>

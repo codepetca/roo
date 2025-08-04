@@ -1,0 +1,1184 @@
+<script>
+  // Global application state
+  const AppState = {
+    currentUser: null,
+    classrooms: [],
+    currentClassroom: null,
+    currentAssignment: null,
+    submissions: [],
+    selectedSubmissions: new Set(),
+    currentSubmissionIndex: -1,
+    lastAction: null
+  };
+
+  // Initialize application on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Roo Teacher Grading Portal - Initializing...');
+    initializeApp();
+  });
+
+  /**
+   * Initialize the application
+   */
+  function initializeApp() {
+    showLoading('Initializing application...');
+    
+    // Load user info and classrooms
+    Promise.all([
+      callServerFunction('getCurrentUser'),
+      callServerFunction('getClassrooms')
+    ]).then(([userResult, classroomsResult]) => {
+      hideLoading();
+      
+      if (userResult.success) {
+        AppState.currentUser = userResult.data;
+        document.getElementById('user-name').textContent = userResult.data.name;
+      }
+      
+      if (classroomsResult.success) {
+        AppState.classrooms = classroomsResult.data;
+        populateClassroomSelect();
+        showWelcomeScreen();
+      } else {
+        showError('Failed to load classrooms: ' + classroomsResult.error);
+      }
+    }).catch(error => {
+      hideLoading();
+      showError('Failed to initialize application: ' + error.message);
+    });
+  }
+
+  /**
+   * Populate the classroom dropdown
+   */
+  function populateClassroomSelect() {
+    const select = document.getElementById('classroom-select');
+    select.innerHTML = '<option value="">Select a classroom...</option>';
+    
+    AppState.classrooms.forEach(classroom => {
+      const option = document.createElement('option');
+      option.value = classroom.id;
+      option.textContent = classroom.name;
+      select.appendChild(option);
+    });
+  }
+
+  /**
+   * Handle classroom selection change
+   */
+  function onClassroomChange() {
+    const select = document.getElementById('classroom-select');
+    const classroomId = select.value;
+    
+    if (!classroomId) {
+      clearAssignmentsList();
+      showWelcomeScreen();
+      return;
+    }
+    
+    AppState.currentClassroom = AppState.classrooms.find(c => c.id === classroomId);
+    AppState.currentAssignment = null;
+    AppState.submissions = [];
+    
+    loadAssignments(classroomId);
+  }
+
+  /**
+   * Load assignments for selected classroom
+   */
+  function loadAssignments(classroomId) {
+    showAssignmentsLoading();
+    AppState.lastAction = () => loadAssignments(classroomId);
+    
+    callServerFunction('getAssignments', classroomId)
+      .then(result => {
+        if (result.success) {
+          displayAssignments(result.data);
+          updateQuickStats(result.data);
+        } else {
+          showError('Failed to load assignments: ' + result.error);
+        }
+      })
+      .catch(error => {
+        showError('Error loading assignments: ' + error.message);
+      });
+  }
+
+  /**
+   * Display assignments in sidebar
+   */
+  function displayAssignments(assignments) {
+    const container = document.getElementById('assignments-list');
+    container.innerHTML = '';
+    
+    if (assignments.length === 0) {
+      container.innerHTML = '<div class="assignment-item empty-message">No assignments found</div>';
+      return;
+    }
+    
+    assignments.forEach(assignment => {
+      const item = createAssignmentItem(assignment);
+      container.appendChild(item);
+    });
+  }
+
+  /**
+   * Create assignment list item element
+   */
+  function createAssignmentItem(assignment) {
+    const item = document.createElement('div');
+    item.className = 'assignment-item';
+    item.setAttribute('data-type', assignment.type);
+    item.setAttribute('data-status', assignment.status);
+    item.onclick = () => selectAssignment(assignment);
+    
+    // Add pending count badge if applicable
+    const pendingCount = assignment.submissionStats ? assignment.submissionStats.pending : 0;
+    const pendingBadge = pendingCount > 0 ? `<span class="pending-badge">${pendingCount}</span>` : '';
+    
+    item.innerHTML = `
+      <div class="assignment-icon"></div>
+      <div class="assignment-info">
+        <div class="assignment-name">${escapeHtml(assignment.title)}</div>
+        <div class="assignment-meta">${assignment.type} • ${assignment.maxScore || 100} pts</div>
+      </div>
+      <div class="assignment-status">${pendingBadge}</div>
+    `;
+    
+    return item;
+  }
+
+  /**
+   * Select an assignment and load its submissions
+   */
+  function selectAssignment(assignment) {
+    // Update UI
+    document.querySelectorAll('.assignment-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    event.currentTarget.classList.add('active');
+    
+    AppState.currentAssignment = assignment;
+    AppState.submissions = [];
+    AppState.selectedSubmissions.clear();
+    
+    // Show assignment view
+    showAssignmentView();
+    loadSubmissions(AppState.currentClassroom.id, assignment.id);
+  }
+
+  /**
+   * Load submissions for selected assignment
+   */
+  function loadSubmissions(classroomId, assignmentId) {
+    showLoading('Loading submissions...');
+    AppState.lastAction = () => loadSubmissions(classroomId, assignmentId);
+    
+    callServerFunction('getSubmissions', classroomId, assignmentId)
+      .then(result => {
+        hideLoading();
+        if (result.success) {
+          AppState.submissions = result.data;
+          displaySubmissions(result.data);
+          updateSubmissionStats(result.stats || calculateStats(result.data));
+        } else {
+          showError('Failed to load submissions: ' + result.error);
+        }
+      })
+      .catch(error => {
+        hideLoading();
+        showError('Error loading submissions: ' + error.message);
+      });
+  }
+
+  /**
+   * Display submissions in the main content area
+   */
+  function displaySubmissions(submissions) {
+    const container = document.getElementById('submissions-list');
+    container.innerHTML = '';
+    
+    if (submissions.length === 0) {
+      document.getElementById('submissions-container').style.display = 'none';
+      document.getElementById('empty-state').style.display = 'block';
+      return;
+    }
+    
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('submissions-container').style.display = 'block';
+    
+    submissions.forEach((submission, index) => {
+      const item = createSubmissionItem(submission, index);
+      container.appendChild(item);
+    });
+    
+    updateBatchGradeButton();
+  }
+
+  /**
+   * Create submission list item element
+   */
+  function createSubmissionItem(submission, index) {
+    const item = document.createElement('div');
+    item.className = 'submission-item';
+    item.setAttribute('data-status', submission.status);
+    if (AppState.selectedSubmissions.has(submission.id)) {
+      item.classList.add('selected');
+    }
+    
+    const scoreDisplay = submission.score !== undefined ? 
+      `<div class="submission-score">${submission.score}/${submission.maxScore || AppState.currentAssignment.maxScore || 100}</div>` : '';
+    
+    const lateIndicator = submission.late ? '<span class="late-indicator">Late</span>' : '';
+    
+    item.innerHTML = `
+      <div class="submission-checkbox">
+        <input type="checkbox" ${AppState.selectedSubmissions.has(submission.id) ? 'checked' : ''} 
+               onchange="toggleSubmissionSelection('${submission.id}')">
+      </div>
+      <div class="submission-info" onclick="openSubmissionGrading(${index})">
+        <div class="student-name">${escapeHtml(submission.studentName)}</div>
+        <div class="submission-time">
+          Submitted: ${formatDate(submission.submittedAt)}
+          ${lateIndicator}
+        </div>
+      </div>
+      <div class="submission-status ${getStatusClass(submission.status)}">${getStatusText(submission.status)}</div>
+      ${scoreDisplay}
+    `;
+    
+    return item;
+  }
+
+  /**
+   * Toggle submission selection for batch operations
+   */
+  function toggleSubmissionSelection(submissionId) {
+    if (AppState.selectedSubmissions.has(submissionId)) {
+      AppState.selectedSubmissions.delete(submissionId);
+    } else {
+      AppState.selectedSubmissions.add(submissionId);
+    }
+    
+    updateSubmissionItemSelection(submissionId);
+    updateSelectAllCheckbox();
+    updateBatchGradeButton();
+  }
+
+  /**
+   * Toggle select all submissions
+   */
+  function toggleSelectAll() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const pendingSubmissions = AppState.submissions.filter(s => s.status === 'pending');
+    
+    if (selectAllCheckbox.checked) {
+      // Select all pending submissions
+      pendingSubmissions.forEach(submission => {
+        AppState.selectedSubmissions.add(submission.id);
+      });
+    } else {
+      // Deselect all
+      AppState.selectedSubmissions.clear();
+    }
+    
+    // Update UI
+    document.querySelectorAll('.submission-item input[type="checkbox"]').forEach(checkbox => {
+      const submissionId = checkbox.onchange.toString().match(/'([^']+)'/)[1];
+      const submission = AppState.submissions.find(s => s.id === submissionId);
+      if (submission && submission.status === 'pending') {
+        checkbox.checked = selectAllCheckbox.checked;
+        updateSubmissionItemSelection(submissionId);
+      }
+    });
+    
+    updateBatchGradeButton();
+  }
+
+  /**
+   * Open grading modal for specific submission
+   */
+  function openSubmissionGrading(index) {
+    AppState.currentSubmissionIndex = index;
+    const submission = AppState.submissions[index];
+    
+    // Populate modal with submission data
+    document.getElementById('modal-assignment-title').textContent = 
+      `Grade: ${AppState.currentAssignment.title}`;
+    document.getElementById('modal-student-name').textContent = submission.studentName;
+    document.getElementById('modal-submission-time').textContent = 
+      `Submitted: ${formatDate(submission.submittedAt)}`;
+    document.getElementById('modal-status-badge').textContent = getStatusText(submission.status);
+    document.getElementById('modal-status-badge').className = 
+      `submission-status-badge ${getStatusClass(submission.status)}`;
+    
+    // Show/hide late indicator
+    const lateIndicator = document.getElementById('modal-late-indicator');
+    if (submission.late) {
+      lateIndicator.style.display = 'inline';
+    } else {
+      lateIndicator.style.display = 'none';
+    }
+    
+    // Populate content based on assignment type
+    populateSubmissionContent(submission);
+    
+    // Populate existing grade if available
+    if (submission.score !== undefined) {
+      document.getElementById('score-input').value = submission.score;
+      updatePercentageDisplay();
+    } else {
+      document.getElementById('score-input').value = '';
+      document.getElementById('percentage-display').textContent = '0%';
+    }
+    
+    if (submission.feedback) {
+      document.getElementById('feedback-input').value = submission.feedback;
+    } else {
+      document.getElementById('feedback-input').value = '';
+    }
+    
+    // Update navigation buttons
+    updateModalNavigation();
+    
+    // Clear AI suggestions
+    hideAISuggestions();
+    
+    // Show modal
+    document.getElementById('grading-modal').style.display = 'flex';
+  }
+
+  /**
+   * Populate submission content in modal
+   */
+  function populateSubmissionContent(submission) {
+    // Hide all content containers
+    document.getElementById('code-container').style.display = 'none';
+    document.getElementById('quiz-container').style.display = 'none';
+    document.getElementById('content-container').style.display = 'none';
+    
+    if (AppState.currentAssignment.type === 'coding' && typeof submission.content === 'string') {
+      // Show code container
+      document.getElementById('code-container').style.display = 'block';
+      document.getElementById('code-content').textContent = submission.content;
+    } else if (AppState.currentAssignment.type === 'quiz' && submission.content && submission.content.answers) {
+      // Show quiz container
+      document.getElementById('quiz-container').style.display = 'block';
+      populateQuizAnswers(submission.content.answers);
+    } else {
+      // Show general content container
+      document.getElementById('content-container').style.display = 'block';
+      document.getElementById('content-text').textContent = 
+        typeof submission.content === 'string' ? submission.content : JSON.stringify(submission.content, null, 2);
+    }
+  }
+
+  /**
+   * Populate quiz answers in modal
+   */
+  function populateQuizAnswers(answers) {
+    const container = document.getElementById('quiz-answers');
+    container.innerHTML = '';
+    
+    answers.forEach((answer, index) => {
+      const answerDiv = document.createElement('div');
+      answerDiv.className = 'quiz-answer';
+      
+      const correctIndicator = answer.correct !== undefined ? 
+        (answer.correct ? ' ✓' : ' ✗') : '';
+      
+      answerDiv.innerHTML = `
+        <div class="quiz-question">Question ${index + 1}${correctIndicator}</div>
+        <div class="quiz-student-answer">${escapeHtml(answer.answer || 'No answer provided')}</div>
+      `;
+      
+      container.appendChild(answerDiv);
+    });
+  }
+
+  /**
+   * Grade submission with AI
+   */
+  function gradeWithAI() {
+    const submission = AppState.submissions[AppState.currentSubmissionIndex];
+    if (!submission) return;
+    
+    // Show progress
+    showAIProgress();
+    
+    // Update submission status to grading
+    updateSubmissionStatus(submission.id, 'grading');
+    
+    const submissionData = {
+      id: submission.id,
+      studentId: submission.studentId,
+      assignmentId: AppState.currentAssignment.id,
+      type: AppState.currentAssignment.type,
+      content: submission.content,
+      maxScore: AppState.currentAssignment.maxScore || 100
+    };
+    
+    callServerFunction('gradeSubmission', submissionData)
+      .then(result => {
+        hideAIProgress();
+        
+        if (result.success) {
+          const gradeData = result.data;
+          
+          // Update form with AI results
+          document.getElementById('score-input').value = gradeData.score;
+          document.getElementById('feedback-input').value = gradeData.feedback;
+          updatePercentageDisplay();
+          
+          // Show AI suggestions
+          showAISuggestions(gradeData);
+          
+          // Update submission in memory
+          submission.score = gradeData.score;
+          submission.feedback = gradeData.feedback;
+          submission.status = 'graded';
+          submission.gradedAt = gradeData.gradedAt;
+          
+          // Refresh submissions display
+          displaySubmissions(AppState.submissions);
+          
+          showToast('AI grading completed successfully!', 'success');
+        } else {
+          showToast('AI grading failed: ' + result.error, 'error');
+          updateSubmissionStatus(submission.id, 'pending');
+        }
+      })
+      .catch(error => {
+        hideAIProgress();
+        showToast('AI grading error: ' + error.message, 'error');
+        updateSubmissionStatus(submission.id, 'pending');
+      });
+  }
+
+  /**
+   * Batch grade selected submissions
+   */
+  function batchGradeSelected() {
+    const selectedSubmissions = Array.from(AppState.selectedSubmissions)
+      .map(id => AppState.submissions.find(s => s.id === id))
+      .filter(s => s && s.status === 'pending');
+    
+    if (selectedSubmissions.length === 0) {
+      showToast('No pending submissions selected', 'warning');
+      return;
+    }
+    
+    if (!confirm(`Grade ${selectedSubmissions.length} submissions with AI?`)) {
+      return;
+    }
+    
+    // Update UI to show batch progress
+    showBatchProgress(selectedSubmissions.length);
+    
+    // Update all selected submissions to grading status
+    selectedSubmissions.forEach(submission => {
+      updateSubmissionStatus(submission.id, 'grading');
+    });
+    
+    const submissionsData = selectedSubmissions.map(submission => ({
+      id: submission.id,
+      studentId: submission.studentId,
+      assignmentId: AppState.currentAssignment.id,
+      type: AppState.currentAssignment.type,
+      content: submission.content,
+      maxScore: AppState.currentAssignment.maxScore || 100
+    }));
+    
+    callServerFunction('batchGrade', submissionsData)
+      .then(result => {
+        hideBatchProgress();
+        
+        if (result.success) {
+          const results = result.data.results || [];
+          
+          // Update submissions in memory
+          results.forEach(gradeResult => {
+            const submission = AppState.submissions.find(s => s.id === gradeResult.submissionId);
+            if (submission) {
+              submission.score = gradeResult.score;
+              submission.feedback = gradeResult.feedback;
+              submission.status = 'graded';
+              submission.gradedAt = gradeResult.gradedAt;
+            }
+          });
+          
+          // Clear selections and refresh display
+          AppState.selectedSubmissions.clear();
+          displaySubmissions(AppState.submissions);
+          updateSubmissionStats(calculateStats(AppState.submissions));
+          
+          showToast(`Successfully graded ${results.length} submissions!`, 'success');
+        } else {
+          showToast('Batch grading failed: ' + result.error, 'error');
+          // Reset failed submissions back to pending
+          selectedSubmissions.forEach(submission => {
+            updateSubmissionStatus(submission.id, 'pending');
+          });
+        }
+      })
+      .catch(error => {
+        hideBatchProgress();
+        showToast('Batch grading error: ' + error.message, 'error');
+        // Reset failed submissions back to pending
+        selectedSubmissions.forEach(submission => {
+          updateSubmissionStatus(submission.id, 'pending');
+        });
+      });
+  }
+
+  /**
+   * Save grade and close modal
+   */
+  function saveGradeAndClose() {
+    const submission = AppState.submissions[AppState.currentSubmissionIndex];
+    if (!submission) return;
+    
+    const score = parseInt(document.getElementById('score-input').value);
+    const feedback = document.getElementById('feedback-input').value.trim();
+    
+    if (isNaN(score) || score < 0) {
+      showToast('Please enter a valid score', 'warning');
+      return;
+    }
+    
+    const maxScore = AppState.currentAssignment.maxScore || 100;
+    if (score > maxScore) {
+      showToast(`Score cannot exceed ${maxScore}`, 'warning');
+      return;
+    }
+    
+    const gradeData = {
+      score: score,
+      feedback: feedback,
+      gradedBy: 'teacher',
+      gradedAt: new Date().toISOString()
+    };
+    
+    // Show saving state
+    const saveBtn = document.getElementById('save-btn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+    
+    callServerFunction('updateGrade', 
+      AppState.currentClassroom.id, 
+      AppState.currentAssignment.id, 
+      submission.id, 
+      gradeData
+    ).then(result => {
+      saveBtn.textContent = originalText;
+      saveBtn.disabled = false;
+      
+      if (result.success) {
+        // Update submission in memory
+        submission.score = score;
+        submission.feedback = feedback;
+        submission.status = 'graded';
+        submission.gradedAt = gradeData.gradedAt;
+        
+        // Refresh display
+        displaySubmissions(AppState.submissions);
+        updateSubmissionStats(calculateStats(AppState.submissions));
+        
+        // Close modal
+        closeGradingModal();
+        
+        showToast('Grade saved successfully!', 'success');
+      } else {
+        showToast('Failed to save grade: ' + result.error, 'error');
+      }
+    }).catch(error => {
+      saveBtn.textContent = originalText;
+      saveBtn.disabled = false;
+      showToast('Error saving grade: ' + error.message, 'error');
+    });
+  }
+
+  /**
+   * Close grading modal
+   */
+  function closeGradingModal() {
+    document.getElementById('grading-modal').style.display = 'none';
+    AppState.currentSubmissionIndex = -1;
+    hideAISuggestions();
+    hideAIProgress();
+  }
+
+  /**
+   * Navigate to previous submission
+   */
+  function previousSubmission() {
+    if (AppState.currentSubmissionIndex > 0) {
+      openSubmissionGrading(AppState.currentSubmissionIndex - 1);
+    }
+  }
+
+  /**
+   * Navigate to next submission
+   */
+  function nextSubmission() {
+    if (AppState.currentSubmissionIndex < AppState.submissions.length - 1) {
+      openSubmissionGrading(AppState.currentSubmissionIndex + 1);
+    }
+  }
+
+  /**
+   * Export grades for current assignment
+   */
+  function exportCurrentGrades() {
+    if (!AppState.currentAssignment) {
+      showToast('No assignment selected', 'warning');
+      return;
+    }
+    
+    callServerFunction('exportGradesForAssignment', 
+      AppState.currentClassroom.id, 
+      AppState.currentAssignment.id
+    ).then(result => {
+      if (result.success) {
+        downloadCSV(result.data, result.filename);
+        showToast('Grades exported successfully!', 'success');
+      } else {
+        showToast('Export failed: ' + result.error, 'error');
+      }
+    }).catch(error => {
+      showToast('Export error: ' + error.message, 'error');
+    });
+  }
+
+  /**
+   * Refresh current submissions
+   */
+  function refreshSubmissions() {
+    if (AppState.currentAssignment && AppState.currentClassroom) {
+      loadSubmissions(AppState.currentClassroom.id, AppState.currentAssignment.id);
+    }
+  }
+
+  /**
+   * Refresh all data
+   */
+  function refreshAllData() {
+    initializeApp();
+  }
+
+  /**
+   * Retry last failed action
+   */
+  function retryLastAction() {
+    if (AppState.lastAction) {
+      hideError();
+      AppState.lastAction();
+    }
+  }
+
+  /**
+   * Filter submissions by status
+   */
+  function filterSubmissions() {
+    const filter = document.getElementById('status-filter').value;
+    const items = document.querySelectorAll('.submission-item');
+    
+    items.forEach(item => {
+      const status = item.getAttribute('data-status');
+      if (filter === 'all' || status === filter) {
+        item.style.display = 'flex';
+      } else {
+        item.style.display = 'none';
+      }
+    });
+  }
+
+  // Utility Functions
+
+  /**
+   * Call server-side function with error handling
+   */
+  function callServerFunction(functionName, ...args) {
+    return new Promise((resolve, reject) => {
+      const handler = google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject);
+      
+      handler[functionName](...args);
+    });
+  }
+
+  /**
+   * Show loading state
+   */
+  function showLoading(message = 'Loading...') {
+    document.getElementById('loading-message').textContent = message;
+    document.getElementById('loading').style.display = 'flex';
+    document.getElementById('welcome-screen').style.display = 'none';
+    document.getElementById('assignment-view').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+  }
+
+  /**
+   * Hide loading state
+   */
+  function hideLoading() {
+    document.getElementById('loading').style.display = 'none';
+  }
+
+  /**
+   * Show error state
+   */
+  function showError(message) {
+    document.getElementById('error-message').textContent = message;
+    document.getElementById('error').style.display = 'flex';
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('welcome-screen').style.display = 'none';
+    document.getElementById('assignment-view').style.display = 'none';
+  }
+
+  /**
+   * Hide error state
+   */
+  function hideError() {
+    document.getElementById('error').style.display = 'none';
+  }
+
+  /**
+   * Show welcome screen
+   */
+  function showWelcomeScreen() {
+    document.getElementById('welcome-screen').style.display = 'block';
+    document.getElementById('assignment-view').style.display = 'none';
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+  }
+
+  /**
+   * Show assignment view
+   */
+  function showAssignmentView() {
+    document.getElementById('assignment-view').style.display = 'block';
+    document.getElementById('welcome-screen').style.display = 'none';
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('error').style.display = 'none';
+    
+    // Update assignment header
+    if (AppState.currentAssignment) {
+      document.getElementById('assignment-title').textContent = AppState.currentAssignment.title;
+    }
+  }
+
+  /**
+   * Show assignments loading in sidebar
+   */
+  function showAssignmentsLoading() {
+    const container = document.getElementById('assignments-list');
+    container.innerHTML = '<div class="assignments-loading"><div class="spinner"></div>Loading assignments...</div>';
+  }
+
+  /**
+   * Clear assignments list
+   */
+  function clearAssignmentsList() {
+    const container = document.getElementById('assignments-list');
+    container.innerHTML = '<div class="assignment-item empty-message">Select a classroom to view assignments</div>';
+  }
+
+  /**
+   * Update quick stats in sidebar
+   */
+  function updateQuickStats(assignments) {
+    const totalAssignments = assignments.length;
+    const pendingGrades = assignments.reduce((count, assignment) => {
+      return count + (assignment.submissionStats ? assignment.submissionStats.pending : 0);
+    }, 0);
+    
+    document.getElementById('total-assignments').textContent = totalAssignments;
+    document.getElementById('pending-grades').textContent = pendingGrades;
+  }
+
+  /**
+   * Update submission statistics display
+   */
+  function updateSubmissionStats(stats) {
+    document.getElementById('stat-submitted').textContent = stats.total || 0;
+    document.getElementById('stat-graded').textContent = stats.graded || 0;
+    document.getElementById('stat-pending').textContent = stats.pending || 0;
+    document.getElementById('stat-average').textContent = (stats.averageScore || 0) + '%';
+    
+    document.getElementById('stats-container').style.display = 'grid';
+  }
+
+  /**
+   * Calculate statistics from submissions array
+   */
+  function calculateStats(submissions) {
+    const total = submissions.length;
+    const graded = submissions.filter(s => s.status === 'graded').length;
+    const pending = submissions.filter(s => s.status === 'pending').length;
+    const grading = submissions.filter(s => s.status === 'grading').length;
+    
+    const gradedSubmissions = submissions.filter(s => s.status === 'graded' && s.score !== undefined);
+    const averageScore = gradedSubmissions.length > 0 
+      ? Math.round(gradedSubmissions.reduce((sum, s) => sum + s.score, 0) / gradedSubmissions.length)
+      : 0;
+    
+    return { total, graded, pending, grading, averageScore };
+  }
+
+  /**
+   * Update batch grade button state
+   */
+  function updateBatchGradeButton() {
+    const button = document.getElementById('batch-grade-btn');
+    const selectedCount = AppState.selectedSubmissions.size;
+    const pendingSelected = Array.from(AppState.selectedSubmissions)
+      .map(id => AppState.submissions.find(s => s.id === id))
+      .filter(s => s && s.status === 'pending').length;
+    
+    button.disabled = pendingSelected === 0;
+    button.textContent = selectedCount > 0 
+      ? `🤖 Grade Selected (${pendingSelected})` 
+      : '🤖 Batch Grade Selected';
+  }
+
+  /**
+   * Update select all checkbox state
+   */
+  function updateSelectAllCheckbox() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const pendingSubmissions = AppState.submissions.filter(s => s.status === 'pending');
+    const selectedPending = Array.from(AppState.selectedSubmissions)
+      .map(id => AppState.submissions.find(s => s.id === id))
+      .filter(s => s && s.status === 'pending').length;
+    
+    selectAllCheckbox.checked = pendingSubmissions.length > 0 && 
+                                selectedPending === pendingSubmissions.length;
+  }
+
+  /**
+   * Update submission item selection visual state
+   */
+  function updateSubmissionItemSelection(submissionId) {
+    const items = document.querySelectorAll('.submission-item');
+    items.forEach(item => {
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      const id = checkbox.onchange.toString().match(/'([^']+)'/)[1];
+      if (id === submissionId) {
+        checkbox.checked = AppState.selectedSubmissions.has(submissionId);
+        if (AppState.selectedSubmissions.has(submissionId)) {
+          item.classList.add('selected');
+        } else {
+          item.classList.remove('selected');
+        }
+      }
+    });
+  }
+
+  /**
+   * Update submission status in UI
+   */
+  function updateSubmissionStatus(submissionId, status) {
+    // Update in memory
+    const submission = AppState.submissions.find(s => s.id === submissionId);
+    if (submission) {
+      submission.status = status;
+    }
+    
+    // Update server
+    callServerFunction('updateSubmissionStatus', submissionId, status);
+    
+    // Update UI
+    const items = document.querySelectorAll('.submission-item');
+    items.forEach(item => {
+      const checkbox = item.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        const id = checkbox.onchange.toString().match(/'([^']+)'/)[1];
+        if (id === submissionId) {
+          item.setAttribute('data-status', status);
+          const statusElement = item.querySelector('.submission-status');
+          if (statusElement) {
+            statusElement.textContent = getStatusText(status);
+            statusElement.className = `submission-status ${getStatusClass(status)}`;
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Show AI grading progress
+   */
+  function showAIProgress() {
+    const progressDiv = document.getElementById('ai-progress');
+    const progressFill = document.getElementById('progress-fill');
+    const progressText = document.getElementById('progress-text');
+    
+    progressDiv.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressText.textContent = 'Initializing AI grading...';
+    
+    // Simulate progress
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += Math.random() * 15;
+      if (progress > 90) progress = 90;
+      
+      progressFill.style.width = progress + '%';
+      
+      if (progress < 30) {
+        progressText.textContent = 'Analyzing submission...';
+      } else if (progress < 60) {
+        progressText.textContent = 'Processing with AI...';
+      } else {
+        progressText.textContent = 'Generating feedback...';
+      }
+    }, 200);
+    
+    // Store interval for cleanup
+    progressDiv.dataset.interval = interval;
+  }
+
+  /**
+   * Hide AI grading progress
+   */
+  function hideAIProgress() {
+    const progressDiv = document.getElementById('ai-progress');
+    const interval = progressDiv.dataset.interval;
+    
+    if (interval) {
+      clearInterval(interval);
+    }
+    
+    progressDiv.style.display = 'none';
+  }
+
+  /**
+   * Show AI suggestions in grading modal
+   */
+  function showAISuggestions(gradeData) {
+    const suggestionsDiv = document.getElementById('ai-suggestions');
+    const confidenceBadge = document.getElementById('confidence-badge');
+    const suggestionContent = document.getElementById('suggestion-content');
+    
+    confidenceBadge.textContent = `Confidence: ${Math.round((gradeData.confidence || 0.85) * 100)}%`;
+    suggestionContent.innerHTML = `
+      <div><strong>Suggested Score:</strong> ${gradeData.score}/${AppState.currentAssignment.maxScore || 100}</div>
+      <div><strong>AI Feedback:</strong> ${gradeData.feedback}</div>
+    `;
+    
+    suggestionsDiv.style.display = 'block';
+  }
+
+  /**
+   * Hide AI suggestions
+   */
+  function hideAISuggestions() {
+    document.getElementById('ai-suggestions').style.display = 'none';
+  }
+
+  /**
+   * Accept AI suggestions
+   */
+  function acceptAISuggestions() {
+    // Values are already populated, just hide suggestions
+    hideAISuggestions();
+    showToast('AI suggestions accepted', 'success');
+  }
+
+  /**
+   * Clear AI suggestions
+   */
+  function clearAISuggestions() {
+    document.getElementById('score-input').value = '';
+    document.getElementById('feedback-input').value = '';
+    updatePercentageDisplay();
+    hideAISuggestions();
+  }
+
+  /**
+   * Update percentage display when score changes
+   */
+  function updatePercentageDisplay() {
+    const score = parseInt(document.getElementById('score-input').value) || 0;
+    const maxScore = AppState.currentAssignment ? (AppState.currentAssignment.maxScore || 100) : 100;
+    const percentage = Math.round((score / maxScore) * 100);
+    
+    document.getElementById('percentage-display').textContent = percentage + '%';
+    document.getElementById('max-score').textContent = maxScore;
+  }
+
+  /**
+   * Update modal navigation buttons
+   */
+  function updateModalNavigation() {
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    
+    prevBtn.disabled = AppState.currentSubmissionIndex <= 0;
+    nextBtn.disabled = AppState.currentSubmissionIndex >= AppState.submissions.length - 1;
+  }
+
+  /**
+   * Show batch grading progress
+   */
+  function showBatchProgress(total) {
+    showToast(`Grading ${total} submissions with AI...`, 'info');
+  }
+
+  /**
+   * Hide batch grading progress
+   */
+  function hideBatchProgress() {
+    // Progress is shown via toast, nothing to hide
+  }
+
+  /**
+   * Show toast notification
+   */
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    const icon = type === 'success' ? '✓' : 
+                 type === 'error' ? '✗' : 
+                 type === 'warning' ? '⚠' : 'ℹ';
+    
+    toast.innerHTML = `<span>${icon}</span><span>${escapeHtml(message)}</span>`;
+    
+    container.appendChild(toast);
+    
+    // Auto remove after 4 seconds
+    setTimeout(() => {
+      if (toast.parentNode) {
+        toast.parentNode.removeChild(toast);
+      }
+    }, 4000);
+  }
+
+  /**
+   * Download CSV file
+   */
+  function downloadCSV(csvContent, filename) {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  /**
+   * Copy code to clipboard
+   */
+  function copyCode() {
+    const codeContent = document.getElementById('code-content');
+    const text = codeContent.textContent;
+    
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Code copied to clipboard!', 'success');
+      });
+    } else {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      showToast('Code copied to clipboard!', 'success');
+    }
+  }
+
+  /**
+   * Show settings modal (placeholder)
+   */
+  function showSettings() {
+    showToast('Settings panel coming soon!', 'info');
+  }
+
+  /**
+   * Export all grades (placeholder)
+   */
+  function exportAllGrades() {
+    showToast('Export all grades coming soon!', 'info');
+  }
+
+  // Helper Functions
+
+  function getStatusClass(status) {
+    return `status-${status}`;
+  }
+
+  function getStatusText(status) {
+    const statusMap = {
+      'graded': 'Graded',
+      'pending': 'Pending',
+      'grading': 'Grading...'
+    };
+    return statusMap[status] || status;
+  }
+
+  function formatDate(dateString) {
+    if (!dateString) return 'Unknown';
+    return new Date(dateString).toLocaleDateString() + ' ' + 
+           new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function escapeHtml(unsafe) {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Event Listeners
+
+  // Score input change
+  document.addEventListener('DOMContentLoaded', function() {
+    const scoreInput = document.getElementById('score-input');
+    if (scoreInput) {
+      scoreInput.addEventListener('input', updatePercentageDisplay);
+    }
+  });
+
+  // Close modal on outside click
+  window.onclick = function(event) {
+    const modal = document.getElementById('grading-modal');
+    if (event.target === modal) {
+      closeGradingModal();
+    }
+  };
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', function(event) {
+    // Only handle shortcuts when modal is open
+    if (document.getElementById('grading-modal').style.display === 'flex') {
+      if (event.key === 'Escape') {
+        closeGradingModal();
+      } else if (event.key === 'ArrowLeft' && event.ctrlKey) {
+        event.preventDefault();
+        previousSubmission();
+      } else if (event.key === 'ArrowRight' && event.ctrlKey) {
+        event.preventDefault();
+        nextSubmission();
+      } else if (event.key === 's' && event.ctrlKey) {
+        event.preventDefault();
+        saveGradeAndClose();
+      }
+    }
+  });
+
+  console.log('Roo Teacher Grading Portal - JavaScript loaded successfully');
+</script>
