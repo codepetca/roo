@@ -23,7 +23,7 @@ function debugLog(message, data) {
 /**
  * Simulate network delay for mock calls
  */
-function simulateDelay(ms = 500) {
+function simulateDelay(ms = 1) {
   if (CONFIG.USE_MOCK) {
     Utilities.sleep(ms);
   }

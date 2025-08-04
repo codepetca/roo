@@ -2,6 +2,44 @@
 
 A comprehensive AppScript-based web application for grading student assignments and managing classrooms with AI assistance.
 
+## 🤖 **AI Assistant Guide - READ FIRST**
+
+**CRITICAL**: This is an **AppScript-based web application**, NOT a traditional web app with build tools.
+
+### **Development Model**
+- **Platform**: Google Apps Script (NOT SvelteKit/React/Vue)
+- **Deployment**: Direct AppScript deployment (NO webpack/vite/build process)
+- **Architecture**: Mock-first development with API Gateway pattern
+- **UI Framework**: Vanilla JavaScript + HTML components + CSS (NO frontend frameworks)
+
+### **Complete Development Workflow**
+```bash
+# 1. Edit files locally
+# 2. Upload to Apps Script editor
+clasp push
+
+# 3. Update live web app (REQUIRED - push alone doesn't update live app)
+clasp deploy --deploymentId AKfycbxCACap-LCKNjYSx8oXAS2vxnjrvcXn6Weypd_dIr_wbiRPsIKh0J2Z4bMSxuK9vyM2hw --description "Update description"
+
+# 4. Test in browser with console open (F12)
+```
+
+### **Key Pain Points & Solutions**
+- **❌ Common Mistake**: Running `clasp push` and expecting live web app to update
+- **✅ Correct Flow**: Always run `clasp deploy --deploymentId [ID]` after `clasp push`
+- **❌ UI Not Loading**: Test server functions in Apps Script editor first, then check browser console
+- **✅ Debug Process**: Browser console shows client errors, Apps Script logs show server errors
+
+### **Architecture Pattern**
+```javascript
+// API Gateway switches between mock and real data
+const CONFIG = {
+  USE_MOCK: true,  // Toggle for instant demo vs real APIs
+  API_BASE_URL: 'https://firebase-functions-url',
+  API_KEY: 'api-key'
+};
+```
+
 ## Features
 
 ### 🎯 **Core Functionality**
@@ -53,6 +91,67 @@ appscript/development/teacher-grading-ui/
 ├── appsscript.json      # AppScript manifest
 └── README.md           # This documentation
 ```
+
+## 🏗️ **Architecture Decisions & Rationale**
+
+### **Why AppScript Instead of SvelteKit Frontend?**
+1. **Integrated Google Ecosystem**: Direct access to Google Classroom APIs without CORS issues
+2. **No Authentication Complexity**: Built-in Google OAuth integration
+3. **Simplified Deployment**: No build pipeline, hosting, or server management
+4. **Teacher Familiarity**: Teachers already use Google Workspace tools
+
+### **Component Architecture**
+```javascript
+// HTML Files as Components (NOT React/Vue components)
+index.html          // Main layout container
+├── sidebar.html    // Navigation component  
+├── grading-modal.html  // Detailed grading interface
+└── styles.html     // Shared CSS styles
+
+// Vanilla JavaScript State Management  
+const AppState = {
+  currentUser: null,
+  classrooms: [],
+  currentClassroom: null,
+  currentAssignment: null,
+  submissions: []
+};
+```
+
+### **API Gateway Pattern Benefits**
+- **Mock-First Development**: Build UI without backend dependencies
+- **Easy Testing**: Switch between mock and real data instantly
+- **Development Speed**: No API rate limits or authentication during development
+- **Production Ready**: Flip one flag to use real Firebase Functions
+
+### **Why No Build Tools?**
+- **Direct Deployment**: Apps Script handles hosting and serving
+- **No Dependencies**: Pure HTML/CSS/JS reduces complexity
+- **Fast Iteration**: Edit → Push → Deploy → Test cycle under 30 seconds
+- **Debugging Simplicity**: Browser DevTools work directly with source code
+
+## Clasp Development Commands
+
+### **Essential Commands**
+```bash
+# Setup (one-time)
+clasp login
+clasp create --type standalone --title "Project Name"
+
+# Development cycle
+clasp push                    # Upload files to Apps Script editor
+clasp deploy --deploymentId [ID] --description "Changes"  # Update live web app
+
+# Testing
+clasp open                    # Open Apps Script editor
+# Run individual functions in editor for server-side debugging
+```
+
+### **Deployment ID Management**
+- **Current Deployment ID**: `AKfycbxCACap-LCKNjYSx8oXAS2vxnjrvcXn6Weypd_dIr_wbiRPsIKh0J2Z4bMSxuK9vyM2hw`
+- **Get New ID**: `clasp deploy` (creates new deployment)  
+- **Update Existing**: `clasp deploy --deploymentId [ID]` (updates existing)
+- **List Deployments**: `clasp deployments`
 
 ## Setup Instructions
 
@@ -250,13 +349,56 @@ const CONFIG = {
 - Accessibility enhancements
 - Mobile-responsive improvements
 
+## 🚨 **Troubleshooting Guide - Common Issues**
+
+### **Issue: "Made changes but web app not updating"**
+**Problem**: Running `clasp push` but live web app shows old version
+**Solution**: 
+```bash
+clasp push  # Upload changes
+clasp deploy --deploymentId AKfycbxCACap-LCKNjYSx8oXAS2vxnjrvcXn6Weypd_dIr_wbiRPsIKh0J2Z4bMSxuK9vyM2hw --description "Updated version"  # Update live app
+```
+
+### **Issue: "Submissions not loading after clicking assignment"**
+**Debug Process**:
+1. **Test Server Function**: In Apps Script editor, run `testSubmissionsLoading()`
+2. **Check Browser Console**: Open F12, look for error messages
+3. **Verify Assignment ID**: Ensure assignment ID matches mock data keys
+4. **Check Mock Data**: Verify `MOCK_SUBMISSIONS['assign-karel-3']` exists
+
+### **Issue: "AppScript security banner too prominent"**
+**Solutions**:
+- **Deployment Setting**: Use `"access": "ANYONE"` instead of `"ANYONE_ANONYMOUS"`
+- **Production**: Deploy through Google Workspace domain for branded experience
+- **Note**: Some security notice will always appear for Apps Script web apps
+
+### **Issue: "Permission denied accessing Google APIs"**
+**Solutions**:
+1. **Check OAuth Scopes**: Verify `appsscript.json` includes required classroom scopes
+2. **Re-authorize**: Delete and redeploy to trigger new permission request
+3. **Test Account**: Ensure testing with account that has classroom access
+
+### **Issue: "Loading spinners stuck forever"**
+**Debug Steps**:
+1. **Server-Side**: Test individual functions in Apps Script editor
+2. **Client-Side**: Check browser console for JavaScript errors
+3. **Network**: Verify function calls are reaching the server
+4. **Mock Data**: Ensure mock data structure matches expected format
+
+### **Development Best Practices**
+- **Always test server functions individually** before testing full UI
+- **Use browser console extensively** - all operations are logged with emojis
+- **Verify deployment updates** by checking deployment version in Apps Script
+- **Test with different browsers** if issues persist
+- **Keep deployment ID handy** for quick updates
+
 ## Support
 
-For issues and questions:
-1. Check the troubleshooting section above
-2. Review browser console for error messages
-3. Test with mock data first before real API integration
-4. Verify all required OAuth permissions are granted
+For additional issues:
+1. **Check Console Logs**: Browser console shows detailed debug info with emoji indicators
+2. **Test Server Functions**: Use Apps Script editor to run individual functions
+3. **Verify File Structure**: Ensure all 9 files are properly uploaded
+4. **Check Deployment Status**: Verify deployment version matches your changes
 
 ---
 

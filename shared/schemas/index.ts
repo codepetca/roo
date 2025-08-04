@@ -13,6 +13,9 @@ export * from "./domain";
 // DTO schemas (API boundaries)
 export * from "./dto";
 
+// Dashboard cache schemas (for UI state management)
+export * from "./dashboard-cache";
+
 // Transformer utilities
 export * from "./transformers";
 

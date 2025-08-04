@@ -595,4 +595,269 @@
   .hidden {
     display: none !important;
   }
+
+  /* Loading Skeletons and Enhanced UX */
+  
+  /* Skeleton Animation */
+  @keyframes shimmer {
+    0% {
+      background-position: -200px 0;
+    }
+    100% {
+      background-position: calc(200px + 100%) 0;
+    }
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200px 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+  }
+
+  /* Assignment Loading Skeletons */
+  .assignment-skeleton {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    margin: 0.25rem 0;
+    animation: none;
+  }
+
+  .assignment-skeleton .skeleton-icon {
+    width: 20px;
+    height: 20px;
+    margin-right: 0.5rem;
+    border-radius: 50%;
+  }
+
+  .assignment-skeleton .skeleton-content {
+    flex: 1;
+  }
+
+  .assignment-skeleton .skeleton-title {
+    height: 16px;
+    width: 70%;
+    margin-bottom: 4px;
+  }
+
+  .assignment-skeleton .skeleton-meta {
+    height: 12px;
+    width: 40%;
+  }
+
+  .assignment-skeleton .skeleton-badge {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    margin-left: auto;
+  }
+
+  /* Submission Loading Skeletons */
+  .submission-skeleton {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    margin: 0.5rem 0;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+  }
+
+  .submission-skeleton .skeleton-checkbox {
+    width: 20px;
+    height: 20px;
+    margin-right: 1rem;
+    border-radius: 4px;
+  }
+
+  .submission-skeleton .skeleton-info {
+    flex: 1;
+  }
+
+  .submission-skeleton .skeleton-name {
+    height: 18px;
+    width: 60%;
+    margin-bottom: 6px;
+  }
+
+  .submission-skeleton .skeleton-time {
+    height: 14px;
+    width: 40%;
+  }
+
+  .submission-skeleton .skeleton-status {
+    width: 80px;
+    height: 24px;
+    border-radius: 12px;
+    margin-left: 1rem;
+  }
+
+  .submission-skeleton .skeleton-score {
+    width: 60px;
+    height: 32px;
+    margin-left: 1rem;
+    border-radius: 6px;
+  }
+
+  /* Enhanced Loading States */
+  .loading-enhanced {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+  }
+
+  .loading-spinner-enhanced {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border-color);
+    border-top: 4px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  .loading-message {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .loading-submessage {
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    opacity: 0.7;
+  }
+
+  /* Progressive Loading States */
+  .loading-progress {
+    width: 100%;
+    max-width: 300px;
+    margin: 1rem 0;
+  }
+
+  .loading-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .loading-progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    animation: progress-pulse 2s infinite;
+  }
+
+  @keyframes progress-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  /* Enhanced Buttons with Loading States */
+  .btn-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+  }
+
+  .btn-loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  .btn-loading .btn-text {
+    opacity: 0;
+  }
+
+  /* Toast Enhancements */
+  .toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.3);
+    animation: toast-progress 4s linear;
+  }
+
+  @keyframes toast-progress {
+    from { width: 100%; }
+    to { width: 0%; }
+  }
+
+  /* Optimistic UI States */
+  .optimistic-update {
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+  }
+
+  .optimistic-success {
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 3px solid var(--success-color);
+  }
+
+  .optimistic-error {
+    background: rgba(239, 68, 68, 0.1);
+    border-left: 3px solid var(--danger-color);
+    animation: shake 0.5s ease-in-out;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  /* Cache Status Indicator */
+  .cache-indicator {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    opacity: 0.6;
+    margin-left: 0.5rem;
+  }
+
+  .cache-indicator::before {
+    content: "⚡";
+    margin-right: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  /* Preloading States */
+  .preloading {
+    position: relative;
+  }
+
+  .preloading::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
 </style>
