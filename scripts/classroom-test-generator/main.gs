@@ -37,6 +37,7 @@ function generateTestClassroom() {
     console.log("2. Accept/Activate the classroom");
     console.log("3. Enrollment code: " + classroom.enrollmentCode);
     console.log("4. Add test students manually or share enrollment code");
+    console.log("5. Run createSampleSubmissions() to generate student assignment samples");
     console.log("\n📁 All materials will be organized automatically by Google Classroom");
     
     return {
@@ -170,14 +171,20 @@ function getClassroomInfo() {
   return null;
 }
 
+
 /**
- * DEPRECATED: Use generateTestClassroom() instead
- * This function remains for backward compatibility but is no longer needed
+ * Generate sample student submissions for AI grading testing
+ * Creates authentic Google Slides presentations and Google Docs portfolio websites
+ * 
+ * This function is defined in sample-submission-generator.gs
+ * Run this to create realistic Google Slides and Docs for testing your AI grading system
  */
-function generateTestClassroomSimple() {
-  console.log("⚠️ generateTestClassroomSimple() is deprecated.");
-  console.log("🔄 Redirecting to generateTestClassroom()...");
-  return generateTestClassroom();
+function createSampleSubmissions() {
+  console.log("🎯 Redirecting to sample submission generator...");
+  console.log("💡 This creates real Google Slides presentations and Google Docs for testing");
+  
+  // The actual implementation is in sample-submission-generator.gs
+  return generateSampleSubmissions();
 }
 
 /**

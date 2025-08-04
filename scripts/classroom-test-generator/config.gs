@@ -69,7 +69,7 @@ const CONFIG = {
   // Quiz Topics
   QUIZ_ASSIGNMENTS: [
     {
-      title: "Programming Fundamentals Test",
+      title: "Quiz: Python Fundamentals",
       description: "Multiple choice test covering basic programming concepts",
       questionCount: 8,
       pointsPerQuestion: 5,
@@ -77,7 +77,7 @@ const CONFIG = {
       type: "MULTIPLE_CHOICE_ONLY"
     },
     {
-      title: "Comprehensive Programming Assessment",
+      title: "Quiz: Programming Concepts",
       description: "Mixed format test with multiple choice, short answer, and essay questions",
       questionCount: 6,
       pointsPerQuestion: 10,

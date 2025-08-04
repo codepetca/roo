@@ -1,344 +1,27 @@
 /**
- * DEPRECATED: Programming assignment generation with Google Drive document links
- * Location: assignment-generator.gs
- * 
- * NOTE: These functions are deprecated. Use createStudentSubmissionAssignments() 
- * from new-assignment-generator.gs instead, which creates assignments that let
- * students submit their own documents without complex Drive folder management.
+ * New assignment generator that creates submission-based assignments
+ * Location: new-assignment-generator.gs
  */
 
 /**
- * DEPRECATED: Use createStudentSubmissionAssignments() instead
- * Creates Google Drive documents for programming assignments
+ * Create assignments where students submit their own work
  */
-function createProgrammingDocuments(classroomFolderId) {
-  console.log("Creating programming assignment documents...");
+function createStudentSubmissionAssignments(classroomId) {
+  console.log("Creating student submission assignments...");
   
-  const assignmentContent = generateProgrammingContent();
-  const createdDocs = [];
-  
-  // Karel Assignment - Google Doc
-  try {
-    const karelDoc = Docs.Documents.create({
-      title: "Karel Navigation Challenge - Instructions"
-    });
-    
-    // Move to classroom folder
-    Drive.Files.update({
-      addParents: classroomFolderId,
-      removeParents: "root"
-    }, karelDoc.documentId);
-    
-    // Add content to document
-    const karelRequests = [
-      {
-        insertText: {
-          location: { index: 1 },
-          text: assignmentContent.karel.content
-        }
-      }
-    ];
-    
-    Docs.Documents.batchUpdate({ requests: karelRequests }, karelDoc.documentId);
-    
-    createdDocs.push({
-      type: 'docs',
-      assignmentKey: 'karel',
-      fileId: karelDoc.documentId,
-      title: assignmentContent.karel.title,
-      mimeType: 'application/vnd.google-apps.document'
-    });
-    
-    console.log(`✅ Created Karel Doc: ${karelDoc.documentId}`);
-    
-  } catch (error) {
-    console.error("❌ Error creating Karel document:", error);
-  }
-  
-  // Grade Calculator - Google Sheets
-  try {
-    const gradeSheet = Sheets.Spreadsheets.create({
-      properties: {
-        title: "Grade Calculator Template"
-      },
-      sheets: [{
-        properties: {
-          title: "Instructions"
-        }
-      }, {
-        properties: {
-          title: "Grade Calculator"
-        }
-      }, {
-        properties: {
-          title: "Sample Data"
-        }
-      }]
-    });
-    
-    // Move to classroom folder
-    Drive.Files.update({
-      addParents: classroomFolderId,
-      removeParents: "root"
-    }, gradeSheet.spreadsheetId);
-    
-    // Add instructions to first sheet
-    const instructionsData = [
-      ["Grade Calculator Project"],
-      [""],
-      ["Instructions:"],
-      [assignmentContent.gradeCalculator.content]
-    ];
-    
-    Sheets.Spreadsheets.Values.update({
-      values: instructionsData
-    }, gradeSheet.spreadsheetId, "Instructions!A1", {
-      valueInputOption: "USER_ENTERED"
-    });
-    
-    // Add sample data structure
-    const sampleHeaders = [
-      ["Student Name", "HW1", "HW2", "HW3", "HW4", "HW5", "Quiz1", "Quiz2", "Quiz3", "Midterm", "Final", "Weighted Average", "Letter Grade"]
-    ];
-    
-    Sheets.Spreadsheets.Values.update({
-      values: sampleHeaders
-    }, gradeSheet.spreadsheetId, "Grade Calculator!A1", {
-      valueInputOption: "USER_ENTERED"
-    });
-    
-    // Add sample student data
-    const sampleData = [
-      ["Alice Johnson", 85, 92, 78, 88, 90, 82, 85, 79, 86, 88],
-      ["Bob Smith", 78, 85, 82, 76, 84, 88, 82, 85, 82, 80],
-      ["Carol Davis", 92, 88, 85, 90, 87, 90, 88, 92, 89, 91]
-    ];
-    
-    Sheets.Spreadsheets.Values.update({
-      values: sampleData
-    }, gradeSheet.spreadsheetId, "Sample Data!A1", {
-      valueInputOption: "USER_ENTERED"
-    });
-    
-    createdDocs.push({
-      type: 'sheets',
-      assignmentKey: 'gradeCalculator',
-      fileId: gradeSheet.spreadsheetId,
-      title: assignmentContent.gradeCalculator.title,
-      mimeType: 'application/vnd.google-apps.spreadsheet'
-    });
-    
-    console.log(`✅ Created Grade Calculator Sheet: ${gradeSheet.spreadsheetId}`);
-    
-  } catch (error) {
-    console.error("❌ Error creating grade calculator sheet:", error);
-  }
-  
-  // Algorithm Presentation - Google Slides
-  try {
-    const algoSlides = Slides.Presentations.create({
-      title: "Algorithm Visualization Template"
-    });
-    
-    // Move to classroom folder
-    Drive.Files.update({
-      addParents: classroomFolderId,
-      removeParents: "root"
-    }, algoSlides.presentationId);
-    
-    // Add title slide content
-    const titleSlideRequests = [
-      {
-        insertText: {
-          objectId: algoSlides.slides[0].pageElements[0].objectId,
-          text: "Algorithm Visualization Project"
-        }
-      },
-      {
-        insertText: {
-          objectId: algoSlides.slides[0].pageElements[1].objectId,
-          text: "Compare and visualize sorting algorithms\n\nInstructions:\n" + assignmentContent.algorithmPresentation.content.substring(0, 200) + "..."
-        }
-      }
-    ];
-    
-    Slides.Presentations.batchUpdate({
-      requests: titleSlideRequests
-    }, algoSlides.presentationId);
-    
-    createdDocs.push({
-      type: 'slides',
-      assignmentKey: 'algorithmPresentation',
-      fileId: algoSlides.presentationId,
-      title: assignmentContent.algorithmPresentation.title,
-      mimeType: 'application/vnd.google-apps.presentation'
-    });
-    
-    console.log(`✅ Created Algorithm Slides: ${algoSlides.presentationId}`);
-    
-  } catch (error) {
-    console.error("❌ Error creating algorithm slides:", error);
-  }
-  
-  // Python Basics - Colab Notebook (as Google Doc)
-  try {
-    const pythonDoc = Docs.Documents.create({
-      title: "Python Basics Notebook - Instructions"
-    });
-    
-    // Move to classroom folder
-    Drive.Files.update({
-      addParents: classroomFolderId,
-      removeParents: "root"
-    }, pythonDoc.documentId);
-    
-    // Add Python content
-    const pythonRequests = [
-      {
-        insertText: {
-          location: { index: 1 },
-          text: assignmentContent.pythonBasics.content + "\n\nColab Link: https://colab.research.google.com/\n\nCreate a new notebook and complete the exercises above."
-        }
-      }
-    ];
-    
-    Docs.Documents.batchUpdate({ requests: pythonRequests }, pythonDoc.documentId);
-    
-    createdDocs.push({
-      type: 'colab',
-      assignmentKey: 'pythonBasics',
-      fileId: pythonDoc.documentId,
-      title: assignmentContent.pythonBasics.title,
-      mimeType: 'application/vnd.google-apps.document'
-    });
-    
-    console.log(`✅ Created Python Doc: ${pythonDoc.documentId}`);
-    
-  } catch (error) {
-    console.error("❌ Error creating Python document:", error);
-  }
-  
-  // Data Analysis - Google Sheets
-  try {
-    const dataSheet = Sheets.Spreadsheets.create({
-      properties: {
-        title: "Student Survey Data Analysis"
-      },
-      sheets: [{
-        properties: {
-          title: "Instructions"
-        }
-      }, {
-        properties: {
-          title: "Survey Data"
-        }
-      }, {
-        properties: {
-          title: "Analysis"
-        }
-      }]
-    });
-    
-    // Move to classroom folder
-    Drive.Files.update({
-      addParents: classroomFolderId,
-      removeParents: "root"
-    }, dataSheet.spreadsheetId);
-    
-    // Add instructions
-    const dataInstructions = [
-      ["Student Survey Data Analysis Project"],
-      [""],
-      [assignmentContent.dataAnalysis.content]
-    ];
-    
-    Sheets.Spreadsheets.Values.update({
-      values: dataInstructions
-    }, dataSheet.spreadsheetId, "Instructions!A1", {
-      valueInputOption: "USER_ENTERED"
-    });
-    
-    // Add sample survey data
-    const surveyHeaders = [
-      ["Student ID", "Grade Level", "Favorite Subject", "Study Hours/Week", "GPA", "Extracurriculars", "Sleep Hours/Night"]
-    ];
-    
-    const surveyData = generateSampleSurveyData(50);
-    
-    Sheets.Spreadsheets.Values.update({
-      values: surveyHeaders.concat(surveyData)
-    }, dataSheet.spreadsheetId, "Survey Data!A1", {
-      valueInputOption: "USER_ENTERED"
-    });
-    
-    createdDocs.push({
-      type: 'sheets',
-      assignmentKey: 'dataAnalysis',
-      fileId: dataSheet.spreadsheetId,
-      title: assignmentContent.dataAnalysis.title,
-      mimeType: 'application/vnd.google-apps.spreadsheet'
-    });
-    
-    console.log(`✅ Created Data Analysis Sheet: ${dataSheet.spreadsheetId}`);
-    
-  } catch (error) {
-    console.error("❌ Error creating data analysis sheet:", error);
-  }
-  
-  console.log(`✅ Created ${createdDocs.length} programming assignment documents`);
-  return createdDocs;
-}
-
-/**
- * Create programming assignments in Google Classroom with Drive links
- */
-/**
- * DEPRECATED: Use createStudentSubmissionAssignments() instead
- * Creates programming assignments linked to Google Drive documents
- */
-function createProgrammingAssignments(classroomId, assignmentDocs) {
-  console.log("Creating programming assignments in classroom...");
-  
-  const assignments = CONFIG.ASSIGNMENTS || CONFIG.PROGRAMMING_ASSIGNMENTS || [];
+  const assignments = CONFIG.ASSIGNMENTS;
   const createdAssignments = [];
   
   assignments.forEach((assignment, index) => {
     try {
-      // Find matching document
-      const doc = assignmentDocs.find(d => {
-        // Match based on assignment key
-        if (assignment.title.includes("Karel") && d.assignmentKey === 'karel') return true;
-        if (assignment.title.includes("Grade Calculator") && d.assignmentKey === 'gradeCalculator') return true;
-        if (assignment.title.includes("Algorithm") && d.assignmentKey === 'algorithmPresentation') return true;
-        if (assignment.title.includes("Python") && d.assignmentKey === 'pythonBasics') return true;
-        if (assignment.title.includes("Data Analysis") && d.assignmentKey === 'dataAnalysis') return true;
-        return false;
-      });
-      
-      if (!doc) {
-        console.log(`⚠️ No document found for assignment: ${assignment.title}`);
-        return;
-      }
-      
       const dueDate = getDueDate(assignment.dueInDays);
       
       const assignmentData = {
         title: assignment.title,
         description: assignment.description,
-        materials: [{
-          driveFile: {
-            driveFile: {
-              id: doc.fileId,
-              title: doc.title
-            },
-            shareMode: "VIEW"
-          }
-        }],
-        assigneeMode: "ALL_STUDENTS",
-        submissionModificationMode: "MODIFIABLE_UNTIL_TURNED_IN",
         workType: "ASSIGNMENT",
         state: "PUBLISHED",
-        maxPoints: 100,
+        maxPoints: assignment.maxPoints,
         dueDate: {
           year: dueDate.getFullYear(),
           month: dueDate.getMonth() + 1,
@@ -347,17 +30,18 @@ function createProgrammingAssignments(classroomId, assignmentDocs) {
         dueTime: {
           hours: 23,
           minutes: 59
-        }
+        },
+        assigneeMode: "ALL_STUDENTS",
+        submissionModificationMode: "MODIFIABLE_UNTIL_TURNED_IN"
       };
       
       const createdAssignment = Classroom.Courses.CourseWork.create(assignmentData, classroomId);
       
-      console.log(`✅ Created assignment: ${assignment.title} (ID: ${createdAssignment.id})`);
+      console.log(`✅ Created assignment: ${assignment.title} (${assignment.submissionType})`);
       
       createdAssignments.push({
         ...createdAssignment,
-        documentId: doc.fileId,
-        documentType: doc.type
+        submissionType: assignment.submissionType
       });
       
       // Add delay to avoid rate limiting
@@ -370,35 +54,502 @@ function createProgrammingAssignments(classroomId, assignmentDocs) {
     }
   });
   
-  console.log(`✅ Created ${createdAssignments.length} programming assignments`);
+  console.log(`✅ Created ${createdAssignments.length} student submission assignments`);
   return createdAssignments;
 }
 
 /**
- * Helper function to generate sample survey data
+ * Create quiz forms with improved error handling
  */
-function generateSampleSurveyData(count) {
-  const subjects = ["Math", "Science", "English", "History", "Computer Science", "Art", "Music"];
-  const grades = [9, 10, 11, 12];
-  const extracurriculars = ["Sports", "Drama", "Band", "Debate", "Robotics", "Art Club", "None"];
+function createImprovedQuizForms() {
+  console.log("Creating improved quiz forms with answer keys...");
   
-  const data = [];
+  const quizQuestions = generateQuizQuestions();
+  const createdForms = [];
   
-  for (let i = 1; i <= count; i++) {
-    const studyHours = Math.floor(Math.random() * 25) + 5; // 5-30 hours
-    const sleepHours = Math.floor(Math.random() * 4) + 6; // 6-10 hours
-    const gpa = (Math.random() * 2 + 2.5).toFixed(2); // 2.5-4.5 GPA
+  // Multiple Choice Only Quiz
+  try {
+    const mcForm = createFormWithFixedAnswerKey(
+      "Quiz: Python Fundamentals",
+      "Multiple choice test covering basic programming concepts",
+      quizQuestions.multipleChoiceOnly
+    );
     
-    data.push([
-      `S${i.toString().padStart(3, '0')}`,
-      grades[Math.floor(Math.random() * grades.length)],
-      subjects[Math.floor(Math.random() * subjects.length)],
-      studyHours,
-      parseFloat(gpa),
-      extracurriculars[Math.floor(Math.random() * extracurriculars.length)],
-      sleepHours
-    ]);
+    createdForms.push({
+      type: 'multiple_choice_only',
+      formId: mcForm.formId,
+      title: "Quiz: Python Fundamentals",
+      questionCount: quizQuestions.multipleChoiceOnly.length,
+      totalPoints: quizQuestions.multipleChoiceOnly.reduce((sum, q) => sum + q.points, 0)
+    });
+    
+    console.log(`✅ Created Multiple Choice Quiz: ${mcForm.formId}`);
+    
+  } catch (error) {
+    console.error("❌ Error creating Multiple Choice Quiz:", error);
   }
   
-  return data;
+  // Mixed Format Quiz with enhanced error logging
+  try {
+    console.log("🔍 Starting Mixed Format Quiz creation with detailed logging...");
+    console.log(`📊 Mixed format questions count: ${quizQuestions.mixedFormat.length}`);
+    
+    // Log each question for debugging
+    quizQuestions.mixedFormat.forEach((q, i) => {
+      console.log(`Question ${i+1}: ${q.type} - "${q.question.substring(0, 60)}..."`);
+      if (q.correctAnswer !== undefined && q.correctAnswer !== null) {
+        if (q.type === 'MULTIPLE_CHOICE') {
+          console.log(`  Correct answer index: ${q.correctAnswer} (${q.options ? q.options[q.correctAnswer] : 'undefined'})`);
+        } else {
+          const answerStr = String(q.correctAnswer);
+          console.log(`  Correct answer length: ${answerStr.length} chars`);
+          if (answerStr.includes('\n')) {
+            console.log(`  ⚠️ Contains newlines: ${answerStr.split('\n').length} lines`);
+          }
+        }
+      } else {
+        console.log(`  No correct answer defined`);
+      }
+    });
+    
+    const mixedForm = createFormWithFixedAnswerKey(
+      "Quiz: Programming Concepts",
+      "Mixed format test with multiple choice, short answer, and essay questions",
+      quizQuestions.mixedFormat
+    );
+    
+    createdForms.push({
+      type: 'mixed_format',
+      formId: mixedForm.formId,
+      title: "Quiz: Programming Concepts",
+      questionCount: quizQuestions.mixedFormat.length,
+      totalPoints: quizQuestions.mixedFormat.reduce((sum, q) => sum + q.points, 0)
+    });
+    
+    console.log(`✅ Created Mixed Format Quiz: ${mixedForm.formId}`);
+    
+  } catch (error) {
+    console.error("❌ Error creating Mixed Format Quiz:", error);
+    
+    // Enhanced error logging
+    if (error.message && error.message.includes('500')) {
+      console.error("🔍 This is a 500 Internal Server Error from Google Forms API");
+      console.error("🔧 Possible causes:");
+      console.error("  1. Complex question payload exceeding API limits");
+      console.error("  2. Invalid characters in question text or answers");
+      console.error("  3. Malformed grading configuration");
+      console.error("  4. Rate limiting or temporary API issues");
+    }
+    
+    // Log the specific error details if available
+    if (error.toString) {
+      console.error("Full error details:", error.toString());
+    }
+  }
+  
+  console.log(`✅ Created ${createdForms.length} quiz forms with answer keys`);
+  return createdForms;
+}
+
+/**
+ * Create a form with fixed answer key handling
+ */
+function createFormWithFixedAnswerKey(title, description, questions) {
+  const token = ScriptApp.getOAuthToken();
+  
+  // Step 1: Create the form
+  const createFormUrl = CONFIG.FORMS_API.baseUrl;
+  const createFormPayload = {
+    info: {
+      title: title,           // Form title for respondents
+      documentTitle: title    // File name in Google Drive
+    }
+  };
+  
+  const createFormResponse = UrlFetchApp.fetch(createFormUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify(createFormPayload)
+  });
+  
+  const form = JSON.parse(createFormResponse.getContentText());
+  
+  // Step 2: Convert to quiz and add description
+  const batchUpdateUrl = `${CONFIG.FORMS_API.baseUrl}/${form.formId}:batchUpdate`;
+  const quizSettingsRequests = [
+    {
+      updateFormInfo: {
+        info: {
+          description: description
+        },
+        updateMask: "description"
+      }
+    },
+    {
+      updateSettings: {
+        settings: {
+          quizSettings: {
+            isQuiz: true
+          }
+        },
+        updateMask: "quizSettings.isQuiz"
+      }
+    }
+  ];
+  
+  const quizSetupResponse = UrlFetchApp.fetch(batchUpdateUrl, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify({ requests: quizSettingsRequests }),
+    muteHttpExceptions: true
+  });
+  
+  if (quizSetupResponse.getResponseCode() !== 200) {
+    console.error(`❌ Failed to setup quiz settings: ${quizSetupResponse.getContentText()}`);
+    throw new Error(`Quiz setup failed: ${quizSetupResponse.getResponseCode()}`);
+  }
+  
+  console.log("✅ Quiz settings configured successfully");
+  
+  // Small delay to ensure quiz settings are applied
+  Utilities.sleep(1000);
+  
+  // Verify form state before adding questions
+  console.log("🔍 Verifying form state...");
+  const verifyResponse = UrlFetchApp.fetch(`${CONFIG.FORMS_API.baseUrl}/${form.formId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    muteHttpExceptions: true
+  });
+  
+  if (verifyResponse.getResponseCode() === 200) {
+    const formData = JSON.parse(verifyResponse.getContentText());
+    console.log(`✅ Form verified: ${formData.info.title}`);
+    console.log(`📊 Current items count: ${formData.items ? formData.items.length : 0}`);
+    console.log(`🧮 Quiz mode: ${formData.settings?.quizSettings?.isQuiz ? 'enabled' : 'disabled'}`);
+  } else {
+    console.warn(`⚠️ Could not verify form state: ${verifyResponse.getContentText()}`);
+  }
+  
+  // Step 3: Create questions with grading included (correct Forms API usage)
+  console.log(`Adding ${questions.length} questions with integrated grading...`);
+  
+  const createRequests = [];
+  
+  questions.forEach((question, index) => {
+    const location = { index: index };
+    
+    if (question.type === 'MULTIPLE_CHOICE') {
+      // Create MC question WITH grading - following exact API structure
+      const questionItem = {
+        title: question.question,
+        questionItem: {
+          question: {
+            required: true,
+            choiceQuestion: {
+              type: 'RADIO',
+              options: question.options.map(option => ({ value: option })),
+              shuffle: false
+            },
+            grading: {
+              pointValue: question.points,
+              correctAnswers: {
+                answers: [{ value: question.options[question.correctAnswer] }]
+              }
+            }
+          }
+        }
+      };
+      
+      // Add feedback if present - proper structure
+      if (question.feedback) {
+        questionItem.questionItem.question.grading.whenRight = { text: question.feedback };
+        questionItem.questionItem.question.grading.whenWrong = { text: "Incorrect. " + question.feedback };
+      }
+      
+      createRequests.push({
+        createItem: {
+          item: questionItem,
+          location: { index: index }
+        }
+      });
+      
+    } else {
+      // Create text questions - following exact API structure
+      const questionItem = {
+        title: question.question,
+        questionItem: {
+          question: {
+            required: true,
+            textQuestion: {
+              paragraph: question.type === 'PARAGRAPH'
+            },
+            grading: {
+              pointValue: question.points
+            }
+          }
+        }
+      };
+      
+      // Add correctAnswers only for SHORT_ANSWER (not PARAGRAPH)
+      if (question.type === 'SHORT_ANSWER' && question.correctAnswer) {
+        questionItem.questionItem.question.grading.correctAnswers = {
+          answers: [{ value: question.correctAnswer }]
+        };
+      }
+      
+      // Add general feedback for manual grading guidance
+      if (question.feedback) {
+        questionItem.questionItem.question.grading.generalFeedback = { text: question.feedback };
+      }
+      
+      createRequests.push({
+        createItem: {
+          item: questionItem,
+          location: { index: index }
+        }
+      });
+    }
+  });
+  
+  // Validate requests before sending
+  console.log("🔍 Validating question structure...");
+  createRequests.forEach((req, i) => {
+    const item = req.createItem.item;
+    const location = req.createItem.location;
+    
+    // Validate location index
+    if (typeof location.index !== 'number' || location.index < 0) {
+      throw new Error(`Invalid location index for question ${i + 1}: ${location.index}`);
+    }
+    
+    // Validate question structure
+    if (!item.title || !item.questionItem || !item.questionItem.question) {
+      throw new Error(`Invalid question structure for question ${i + 1}`);
+    }
+    
+    // Validate grading structure if present
+    const grading = item.questionItem.question.grading;
+    if (grading && typeof grading.pointValue !== 'number') {
+      throw new Error(`Invalid point value for question ${i + 1}: ${grading.pointValue}`);
+    }
+    
+    // Check for problematic characters
+    if (item.title.includes('\n') || item.title.includes('\r')) {
+      console.warn(`⚠️ Question ${i + 1} title contains newline characters, removing...`);
+      item.title = item.title.replace(/[\n\r]/g, ' ');
+    }
+  });
+  
+  console.log("✅ Question validation passed");
+  
+  // Send all creation requests with improved error handling
+  const batchSize = title.includes("Mixed") ? 1 : 5; // Even smaller batches for mixed format
+  let successCount = 0;
+  
+  for (let i = 0; i < createRequests.length; i += batchSize) {
+    const batch = createRequests.slice(i, i + batchSize);
+    const batchNum = Math.floor(i/batchSize) + 1;
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        if (retryCount > 0) {
+          console.log(`🔄 Retry ${retryCount}/${maxRetries} for batch ${batchNum}...`);
+          Utilities.sleep(2000 * retryCount); // Exponential backoff
+        } else {
+          console.log(`Sending batch ${batchNum} with ${batch.length} questions...`);
+        }
+        
+        const response = UrlFetchApp.fetch(batchUpdateUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          payload: JSON.stringify({ requests: batch }),
+          muteHttpExceptions: true
+        });
+        
+        const responseCode = response.getResponseCode();
+        const responseText = response.getContentText();
+        
+        if (responseCode === 200) {
+          successCount += batch.length;
+          console.log(`✅ Batch ${batchNum} completed: Created ${batch.length} questions`);
+          break; // Success, exit retry loop
+          
+        } else if (responseCode === 500 && retryCount < maxRetries) {
+          console.log(`⚠️ 500 error on batch ${batchNum}, will retry...`);
+          retryCount++;
+          continue; // Retry the batch
+          
+        } else {
+          // Handle other errors or max retries exceeded
+          console.error(`❌ Batch ${batchNum} failed with HTTP ${responseCode} after ${retryCount} retries`);
+          console.error(`📄 Full response: ${responseText}`);
+          
+          // Try to parse the error response for more details
+          try {
+            const errorResponse = JSON.parse(responseText);
+            if (errorResponse.error) {
+              console.error(`🔍 Error code: ${errorResponse.error.code}`);
+              console.error(`🔍 Error message: ${errorResponse.error.message}`);
+              console.error(`🔍 Error status: ${errorResponse.error.status}`);
+              
+              if (errorResponse.error.details) {
+                console.error(`🔍 Error details:`, JSON.stringify(errorResponse.error.details, null, 2));
+              }
+            }
+          } catch (parseError) {
+            console.error("Could not parse error response as JSON");
+          }
+          
+          // For debugging, try individual questions if batch failed
+          if (batch.length > 1 && responseCode === 500) {
+            console.log("🔧 Attempting to create questions individually...");
+            let individualSuccesses = 0;
+            
+            for (let j = 0; j < batch.length; j++) {
+              try {
+                const singleRequest = [batch[j]];
+                const singleResponse = UrlFetchApp.fetch(batchUpdateUrl, {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                  },
+                  payload: JSON.stringify({ requests: singleRequest }),
+                  muteHttpExceptions: true
+                });
+                
+                if (singleResponse.getResponseCode() === 200) {
+                  individualSuccesses++;
+                  console.log(`✅ Individual question ${i + j + 1} created successfully`);
+                } else {
+                  const q = questions[i + j];
+                  console.error(`❌ Individual question ${i + j + 1} failed: ${q.type} - "${q.question.substring(0, 50)}..."`);
+                  console.error(`   Response: ${singleResponse.getContentText()}`);
+                }
+                
+                Utilities.sleep(200); // Small delay between individual requests
+              } catch (singleError) {
+                console.error(`❌ Error creating individual question ${i + j + 1}:`, singleError);
+              }
+            }
+            
+            successCount += individualSuccesses;
+            console.log(`📊 Individual creation results: ${individualSuccesses}/${batch.length} questions created`);
+            break; // Exit retry loop after individual attempts
+          }
+          
+          throw new Error(`Failed to create questions in batch ${batchNum}: HTTP ${responseCode} - ${responseText}`);
+        }
+        
+      } catch (error) {
+        if (retryCount < maxRetries && error.message.includes('500')) {
+          console.log(`⚠️ Network error on batch ${batchNum}, will retry...`);
+          retryCount++;
+          continue;
+        } else {
+          console.error(`❌ Final error in batch ${batchNum}:`, error);
+          throw error;
+        }
+      }
+    }
+    
+    // Longer delay between batches for mixed format
+    if (i + batchSize < createRequests.length) {
+      const delay = title.includes("Mixed") ? 1000 : 500;
+      Utilities.sleep(delay);
+    }
+  }
+  
+  console.log(`✅ Successfully created all ${successCount} questions with integrated grading`);
+  
+  // Forms will be organized automatically by Google Classroom
+  return {
+    formId: form.formId,
+    title: title,
+    description: description,
+    questionCount: questions.length,
+    publishedUrl: `https://docs.google.com/forms/d/${form.formId}/viewform`
+  };
+}
+
+/**
+ * Create quiz assignments in classroom with form links (not attachments)
+ */
+function createQuizAssignmentsWithLinks(classroomId, quizForms) {
+  console.log("Creating quiz assignments with form links...");
+  
+  const assignments = CONFIG.QUIZ_ASSIGNMENTS;
+  const createdAssignments = [];
+  
+  assignments.forEach((assignment, index) => {
+    try {
+      // Find matching form
+      const form = quizForms.find(f => 
+        f.title.toLowerCase().includes(assignment.title.toLowerCase().split(' ')[0])
+      );
+      
+      if (!form) {
+        console.log(`⚠️ No form found for assignment: ${assignment.title}`);
+        return;
+      }
+      
+      const dueDate = getDueDate(assignment.dueInDays);
+      const totalPoints = assignment.questionCount * assignment.pointsPerQuestion;
+      
+      const assignmentData = {
+        title: assignment.title,
+        description: assignment.description + `\n\n📋 **Take the quiz here:** ${form.publishedUrl}\n\nThis quiz has ${assignment.questionCount} questions worth ${assignment.pointsPerQuestion} points each.\n\nTotal Points: ${totalPoints}`,
+        workType: "ASSIGNMENT",
+        state: "PUBLISHED",
+        maxPoints: totalPoints,
+        dueDate: {
+          year: dueDate.getFullYear(),
+          month: dueDate.getMonth() + 1,
+          day: dueDate.getDate()
+        },
+        dueTime: {
+          hours: 23,
+          minutes: 59
+        },
+        submissionModificationMode: "MODIFIABLE_UNTIL_TURNED_IN"
+      };
+      
+      const createdAssignment = Classroom.Courses.CourseWork.create(assignmentData, classroomId);
+      
+      console.log(`✅ Created quiz assignment: ${assignment.title} (ID: ${createdAssignment.id})`);
+      
+      createdAssignments.push({
+        ...createdAssignment,
+        formId: form.formId,
+        formUrl: form.publishedUrl,
+        questionCount: assignment.questionCount,
+        totalPoints: totalPoints
+      });
+      
+      // Add delay to avoid rate limiting
+      if (index % 2 === 0 && index > 0) {
+        Utilities.sleep(1000);
+      }
+      
+    } catch (error) {
+      console.error(`❌ Error creating quiz assignment ${assignment.title}:`, error);
+    }
+  });
+  
+  console.log(`✅ Created ${createdAssignments.length} quiz assignments with form links`);
+  return createdAssignments;
 }

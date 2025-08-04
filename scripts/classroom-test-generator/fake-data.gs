@@ -295,7 +295,7 @@ function generateQuizQuestions() {
       {
         question: "Write a Python function that takes two numbers and returns their sum.",
         type: "SHORT_ANSWER",
-        correctAnswer: "def add(a, b):\n    return a + b",
+        correctAnswer: "def add(a, b): return a + b",
         points: 10,
         feedback: "Your function should use 'def' keyword, take two parameters, and return their sum using the + operator."
       },
@@ -307,18 +307,18 @@ function generateQuizQuestions() {
         feedback: "The len() function counts the number of items in a list. Count the elements in the list."
       },
       {
-        question: "Explain the difference between a list and a tuple in Python. Include when you would use each one.",
+        question: "Explain the difference between a list and a tuple in Python.",
         type: "PARAGRAPH",
-        correctAnswer: "Lists are mutable (can be changed) and use square brackets []. Tuples are immutable (cannot be changed) and use parentheses (). Use lists when you need to modify data, tuples when data should stay constant.",
+        correctAnswer: "Lists are mutable and use brackets []. Tuples are immutable and use parentheses (). Use lists for changing data, tuples for constant data.",
         points: 10,
-        feedback: "Consider mutability (can it be changed?), syntax (brackets vs parentheses), and use cases (when would you want unchangeable data?)."
+        feedback: "Consider mutability, syntax, and use cases."
       },
       {
-        question: "Write a detailed explanation of how a for loop works in Python. Include an example and explain each part of the loop structure.",
+        question: "Explain how a for loop works in Python with an example.",
         type: "PARAGRAPH",
-        correctAnswer: "A for loop iterates over a sequence. Example: for i in range(5): print(i). The 'for' keyword starts the loop, 'i' is the variable that takes each value, 'in' specifies iteration, 'range(5)' creates numbers 0-4, and the indented code runs for each iteration.",
+        correctAnswer: "A for loop iterates over sequences. Example: for i in range(3): print(i) prints 0, 1, 2. The loop runs the indented code for each item.",
         points: 10,
-        feedback: "Include: 1) What a for loop does, 2) A specific code example, 3) Explanation of each part (for, variable, in, sequence, indented code)."
+        feedback: "Include what a for loop does and provide a specific example."
       }
     ]
   };
