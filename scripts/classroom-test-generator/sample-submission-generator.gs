@@ -26,8 +26,8 @@ function generateSampleSubmissions() {
     console.log("🤖 Creating Karel Programming Challenge submissions...");
     const karelSubmissions = createKarelSubmissions();
     
-    // Create Quiz: Python Fundamentals submissions
-    console.log("📋 Creating Quiz: Python Fundamentals submissions...");
+    // Create quiz submissions for both quizzes
+    console.log("📋 Creating quiz submissions for both quizzes...");
     const testSubmissions = createTestSubmissions();
     
     console.log("\n🎉 Sample submissions created successfully!");
@@ -52,12 +52,23 @@ function generateSampleSubmissions() {
     console.log(`   Imperfect Student: ${imperfectPortfolio.publishedUrl}`);
     
     console.log("\n📋 Quiz: Python Fundamentals Assignment:");
-    const perfectTest = testSubmissions.find(t => t.studentType === 'perfect');
-    const imperfectTest = testSubmissions.find(t => t.studentType === 'imperfect');
-    console.log(`   Perfect Student: ${perfectTest.url}`);
-    console.log(`   Imperfect Student: ${imperfectTest.url}`);
+    const perfectPythonTest = testSubmissions.find(t => t.studentType === 'perfect' && t.quizType === 'Python Fundamentals');
+    const imperfectPythonTest = testSubmissions.find(t => t.studentType === 'imperfect' && t.quizType === 'Python Fundamentals');
+    console.log(`   Perfect Student: ${perfectPythonTest.url}`);
+    console.log(`   Imperfect Student: ${imperfectPythonTest.url}`);
+    
+    console.log("\n📋 Quiz: Programming Concepts Assignment:");
+    const perfectConceptsTest = testSubmissions.find(t => t.studentType === 'perfect' && t.quizType === 'Programming Concepts');
+    const imperfectConceptsTest = testSubmissions.find(t => t.studentType === 'imperfect' && t.quizType === 'Programming Concepts');
+    console.log(`   Perfect Student: ${perfectConceptsTest.url}`);
+    console.log(`   Imperfect Student: ${imperfectConceptsTest.url}`);
     
     console.log("\n✅ Ready for Google Classroom testing!");
+    console.log(`📊 Generated ${karelSubmissions.length + presentations.length + portfolios.length + testSubmissions.length} total submissions:`);
+    console.log("   • 2 Karel Programming Challenge submissions");
+    console.log("   • 2 Algorithm Presentation submissions");
+    console.log("   • 2 Personal Portfolio Website submissions");
+    console.log("   • 4 Quiz submissions (2 quizzes × 2 students)");
     console.log("💡 Copy these URLs directly into your test student submissions");
     console.log("🎯 Perfect Student submissions should score 90-100%");
     console.log("📚 Imperfect Student submissions should score 45-75%");
@@ -146,30 +157,37 @@ function createSingleKarelSubmission(studentType) {
  * Create Quiz: Python Fundamentals submissions
  */
 function createTestSubmissions() {
-  console.log("📋 Creating Quiz: Python Fundamentals documents...");
+  console.log("📋 Creating quiz submissions for both quizzes...");
   
   const submissions = [];
   
-  // Create perfect student submission
-  const perfectSubmission = createSingleTestSubmission('perfect');
-  submissions.push(perfectSubmission);
+  // Create Quiz: Python Fundamentals submissions
+  console.log("   📝 Creating Quiz: Python Fundamentals submissions...");
+  const pythonPerfect = createSingleTestSubmission('perfect', 'Python Fundamentals');
+  const pythonImperfect = createSingleTestSubmission('imperfect', 'Python Fundamentals');
+  submissions.push(pythonPerfect);
+  submissions.push(pythonImperfect);
   
-  // Create imperfect student submission
-  const imperfectSubmission = createSingleTestSubmission('imperfect');
-  submissions.push(imperfectSubmission);
+  // Create Quiz: Programming Concepts submissions
+  console.log("   📝 Creating Quiz: Programming Concepts submissions...");
+  const conceptsPerfect = createSingleTestSubmission('perfect', 'Programming Concepts');
+  const conceptsImperfect = createSingleTestSubmission('imperfect', 'Programming Concepts');
+  submissions.push(conceptsPerfect);
+  submissions.push(conceptsImperfect);
   
+  console.log(`   ✅ Created ${submissions.length} quiz submissions total`);
   return submissions;
 }
 
 /**
- * Create a single Quiz: Python Fundamentals document
+ * Create a single quiz document (supports both quiz types)
  */
-function createSingleTestSubmission(studentType) {
+function createSingleTestSubmission(studentType, quizType) {
   const isPerfect = studentType === 'perfect';
   const studentName = isPerfect ? 'Perfect Student' : 'Imperfect Student';
-  const title = `${studentName} - Quiz: Python Fundamentals`;
+  const title = `${studentName} - Quiz: ${quizType}`;
     
-  console.log(`   Creating ${studentType} test submission: ${title}`);
+  console.log(`      Creating ${studentType} submission for Quiz: ${quizType}`);
   
   // Create document
   const doc = Docs.Documents.create({
@@ -178,8 +196,15 @@ function createSingleTestSubmission(studentType) {
   
   const documentId = doc.documentId;
   
-  // Get content
-  const content = isPerfect ? getPerfectTestContent() : getImperfectTestContent();
+  // Get content based on quiz type
+  let content;
+  if (quizType === 'Python Fundamentals') {
+    content = isPerfect ? getPerfectTestContent() : getImperfectTestContent();
+  } else if (quizType === 'Programming Concepts') {
+    content = isPerfect ? getPerfectProgrammingConceptsContent() : getImperfectProgrammingConceptsContent();
+  } else {
+    throw new Error(`Unknown quiz type: ${quizType}`);
+  }
   
   // Add content to document
   Docs.Documents.batchUpdate({
@@ -199,10 +224,11 @@ function createSingleTestSubmission(studentType) {
   
   const documentUrl = `https://docs.google.com/document/d/${documentId}/edit?usp=sharing`;
   
-  console.log(`   ✅ ${studentType} test submission created: ${documentUrl}`);
+  console.log(`      ✅ ${studentType} ${quizType} submission created: ${documentUrl}`);
   
   return {
     studentType: studentType,
+    quizType: quizType,
     documentId: documentId,
     url: documentUrl,
     title: title

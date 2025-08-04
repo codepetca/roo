@@ -188,3 +188,209 @@ Major Issues with this submission:
 
 Score Expectation: 60-70% - Shows basic understanding but lacks depth and precision.`;
 }
+
+/**
+ * Perfect student Quiz: Programming Concepts content
+ */
+function getPerfectProgrammingConceptsContent() {
+  return `Quiz: Programming Concepts - Perfect Student Submission
+
+Student Name: Perfect Student
+Assignment: Quiz: Programming Concepts
+Date: January 2025
+
+QUESTION 1: What is object-oriented programming and what are its key principles?
+
+ANSWER: Object-oriented programming (OOP) is a programming paradigm that organizes code into objects that contain both data (attributes) and methods (functions). The four key principles are:
+
+1. **Encapsulation**: Bundling data and methods together within a class, hiding internal implementation details from outside access. This promotes data security and code maintainability.
+
+2. **Inheritance**: Creating new classes based on existing classes, allowing code reuse and establishing hierarchical relationships. Child classes inherit attributes and methods from parent classes.
+
+3. **Polymorphism**: The ability for different objects to respond to the same method call in their own specific way. This allows for flexible and extensible code design.
+
+4. **Abstraction**: Hiding complex implementation details while exposing only essential features through simplified interfaces. This reduces complexity and improves code usability.
+
+Benefits include improved code organization, reusability, maintainability, and scalability for large software projects.
+
+QUESTION 2: Explain error handling in programming. What are try-catch blocks?
+
+ANSWER: Error handling is the process of anticipating, catching, and managing runtime errors that may occur during program execution, preventing crashes and providing graceful failure recovery.
+
+Try-catch blocks are structured error handling mechanisms:
+- **Try block**: Contains code that might raise an exception
+- **Catch/Except block**: Handles specific types of errors when they occur
+- **Finally block**: Optional block that always executes regardless of errors
+
+Purpose:
+1. **Prevent crashes**: Handle errors gracefully instead of terminating
+2. **User experience**: Provide meaningful error messages to users
+3. **Debugging**: Log errors for developers to identify and fix issues
+4. **Recovery**: Attempt alternative solutions when errors occur
+
+Best practices include catching specific exception types, providing informative error messages, logging errors appropriately, and implementing fallback mechanisms when possible.
+
+QUESTION 3: Write a function that reads a file and handles potential errors.
+
+ANSWER: Here's a robust file reading function with comprehensive error handling:
+
+def read_file_safely(filename):
+    try:
+        with open(filename, 'r', encoding='utf-8') as file:
+            content = file.read()
+            return content
+    except FileNotFoundError:
+        print(f"Error: File '{filename}' not found.")
+        return None
+    except PermissionError:
+        print(f"Error: Permission denied to read '{filename}'.")
+        return None
+    except UnicodeDecodeError:
+        print(f"Error: Cannot decode file '{filename}' as UTF-8.")
+        return None
+    except Exception as e:
+        print(f"Unexpected error reading '{filename}': {e}")
+        return None
+
+This function demonstrates proper exception handling by catching specific error types and providing meaningful feedback for each scenario.
+
+QUESTION 4: What are data structures and why are they important?
+
+ANSWER: Data structures are organized ways of storing and managing data in computer memory to enable efficient access, modification, and operations. They are fundamental building blocks for algorithm design and software development.
+
+Key categories:
+1. **Linear structures**: Arrays, linked lists, stacks, queues
+2. **Non-linear structures**: Trees, graphs, hash tables
+3. **Abstract data types**: Sets, maps, priority queues
+
+Importance:
+- **Efficiency**: Choose appropriate structures for optimal time/space complexity
+- **Organization**: Logical data arrangement improves code clarity
+- **Performance**: Proper structure selection dramatically affects speed
+- **Problem-solving**: Different structures enable different algorithmic approaches
+
+Selection criteria include access patterns (sequential vs random), modification frequency (insertions/deletions), memory constraints, and required operations (searching, sorting, traversal).
+
+QUESTION 5: Describe the software development lifecycle and its phases.
+
+ANSWER: The Software Development Lifecycle (SDLC) is a systematic process for developing software applications that ensures quality, efficiency, and successful project completion.
+
+Main phases:
+1. **Planning**: Define project scope, requirements, timeline, and resources
+2. **Analysis**: Gather detailed requirements and create system specifications
+3. **Design**: Create system architecture, database design, and user interfaces
+4. **Implementation**: Write actual code based on design specifications
+5. **Testing**: Verify functionality, find bugs, and ensure quality standards
+6. **Deployment**: Release software to production environment
+7. **Maintenance**: Ongoing support, updates, and bug fixes
+
+Common methodologies:
+- **Waterfall**: Sequential phases with formal handoffs
+- **Agile**: Iterative development with frequent deliveries
+- **DevOps**: Continuous integration and deployment practices
+
+Benefits include reduced risks, improved quality, better resource management, and predictable delivery timelines.
+
+QUESTION 6: Explain algorithms and their complexity analysis.
+
+ANSWER: Algorithms are step-by-step procedures for solving computational problems efficiently and systematically. Algorithm analysis evaluates performance characteristics to guide selection and optimization.
+
+Complexity analysis measures:
+1. **Time complexity**: How execution time scales with input size
+2. **Space complexity**: How memory usage scales with input size
+
+Big O notation describes worst-case growth rates:
+- O(1): Constant time (hash table lookup)
+- O(log n): Logarithmic time (binary search)
+- O(n): Linear time (array traversal)
+- O(n log n): Log-linear time (efficient sorting)
+- O(n²): Quadratic time (nested loops)
+
+Algorithm design strategies:
+- **Divide and conquer**: Break problems into smaller subproblems
+- **Dynamic programming**: Store solutions to avoid recomputation
+- **Greedy algorithms**: Make locally optimal choices
+- **Backtracking**: Explore solution space systematically
+
+Understanding complexity helps developers choose appropriate algorithms for performance-critical applications and predict system behavior under scale.
+
+Score Expectation: 95-100% - Demonstrates comprehensive understanding of advanced programming concepts with detailed explanations and practical examples.`;
+}
+
+/**
+ * Imperfect student Quiz: Programming Concepts content
+ */
+function getImperfectProgrammingConceptsContent() {
+  return `Quiz: Programming Concepts - Imperfect Student Submission
+
+Student Name: Struggling Student
+Assignment: Quiz: Programming Concepts
+Date: January 2025
+
+1. What is object-oriented programming and what are its key principles?
+
+Object-oriented programming is when you use objects in your code instead of just functions. I think there are 3 or 4 main principles but I can only remember a few of them.
+
+Encapsulation means you put things together in a class. Inheritance is when one class gets stuff from another class, like a child class getting things from a parent class. There's also something called polymorphism but I'm not really sure what that means exactly.
+
+I know OOP is supposed to make code better organized and easier to reuse, but I still find it confusing compared to just writing regular functions.
+
+2. Explain error handling in programming. What are try-catch blocks?
+
+Error handling is when you try to prevent your program from crashing when something goes wrong. Try-catch blocks are a way to do this.
+
+You put code that might have errors in the try part, and then if an error happens, it goes to the catch part instead of crashing. I think there's also a finally part that always runs but I'm not sure when you would use that.
+
+I've used try-catch a few times but I usually just put everything in the try block and then print "an error occurred" in the catch block. I probably should be more specific about what errors I'm catching.
+
+3. Write a function that reads a file and handles potential errors.
+
+def read_file(filename):
+    try:
+        file = open(filename, 'r')
+        content = file.read()
+        file.close()
+        return content
+    except:
+        print("Error reading file")
+        return None
+
+I think this should work. I put the file reading in a try block and if anything goes wrong it will print an error message. I remember you're supposed to close files but I'm not sure if I need to do that in the except block too.
+
+4. What are data structures and why are they important?
+
+Data structures are different ways to store data in your program. Like arrays (or lists in Python), and there are other ones too like stacks and queues and trees.
+
+They're important because some are faster for certain things. Like if you need to search for something, some data structures are better than others. Arrays are good for storing lists of things, and I think hash tables are really fast for looking things up.
+
+I know there are complex ones like binary trees but I don't really understand how those work yet. We learned about big O notation which is supposed to tell you how fast algorithms are but I still get confused about when to use O(n) vs O(log n).
+
+5. Describe the software development lifecycle and its phases.
+
+The software development lifecycle is the process you follow when making software. I think there are several phases:
+
+First you plan what you want to build, then you design how it will work, then you write the code, then you test it to find bugs, and finally you release it to users.
+
+I've heard of agile and waterfall which are different ways to do this. Agile is more flexible and you make changes as you go, while waterfall is more structured and you finish each phase before moving to the next one.
+
+There's also something about maintenance after you release the software but I'm not sure what that involves exactly.
+
+6. Explain algorithms and their complexity analysis.
+
+Algorithms are instructions for solving problems with code. Like if you want to sort a list, there are different algorithms you can use like bubble sort or quick sort.
+
+Complexity analysis is about figuring out how fast an algorithm will be. There's something called Big O notation that measures this. O(1) means it's always the same speed, O(n) means it gets slower as the data gets bigger.
+
+I know bubble sort is slow (O(n²) I think?) and there are faster sorting algorithms but I can't remember their names. Binary search is supposed to be really fast because it's O(log n) but I don't totally understand why logarithms make it faster.
+
+I still have trouble figuring out the Big O notation for algorithms I write myself.
+
+Major Issues with this submission:
+1. Vague and incomplete explanations
+2. Frequent use of "I think" and "I'm not sure" showing uncertainty
+3. Missing important details and concepts
+4. Some incorrect or oversimplified information
+5. Informal language inappropriate for academic context
+
+Score Expectation: 55-70% - Shows basic awareness of concepts but lacks depth and contains several gaps in understanding.`;
+}
