@@ -24,6 +24,12 @@
     initializeApp();
   });
 
+  // Debug function for clearing cache (callable from console)
+  window.clearCache = function() {
+    console.log('🧹 [DEBUG] Manually clearing cache...');
+    refreshDashboardData();
+  };
+
   /**
    * Initialize the application with cache-based data loading
    */
@@ -494,16 +500,42 @@
    * Load submissions for selected assignment from cache
    */
   function loadSubmissionsFromCache(classroomId, assignmentId) {
-    console.log('Loading submissions from cache for assignment:', assignmentId);
+    console.log('🔍 [DEBUG] Loading submissions from cache for assignment:', assignmentId);
+    console.log('🔍 [DEBUG] Classroom ID:', classroomId);
     
     const classroom = getClassroomFromCache(classroomId);
     if (!classroom) {
+      console.error('❌ [DEBUG] Classroom not found in cache for ID:', classroomId);
       showError('Classroom not found in cache');
       return;
     }
     
+    console.log('✅ [DEBUG] Classroom found:', classroom.name);
+    console.log('📊 [DEBUG] Total submissions in classroom:', classroom.submissions?.length || 0);
+    
+    // Debug: Show all submission assignment IDs
+    if (classroom.submissions) {
+      const assignmentIds = classroom.submissions.map(s => s.assignmentId || 'NO_ID');
+      console.log('🔍 [DEBUG] All submission assignment IDs:', assignmentIds);
+      console.log('🔍 [DEBUG] Looking for assignment ID:', assignmentId);
+      console.log('🔍 [DEBUG] First few submissions:', classroom.submissions.slice(0, 2).map(s => ({
+        id: s.id,
+        assignmentId: s.assignmentId,
+        studentName: s.studentName
+      })));
+    }
+    
     // Filter submissions for this assignment from cache
     const submissions = classroom.submissions?.filter(s => s.assignmentId === assignmentId) || [];
+    
+    console.log(`🎯 [DEBUG] Found ${submissions.length} submissions for assignment ${assignmentId}`);
+    if (submissions.length > 0) {
+      console.log('📝 [DEBUG] First submission:', {
+        id: submissions[0].id,
+        studentName: submissions[0].studentName,
+        assignmentId: submissions[0].assignmentId
+      });
+    }
     
     // Display immediately (no loading state needed)
     displaySubmissions(submissions);
@@ -512,7 +544,7 @@
     const stats = calculateStats(submissions);
     updateSubmissionStats(stats);
     
-    console.log(`Loaded ${submissions.length} submissions from cache for assignment ${assignmentId}`);
+    console.log(`✅ [DEBUG] Loaded ${submissions.length} submissions from cache for assignment ${assignmentId}`);
   }
 
   /**
