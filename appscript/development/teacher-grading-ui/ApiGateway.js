@@ -3,19 +3,23 @@
  * Toggle USE_MOCK to switch between mock data and real APIs
  */
 
-// Configuration
-const CONFIG = {
-  USE_MOCK: false,  // Toggle between mock and real APIs - NOW USING REAL DATA
-  API_BASE_URL: 'https://your-firebase-functions-url/api/v2',
-  API_KEY: 'your-api-key-here',
-  DEBUG: true  // Enable debug logging
-};
+// Configuration loaded lazily to avoid initialization issues
+function getApiGatewayConfig() {
+  const appConfig = getAppConfig();
+  return {
+    USE_MOCK: appConfig.USE_MOCK_DATA,
+    API_BASE_URL: appConfig.FIREBASE.FUNCTIONS_URL,
+    API_KEY: appConfig.FIREBASE.API_KEY,
+    DEBUG: appConfig.DEBUG_ENABLED
+  };
+}
 
 /**
  * Log debug messages if debugging is enabled
  */
 function debugLog(message, data) {
-  if (CONFIG.DEBUG) {
+  const config = getApiGatewayConfig();
+  if (config.DEBUG) {
     console.log(`[ApiGateway] ${message}`, data || '');
   }
 }
@@ -24,7 +28,7 @@ function debugLog(message, data) {
  * Simulate network delay for mock calls
  */
 function simulateDelay(ms = 1) {
-  if (CONFIG.USE_MOCK) {
+  if (getApiGatewayConfig().USE_MOCK) {
     Utilities.sleep(ms);
   }
 }
@@ -33,10 +37,10 @@ function simulateDelay(ms = 1) {
  * Fetch classroom data from Google Classroom API or mock
  */
 function fetchClassrooms() {
-  debugLog('fetchClassrooms called', { useMock: CONFIG.USE_MOCK });
+  debugLog('fetchClassrooms called', { useMock: getApiGatewayConfig().USE_MOCK });
   
   try {
-    if (CONFIG.USE_MOCK) {
+    if (getApiGatewayConfig().USE_MOCK) {
       simulateDelay(300);
       return {
         success: true,
@@ -74,7 +78,7 @@ function fetchClassrooms() {
     return {
       success: false,
       error: error.toString(),
-      source: CONFIG.USE_MOCK ? 'mock' : 'google-classroom',
+      source: getApiGatewayConfig().USE_MOCK ? 'mock' : 'google-classroom',
       timestamp: new Date().toISOString()
     };
   }
@@ -84,10 +88,10 @@ function fetchClassrooms() {
  * Fetch assignments for a specific classroom
  */
 function fetchAssignments(classroomId) {
-  debugLog('fetchAssignments called', { classroomId, useMock: CONFIG.USE_MOCK });
+  debugLog('fetchAssignments called', { classroomId, useMock: getApiGatewayConfig().USE_MOCK });
   
   try {
-    if (CONFIG.USE_MOCK) {
+    if (getApiGatewayConfig().USE_MOCK) {
       simulateDelay(200);
       return {
         success: true,
@@ -125,7 +129,7 @@ function fetchAssignments(classroomId) {
     return {
       success: false,
       error: error.toString(),
-      source: CONFIG.USE_MOCK ? 'mock' : 'google-classroom',
+      source: getApiGatewayConfig().USE_MOCK ? 'mock' : 'google-classroom',
       timestamp: new Date().toISOString()
     };
   }
@@ -135,10 +139,10 @@ function fetchAssignments(classroomId) {
  * Fetch student submissions for an assignment
  */
 function fetchSubmissions(classroomId, assignmentId) {
-  debugLog('fetchSubmissions called', { classroomId, assignmentId, useMock: CONFIG.USE_MOCK });
+  debugLog('fetchSubmissions called', { classroomId, assignmentId, useMock: getApiGatewayConfig().USE_MOCK });
   
   try {
-    if (CONFIG.USE_MOCK) {
+    if (getApiGatewayConfig().USE_MOCK) {
       simulateDelay(300);
       const submissions = MOCK_SUBMISSIONS[assignmentId] || [];
       return {
@@ -191,7 +195,7 @@ function fetchSubmissions(classroomId, assignmentId) {
     return {
       success: false,
       error: error.toString(),
-      source: CONFIG.USE_MOCK ? 'mock' : 'google-classroom',
+      source: getApiGatewayConfig().USE_MOCK ? 'mock' : 'google-classroom',
       timestamp: new Date().toISOString()
     };
   }
@@ -202,10 +206,10 @@ function fetchSubmissions(classroomId, assignmentId) {
  * This is the main function that populates the teacher dashboard cache
  */
 function fetchFullDashboardData() {
-  debugLog('fetchFullDashboardData called', { useMock: CONFIG.USE_MOCK });
+  debugLog('fetchFullDashboardData called', { useMock: getApiGatewayConfig().USE_MOCK });
   
   try {
-    if (CONFIG.USE_MOCK) {
+    if (getApiGatewayConfig().USE_MOCK) {
       simulateDelay(1000); // Simulate network delay for complete data fetch
       
       // Build complete dashboard structure from mock data
@@ -226,7 +230,7 @@ function fetchFullDashboardData() {
     return {
       success: false,
       error: error.toString(),
-      source: CONFIG.USE_MOCK ? 'mock' : 'google-classroom',
+      source: getApiGatewayConfig().USE_MOCK ? 'mock' : 'google-classroom',
       timestamp: new Date().toISOString()
     };
   }
@@ -440,134 +444,462 @@ function fetchRealDashboardData() {
 }
 
 /**
- * Call external API for AI grading
+ * Grade a single submission with AI
+ * @param {Object} submissionData - Enhanced submission data
+ * @param {Object} assignmentData - Enhanced assignment data  
+ * @param {Object} gradingOptions - Grading preferences
+ * @returns {Object} Grading result
  */
-function callGradingAPI(submissionData) {
-  debugLog('callGradingAPI called', { submissionId: submissionData.id, useMock: CONFIG.USE_MOCK });
+async function gradeSubmissionWithAI(submissionData, assignmentData, gradingOptions = {}) {
+  debugLog('gradeSubmissionWithAI called', { 
+    submissionId: submissionData.id, 
+    assignmentId: assignmentData.id,
+    useMock: getApiGatewayConfig().USE_MOCK 
+  });
   
   try {
-    if (CONFIG.USE_MOCK) {
-      // Simulate AI processing time
-      simulateDelay(2000);
+    if (getApiGatewayConfig().USE_MOCK) {
+      // Simulate AI processing with enhanced mock response
+      simulateDelay(3000);
       
-      // Generate mock AI response
       const baseScore = Math.floor(Math.random() * 30) + 70;  // 70-100
-      const feedback = generateMockFeedback(submissionData.type, baseScore);
+      const feedback = generateEnhancedMockFeedback(assignmentData.type, baseScore);
       
       return {
         success: true,
         data: {
-          submissionId: submissionData.id,
-          score: baseScore,
+          requestId: `mock_${Date.now()}`,
+          grade: {
+            score: baseScore,
+            maxScore: assignmentData.maxScore || 100,
+            percentage: Math.round((baseScore / (assignmentData.maxScore || 100)) * 100)
+          },
           feedback: feedback,
-          confidence: 0.85 + (Math.random() * 0.15),  // 0.85-1.0
-          gradedAt: new Date().toISOString(),
-          gradingTime: 2000  // ms
+          metadata: {
+            model: 'mock-gemini-1.5-flash',
+            confidence: 0.85 + (Math.random() * 0.15),
+            processingTime: 3000,
+            needsReview: Math.random() < 0.1, // 10% chance needs review
+            provider: 'mock',
+            gradedAt: new Date().toISOString()
+          }
         },
         source: 'mock',
         timestamp: new Date().toISOString()
       };
     } else {
-      // Real implementation - Firebase Functions API
-      const startTime = Date.now();
-      const response = UrlFetchApp.fetch(
-        `${CONFIG.API_BASE_URL}/grade/submission`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': CONFIG.API_KEY
-          },
-          payload: JSON.stringify(submissionData),
-          muteHttpExceptions: true
-        }
-      );
+      // Real AI grading using AIGradingAPI
+      const gradingContext = await buildGradingContext(submissionData, assignmentData, gradingOptions);
+      const gradingResult = await AIGradingAPI.gradeSubmission(gradingContext);
       
-      if (response.getResponseCode() !== 200) {
-        throw new Error(`API Error: ${response.getResponseCode()} - ${response.getContentText()}`);
-      }
-      
-      const data = JSON.parse(response.getContentText());
       return {
         success: true,
-        data: {
-          ...data,
-          gradingTime: Date.now() - startTime
-        },
-        source: 'firebase-functions',
+        data: gradingResult,
+        source: 'ai-grading-api',
         timestamp: new Date().toISOString()
       };
     }
   } catch (error) {
-    debugLog('callGradingAPI error', error.toString());
+    debugLog('gradeSubmissionWithAI error', error.toString());
     return {
       success: false,
       error: error.toString(),
-      source: CONFIG.USE_MOCK ? 'mock' : 'firebase-functions',
+      source: getApiGatewayConfig().USE_MOCK ? 'mock' : 'ai-grading-api',
       timestamp: new Date().toISOString()
     };
   }
 }
 
 /**
- * Batch grade multiple submissions
+ * Build complete grading context from submission and assignment data
+ * @param {Object} submission - Enhanced submission data
+ * @param {Object} assignment - Enhanced assignment data
+ * @param {Object} options - Grading options
+ * @returns {Object} Complete grading context matching aiGradingContextSchema
  */
-function batchGradeSubmissions(submissions) {
-  debugLog('batchGradeSubmissions called', { count: submissions.length, useMock: CONFIG.USE_MOCK });
+async function buildGradingContext(submission, assignment, options = {}) {
+  debugLog('Building grading context', {
+    submissionId: submission.id,
+    assignmentId: assignment.id,
+    hasRubric: !!assignment.rubric,
+    hasQuizData: !!assignment.quizData
+  });
   
   try {
-    if (CONFIG.USE_MOCK) {
-      // Simulate processing time based on number of submissions
-      simulateDelay(500 * submissions.length);
+    // Extract content from submission attachments
+    const extractedContent = ContentExtractor.extractSubmissionContent(submission);
+    
+    // Build assignment context
+    const assignmentContext = {
+      id: assignment.id,
+      title: assignment.title,
+      description: assignment.description,
+      type: assignment.type,
+      maxScore: assignment.maxScore || 100,
+      instructions: assignment.description,
+      materials: assignment.materials ? formatMaterialsForAI(assignment.materials) : undefined
+    };
+    
+    // Build grading criteria based on available data
+    let gradingCriteria;
+    
+    if (assignment.rubric) {
+      gradingCriteria = {
+        type: 'rubric',
+        rubric: assignment.rubric,
+        gradingInstructions: 'Grade according to the rubric criteria and performance levels.'
+      };
+    } else if (assignment.quizData) {
+      gradingCriteria = {
+        type: 'quiz',
+        questions: assignment.quizData.questions,
+        gradingInstructions: 'Grade based on correct answers and sample solutions provided.'
+      };
+    } else {
+      gradingCriteria = {
+        type: 'points',
+        maxPoints: assignment.maxScore || 100,
+        gradingInstructions: 'Provide a holistic assessment of this assignment based on the description and requirements.',
+        keyPoints: extractKeyPointsFromDescription(assignment.description)
+      };
+    }
+    
+    // Build submission content for AI
+    const submissionContent = {
+      studentId: submission.studentId,
+      studentName: submission.studentName,
+      contentType: determineContentType(submission, extractedContent),
+      text: extractedContent.text || submission.submissionText,
+      sections: extractedContent.sections,
+      images: extractedContent.images,
+      wordCount: (extractedContent.text || submission.submissionText || '').split(/\s+/).length,
+      attachmentCount: submission.attachments?.length || 0,
+      submittedAt: submission.submittedAt,
+      extractedAt: extractedContent.metadata.extractedAt,
+      extractionMethod: extractedContent.metadata.extractionMethod,
+      extractionQuality: extractedContent.metadata.extractionQuality
+    };
+    
+    // Add quiz responses if available
+    if (submission.quizResponse) {
+      submissionContent.quizAnswers = submission.quizResponse.answers;
+    }
+    
+    // Build complete grading context
+    const gradingContext = {
+      requestId: AIGradingAPI.generateRequestId(),
+      assignment: assignmentContext,
+      criteria: gradingCriteria,
+      submission: submissionContent,
+      gradingOptions: {
+        strictness: options.strictness || 'moderate',
+        focusAreas: options.focusAreas || ['accuracy', 'completeness', 'clarity'],
+        feedbackStyle: options.feedbackStyle || 'constructive',
+        includePositives: options.includePositives !== false,
+        includeSuggestions: options.includeSuggestions !== false,
+        model: options.model || 'gemini-1.5-flash',
+        temperature: options.temperature || 0.3
+      },
+      metadata: {
+        classroomId: options.classroomId,
+        teacherId: Session.getActiveUser().getEmail(),
+        gradingTimestamp: new Date().toISOString()
+      }
+    };
+    
+    debugLog('Grading context built successfully', {
+      criteriaType: gradingCriteria.type,
+      contentLength: submissionContent.text?.length || 0,
+      hasExtractedSections: submissionContent.sections?.length > 0
+    });
+    
+    return gradingContext;
+    
+  } catch (error) {
+    debugLog('Error building grading context', error.toString());
+    throw error;
+  }
+}
+
+/**
+ * Format assignment materials for AI consumption
+ */
+function formatMaterialsForAI(materials) {
+  const formattedMaterials = [];
+  
+  // Add Drive files
+  if (materials.driveFiles) {
+    materials.driveFiles.forEach(file => {
+      formattedMaterials.push({
+        title: file.title,
+        type: 'driveFile',
+        url: file.alternateLink,
+        content: `Google Drive file: ${file.title}`
+      });
+    });
+  }
+  
+  // Add links
+  if (materials.links) {
+    materials.links.forEach(link => {
+      formattedMaterials.push({
+        title: link.title,
+        type: 'link',
+        url: link.url,
+        content: `Web resource: ${link.title}`
+      });
+    });
+  }
+  
+  // Add YouTube videos
+  if (materials.youtubeVideos) {
+    materials.youtubeVideos.forEach(video => {
+      formattedMaterials.push({
+        title: video.title,
+        type: 'video',
+        url: video.alternateLink,
+        content: `Video resource: ${video.title}`
+      });
+    });
+  }
+  
+  // Add Forms
+  if (materials.forms) {
+    materials.forms.forEach(form => {
+      formattedMaterials.push({
+        title: form.title,
+        type: 'form',
+        url: form.formUrl,
+        content: `Google Form: ${form.title}`
+      });
+    });
+  }
+  
+  return formattedMaterials;
+}
+
+/**
+ * Extract key points from assignment description for grading
+ */
+function extractKeyPointsFromDescription(description) {
+  if (!description) return [];
+  
+  const keyPoints = [];
+  
+  // Look for bullet points or numbered lists
+  const bulletRegex = /[•\-\*]\s*(.+)/g;
+  const numberRegex = /\d+\.\s*(.+)/g;
+  
+  let match;
+  while ((match = bulletRegex.exec(description)) !== null) {
+    keyPoints.push(match[1].trim());
+  }
+  
+  while ((match = numberRegex.exec(description)) !== null) {
+    keyPoints.push(match[1].trim());
+  }
+  
+  // If no structured points found, extract sentences that might be requirements
+  if (keyPoints.length === 0) {
+    const sentences = description.split(/[.!?]+/);
+    sentences.forEach(sentence => {
+      const trimmed = sentence.trim();
+      if (trimmed.length > 20 && (
+        trimmed.toLowerCase().includes('should') ||
+        trimmed.toLowerCase().includes('must') ||
+        trimmed.toLowerCase().includes('need') ||
+        trimmed.toLowerCase().includes('require')
+      )) {
+        keyPoints.push(trimmed);
+      }
+    });
+  }
+  
+  return keyPoints.slice(0, 5); // Limit to 5 key points
+}
+
+/**
+ * Determine content type for AI processing
+ */
+function determineContentType(submission, extractedContent) {
+  if (submission.quizResponse) {
+    return 'quiz_response';
+  }
+  
+  if (extractedContent.sections && extractedContent.sections.length > 1) {
+    return 'mixed';
+  }
+  
+  if (submission.attachments && submission.attachments.length > 0) {
+    const primaryAttachment = submission.attachments[0];
+    switch (primaryAttachment.contentType) {
+      case 'document': return 'document';
+      case 'spreadsheet': return 'spreadsheet';
+      case 'presentation': return 'presentation';
+      default: return 'mixed';
+    }
+  }
+  
+  return 'text';
+}
+
+/**
+ * Generate enhanced mock feedback based on assignment type
+ */
+function generateEnhancedMockFeedback(type, score) {
+  const feedbackTemplates = {
+    assignment: {
+      high: {
+        summary: "Excellent work! Your submission demonstrates strong understanding and meets all requirements.",
+        strengths: ["Clear structure and organization", "Thorough analysis and explanation", "Follows instructions precisely"],
+        improvements: ["Consider adding more specific examples", "Minor formatting improvements possible"],
+        suggestions: ["Great foundation - consider exploring advanced concepts", "Share your approach with classmates"]
+      },
+      medium: {
+        summary: "Good effort! Your work shows understanding but could be strengthened in a few areas.",
+        strengths: ["Shows understanding of key concepts", "Meets most requirements", "Clear writing style"],
+        improvements: ["Provide more detailed explanations", "Double-check all requirements", "Improve organization"],
+        suggestions: ["Review the rubric carefully", "Consider peer feedback", "Expand on your main points"]
+      },
+      low: {
+        summary: "Your submission shows effort but needs significant improvement to meet expectations.",
+        strengths: ["Shows initiative in attempting the assignment", "Some understanding evident"],
+        improvements: ["Address all assignment requirements", "Provide more thorough explanations", "Improve overall structure"],
+        suggestions: ["Review assignment instructions carefully", "Seek help during office hours", "Consider submitting a revised version"]
+      }
+    },
+    quiz: {
+      high: {
+        summary: "Excellent performance! You demonstrate strong mastery of the material.",
+        strengths: ["Accurate answers throughout", "Clear understanding of concepts", "Thorough responses"],
+        improvements: ["Minor clarifications on complex topics"],
+        suggestions: ["Help other students who are struggling", "Explore advanced applications"]
+      },
+      medium: {
+        summary: "Good work! You show solid understanding with room for improvement in some areas.",
+        strengths: ["Most answers are correct", "Shows good grasp of fundamentals", "Clear reasoning"],
+        improvements: ["Review questions you missed", "Provide more complete explanations", "Study key concepts more thoroughly"],
+        suggestions: ["Review class materials", "Form a study group", "Practice similar problems"]
+      },
+      low: {
+        summary: "Your responses show some understanding but indicate areas that need more study.",
+        strengths: ["Shows effort and engagement", "Some correct responses"],
+        improvements: ["Review fundamental concepts", "Study incorrect answers", "Seek additional help"],
+        suggestions: ["Attend office hours", "Use additional study resources", "Form study groups with classmates"]
+      }
+    }
+  };
+  
+  const assignmentType = type === 'quiz' ? 'quiz' : 'assignment';
+  const scoreCategory = score >= 90 ? 'high' : score >= 70 ? 'medium' : 'low';
+  
+  return feedbackTemplates[assignmentType][scoreCategory];
+}
+
+/**
+ * Legacy function for backward compatibility
+ */
+function callGradingAPI(submissionData) {
+  // Convert legacy call to new AI grading system
+  return gradeSubmissionWithAI(submissionData, {
+    id: submissionData.assignmentId,
+    title: submissionData.assignmentTitle || 'Assignment',
+    description: submissionData.assignmentDescription || '',
+    type: submissionData.type || 'assignment',
+    maxScore: submissionData.maxScore || 100
+  });
+}
+
+/**
+ * Batch grade multiple submissions with AI
+ * @param {Array} submissions - Array of enhanced submission objects
+ * @param {Object} assignment - Enhanced assignment object
+ * @param {Object} gradingOptions - Grading preferences
+ * @returns {Object} Batch grading results
+ */
+async function batchGradeSubmissions(submissions, assignment, gradingOptions = {}) {
+  debugLog('batchGradeSubmissions called', { 
+    count: submissions.length, 
+    assignmentId: assignment.id,
+    useMock: getApiGatewayConfig().USE_MOCK 
+  });
+  
+  try {
+    if (getApiGatewayConfig().USE_MOCK) {
+      // Enhanced mock batch processing
+      simulateDelay(1000 * submissions.length);
       
-      // Generate results for each submission
-      const results = submissions.map(sub => ({
-        submissionId: sub.id,
-        score: Math.floor(Math.random() * 30) + 70,
-        feedback: generateMockFeedback(sub.type, 85),
-        status: 'graded',
-        gradedAt: new Date().toISOString()
-      }));
+      const results = submissions.map(submission => {
+        const baseScore = Math.floor(Math.random() * 30) + 70;
+        const feedback = generateEnhancedMockFeedback(assignment.type, baseScore);
+        
+        return {
+          requestId: `mock_batch_${Date.now()}_${submission.id}`,
+          submissionId: submission.id,
+          studentId: submission.studentId,
+          studentName: submission.studentName,
+          grade: {
+            score: baseScore,
+            maxScore: assignment.maxScore || 100,
+            percentage: Math.round((baseScore / (assignment.maxScore || 100)) * 100)
+          },
+          feedback: feedback,
+          metadata: {
+            model: 'mock-gemini-1.5-flash',
+            confidence: 0.8 + (Math.random() * 0.2),
+            processingTime: 1000,
+            needsReview: Math.random() < 0.15, // 15% chance needs review
+            provider: 'mock',
+            gradedAt: new Date().toISOString()
+          },
+          status: 'graded'
+        };
+      });
+      
+      const successful = results.filter(r => !r.metadata.needsReview).length;
+      const failed = results.length - successful;
       
       return {
         success: true,
         data: {
+          batchId: `mock_batch_${Date.now()}`,
           results: results,
-          successful: results.length,
-          failed: 0,
-          totalTime: 500 * submissions.length
+          successful: successful,
+          failed: failed,
+          totalTime: 1000 * submissions.length,
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString()
         },
         source: 'mock',
         timestamp: new Date().toISOString()
       };
     } else {
-      // Real implementation - Firebase Functions batch API
-      const startTime = Date.now();
-      const response = UrlFetchApp.fetch(
-        `${CONFIG.API_BASE_URL}/grade/batch`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': CONFIG.API_KEY
-          },
-          payload: JSON.stringify({ submissions }),
-          muteHttpExceptions: true
-        }
-      );
+      // Real AI batch grading using AIGradingAPI
+      const gradingContexts = [];
       
-      if (response.getResponseCode() !== 200) {
-        throw new Error(`API Error: ${response.getResponseCode()} - ${response.getContentText()}`);
+      // Build grading context for each submission
+      for (const submission of submissions) {
+        try {
+          const context = await buildGradingContext(submission, assignment, gradingOptions);
+          gradingContexts.push(context);
+        } catch (error) {
+          debugLog('Error building context for submission', `${submission.id}: ${error.toString()}`);
+          // Add error context
+          gradingContexts.push({
+            requestId: AIGradingAPI.generateRequestId(),
+            submissionId: submission.id,
+            error: error.toString()
+          });
+        }
       }
       
-      const data = JSON.parse(response.getContentText());
+      // Use AI grading API for batch processing
+      const batchResult = await AIGradingAPI.batchGradeSubmissions(gradingContexts);
+      
       return {
         success: true,
-        data: {
-          ...data,
-          totalTime: Date.now() - startTime
-        },
-        source: 'firebase-functions',
+        data: batchResult,
+        source: 'ai-grading-api',
         timestamp: new Date().toISOString()
       };
     }
@@ -576,7 +908,7 @@ function batchGradeSubmissions(submissions) {
     return {
       success: false,
       error: error.toString(),
-      source: CONFIG.USE_MOCK ? 'mock' : 'firebase-functions',
+      source: getApiGatewayConfig().USE_MOCK ? 'mock' : 'ai-grading-api',
       timestamp: new Date().toISOString()
     };
   }
@@ -589,7 +921,7 @@ function saveGrade(classroomId, assignmentId, submissionId, gradeData) {
   debugLog('saveGrade called', { classroomId, assignmentId, submissionId, score: gradeData.score });
   
   try {
-    if (CONFIG.USE_MOCK) {
+    if (getApiGatewayConfig().USE_MOCK) {
       simulateDelay(500);
       
       // Update mock data in memory
@@ -615,12 +947,12 @@ function saveGrade(classroomId, assignmentId, submissionId, gradeData) {
     } else {
       // Real implementation - Update Google Classroom and/or Firebase
       const response = UrlFetchApp.fetch(
-        `${CONFIG.API_BASE_URL}/grades/save`,
+        `${getApiGatewayConfig().API_BASE_URL}/grades/save`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-API-Key': CONFIG.API_KEY
+            'X-API-Key': getApiGatewayConfig().API_KEY
           },
           payload: JSON.stringify({
             classroomId,
@@ -648,7 +980,7 @@ function saveGrade(classroomId, assignmentId, submissionId, gradeData) {
     return {
       success: false,
       error: error.toString(),
-      source: CONFIG.USE_MOCK ? 'mock' : 'firebase-functions',
+      source: getApiGatewayConfig().USE_MOCK ? 'mock' : 'firebase-functions',
       timestamp: new Date().toISOString()
     };
   }
@@ -731,7 +1063,7 @@ function exportGrades(classroomId, assignmentId) {
       success: true,
       data: csv,
       filename: `grades_${classroomId}_${assignmentId}_${new Date().toISOString().split('T')[0]}.csv`,
-      source: CONFIG.USE_MOCK ? 'mock' : 'api',
+      source: getApiGatewayConfig().USE_MOCK ? 'mock' : 'api',
       timestamp: new Date().toISOString()
     };
   } catch (error) {
@@ -1264,7 +1596,7 @@ function processEnhancedSubmission(submission, assignment, student) {
             thumbnailUrl: attachment.link.thumbnailUrl,
             
             // Link classification
-            domain: new URL(attachment.link.url).hostname,
+            domain: extractDomainFromUrl(attachment.link.url),
             linkType: classifyLinkType(attachment.link.url),
             accessible: true,
             requiresAuth: false
@@ -1421,11 +1753,11 @@ function isTextExtractable(mimeType) {
 }
 
 /**
- * Classify link type
+ * Classify link type (AppScript compatible)
  */
 function classifyLinkType(url) {
   try {
-    const domain = new URL(url).hostname.toLowerCase();
+    const domain = extractDomainFromUrl(url).toLowerCase();
     
     if (domain.includes('github')) return 'repository';
     if (domain.includes('youtube') || domain.includes('vimeo')) return 'video';
@@ -1434,6 +1766,26 @@ function classifyLinkType(url) {
     return 'webpage';
   } catch (error) {
     return 'other';
+  }
+}
+
+/**
+ * Extract domain from URL (AppScript compatible)
+ */
+function extractDomainFromUrl(url) {
+  try {
+    if (!url) return '';
+    
+    // Remove protocol
+    let domain = url.replace(/^https?:\/\//, '');
+    
+    // Remove path and query parameters
+    domain = domain.split('/')[0];
+    domain = domain.split('?')[0];
+    
+    return domain;
+  } catch (error) {
+    return '';
   }
 }
 

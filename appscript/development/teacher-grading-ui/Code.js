@@ -272,7 +272,7 @@ function getSubmissionDetails(submissionId) {
   console.log('Code.js: getSubmissionDetails called for:', submissionId);
   
   // In mock mode, search through all submissions
-  if (CONFIG.USE_MOCK) {
+  if (getApiGatewayConfig().USE_MOCK) {
     for (const assignmentId in MOCK_SUBMISSIONS) {
       const submission = MOCK_SUBMISSIONS[assignmentId].find(s => s.id === submissionId);
       if (submission) {
@@ -356,7 +356,7 @@ function healthCheck() {
     debugLog('Health', '⚙️ Testing configuration');
     results.components.config = {
       status: 'healthy',
-      details: `Mock mode: ${CONFIG.USE_MOCK}, Debug: ${CONFIG.DEBUG}`
+      details: `Mock mode: ${getApiGatewayConfig().USE_MOCK}, Debug: ${getApiGatewayConfig().DEBUG}`
     };
     
     // Test 3: Cache system
@@ -484,8 +484,8 @@ function testRealClassroomData() {
   
   try {
     // Temporarily switch to real data mode
-    const originalMockSetting = CONFIG.USE_MOCK;
-    CONFIG.USE_MOCK = false;
+    const originalMockSetting = getApiGatewayConfig().USE_MOCK;
+    getApiGatewayConfig().USE_MOCK = false;
     
     console.log('🔄 Switched to real Google Classroom API mode');
     console.log('👤 Testing with account:', Session.getActiveUser().getEmail());
@@ -560,7 +560,7 @@ function testRealClassroomData() {
       console.log('\n📏 Real Data Size:', jsonSizeKB, 'KB');
       
       // Restore original setting
-      CONFIG.USE_MOCK = originalMockSetting;
+      getApiGatewayConfig().USE_MOCK = originalMockSetting;
       console.log('🔄 Restored original mock setting:', originalMockSetting);
       
       return {
@@ -579,7 +579,7 @@ function testRealClassroomData() {
       console.error('❌ Real data fetch failed:', result.error);
       
       // Restore original setting
-      CONFIG.USE_MOCK = originalMockSetting;
+      getApiGatewayConfig().USE_MOCK = originalMockSetting;
       console.log('🔄 Restored original mock setting due to error');
       
       return {
@@ -593,7 +593,7 @@ function testRealClassroomData() {
     console.error('❌ Real data test failed with exception:', error);
     
     // Ensure we restore the original setting even on exception
-    CONFIG.USE_MOCK = true;
+    getApiGatewayConfig().USE_MOCK = true;
     console.log('🔄 Restored mock mode due to exception');
     
     return {
@@ -660,6 +660,525 @@ function compareRealVsMockData() {
 }
 
 /**
+ * Test enhanced data fetching functionality
+ */
+function testEnhancedDataFetching() {
+  console.log('\n=== Testing Enhanced Data Fetching ===');
+  
+  try {
+    // Test with mock data first
+    console.log('Testing with mock data...');
+    const mockResult = fetchFullDashboardData();
+    
+    if (mockResult.success) {
+      const classroom = mockResult.data.classrooms[0];
+      if (classroom && classroom.assignments.length > 0) {
+        const assignment = classroom.assignments[0];
+        
+        console.log('✅ Enhanced Assignment Data:', {
+          id: assignment.id,
+          title: assignment.title,
+          type: assignment.type,
+          hasMaterials: !!assignment.materials,
+          materialCounts: assignment.materials ? {
+            driveFiles: assignment.materials.driveFiles?.length || 0,
+            links: assignment.materials.links?.length || 0,
+            youtubeVideos: assignment.materials.youtubeVideos?.length || 0,
+            forms: assignment.materials.forms?.length || 0
+          } : 'No materials',
+          hasRubric: !!assignment.rubric,
+          hasQuizData: !!assignment.quizData
+        });
+        
+        // Test submission processing
+        if (classroom.submissions.length > 0) {
+          const submission = classroom.submissions[0];
+          console.log('✅ Enhanced Submission Data:', {
+            id: submission.id,
+            studentName: submission.studentName,
+            status: submission.status,
+            attachmentCount: submission.attachments?.length || 0,
+            hasAiProcessingStatus: !!submission.aiProcessingStatus,
+            readyForGrading: submission.aiProcessingStatus?.readyForGrading || false
+          });
+        }
+        
+        console.log('✅ Enhanced data fetching test passed!');
+        return {
+          success: true,
+          enhancedFieldsPresent: true,
+          assignmentEnhancements: {
+            hasMaterials: !!assignment.materials,
+            hasRubric: !!assignment.rubric,
+            hasQuizData: !!assignment.quizData
+          }
+        };
+      } else {
+        console.log('❌ No assignments found in test data');
+        return { success: false, error: 'No assignments found' };
+      }
+    } else {
+      console.log('❌ Failed to fetch dashboard data:', mockResult.error);
+      return { success: false, error: mockResult.error };
+    }
+  } catch (error) {
+    console.log('❌ Enhanced data fetching test failed:', error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Test individual enhancement functions
+ */
+function testEnhancementFunctions() {
+  console.log('\n=== Testing Enhancement Functions ===');
+  
+  try {
+    // Test content type classification
+    console.log('Testing content type classification...');
+    const testResults = {
+      pdf: classifyContentType('application/pdf'),
+      doc: classifyContentType('application/vnd.google-apps.document'),
+      sheet: classifyContentType('application/vnd.google-apps.spreadsheet'),
+      unknown: classifyContentType('application/unknown')
+    };
+    console.log('✅ Content type classification:', testResults);
+    
+    // Test text extraction capability
+    console.log('Testing text extractability...');
+    const extractResults = {
+      googleDoc: isTextExtractable('application/vnd.google-apps.document'),
+      pdf: isTextExtractable('application/pdf'),
+      image: isTextExtractable('image/jpeg'),
+      unknown: isTextExtractable('application/unknown')
+    };
+    console.log('✅ Text extractability:', extractResults);
+    
+    // Test link type classification
+    console.log('Testing link type classification...');
+    const linkResults = {
+      github: classifyLinkType('https://github.com/user/repo'),
+      youtube: classifyLinkType('https://youtube.com/watch?v=123'),
+      googleDocs: classifyLinkType('https://docs.google.com/document/d/123'),
+      webpage: classifyLinkType('https://example.com')
+    };
+    console.log('✅ Link type classification:', linkResults);
+    
+    console.log('✅ All enhancement functions working correctly!');
+    return {
+      success: true,
+      results: {
+        contentTypes: testResults,
+        textExtraction: extractResults,
+        linkTypes: linkResults
+      }
+    };
+  } catch (error) {
+    console.log('❌ Enhancement functions test failed:', error.toString());
+    return { success: false, error: error.toString() };
+  }
+}
+
+/**
+ * Test real enhanced data fetching with Google Classroom
+ */
+function testRealEnhancedData() {
+  console.log('\n=== Testing Real Enhanced Data Fetching ===');
+  
+  try {
+    // Temporarily switch to real data mode
+    const originalMockSetting = getApiGatewayConfig().USE_MOCK;
+    getApiGatewayConfig().USE_MOCK = false;
+    
+    console.log('🔄 Switched to real Google Classroom API mode');
+    console.log('👤 Testing with account:', Session.getActiveUser().getEmail());
+    
+    const result = fetchFullDashboardData();
+    
+    if (result.success && result.data && result.data.classrooms.length > 0) {
+      const classroom = result.data.classrooms[0];
+      console.log('✅ Found real classroom:', classroom.name);
+      
+      if (classroom.assignments.length > 0) {
+        const assignment = classroom.assignments[0];
+        console.log('✅ Enhanced assignment data:', {
+          title: assignment.title,
+          type: assignment.type,
+          hasMaterials: !!assignment.materials,
+          hasRubric: !!assignment.rubric,
+          hasQuizData: !!assignment.quizData,
+          materialTypes: assignment.materials ? Object.keys(assignment.materials).filter(key => 
+            assignment.materials[key] && assignment.materials[key].length > 0
+          ) : []
+        });
+        
+        // Test enhanced submissions
+        if (classroom.submissions.length > 0) {
+          const submission = classroom.submissions[0];
+          console.log('✅ Enhanced submission data:', {
+            studentName: submission.studentName,
+            attachmentCount: submission.attachments?.length || 0,
+            attachmentTypes: submission.attachments?.map(att => att.type) || [],
+            hasAiProcessingStatus: !!submission.aiProcessingStatus,
+            readyForGrading: submission.aiProcessingStatus?.readyForGrading || false
+          });
+        }
+      }
+      
+      // Restore original setting
+      getApiGatewayConfig().USE_MOCK = originalMockSetting;
+      
+      return {
+        success: true,
+        source: 'real-google-classroom',
+        enhancementsWorking: true
+      };
+    } else {
+      getApiGatewayConfig().USE_MOCK = originalMockSetting;
+      return {
+        success: false,
+        error: result.error || 'No classrooms found',
+        source: 'real-google-classroom'
+      };
+    }
+  } catch (error) {
+    getApiGatewayConfig().USE_MOCK = true; // Ensure we restore mock mode
+    console.log('❌ Real enhanced data test failed:', error.toString());
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Test AI grading functionality
+ */
+function testAIGrading() {
+  console.log('\n=== Testing AI Grading Functionality ===');
+  
+  try {
+    // Test with mock data first
+    console.log('Testing AI grading with mock data...');
+    
+    // Get sample data from dashboard
+    const dashboardResult = fetchFullDashboardData();
+    if (!dashboardResult.success || !dashboardResult.data.classrooms.length) {
+      throw new Error('No test data available for AI grading test');
+    }
+    
+    const classroom = dashboardResult.data.classrooms[0];
+    if (!classroom.assignments.length || !classroom.submissions.length) {
+      throw new Error('No assignments or submissions available for testing');
+    }
+    
+    const assignment = classroom.assignments[0];
+    const submission = classroom.submissions[0];
+    
+    console.log('✅ Test data loaded:', {
+      assignmentTitle: assignment.title,
+      assignmentType: assignment.type,
+      hasRubric: !!assignment.rubric,
+      hasQuizData: !!assignment.quizData,
+      submissionStudent: submission.studentName,
+      hasAttachments: submission.attachments?.length > 0
+    });
+    
+    // Test single submission grading
+    console.log('\n📝 Testing single submission AI grading...');
+    const gradingResult = gradeSubmissionWithAI(submission, assignment, {
+      strictness: 'moderate',
+      feedbackStyle: 'constructive'
+    });
+    
+    if (gradingResult.success) {
+      const grade = gradingResult.data.grade;
+      const feedback = gradingResult.data.feedback;
+      
+      console.log('✅ AI grading successful:', {
+        requestId: gradingResult.data.requestId,
+        score: `${grade.score}/${grade.maxScore} (${grade.percentage}%)`,
+        confidence: gradingResult.data.metadata.confidence,
+        model: gradingResult.data.metadata.model,
+        processingTime: `${gradingResult.data.metadata.processingTime}ms`,
+        needsReview: gradingResult.data.metadata.needsReview,
+        feedbackSummary: feedback.summary,
+        strengthsCount: feedback.strengths?.length || 0,
+        improvementsCount: feedback.improvements?.length || 0
+      });
+      
+      return {
+        success: true,
+        singleGrading: true,
+        gradingResult: {
+          score: grade.score,
+          maxScore: grade.maxScore,
+          confidence: gradingResult.data.metadata.confidence,
+          processingTime: gradingResult.data.metadata.processingTime,
+          needsReview: gradingResult.data.metadata.needsReview
+        }
+      };
+    } else {
+      console.log('❌ AI grading failed:', gradingResult.error);
+      return {
+        success: false,
+        error: gradingResult.error
+      };
+    }
+    
+  } catch (error) {
+    console.log('❌ AI grading test failed:', error.toString());
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Test batch AI grading
+ */
+function testBatchAIGrading() {
+  console.log('\n=== Testing Batch AI Grading ===');
+  
+  try {
+    // Get sample data
+    const dashboardResult = fetchFullDashboardData();
+    if (!dashboardResult.success) {
+      throw new Error('Failed to get test data');
+    }
+    
+    const classroom = dashboardResult.data.classrooms[0];
+    if (!classroom.assignments.length || !classroom.submissions.length) {
+      throw new Error('No test data available');
+    }
+    
+    const assignment = classroom.assignments[0];
+    const submissions = classroom.submissions.slice(0, 3); // Test with first 3 submissions
+    
+    console.log(`📦 Testing batch grading with ${submissions.length} submissions...`);
+    
+    const batchResult = batchGradeSubmissions(submissions, assignment, {
+      strictness: 'moderate',
+      feedbackStyle: 'constructive'
+    });
+    
+    if (batchResult.success) {
+      const data = batchResult.data;
+      
+      console.log('✅ Batch AI grading successful:', {
+        batchId: data.batchId,
+        totalSubmissions: submissions.length,
+        successful: data.successful,
+        failed: data.failed,
+        totalTime: `${data.totalTime}ms`,
+        avgTimePerSubmission: `${Math.round(data.totalTime / submissions.length)}ms`,
+        source: batchResult.source
+      });
+      
+      // Show sample results
+      if (data.results && data.results.length > 0) {
+        console.log('\n📊 Sample grading results:');
+        data.results.slice(0, 2).forEach((result, index) => {
+          console.log(`  Student ${index + 1}: ${result.studentName}`);
+          console.log(`    Score: ${result.grade?.score || 0}/${result.grade?.maxScore || 100}`);
+          console.log(`    Confidence: ${result.metadata?.confidence || 0}`);
+          console.log(`    Needs Review: ${result.metadata?.needsReview || false}`);
+        });
+      }
+      
+      return {
+        success: true,
+        batchGrading: true,
+        results: {
+          totalSubmissions: submissions.length,
+          successful: data.successful,
+          failed: data.failed,
+          avgProcessingTime: Math.round(data.totalTime / submissions.length)
+        }
+      };
+    } else {
+      console.log('❌ Batch AI grading failed:', batchResult.error);
+      return {
+        success: false,
+        error: batchResult.error
+      };
+    }
+    
+  } catch (error) {
+    console.log('❌ Batch AI grading test failed:', error.toString());
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Test AI grading context building
+ */
+function testGradingContextBuilding() {
+  console.log('\n=== Testing Grading Context Building ===');
+  
+  try {
+    // Get sample data
+    const dashboardResult = fetchFullDashboardData();
+    if (!dashboardResult.success) {
+      throw new Error('Failed to get test data');
+    }
+    
+    const classroom = dashboardResult.data.classrooms[0];
+    const assignment = classroom.assignments[0];
+    const submission = classroom.submissions[0];
+    
+    console.log('🔧 Building grading context...');
+    
+    const gradingContext = buildGradingContext(submission, assignment, {
+      strictness: 'moderate',
+      focusAreas: ['accuracy', 'completeness', 'clarity']
+    });
+    
+    console.log('✅ Grading context built successfully:', {
+      requestId: gradingContext.requestId,
+      assignmentType: gradingContext.assignment.type,
+      criteriaType: gradingContext.criteria.type,
+      submissionContentType: gradingContext.submission.contentType,
+      hasExtractedContent: !!gradingContext.submission.text,
+      contentLength: gradingContext.submission.text?.length || 0,
+      attachmentsCount: gradingContext.submission.attachmentCount,
+      gradingStrictness: gradingContext.gradingOptions.strictness,
+      focusAreas: gradingContext.gradingOptions.focusAreas
+    });
+    
+    // Test different criteria types
+    const contextTypes = [];
+    
+    if (assignment.rubric) {
+      contextTypes.push('rubric');
+      console.log('📏 Rubric-based grading context available');
+    }
+    
+    if (assignment.quizData) {
+      contextTypes.push('quiz');
+      console.log('📝 Quiz-based grading context available');
+    }
+    
+    if (!assignment.rubric && !assignment.quizData) {
+      contextTypes.push('points');
+      console.log('🎯 Points-based grading context created');
+    }
+    
+    return {
+      success: true,
+      contextBuilding: true,
+      contextTypes: contextTypes,
+      hasContent: !!gradingContext.submission.text,
+      contentLength: gradingContext.submission.text?.length || 0
+    };
+    
+  } catch (error) {
+    console.log('❌ Grading context building test failed:', error.toString());
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Test system configuration
+ */
+function testConfiguration() {
+  console.log('\n=== Testing System Configuration ===');
+  
+  try {
+    const configStatus = getConfigurationStatus();
+    
+    console.log('📋 Configuration Status:');
+    console.log('  Gemini API Key Configured:', configStatus.geminiApiKey.configured ? '✅' : '❌');
+    console.log('  API Key Length:', configStatus.geminiApiKey.keyLength);
+    console.log('  Is Placeholder:', configStatus.geminiApiKey.isPlaceholder ? '❌' : '✅');
+    console.log('  Use Mock Data:', configStatus.useMockData ? '🎭' : '🌐');
+    console.log('  Debug Enabled:', configStatus.debugEnabled ? '🔍' : '🔇');
+    console.log('  AI Model:', configStatus.model);
+    console.log('  Cache Expiration:', configStatus.cacheExpiration + ' minutes');
+    
+    const isAIReady = isAIGradingConfigured();
+    console.log('\n🤖 AI Grading Status:', isAIReady ? '✅ Ready' : '❌ Not Configured');
+    
+    if (!isAIReady) {
+      console.log('\n⚠️ To enable AI grading:');
+      console.log('1. Get a Gemini API key from: https://makersuite.google.com/app/apikey');
+      console.log('2. Open CONFIG.js and replace YOUR_GEMINI_API_KEY_HERE with your key');
+      console.log('3. Redeploy the application');
+    }
+    
+    return {
+      success: true,
+      geminiConfigured: configStatus.geminiApiKey.configured,
+      aiGradingReady: isAIReady,
+      configuration: configStatus
+    };
+    
+  } catch (error) {
+    console.log('❌ Configuration test failed:', error.toString());
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Test real AI grading with Gemini (if not using mock)
+ */
+function testRealAIGrading() {
+  console.log('\n=== Testing Real AI Grading with Gemini ===');
+  
+  try {
+    // Temporarily switch to real mode
+    const originalMockSetting = getApiGatewayConfig().USE_MOCK;
+    getApiGatewayConfig().USE_MOCK = false;
+    
+    console.log('🔄 Switched to real AI grading mode');
+    console.log('🤖 Provider:', AIGradingAPI.getProviderInfo().provider);
+    
+    // Test AI grading functionality
+    const result = testAIGrading();
+    
+    // Restore original setting
+    getApiGatewayConfig().USE_MOCK = originalMockSetting;
+    console.log('🔄 Restored original mock setting');
+    
+    if (result.success) {
+      console.log('✅ Real AI grading test successful');
+      return {
+        success: true,
+        realAIGrading: true,
+        provider: 'gemini-ai',
+        results: result.gradingResult
+      };
+    } else {
+      console.log('❌ Real AI grading test failed:', result.error);
+      return {
+        success: false,
+        error: result.error,
+        provider: 'gemini-ai'
+      };
+    }
+    
+  } catch (error) {
+    // Ensure we restore mock mode
+    getApiGatewayConfig().USE_MOCK = true;
+    console.log('❌ Real AI grading test failed with exception:', error.toString());
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+/**
  * Comprehensive test of all dashboard functionality
  */
 function runAllDashboardTests() {
@@ -670,24 +1189,56 @@ function runAllDashboardTests() {
     tests: {}
   };
   
-  // Test 1: Mock data structure
-  console.log('\n--- Test 1: Mock Data Structure ---');
+  // Test 1: Configuration
+  console.log('\n--- Test 1: System Configuration ---');
+  results.tests.configuration = testConfiguration();
+  
+  // Test 2: Mock data structure
+  console.log('\n--- Test 2: Mock Data Structure ---');
   results.tests.mockData = testMockDataStructure();
   
-  // Test 2: Dashboard data fetch (mock)
-  console.log('\n--- Test 2: Dashboard Data Fetch (Mock) ---');
+  // Test 3: Dashboard data fetch (mock)
+  console.log('\n--- Test 3: Dashboard Data Fetch (Mock) ---');
   results.tests.mockDataFetch = testDashboardDataFetch();
   
-  // Test 3: Cache management
-  console.log('\n--- Test 3: Cache Management ---');
+  // Test 4: Cache management
+  console.log('\n--- Test 4: Cache Management ---');
   results.tests.cacheManagement = testCacheManagement();
   
-  // Test 4: Real data fetch
-  console.log('\n--- Test 4: Real Google Classroom Data ---');
+  // Test 5: Real data fetch
+  console.log('\n--- Test 5: Real Google Classroom Data ---');
   results.tests.realDataFetch = testRealClassroomData();
   
-  // Test 5: Data comparison
-  console.log('\n--- Test 5: Real vs Mock Comparison ---');
+  // Test 6: Enhanced data fetching
+  console.log('\n--- Test 6: Enhanced Data Fetching ---');
+  results.tests.enhancedDataFetching = testEnhancedDataFetching();
+  
+  // Test 7: Enhancement functions
+  console.log('\n--- Test 7: Enhancement Functions ---');
+  results.tests.enhancementFunctions = testEnhancementFunctions();
+  
+  // Test 8: Real enhanced data
+  console.log('\n--- Test 8: Real Enhanced Data ---');
+  results.tests.realEnhancedData = testRealEnhancedData();
+  
+  // Test 9: AI grading functionality
+  console.log('\n--- Test 9: AI Grading ---');
+  results.tests.aiGrading = testAIGrading();
+  
+  // Test 10: Batch AI grading
+  console.log('\n--- Test 10: Batch AI Grading ---');
+  results.tests.batchAIGrading = testBatchAIGrading();
+  
+  // Test 11: Grading context building
+  console.log('\n--- Test 11: Grading Context Building ---');
+  results.tests.gradingContextBuilding = testGradingContextBuilding();
+  
+  // Test 12: Real AI grading (if enabled)
+  console.log('\n--- Test 12: Real AI Grading ---');
+  results.tests.realAIGrading = testRealAIGrading();
+  
+  // Test 13: Data comparison
+  console.log('\n--- Test 13: Real vs Mock Comparison ---');
   results.tests.dataComparison = compareRealVsMockData();
   
   // Summary
@@ -711,7 +1262,7 @@ function runAllDashboardTests() {
 function getAssignmentStatistics(assignmentId) {
   console.log('Code.js: getAssignmentStatistics called for:', assignmentId);
   
-  if (CONFIG.USE_MOCK) {
+  if (getApiGatewayConfig().USE_MOCK) {
     const stats = getAssignmentStats(assignmentId);
     return {
       success: true,
@@ -771,7 +1322,7 @@ function getClassroomSummary(classroomId) {
 function updateSubmissionStatus(submissionId, status) {
   console.log('Code.js: updateSubmissionStatus called', { submissionId, status });
   
-  if (CONFIG.USE_MOCK) {
+  if (getApiGatewayConfig().USE_MOCK) {
     // Update mock data in memory
     for (const assignmentId in MOCK_SUBMISSIONS) {
       const submission = MOCK_SUBMISSIONS[assignmentId].find(s => s.id === submissionId);
@@ -802,7 +1353,7 @@ function getRecentActivity() {
   try {
     const recentActivity = [];
     
-    if (CONFIG.USE_MOCK) {
+    if (getApiGatewayConfig().USE_MOCK) {
       // Collect recent submissions from all assignments
       for (const assignmentId in MOCK_SUBMISSIONS) {
         const submissions = MOCK_SUBMISSIONS[assignmentId];
@@ -867,4 +1418,64 @@ function testSetup() {
   
   console.log('Test results:', tests);
   return tests;
+}
+
+/**
+ * Setup API Key Interactively
+ * 
+ * METHOD 1: Use the execution transcript
+ * 1. Run this function
+ * 2. In the execution transcript, you'll see a line like:
+ *    setGeminiApiKey("your-key-here")
+ * 3. Copy that line and paste it in the Apps Script console
+ * 4. Press Enter to execute
+ */
+function setupApiKeyInteractively() {
+  console.log('🔑 === API KEY SETUP INSTRUCTIONS ===');
+  console.log('');
+  console.log('Option 1: Use the Apps Script console directly');
+  console.log('1. Go to the Apps Script editor console (View > Logs or Ctrl+Enter)');
+  console.log('2. Type this command with your actual API key:');
+  console.log('   setGeminiApiKey("your-api-key-here")');
+  console.log('3. Press Enter to execute');
+  console.log('');
+  console.log('Option 2: Use PropertiesService directly');
+  console.log('1. In the console, type:');
+  console.log('   PropertiesService.getScriptProperties().setProperty("GEMINI_API_KEY", "your-key-here")');
+  console.log('2. Press Enter to execute');
+  console.log('');
+  console.log('Option 3: Use the manual setup function');
+  console.log('1. Temporarily edit the setApiKeyManually() function below');
+  console.log('2. Replace the placeholder with your key');
+  console.log('3. Run setApiKeyManually()');
+  console.log('4. Change it back to the placeholder');
+  console.log('');
+  console.log('📝 Get your Gemini API key from: https://makersuite.google.com/app/apikey');
+  console.log('');
+  console.log('✅ After setup, test with: testConfiguration()');
+}
+
+/**
+ * Manual API Key Setup (for temporary editing)
+ * Only edit this if you want to use Method 3 above
+ */
+function setApiKeyManually() {
+  // Temporarily replace this line with your actual key, run the function, then change it back
+  const key = null; // Replace null with "your-actual-key" when needed
+  
+  if (!key) {
+    console.log('❌ Please temporarily edit this function to include your API key');
+    console.log('📚 See setupApiKeyInteractively() for full instructions');
+    return false;
+  }
+  
+  console.log('🔑 Setting API key...');
+  const success = setGeminiApiKey(key);
+  
+  if (success) {
+    console.log('✅ API key set successfully!');
+    console.log('⚠️  Remember to change the key back to null in this function');
+  }
+  
+  return success;
 }

@@ -7,7 +7,7 @@
 const CacheManager = {
   // Cache configuration
   DEFAULT_EXPIRATION_MINUTES: 30,
-  CACHE_VERSION: '2.1.0', // Added batch submission fetching for complete cache
+  CACHE_VERSION: '3.0.0', // Enhanced data fetching with materials, rubrics, and quiz data
 
   /**
    * Get cache key for a specific teacher
@@ -20,7 +20,7 @@ const CacheManager = {
    * Log debug messages if debugging is enabled
    */
   debugLog(message, data) {
-    if (CONFIG && CONFIG.DEBUG) {
+    if (getApiGatewayConfig().DEBUG) {
       console.log(`[CacheManager] ${message}`, data || '');
     }
   },
