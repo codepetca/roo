@@ -1,14 +1,21 @@
 <script>
-  // Global application state
+  // Server-side cache management (using AppScript PropertiesService)
+
+  // Global application state - now cache-based
   const AppState = {
-    currentUser: null,
-    classrooms: [],
+    // Dashboard cache (contains all data)
+    dashboardCache: null,
+    
+    // Current UI state
     currentClassroom: null,
     currentAssignment: null,
-    submissions: [],
     selectedSubmissions: new Set(),
     currentSubmissionIndex: -1,
-    lastAction: null
+    lastAction: null,
+    
+    // Cache status
+    cacheLoading: false,
+    cacheError: null
   };
 
   // Initialize application on page load
@@ -18,75 +25,288 @@
   });
 
   /**
-   * Initialize the application
+   * Initialize the application with cache-based data loading
    */
   function initializeApp() {
     showLoading('Initializing application...');
     
-    // Load user info and classrooms
-    Promise.all([
-      callServerFunction('getCurrentUser'),
-      callServerFunction('getClassrooms')
-    ]).then(([userResult, classroomsResult]) => {
-      hideLoading();
-      
-      if (userResult.success) {
-        AppState.currentUser = userResult.data;
-        document.getElementById('user-name').textContent = userResult.data.name;
-      }
-      
-      if (classroomsResult.success) {
-        AppState.classrooms = classroomsResult.data;
-        populateClassroomSelect();
-        showWelcomeScreen();
-      } else {
-        showError('Failed to load classrooms: ' + classroomsResult.error);
-      }
-    }).catch(error => {
-      hideLoading();
-      showError('Failed to initialize application: ' + error.message);
-    });
+    // Try to load dashboard data from cache first
+    loadDashboardData();
   }
 
   /**
-   * Populate the classroom dropdown
+   * Load dashboard data - simplified flow with better logging
    */
-  function populateClassroomSelect() {
+  function loadDashboardData() {
+    console.log('🚀 [Client] Starting dashboard data load...');
+    AppState.cacheLoading = true;
+    
+    // Step 1: Try server-side cache first
+    console.log('🔍 [Client] Checking server cache...');
+    callServerFunction('getCachedDashboardData')
+      .then(cacheResult => {
+        console.log('📥 [Client] Cache check result:', cacheResult.success ? '✅ Found' : '❌ Not found');
+        
+        if (cacheResult.success) {
+          // Cache hit - use cached data
+          console.log('🎉 [Client] Using cached dashboard data');
+          console.log('📊 [Client] Cache contains:', cacheResult.data?.classrooms?.length || 0, 'classrooms');
+          
+          AppState.dashboardCache = cacheResult.data;
+          AppState.cacheError = null;
+          AppState.cacheLoading = false;
+          
+          initializeUIFromCache();
+          hideLoading();
+        } else {
+          // Cache miss or expired - fetch fresh data
+          console.log('🔄 [Client] Cache invalid, fetching fresh data...');
+          fetchAndCacheData();
+        }
+      })
+      .catch(error => {
+        console.error('❌ [Client] Error checking cache:', error);
+        console.log('🔄 [Client] Falling back to fresh data fetch...');
+        fetchAndCacheData();
+      });
+  }
+
+  /**
+   * Fetch fresh data and cache it server-side - simplified with better logging
+   */
+  function fetchAndCacheData() {
+    console.log('📡 [Client] Fetching fresh dashboard data...');
+    
+    callServerFunction('fetchAndCacheDashboardData')
+      .then(result => {
+        AppState.cacheLoading = false;
+        hideLoading();
+        
+        console.log('📦 [Client] Fresh data fetch result:', result.success ? '✅ Success' : '❌ Failed');
+        
+        if (result.success) {
+          console.log('🎉 [Client] Fresh data loaded successfully!');
+          console.log('📊 [Client] Data source:', result.source);
+          console.log('📊 [Client] Contains:', result.data?.classrooms?.length || 0, 'classrooms');
+          console.log('💾 [Client] Server cache saved:', result.cached ? '✅ Yes' : '❌ No');
+          
+          if (result.cacheError) {
+            console.warn('⚠️ [Client] Cache save had issues:', result.cacheError);
+          }
+          
+          AppState.dashboardCache = result.data;
+          AppState.cacheError = null;
+          
+          // Initialize UI
+          initializeUIFromCache();
+        } else {
+          console.error('❌ [Client] Failed to load dashboard data:', result.error);
+          AppState.cacheError = result.error;
+          showError('Failed to load dashboard data: ' + result.error);
+        }
+      })
+      .catch(error => {
+        AppState.cacheLoading = false;
+        hideLoading();
+        console.error('❌ [Client] Exception during data fetch:', error);
+        AppState.cacheError = error.message;
+        showError('Error loading dashboard data: ' + error.message);
+      });
+  }
+
+  /**
+   * Initialize UI components from cached dashboard data
+   */
+  function initializeUIFromCache() {
+    if (!AppState.dashboardCache) {
+      console.error('Cannot initialize UI: no dashboard cache available');
+      return;
+    }
+    
+    console.log('Initializing UI from cache...');
+    
+    // Set user info
+    const teacher = AppState.dashboardCache.teacher;
+    if (teacher) {
+      document.getElementById('user-name').textContent = teacher.name || teacher.email;
+    }
+    
+    // Populate classroom dropdown
+    populateClassroomSelectFromCache();
+    
+    // Show welcome screen
+    showWelcomeScreen();
+    
+    // Update global stats if available
+    updateGlobalStatsFromCache();
+    
+    console.log('UI initialized successfully from cache');
+  }
+
+  /**
+   * Refresh dashboard data (clear server-side cache and reload)
+   */
+  function refreshDashboardData() {
+    console.log('Refreshing dashboard data...');
+    
+    showLoading('Clearing cache and refreshing data...');
+    
+    // Clear server-side cache first
+    callServerFunction('clearDashboardCache')
+      .then(clearResult => {
+        console.log('Cache clear result:', clearResult);
+        
+        // Reset client state
+        AppState.dashboardCache = null;
+        AppState.cacheError = null;
+        
+        // Fetch fresh data
+        fetchAndCacheData();
+      })
+      .catch(error => {
+        console.error('Error clearing cache:', error);
+        // Even if clearing cache fails, try to fetch fresh data
+        AppState.dashboardCache = null;
+        fetchAndCacheData();
+      });
+  }
+
+  /**
+   * Populate the classroom dropdown from cache
+   */
+  function populateClassroomSelectFromCache() {
     const select = document.getElementById('classroom-select');
     select.innerHTML = '<option value="">Select a classroom...</option>';
     
-    AppState.classrooms.forEach(classroom => {
+    if (!AppState.dashboardCache || !AppState.dashboardCache.classrooms) {
+      console.warn('No classrooms available in cache');
+      return;
+    }
+    
+    AppState.dashboardCache.classrooms.forEach(classroom => {
       const option = document.createElement('option');
       option.value = classroom.id;
       option.textContent = classroom.name;
       select.appendChild(option);
     });
+    
+    console.log(`Populated ${AppState.dashboardCache.classrooms.length} classrooms in dropdown`);
   }
 
   /**
-   * Handle classroom selection change
+   * Legacy function for backward compatibility
+   * @deprecated Use populateClassroomSelectFromCache instead
+   */
+  function populateClassroomSelect() {
+    console.warn('populateClassroomSelect is deprecated, using cache version');
+    populateClassroomSelectFromCache();
+  }
+
+  /**
+   * Handle classroom selection change - now uses cache
    */
   function onClassroomChange() {
     const select = document.getElementById('classroom-select');
     const classroomId = select.value;
     
+    console.log('🏫 [Client] Classroom selection changed:', classroomId);
+    
     if (!classroomId) {
+      console.log('📝 [Client] No classroom selected, clearing assignments');
       clearAssignmentsList();
       showWelcomeScreen();
       return;
     }
     
-    AppState.currentClassroom = AppState.classrooms.find(c => c.id === classroomId);
-    AppState.currentAssignment = null;
-    AppState.submissions = [];
+    // Debug: Log cache state
+    console.log('💾 [Client] Dashboard cache state:', {
+      hasCache: !!AppState.dashboardCache,
+      hasClassrooms: !!AppState.dashboardCache?.classrooms,
+      classroomCount: AppState.dashboardCache?.classrooms?.length || 0
+    });
     
-    loadAssignments(classroomId);
+    // Find classroom in cache
+    AppState.currentClassroom = getClassroomFromCache(classroomId);
+    AppState.currentAssignment = null;
+    
+    if (!AppState.currentClassroom) {
+      console.error('❌ [Client] Classroom not found in cache:', classroomId);
+      showError(`Classroom ${classroomId} not found in cache`);
+      return;
+    }
+    
+    console.log('✅ [Client] Found classroom in cache:', {
+      id: AppState.currentClassroom.id,
+      name: AppState.currentClassroom.name,
+      assignmentCount: AppState.currentClassroom.assignments?.length || 0,
+      studentCount: AppState.currentClassroom.students?.length || 0,
+      submissionCount: AppState.currentClassroom.submissions?.length || 0
+    });
+    
+    // Load assignments from cache (instant)
+    loadAssignmentsFromCache(classroomId);
   }
 
   /**
-   * Load assignments for selected classroom
+   * Load assignments for selected classroom from cache
+   */
+  function loadAssignmentsFromCache(classroomId) {
+    console.log('📚 [Client] Loading assignments from cache for classroom:', classroomId);
+    
+    const classroom = getClassroomFromCache(classroomId);
+    if (!classroom) {
+      console.error('❌ [Client] Classroom not found in cache');
+      showError('Classroom not found in cache');
+      return;
+    }
+    
+    // Get assignments from cache
+    const assignments = classroom.assignments || [];
+    const submissions = classroom.submissions || [];
+    
+    console.log('📊 [Client] Raw assignment data:', {
+      assignmentCount: assignments.length,
+      submissionCount: submissions.length,
+      assignmentTitles: assignments.map(a => a.title || a.id).slice(0, 3)
+    });
+    
+    // CRITICAL FIX: Populate AppState.submissions for UI compatibility
+    AppState.submissions = submissions;
+    console.log('✅ [Client] Populated AppState.submissions:', AppState.submissions.length);
+    
+    // Calculate submission stats for each assignment
+    const assignmentsWithStats = assignments.map(assignment => {
+      const assignmentSubmissions = submissions.filter(s => s.assignmentId === assignment.id);
+      const submissionStats = {
+        total: assignmentSubmissions.length,
+        graded: assignmentSubmissions.filter(s => s.status === 'graded').length,
+        pending: assignmentSubmissions.filter(s => s.status === 'pending' || s.status === 'submitted').length,
+        grading: assignmentSubmissions.filter(s => s.status === 'grading').length
+      };
+      
+      console.log(`📈 [Client] Assignment "${assignment.title}" stats:`, submissionStats);
+      
+      return {
+        ...assignment,
+        submissionStats: submissionStats
+      };
+    });
+    
+    console.log('🎯 [Client] Assignments with calculated stats:', assignmentsWithStats.length);
+    
+    // Display immediately (no loading state needed)
+    displayAssignments(assignmentsWithStats);
+    updateQuickStats(assignmentsWithStats);
+    
+    console.log(`✅ [Client] Successfully loaded ${assignments.length} assignments from cache`);
+  }
+
+  /**
+   * Load assignments for selected classroom (legacy API version)
+   * @deprecated Use loadAssignmentsFromCache for better performance
    */
   function loadAssignments(classroomId) {
+    console.warn('loadAssignments API call - consider using cache version');
     showAssignmentsLoading();
     AppState.lastAction = () => loadAssignments(classroomId);
     
@@ -105,21 +325,123 @@
   }
 
   /**
+   * Get classroom data from cache by ID
+   */
+  function getClassroomFromCache(classroomId) {
+    console.log('🔍 [Client] Looking for classroom in cache:', classroomId);
+    
+    if (!AppState.dashboardCache) {
+      console.error('❌ [Client] No dashboard cache available');
+      return null;
+    }
+    
+    if (!AppState.dashboardCache.classrooms) {
+      console.error('❌ [Client] No classrooms array in cache');
+      return null;
+    }
+    
+    console.log('📚 [Client] Searching through', AppState.dashboardCache.classrooms.length, 'cached classrooms');
+    
+    const classroom = AppState.dashboardCache.classrooms.find(c => c.id === classroomId);
+    
+    if (!classroom) {
+      console.error('❌ [Client] Classroom not found:', classroomId);
+      console.log('🔍 [Client] Available classroom IDs:', AppState.dashboardCache.classrooms.map(c => c.id));
+      return null;
+    }
+    
+    // Validate classroom data structure
+    const validation = {
+      hasId: !!classroom.id,
+      hasName: !!classroom.name,
+      hasAssignments: Array.isArray(classroom.assignments),
+      hasStudents: Array.isArray(classroom.students),
+      hasSubmissions: Array.isArray(classroom.submissions),
+      assignmentCount: classroom.assignments?.length || 0,
+      submissionCount: classroom.submissions?.length || 0
+    };
+    
+    console.log('✅ [Client] Found classroom, validating structure:', validation);
+    
+    if (!validation.hasAssignments) {
+      console.warn('⚠️ [Client] Classroom missing assignments array, adding empty array');
+      classroom.assignments = [];
+    }
+    
+    if (!validation.hasSubmissions) {
+      console.warn('⚠️ [Client] Classroom missing submissions array, adding empty array');
+      classroom.submissions = [];
+    }
+    
+    return classroom;
+  }
+
+  /**
+   * Update global statistics display from cache
+   */
+  function updateGlobalStatsFromCache() {
+    if (!AppState.dashboardCache || !AppState.dashboardCache.globalStats) {
+      return;
+    }
+    
+    const stats = AppState.dashboardCache.globalStats;
+    console.log('Global stats from cache:', stats);
+    
+    // Update stats in UI if elements exist
+    const statsElements = {
+      'total-classrooms': stats.totalClassrooms,
+      'total-students': stats.totalStudents,
+      'total-assignments': stats.totalAssignments,
+      'ungraded-submissions': stats.ungradedSubmissions
+    };
+    
+    Object.entries(statsElements).forEach(([elementId, value]) => {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.textContent = value || 0;
+      }
+    });
+  }
+
+  /**
    * Display assignments in sidebar
    */
   function displayAssignments(assignments) {
+    console.log('🎨 [Client] Displaying assignments:', {
+      count: assignments?.length || 0,
+      hasContainer: !!document.getElementById('assignments-list')
+    });
+    
     const container = document.getElementById('assignments-list');
+    if (!container) {
+      console.error('❌ [Client] assignments-list container not found!');
+      return;
+    }
+    
     container.innerHTML = '';
     
-    if (assignments.length === 0) {
+    if (!assignments || assignments.length === 0) {
+      console.log('📝 [Client] No assignments to display, showing empty message');
       container.innerHTML = '<div class="assignment-item empty-message">No assignments found</div>';
       return;
     }
     
-    assignments.forEach(assignment => {
+    console.log('🏗️ [Client] Creating assignment items...');
+    
+    assignments.forEach((assignment, index) => {
+      console.log(`📋 [Client] Creating item ${index + 1}:`, {
+        id: assignment.id,
+        title: assignment.title,
+        type: assignment.type,
+        hasStats: !!assignment.submissionStats,
+        pending: assignment.submissionStats?.pending || 0
+      });
+      
       const item = createAssignmentItem(assignment);
       container.appendChild(item);
     });
+    
+    console.log(`✅ [Client] Successfully displayed ${assignments.length} assignments`);
   }
 
   /**
@@ -149,7 +471,7 @@
   }
 
   /**
-   * Select an assignment and load its submissions
+   * Select an assignment and load its submissions - now uses cache
    */
   function selectAssignment(assignment) {
     // Update UI
@@ -159,18 +481,46 @@
     event.currentTarget.classList.add('active');
     
     AppState.currentAssignment = assignment;
-    AppState.submissions = [];
     AppState.selectedSubmissions.clear();
     
     // Show assignment view
     showAssignmentView();
-    loadSubmissions(AppState.currentClassroom.id, assignment.id);
+    
+    // Load submissions from cache (instant)
+    loadSubmissionsFromCache(AppState.currentClassroom.id, assignment.id);
   }
 
   /**
-   * Load submissions for selected assignment
+   * Load submissions for selected assignment from cache
+   */
+  function loadSubmissionsFromCache(classroomId, assignmentId) {
+    console.log('Loading submissions from cache for assignment:', assignmentId);
+    
+    const classroom = getClassroomFromCache(classroomId);
+    if (!classroom) {
+      showError('Classroom not found in cache');
+      return;
+    }
+    
+    // Filter submissions for this assignment from cache
+    const submissions = classroom.submissions?.filter(s => s.assignmentId === assignmentId) || [];
+    
+    // Display immediately (no loading state needed)
+    displaySubmissions(submissions);
+    
+    // Calculate and update stats
+    const stats = calculateStats(submissions);
+    updateSubmissionStats(stats);
+    
+    console.log(`Loaded ${submissions.length} submissions from cache for assignment ${assignmentId}`);
+  }
+
+  /**
+   * Load submissions for selected assignment (legacy API version)
+   * @deprecated Use loadSubmissionsFromCache for better performance
    */
   function loadSubmissions(classroomId, assignmentId) {
+    console.warn('loadSubmissions API call - consider using cache version');
     showLoading('Loading submissions...');
     AppState.lastAction = () => loadSubmissions(classroomId, assignmentId);
     
@@ -178,7 +528,6 @@
       .then(result => {
         hideLoading();
         if (result.success) {
-          AppState.submissions = result.data;
           displaySubmissions(result.data);
           updateSubmissionStats(result.stats || calculateStats(result.data));
         } else {
@@ -189,6 +538,27 @@
         hideLoading();
         showError('Error loading submissions: ' + error.message);
       });
+  }
+
+  /**
+   * Calculate submission statistics
+   */
+  function calculateStats(submissions) {
+    if (!submissions || submissions.length === 0) {
+      return {
+        total: 0,
+        graded: 0,
+        pending: 0,
+        grading: 0
+      };
+    }
+    
+    return {
+      total: submissions.length,
+      graded: submissions.filter(s => s.status === 'graded').length,
+      pending: submissions.filter(s => s.status === 'pending' || s.status === 'submitted').length,
+      grading: submissions.filter(s => s.status === 'grading').length
+    };
   }
 
   /**

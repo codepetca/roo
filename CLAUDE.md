@@ -144,6 +144,25 @@ npm run dev             # Start frontend + emulators (separate terminal)
 git commit -m "feat: description 🤖 Generated with [Claude Code](https://claude.ai/code)"
 ```
 
+## 📱 **AppScript Deployment (CRITICAL)**
+
+**🚨 IMPORTANT**: For AppScript projects, `clasp push` only uploads files - it does NOT update the live web app!
+
+### **Correct AppScript Deployment Flow**
+```bash
+# 1. Upload code changes
+clasp push
+
+# 2. Update live web app (REQUIRED!)
+clasp deploy --deploymentId AKfycbxCACap-LCKNjYSx8oXAS2vxnjrvcXn6Weypd_dIr_wbiRPsIKh0J2Z4bMSxuK9vyM2hw --description "Update description"
+```
+
+### **AppScript Project Locations**
+- **Teacher Grading UI**: `appscript/development/teacher-grading-ui/`
+- **Deployment ID**: `AKfycbxCACap-LCKNjYSx8oXAS2vxnjrvcXn6Weypd_dIr_wbiRPsIKh0J2Z4bMSxuK9vyM2hw`
+
+**⚠️ Common Mistake**: Running only `clasp push` and expecting the web app to update - it won't!
+
 ---
 
 **Last Updated**: January 2025 - Update only when core architecture changes.

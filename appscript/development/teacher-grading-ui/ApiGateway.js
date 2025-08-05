@@ -198,6 +198,229 @@ function fetchSubmissions(classroomId, assignmentId) {
 }
 
 /**
+ * Fetch complete dashboard data (all classrooms with nested assignments, students, submissions)
+ * This is the main function that populates the teacher dashboard cache
+ */
+function fetchFullDashboardData() {
+  debugLog('fetchFullDashboardData called', { useMock: CONFIG.USE_MOCK });
+  
+  try {
+    if (CONFIG.USE_MOCK) {
+      simulateDelay(1000); // Simulate network delay for complete data fetch
+      
+      // Build complete dashboard structure from mock data
+      const dashboardData = buildMockDashboardData();
+      
+      return {
+        success: true,
+        data: dashboardData,
+        source: 'mock',
+        timestamp: new Date().toISOString()
+      };
+    } else {
+      // Real implementation - fetch from Google Classroom APIs
+      return fetchRealDashboardData();
+    }
+  } catch (error) {
+    debugLog('fetchFullDashboardData error', error.toString());
+    return {
+      success: false,
+      error: error.toString(),
+      source: CONFIG.USE_MOCK ? 'mock' : 'google-classroom',
+      timestamp: new Date().toISOString()
+    };
+  }
+}
+
+/**
+ * Build complete dashboard data structure from mock data
+ */
+function buildMockDashboardData() {
+  debugLog('Building mock dashboard data');
+  
+  // Get teacher info
+  const teacher = {
+    email: Session.getActiveUser().getEmail(),
+    name: Session.getActiveUser().getEmail().split('@')[0],
+    isTeacher: true
+  };
+  
+  debugLog('Building classrooms with nested data');
+  
+  // Build classrooms with complete nested data
+  const classrooms = MOCK_CLASSROOMS.map(classroom => {
+    const assignments = MOCK_ASSIGNMENTS[classroom.id] || [];
+    const students = MOCK_STUDENTS[classroom.id] || [];
+    const submissions = [];
+    
+    debugLog(`Processing classroom ${classroom.id}`, {
+      assignmentCount: assignments.length,
+      studentCount: students.length,
+      assignmentTitles: assignments.map(a => a.title).slice(0, 3)
+    });
+    
+    // Collect all submissions for this classroom
+    assignments.forEach(assignment => {
+      const assignmentSubmissions = MOCK_SUBMISSIONS[assignment.id] || [];
+      submissions.push(...assignmentSubmissions);
+    });
+    
+    debugLog(`Classroom ${classroom.id} submissions collected`, {
+      totalSubmissions: submissions.length
+    });
+    
+    // Transform to cache format
+    const transformedClassroom = {
+      ...classroom,
+      // Update counts based on actual data
+      studentCount: students.length,
+      assignmentCount: assignments.length,
+      totalSubmissions: submissions.length,
+      ungradedSubmissions: submissions.filter(s => s.status === 'pending' || s.status === 'submitted').length,
+      
+      // Add nested data
+      assignments: assignments,
+      students: students,
+      submissions: submissions
+    };
+    
+    debugLog(`Transformed classroom ${classroom.id}`, {
+      assignmentCount: transformedClassroom.assignmentCount,
+      totalSubmissions: transformedClassroom.totalSubmissions,
+      hasAssignments: Array.isArray(transformedClassroom.assignments),
+      actualAssignments: transformedClassroom.assignments.length
+    });
+    
+    return transformedClassroom;
+  });
+  
+  debugLog('Calling CacheManager.createDashboardCache', {
+    classroomCount: classrooms.length,
+    totalAssignments: classrooms.reduce((sum, c) => sum + c.assignments.length, 0)
+  });
+  
+  // Use server-side CacheManager to create proper structure
+  const result = CacheManager.createDashboardCache(teacher, classrooms, 'mock');
+  
+  debugLog('CacheManager.createDashboardCache result', {
+    hasClassrooms: !!result.classrooms,
+    classroomCount: result.classrooms?.length || 0,
+    firstClassroomAssignments: result.classrooms?.[0]?.assignments?.length || 0
+  });
+  
+  return result;
+}
+
+/**
+ * Fetch real dashboard data from Google Classroom APIs
+ */
+function fetchRealDashboardData() {
+  debugLog('Fetching real dashboard data from Google Classroom');
+  
+  try {
+    const token = ScriptApp.getOAuthToken();
+    
+    // Step 1: Get teacher info
+    const teacher = {
+      email: Session.getActiveUser().getEmail(),
+      name: Session.getActiveUser().getEmail().split('@')[0],
+      isTeacher: true
+    };
+    
+    // Step 2: Get all classrooms
+    const classroomsResponse = UrlFetchApp.fetch(
+      'https://classroom.googleapis.com/v1/courses?teacherId=me&courseStates=ACTIVE',
+      {
+        headers: { 'Authorization': 'Bearer ' + token },
+        muteHttpExceptions: true
+      }
+    );
+    
+    if (classroomsResponse.getResponseCode() !== 200) {
+      throw new Error(`Classrooms API Error: ${classroomsResponse.getResponseCode()}`);
+    }
+    
+    const classroomsData = JSON.parse(classroomsResponse.getContentText());
+    const courses = classroomsData.courses || [];
+    
+    // Step 3: For each classroom, fetch assignments, students, and submissions
+    const classrooms = courses.map(course => {
+      debugLog('Processing classroom', { id: course.id, name: course.name });
+      
+      try {
+        // Fetch assignments for this classroom
+        const assignmentsResponse = UrlFetchApp.fetch(
+          `https://classroom.googleapis.com/v1/courses/${course.id}/courseWork`,
+          {
+            headers: { 'Authorization': 'Bearer ' + token },
+            muteHttpExceptions: true
+          }
+        );
+        
+        const assignments = assignmentsResponse.getResponseCode() === 200 
+          ? JSON.parse(assignmentsResponse.getContentText()).courseWork || []
+          : [];
+        
+        // Fetch students for this classroom
+        const studentsResponse = UrlFetchApp.fetch(
+          `https://classroom.googleapis.com/v1/courses/${course.id}/students`,
+          {
+            headers: { 'Authorization': 'Bearer ' + token },
+            muteHttpExceptions: true
+          }
+        );
+        
+        const students = studentsResponse.getResponseCode() === 200
+          ? JSON.parse(studentsResponse.getContentText()).students || []
+          : [];
+        
+        // For now, we'll skip fetching submissions for each assignment to avoid API limits
+        // In a production system, this would be done in batches or on-demand
+        const submissions = [];
+        
+        return {
+          ...course,
+          studentCount: students.length,
+          assignmentCount: assignments.length,
+          totalSubmissions: submissions.length,
+          ungradedSubmissions: 0,
+          assignments: assignments,
+          students: students,
+          submissions: submissions
+        };
+      } catch (error) {
+        debugLog('Error processing classroom', { classroomId: course.id, error: error.toString() });
+        // Return classroom with empty nested data on error
+        return {
+          ...course,
+          studentCount: 0,
+          assignmentCount: 0,
+          totalSubmissions: 0,
+          ungradedSubmissions: 0,
+          assignments: [],
+          students: [],
+          submissions: []
+        };
+      }
+    });
+    
+    // Use server-side CacheManager to create proper structure
+    const dashboardData = CacheManager.createDashboardCache(teacher, classrooms, 'google-classroom');
+    
+    return {
+      success: true,
+      data: dashboardData,
+      source: 'google-classroom',
+      timestamp: new Date().toISOString()
+    };
+    
+  } catch (error) {
+    debugLog('fetchRealDashboardData error', error.toString());
+    throw error;
+  }
+}
+
+/**
  * Call external API for AI grading
  */
 function callGradingAPI(submissionData) {
