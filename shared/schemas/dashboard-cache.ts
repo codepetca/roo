@@ -1,9 +1,15 @@
 import { z } from "zod";
+import { baseAssignmentSchema } from "./assignment-base";
+import { assignmentMaterialsSchema } from "./assignment-materials";
+import { rubricSchema } from "./rubric";
+import { quizDataSchema } from "./quiz-data";
+import { enhancedSubmissionSchema } from "./submission";
 
 /**
  * Dashboard Cache Schemas
  * Comprehensive caching schemas for teacher dashboard data
  * Compatible with both AppScript and Svelte frontends
+ * Now using modular schema components for better maintainability
  * 
  * Location: shared/schemas/dashboard-cache.ts
  */
@@ -29,10 +35,25 @@ export const teacherProfileCacheSchema = z.object({
 });
 
 // ============================================
-// Assignment Schema with Statistics
+// Enhanced Assignment Schema for Cache
 // ============================================
-export const assignmentWithStatsSchema = z.object({
-  // Core assignment data
+export const assignmentWithStatsSchema = baseAssignmentSchema.extend({
+  // Enhanced data (optional for backward compatibility)
+  materials: assignmentMaterialsSchema.optional(),
+  rubric: rubricSchema.optional(),
+  quizData: quizDataSchema.optional(),
+  
+  // Legacy type mapping for backward compatibility
+  type: z.enum(['coding', 'quiz', 'written', 'assignment', 'form']).transform(val => {
+    // Map legacy types to new types
+    if (val === 'coding' || val === 'written') return 'assignment';
+    return val;
+  })
+});
+
+// Legacy assignment schema (for backward compatibility)
+export const legacyAssignmentSchema = z.object({
+  // Core assignment data (legacy format)
   id: z.string(),
   title: z.string(),
   description: z.string(),
@@ -98,42 +119,11 @@ export const studentCacheSchema = z.object({
 });
 
 // ============================================
-// Submission Schema
+// Submission Schema (using enhanced modular schema)
 // ============================================
-export const submissionCacheSchema = z.object({
-  id: z.string(),
-  assignmentId: z.string(),
-  studentId: z.string(),
-  studentEmail: z.string().email(),
-  studentName: z.string(),
-  
-  // Submission content
-  submissionText: z.string().optional(),
-  attachments: z.array(z.object({
-    id: z.string(),
-    title: z.string(),
-    url: z.string().url()
-  })).default([]),
-  
-  // Status and timing
-  status: z.enum(['pending', 'submitted', 'grading', 'graded', 'returned', 'error']),
-  submittedAt: z.string().datetime().optional(),
-  updatedAt: z.string().datetime(),
-  
-  // Grading information
-  grade: z.object({
-    score: z.number(),
-    maxScore: z.number(),
-    feedback: z.string().optional(),
-    gradedAt: z.string().datetime(),
-    gradedBy: z.enum(['ai', 'manual', 'system'])
-  }).optional(),
-  
-  // Google Classroom specific
-  late: z.boolean().default(false),
-  draftGrade: z.number().optional(),
-  assignedGrade: z.number().optional()
-});
+// Note: Now using enhancedSubmissionSchema from submission.ts
+// Keeping legacy alias for backward compatibility
+export const submissionCacheSchema = enhancedSubmissionSchema;
 
 // ============================================
 // Classroom Schema with Nested Data
@@ -228,7 +218,7 @@ export type CacheMetadata = z.infer<typeof cacheMetadataSchema>;
 export type TeacherProfileCache = z.infer<typeof teacherProfileCacheSchema>;
 export type AssignmentWithStats = z.infer<typeof assignmentWithStatsSchema>;
 export type StudentCache = z.infer<typeof studentCacheSchema>;
-export type SubmissionCache = z.infer<typeof submissionCacheSchema>;
+export type SubmissionCache = z.infer<typeof submissionCacheSchema>; // Now uses EnhancedSubmission type
 export type ClassroomWithData = z.infer<typeof classroomWithDataSchema>;
 export type TeacherDashboardCache = z.infer<typeof teacherDashboardCacheSchema>;
 export type ClassroomPartialCache = z.infer<typeof classroomPartialCacheSchema>;

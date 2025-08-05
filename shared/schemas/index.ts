@@ -16,6 +16,14 @@ export * from "./dto";
 // Dashboard cache schemas (for UI state management)
 export * from "./dashboard-cache";
 
+// Modular schemas for AI grading
+export * from "./assignment-base";
+export * from "./assignment-materials";
+export * from "./rubric";
+export * from "./quiz-data";
+export * from "./submission";
+export * from "./ai-grading";
+
 // Transformer utilities
 export * from "./transformers";
 

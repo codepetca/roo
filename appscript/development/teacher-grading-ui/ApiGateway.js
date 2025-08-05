@@ -354,35 +354,8 @@ function fetchRealDashboardData() {
       debugLog('Processing classroom', { id: course.id, name: course.name });
       
       try {
-        // Fetch assignments for this classroom
-        const assignmentsResponse = UrlFetchApp.fetch(
-          `https://classroom.googleapis.com/v1/courses/${course.id}/courseWork`,
-          {
-            headers: { 'Authorization': 'Bearer ' + token },
-            muteHttpExceptions: true
-          }
-        );
-        
-        const assignments = assignmentsResponse.getResponseCode() === 200 
-          ? JSON.parse(assignmentsResponse.getContentText()).courseWork || []
-          : [];
-          
-        debugLog(`Fetched ${assignments.length} assignments for classroom ${course.id}`);
-        
-        // Transform assignments to match our expected format
-        const transformedAssignments = assignments.map(assignment => ({
-          id: assignment.id,
-          title: assignment.title || 'Untitled Assignment',
-          description: assignment.description || '',
-          type: assignment.workType === 'ASSIGNMENT' ? 'coding' : 'quiz', // Simplified mapping
-          status: 'pending', // Default status
-          maxScore: assignment.maxPoints || 100,
-          dueDate: assignment.dueDate ? new Date(assignment.dueDate.year, assignment.dueDate.month - 1, assignment.dueDate.day).toISOString() : null,
-          creationTime: assignment.creationTime,
-          updateTime: assignment.updateTime,
-          workType: assignment.workType,
-          alternateLink: assignment.alternateLink
-        }));
+        // Fetch enhanced assignments with materials, rubrics, and quiz data
+        const transformedAssignments = fetchEnhancedAssignments(course.id, token);
         
         // Fetch students for this classroom
         const studentsResponse = UrlFetchApp.fetch(
@@ -817,56 +790,10 @@ function fetchAllSubmissionsForClassroom(courseId, assignments, students, token)
         
         debugLog(`Found ${submissions.length} submissions for assignment ${assignment.id}`);
         
-        // Transform each submission to match our cache schema
+        // Transform each submission using enhanced processing
         const transformedSubmissions = submissions.map(submission => {
           const student = studentMap[submission.userId] || {};
-          
-          // Map Google Classroom state to our status
-          let status = 'pending';
-          if (submission.state === 'TURNED_IN') {
-            status = submission.assignedGrade !== undefined ? 'graded' : 'submitted';
-          } else if (submission.state === 'RETURNED') {
-            status = 'returned';
-          } else if (submission.state === 'RECLAIMED_BY_STUDENT') {
-            status = 'pending';
-          }
-          
-          // Build grade object if graded
-          let grade = undefined;
-          if (submission.assignedGrade !== undefined) {
-            grade = {
-              score: submission.assignedGrade,
-              maxScore: assignment.maxScore,
-              feedback: submission.gradeHistory?.[0]?.gradeChangeType || '',
-              gradedAt: submission.gradeHistory?.[0]?.gradeTimestamp || new Date().toISOString(),
-              gradedBy: 'manual' // Since it's from Google Classroom
-            };
-          }
-          
-          return {
-            id: submission.id,
-            assignmentId: assignment.id,
-            studentId: submission.userId,
-            studentEmail: student.email || '',
-            studentName: student.name || student.displayName || 'Unknown Student',
-            
-            // Submission content (if available)
-            submissionText: submission.assignmentSubmission?.attachments?.[0]?.link?.url || '',
-            attachments: [],
-            
-            // Status and timing
-            status: status,
-            submittedAt: submission.lastModifiedTime || submission.creationTime,
-            updatedAt: submission.updateTime || submission.lastModifiedTime || new Date().toISOString(),
-            
-            // Grading information
-            grade: grade,
-            
-            // Google Classroom specific
-            late: submission.late || false,
-            draftGrade: submission.draftGrade,
-            assignedGrade: submission.assignedGrade
-          };
+          return processEnhancedSubmission(submission, assignment, student);
         });
         
         allSubmissions.push(...transformedSubmissions);
@@ -892,4 +819,653 @@ function fetchAllSubmissionsForClassroom(courseId, assignments, students, token)
   });
   
   return allSubmissions;
+}
+
+/**
+ * Enhanced Assignment Data Fetching
+ * Fetch assignment with materials, rubrics, and quiz data for AI grading
+ */
+
+/**
+ * Fetch assignment materials (Drive files, forms, links, YouTube videos)
+ * @param {Object} assignment - Assignment object from Google Classroom
+ * @param {string} token - OAuth token
+ * @returns {Object} Materials object matching assignmentMaterialsSchema
+ */
+function fetchAssignmentMaterials(assignment, token) {
+  debugLog(`Fetching materials for assignment: ${assignment.title}`);
+  
+  try {
+    const materials = {
+      driveFiles: [],
+      links: [],
+      youtubeVideos: [],
+      forms: []
+    };
+    
+    // Process assignment materials
+    if (assignment.materials && assignment.materials.length > 0) {
+      assignment.materials.forEach(material => {
+        if (material.driveFile) {
+          materials.driveFiles.push({
+            id: material.driveFile.driveFile.id,
+            title: material.driveFile.driveFile.title,
+            alternateLink: material.driveFile.driveFile.alternateLink,
+            thumbnailUrl: material.driveFile.driveFile.thumbnailUrl
+          });
+        } else if (material.link) {
+          materials.links.push({
+            url: material.link.url,
+            title: material.link.title || material.link.url,
+            thumbnailUrl: material.link.thumbnailUrl
+          });
+        } else if (material.youtubeVideo) {
+          materials.youtubeVideos.push({
+            id: material.youtubeVideo.id,
+            title: material.youtubeVideo.title,
+            alternateLink: material.youtubeVideo.alternateLink,
+            thumbnailUrl: material.youtubeVideo.thumbnailUrl
+          });
+        } else if (material.form) {
+          materials.forms.push({
+            formUrl: material.form.formUrl,
+            responseUrl: material.form.responseUrl,
+            title: material.form.title,
+            thumbnailUrl: material.form.thumbnailUrl
+          });
+        }
+      });
+    }
+    
+    debugLog(`Found materials for ${assignment.title}:`, {
+      driveFiles: materials.driveFiles.length,
+      links: materials.links.length,
+      youtubeVideos: materials.youtubeVideos.length,
+      forms: materials.forms.length
+    });
+    
+    return materials;
+  } catch (error) {
+    debugLog(`Error fetching materials for assignment ${assignment.id}:`, error.toString());
+    return { driveFiles: [], links: [], youtubeVideos: [], forms: [] };
+  }
+}
+
+/**
+ * Fetch rubric data for an assignment
+ * @param {string} courseId - Course ID
+ * @param {string} assignmentId - Assignment ID  
+ * @param {string} token - OAuth token
+ * @returns {Object|null} Rubric object or null if no rubric
+ */
+function fetchAssignmentRubric(courseId, assignmentId, token) {
+  debugLog(`Fetching rubric for assignment: ${assignmentId}`);
+  
+  try {
+    // Fetch the assignment details to get rubric
+    const response = UrlFetchApp.fetch(
+      `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork/${assignmentId}`,
+      {
+        headers: { 'Authorization': 'Bearer ' + token },
+        muteHttpExceptions: true
+      }
+    );
+    
+    if (response.getResponseCode() !== 200) {
+      debugLog(`Failed to fetch assignment details for rubric: ${response.getResponseCode()}`);
+      return null;
+    }
+    
+    const assignment = JSON.parse(response.getContentText());
+    
+    // Check if assignment has a rubric
+    if (!assignment.gradeCategory || !assignment.gradeCategory.rubric) {
+      debugLog(`No rubric found for assignment ${assignmentId}`);
+      return null;
+    }
+    
+    const rubricData = assignment.gradeCategory.rubric;
+    
+    // Transform to our rubric schema
+    const rubric = {
+      id: rubricData.id || assignmentId + '_rubric',
+      title: rubricData.title || 'Assignment Rubric',
+      criteria: rubricData.criteria.map(criterion => ({
+        title: criterion.title,
+        description: criterion.description || '',
+        levels: criterion.levels.map(level => ({
+          title: level.title,
+          description: level.description || '',
+          points: level.points || 0
+        })),
+        weight: criterion.weight || 1
+      })),
+      totalPoints: rubricData.criteria.reduce((sum, criterion) => {
+        const maxPoints = Math.max(...criterion.levels.map(level => level.points || 0));
+        return sum + maxPoints;
+      }, 0),
+      useForGrading: true,
+      showToStudents: true,
+      source: 'google-classroom'
+    };
+    
+    debugLog(`Fetched rubric for assignment ${assignmentId}:`, {
+      criteriaCount: rubric.criteria.length,
+      totalPoints: rubric.totalPoints
+    });
+    
+    return rubric;
+  } catch (error) {
+    debugLog(`Error fetching rubric for assignment ${assignmentId}:`, error.toString());
+    return null;
+  }
+}
+
+/**
+ * Fetch Google Forms quiz data
+ * @param {string} formUrl - Google Forms URL
+ * @param {string} token - OAuth token
+ * @returns {Object|null} Quiz data object or null if not a quiz
+ */
+function fetchFormQuizData(formUrl, token) {
+  debugLog(`Fetching quiz data from form: ${formUrl}`);
+  
+  try {
+    // Extract form ID from URL
+    const formIdMatch = formUrl.match(/\/forms\/d\/([a-zA-Z0-9-_]+)/);
+    if (!formIdMatch) {
+      debugLog(`Could not extract form ID from URL: ${formUrl}`);
+      return null;
+    }
+    
+    const formId = formIdMatch[1];
+    
+    // Fetch form data using Google Forms API
+    const response = UrlFetchApp.fetch(
+      `https://forms.googleapis.com/v1/forms/${formId}`,
+      {
+        headers: { 'Authorization': 'Bearer ' + token },
+        muteHttpExceptions: true
+      }
+    );
+    
+    if (response.getResponseCode() !== 200) {
+      debugLog(`Failed to fetch form data: ${response.getResponseCode()}`);
+      return null;
+    }
+    
+    const form = JSON.parse(response.getContentText());
+    
+    // Check if it's a quiz
+    if (!form.settings || !form.settings.quizSettings) {
+      debugLog(`Form ${formId} is not configured as a quiz`);
+      return null;
+    }
+    
+    // Transform to our quiz schema
+    const quizData = {
+      formId: formId,
+      formUrl: formUrl,
+      title: form.info.title,
+      description: form.info.description || '',
+      isQuiz: true,
+      collectEmailAddresses: form.settings.quizSettings.isQuiz || false,
+      questions: [],
+      totalQuestions: 0,
+      totalPoints: 0,
+      autoGradableQuestions: 0,
+      manualGradingRequired: false
+    };
+    
+    // Process form items (questions)
+    if (form.items && form.items.length > 0) {
+      form.items.forEach((item, index) => {
+        if (item.questionItem) {
+          const question = item.questionItem.question;
+          const grading = item.questionItem.question.grading;
+          
+          // Determine question type
+          let questionType = 'PARAGRAPH'; // Default
+          if (question.choiceQuestion) {
+            questionType = question.choiceQuestion.type === 'RADIO' ? 'RADIO' : 'CHECKBOX';
+          } else if (question.textQuestion && question.textQuestion.paragraph) {
+            questionType = 'PARAGRAPH';
+          } else if (question.textQuestion) {
+            questionType = 'SHORT_ANSWER';
+          } else if (question.scaleQuestion) {
+            questionType = 'LINEAR_SCALE';
+          }
+          
+          // Extract correct answers and feedback
+          let correctAnswers = [];
+          let sampleSolution = '';
+          let feedback = {};
+          
+          if (grading && grading.correctAnswers) {
+            correctAnswers = grading.correctAnswers.answers.map(answer => 
+              answer.value || ''
+            );
+          }
+          
+          if (grading && grading.generalFeedback) {
+            sampleSolution = grading.generalFeedback.text || '';
+            feedback.general = sampleSolution;
+          }
+          
+          if (grading && grading.whenRight) {
+            feedback.correct = grading.whenRight.text || '';
+          }
+          
+          if (grading && grading.whenWrong) {
+            feedback.incorrect = grading.whenWrong.text || '';
+          }
+          
+          const questionData = {
+            id: item.itemId,
+            title: item.title || `Question ${index + 1}`,
+            description: item.description || '',
+            type: questionType,
+            points: grading ? (grading.pointValue || 0) : 0,
+            required: question.required || false,
+            correctAnswers: correctAnswers.length > 0 ? correctAnswers : undefined,
+            sampleSolution: sampleSolution || undefined,
+            feedback: Object.keys(feedback).length > 0 ? feedback : undefined,
+            autoGradable: correctAnswers.length > 0 && questionType !== 'PARAGRAPH',
+            caseSensitive: false, // Default for Google Forms
+            index: index
+          };
+          
+          // Add options for choice questions
+          if (question.choiceQuestion && question.choiceQuestion.options) {
+            questionData.options = question.choiceQuestion.options.map(option => option.value);
+          }
+          
+          quizData.questions.push(questionData);
+          quizData.totalPoints += questionData.points;
+          
+          if (questionData.autoGradable) {
+            quizData.autoGradableQuestions++;
+          } else {
+            quizData.manualGradingRequired = true;
+          }
+        }
+      });
+    }
+    
+    quizData.totalQuestions = quizData.questions.length;
+    
+    debugLog(`Fetched quiz data for form ${formId}:`, {
+      totalQuestions: quizData.totalQuestions,
+      totalPoints: quizData.totalPoints,
+      autoGradable: quizData.autoGradableQuestions,
+      manualGrading: quizData.manualGradingRequired
+    });
+    
+    return quizData;
+  } catch (error) {
+    debugLog(`Error fetching quiz data from form ${formUrl}:`, error.toString());
+    return null;
+  }
+}
+
+/**
+ * Enhanced assignment fetching with materials, rubrics, and quiz data
+ * @param {string} courseId - Course ID
+ * @param {string} token - OAuth token
+ * @returns {Array} Enhanced assignments with full context for AI grading
+ */
+function fetchEnhancedAssignments(courseId, token) {
+  debugLog(`Fetching enhanced assignments for course: ${courseId}`);
+  
+  try {
+    // First fetch basic assignments
+    const response = UrlFetchApp.fetch(
+      `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork`,
+      {
+        headers: { 'Authorization': 'Bearer ' + token },
+        muteHttpExceptions: true
+      }
+    );
+    
+    if (response.getResponseCode() !== 200) {
+      debugLog(`Failed to fetch assignments: ${response.getResponseCode()}`);
+      return [];
+    }
+    
+    const data = JSON.parse(response.getContentText());
+    const assignments = data.courseWork || [];
+    
+    debugLog(`Processing ${assignments.length} assignments for enhancement`);
+    
+    // Enhance each assignment with additional data
+    const enhancedAssignments = assignments.map((assignment, index) => {
+      debugLog(`Enhancing assignment ${index + 1}/${assignments.length}: ${assignment.title}`);
+      
+      // Add delay between API calls to avoid rate limits
+      if (index > 0) {
+        Utilities.sleep(300);
+      }
+      
+      // Base assignment data
+      const enhancedAssignment = {
+        // Base fields from baseAssignmentSchema
+        id: assignment.id,
+        title: assignment.title || 'Untitled Assignment',
+        description: assignment.description || '',
+        type: assignment.workType === 'ASSIGNMENT' ? 'assignment' : 
+              assignment.workType === 'SHORT_ANSWER_QUESTION' ? 'quiz' :
+              assignment.workType === 'MULTIPLE_CHOICE_QUESTION' ? 'quiz' : 'assignment',
+        state: assignment.state || 'PUBLISHED',
+        maxPoints: assignment.maxPoints || 100,
+        dueDate: assignment.dueDate ? 
+          new Date(assignment.dueDate.year, assignment.dueDate.month - 1, assignment.dueDate.day).toISOString() : 
+          undefined,
+        creationTime: assignment.creationTime,
+        updateTime: assignment.updateTime,
+        workType: assignment.workType,
+        alternateLink: assignment.alternateLink,
+        
+        // Enhanced data (optional)
+        materials: fetchAssignmentMaterials(assignment, token),
+        rubric: fetchAssignmentRubric(courseId, assignment.id, token),
+        quizData: undefined, // Will be populated if assignment has a form
+        
+        // Legacy fields for backward compatibility
+        status: 'published',
+        submissionStats: {
+          total: 0,
+          submitted: 0,
+          graded: 0,
+          pending: 0
+        }
+      };
+      
+      // Check if assignment has a form and fetch quiz data
+      if (enhancedAssignment.materials.forms.length > 0) {
+        const formUrl = enhancedAssignment.materials.forms[0].formUrl;
+        enhancedAssignment.quizData = fetchFormQuizData(formUrl, token);
+        
+        // Update type if it's a quiz form
+        if (enhancedAssignment.quizData) {
+          enhancedAssignment.type = 'quiz';
+        }
+      }
+      
+      debugLog(`Enhanced assignment ${assignment.title}:`, {
+        type: enhancedAssignment.type,
+        hasMaterials: Object.values(enhancedAssignment.materials).some(arr => arr.length > 0),
+        hasRubric: !!enhancedAssignment.rubric,
+        hasQuizData: !!enhancedAssignment.quizData
+      });
+      
+      return enhancedAssignment;
+    });
+    
+    debugLog(`Enhanced assignment processing complete:`, {
+      totalAssignments: enhancedAssignments.length,
+      withMaterials: enhancedAssignments.filter(a => 
+        Object.values(a.materials).some(arr => arr.length > 0)
+      ).length,
+      withRubrics: enhancedAssignments.filter(a => a.rubric).length,
+      withQuizData: enhancedAssignments.filter(a => a.quizData).length
+    });
+    
+    return enhancedAssignments;
+  } catch (error) {
+    debugLog(`Error fetching enhanced assignments:`, error.toString());
+    return [];
+  }
+}
+
+/**
+ * Enhanced submission processing with detailed attachment information
+ * @param {Object} submission - Raw Google Classroom submission
+ * @param {Object} assignment - Enhanced assignment object
+ * @param {Object} student - Student information
+ * @returns {Object} Enhanced submission matching the new schema
+ */
+function processEnhancedSubmission(submission, assignment, student) {
+  try {
+    // Process attachments with detailed information
+    const attachments = [];
+    
+    if (submission.assignmentSubmission && submission.assignmentSubmission.attachments) {
+      submission.assignmentSubmission.attachments.forEach(attachment => {
+        if (attachment.driveFile) {
+          const driveFile = attachment.driveFile;
+          attachments.push({
+            type: 'driveFile',
+            id: driveFile.id,
+            title: driveFile.title,
+            alternateLink: driveFile.alternateLink,
+            thumbnailUrl: driveFile.thumbnailUrl,
+            
+            // Enhanced file information
+            mimeType: driveFile.mimeType || 'application/octet-stream',
+            fileExtension: driveFile.title ? driveFile.title.split('.').pop() : undefined,
+            
+            // Content type classification
+            contentType: classifyContentType(driveFile.mimeType),
+            
+            // AI processing readiness
+            textExtractable: isTextExtractable(driveFile.mimeType),
+            needsDownload: true,
+            
+            // Access URLs
+            downloadUrl: driveFile.downloadUrl,
+            exportUrl: driveFile.exportUrl,
+            viewUrl: driveFile.alternateLink
+          });
+        } else if (attachment.link) {
+          attachments.push({
+            type: 'link',
+            url: attachment.link.url,
+            title: attachment.link.title || attachment.link.url,
+            thumbnailUrl: attachment.link.thumbnailUrl,
+            
+            // Link classification
+            domain: new URL(attachment.link.url).hostname,
+            linkType: classifyLinkType(attachment.link.url),
+            accessible: true,
+            requiresAuth: false
+          });
+        } else if (attachment.youtubeVideo) {
+          attachments.push({
+            type: 'youtubeVideo',
+            id: attachment.youtubeVideo.id,
+            title: attachment.youtubeVideo.title,
+            alternateLink: attachment.youtubeVideo.alternateLink,
+            thumbnailUrl: attachment.youtubeVideo.thumbnailUrl
+          });
+        } else if (attachment.form) {
+          attachments.push({
+            type: 'form',
+            formUrl: attachment.form.formUrl,
+            responseUrl: attachment.form.responseUrl,
+            title: attachment.form.title,
+            thumbnailUrl: attachment.form.thumbnailUrl,
+            formId: extractFormId(attachment.form.formUrl),
+            responseProcessed: false
+          });
+        }
+      });
+    }
+    
+    // Map Google Classroom state to our status
+    let status = 'pending';
+    if (submission.state === 'TURNED_IN') {
+      status = submission.assignedGrade !== undefined ? 'graded' : 'submitted';
+    } else if (submission.state === 'RETURNED') {
+      status = 'returned';
+    } else if (submission.state === 'RECLAIMED_BY_STUDENT') {
+      status = 'pending';
+    }
+    
+    // Build grade object if graded
+    let grade = undefined;
+    if (submission.assignedGrade !== undefined) {
+      grade = {
+        score: submission.assignedGrade,
+        maxScore: assignment.maxPoints || 100,
+        percentage: (submission.assignedGrade / (assignment.maxPoints || 100)) * 100,
+        feedback: submission.gradeHistory?.[0]?.gradeChangeType || '',
+        gradedAt: submission.gradeHistory?.[0]?.gradeTimestamp || new Date().toISOString(),
+        gradedBy: 'manual' // Since it's from Google Classroom
+      };
+    }
+    
+    // Enhanced submission object
+    const enhancedSubmission = {
+      // Basic identification
+      id: submission.id,
+      assignmentId: assignment.id,
+      
+      // Student information
+      studentId: submission.userId,
+      studentEmail: student.email || '',
+      studentName: student.name || student.displayName || 'Unknown Student',
+      
+      // Submission content
+      submissionText: extractSubmissionText(submission),
+      attachments: attachments,
+      
+      // For quiz submissions - will be populated later if needed
+      quizResponse: undefined,
+      
+      // Status and timing
+      status: status,
+      submittedAt: submission.lastModifiedTime || submission.creationTime,
+      updatedAt: submission.updateTime || submission.lastModifiedTime || new Date().toISOString(),
+      
+      // Grading information
+      grade: grade,
+      
+      // Google Classroom specific
+      late: submission.late || false,
+      draftGrade: submission.draftGrade,
+      assignedGrade: submission.assignedGrade,
+      
+      // AI processing status
+      aiProcessingStatus: {
+        contentExtracted: false,
+        readyForGrading: attachments.length > 0 || !!extractSubmissionText(submission),
+        processingErrors: [],
+        lastProcessedAt: undefined
+      }
+    };
+    
+    return enhancedSubmission;
+  } catch (error) {
+    debugLog(`Error processing enhanced submission ${submission.id}:`, error.toString());
+    
+    // Return basic submission on error
+    return {
+      id: submission.id,
+      assignmentId: assignment.id,
+      studentId: submission.userId,
+      studentEmail: student.email || '',
+      studentName: student.name || 'Unknown Student',
+      submissionText: '',
+      attachments: [],
+      status: 'error',
+      submittedAt: submission.creationTime,
+      updatedAt: new Date().toISOString(),
+      late: false,
+      aiProcessingStatus: {
+        contentExtracted: false,
+        readyForGrading: false,
+        processingErrors: [error.toString()]
+      }
+    };
+  }
+}
+
+/**
+ * Classify content type based on MIME type
+ */
+function classifyContentType(mimeType) {
+  if (!mimeType) return 'other';
+  
+  if (mimeType.includes('document') || mimeType.includes('text') || mimeType.includes('rtf')) {
+    return 'document';
+  } else if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) {
+    return 'spreadsheet';
+  } else if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) {
+    return 'presentation';
+  } else if (mimeType.includes('pdf')) {
+    return 'pdf';
+  } else if (mimeType.includes('image')) {
+    return 'image';
+  }
+  
+  return 'other';
+}
+
+/**
+ * Check if content is text extractable
+ */
+function isTextExtractable(mimeType) {
+  if (!mimeType) return false;
+  
+  const extractable = [
+    'application/vnd.google-apps.document',
+    'application/vnd.google-apps.spreadsheet',
+    'application/vnd.google-apps.presentation',
+    'application/pdf',
+    'text/',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument'
+  ];
+  
+  return extractable.some(type => mimeType.includes(type));
+}
+
+/**
+ * Classify link type
+ */
+function classifyLinkType(url) {
+  try {
+    const domain = new URL(url).hostname.toLowerCase();
+    
+    if (domain.includes('github')) return 'repository';
+    if (domain.includes('youtube') || domain.includes('vimeo')) return 'video';
+    if (domain.includes('docs.google') || domain.includes('drive.google')) return 'document';
+    
+    return 'webpage';
+  } catch (error) {
+    return 'other';
+  }
+}
+
+/**
+ * Extract form ID from Google Forms URL
+ */
+function extractFormId(formUrl) {
+  const match = formUrl.match(/\/forms\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : '';
+}
+
+/**
+ * Extract submission text from various submission types
+ */
+function extractSubmissionText(submission) {
+  // Try to get text from shortAnswerSubmission
+  if (submission.shortAnswerSubmission && submission.shortAnswerSubmission.answer) {
+    return submission.shortAnswerSubmission.answer;
+  }
+  
+  // Try to get text from multipleChoiceSubmission
+  if (submission.multipleChoiceSubmission && submission.multipleChoiceSubmission.answer) {
+    return submission.multipleChoiceSubmission.answer;
+  }
+  
+  // Try to get URL from assignment submission (for link submissions)
+  if (submission.assignmentSubmission && submission.assignmentSubmission.attachments) {
+    const linkAttachment = submission.assignmentSubmission.attachments.find(att => att.link);
+    if (linkAttachment) {
+      return linkAttachment.link.url;
+    }
+  }
+  
+  return '';
 }
