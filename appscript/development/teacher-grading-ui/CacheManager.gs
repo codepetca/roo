@@ -7,7 +7,7 @@
 const CacheManager = {
   // Cache configuration
   DEFAULT_EXPIRATION_MINUTES: 30,
-  CACHE_VERSION: '1.1.0', // Incremented to force cache invalidation after assignment fix
+  CACHE_VERSION: '2.1.0', // Added batch submission fetching for complete cache
 
   /**
    * Get cache key for a specific teacher

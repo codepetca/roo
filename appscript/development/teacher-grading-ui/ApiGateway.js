@@ -5,7 +5,7 @@
 
 // Configuration
 const CONFIG = {
-  USE_MOCK: true,  // Toggle between mock and real APIs
+  USE_MOCK: false,  // Toggle between mock and real APIs - NOW USING REAL DATA
   API_BASE_URL: 'https://your-firebase-functions-url/api/v2',
   API_KEY: 'your-api-key-here',
   DEBUG: true  // Enable debug logging
@@ -343,6 +343,12 @@ function fetchRealDashboardData() {
     const classroomsData = JSON.parse(classroomsResponse.getContentText());
     const courses = classroomsData.courses || [];
     
+    debugLog(`Found ${courses.length} active classrooms for teacher`);
+    
+    if (courses.length === 0) {
+      debugLog('No active classrooms found. Teacher may need to create classrooms or check permissions.');
+    }
+    
     // Step 3: For each classroom, fetch assignments, students, and submissions
     const classrooms = courses.map(course => {
       debugLog('Processing classroom', { id: course.id, name: course.name });
@@ -360,6 +366,23 @@ function fetchRealDashboardData() {
         const assignments = assignmentsResponse.getResponseCode() === 200 
           ? JSON.parse(assignmentsResponse.getContentText()).courseWork || []
           : [];
+          
+        debugLog(`Fetched ${assignments.length} assignments for classroom ${course.id}`);
+        
+        // Transform assignments to match our expected format
+        const transformedAssignments = assignments.map(assignment => ({
+          id: assignment.id,
+          title: assignment.title || 'Untitled Assignment',
+          description: assignment.description || '',
+          type: assignment.workType === 'ASSIGNMENT' ? 'coding' : 'quiz', // Simplified mapping
+          status: 'pending', // Default status
+          maxScore: assignment.maxPoints || 100,
+          dueDate: assignment.dueDate ? new Date(assignment.dueDate.year, assignment.dueDate.month - 1, assignment.dueDate.day).toISOString() : null,
+          creationTime: assignment.creationTime,
+          updateTime: assignment.updateTime,
+          workType: assignment.workType,
+          alternateLink: assignment.alternateLink
+        }));
         
         // Fetch students for this classroom
         const studentsResponse = UrlFetchApp.fetch(
@@ -373,19 +396,42 @@ function fetchRealDashboardData() {
         const students = studentsResponse.getResponseCode() === 200
           ? JSON.parse(studentsResponse.getContentText()).students || []
           : [];
+          
+        debugLog(`Fetched ${students.length} students for classroom ${course.id}`);
         
-        // For now, we'll skip fetching submissions for each assignment to avoid API limits
-        // In a production system, this would be done in batches or on-demand
-        const submissions = [];
+        // Transform students to match our expected format
+        const transformedStudents = students.map(student => ({
+          id: student.userId,
+          email: student.profile?.emailAddress || '',
+          name: student.profile?.name?.fullName || 'Unknown Student',
+          photoUrl: student.profile?.photoUrl || '',
+          displayName: student.profile?.name?.fullName || student.profile?.emailAddress || 'Unknown'
+        }));
+        
+        // Batch fetch all submissions for this classroom
+        debugLog(`Fetching submissions for ${transformedAssignments.length} assignments in classroom ${course.id}`);
+        const submissions = fetchAllSubmissionsForClassroom(course.id, transformedAssignments, transformedStudents, token);
+        
+        // Calculate ungraded submissions
+        const ungradedSubmissions = submissions.filter(s => 
+          s.status === 'submitted' || s.status === 'pending'
+        ).length;
+        
+        debugLog(`Classroom ${course.id} data complete:`, {
+          students: transformedStudents.length,
+          assignments: transformedAssignments.length,
+          submissions: submissions.length,
+          ungraded: ungradedSubmissions
+        });
         
         return {
           ...course,
-          studentCount: students.length,
-          assignmentCount: assignments.length,
+          studentCount: transformedStudents.length,
+          assignmentCount: transformedAssignments.length,
           totalSubmissions: submissions.length,
-          ungradedSubmissions: 0,
-          assignments: assignments,
-          students: students,
+          ungradedSubmissions: ungradedSubmissions,
+          assignments: transformedAssignments,
+          students: transformedStudents,
           submissions: submissions
         };
       } catch (error) {
@@ -723,4 +769,127 @@ function exportGrades(classroomId, assignmentId) {
       timestamp: new Date().toISOString()
     };
   }
+}
+
+/**
+ * Batch fetch all submissions for all assignments in a classroom
+ * @param {string} courseId - The classroom/course ID
+ * @param {Array} assignments - Array of assignments to fetch submissions for
+ * @param {Array} students - Array of students to map names
+ * @param {string} token - OAuth token for API calls
+ * @returns {Array} All submissions for the classroom
+ */
+function fetchAllSubmissionsForClassroom(courseId, assignments, students, token) {
+  debugLog(`Starting batch submission fetch for classroom ${courseId}`);
+  
+  const allSubmissions = [];
+  let totalApiCalls = 0;
+  
+  // Create a student map for quick lookups
+  const studentMap = {};
+  students.forEach(student => {
+    studentMap[student.id] = student;
+  });
+  
+  // Fetch submissions for each assignment
+  assignments.forEach((assignment, index) => {
+    try {
+      debugLog(`Fetching submissions for assignment ${index + 1}/${assignments.length}: ${assignment.title}`);
+      
+      // Add small delay to avoid rate limits (200ms between calls)
+      if (index > 0) {
+        Utilities.sleep(200);
+      }
+      
+      const response = UrlFetchApp.fetch(
+        `https://classroom.googleapis.com/v1/courses/${courseId}/courseWork/${assignment.id}/studentSubmissions`,
+        {
+          headers: { 'Authorization': 'Bearer ' + token },
+          muteHttpExceptions: true
+        }
+      );
+      
+      totalApiCalls++;
+      
+      if (response.getResponseCode() === 200) {
+        const data = JSON.parse(response.getContentText());
+        const submissions = data.studentSubmissions || [];
+        
+        debugLog(`Found ${submissions.length} submissions for assignment ${assignment.id}`);
+        
+        // Transform each submission to match our cache schema
+        const transformedSubmissions = submissions.map(submission => {
+          const student = studentMap[submission.userId] || {};
+          
+          // Map Google Classroom state to our status
+          let status = 'pending';
+          if (submission.state === 'TURNED_IN') {
+            status = submission.assignedGrade !== undefined ? 'graded' : 'submitted';
+          } else if (submission.state === 'RETURNED') {
+            status = 'returned';
+          } else if (submission.state === 'RECLAIMED_BY_STUDENT') {
+            status = 'pending';
+          }
+          
+          // Build grade object if graded
+          let grade = undefined;
+          if (submission.assignedGrade !== undefined) {
+            grade = {
+              score: submission.assignedGrade,
+              maxScore: assignment.maxScore,
+              feedback: submission.gradeHistory?.[0]?.gradeChangeType || '',
+              gradedAt: submission.gradeHistory?.[0]?.gradeTimestamp || new Date().toISOString(),
+              gradedBy: 'manual' // Since it's from Google Classroom
+            };
+          }
+          
+          return {
+            id: submission.id,
+            assignmentId: assignment.id,
+            studentId: submission.userId,
+            studentEmail: student.email || '',
+            studentName: student.name || student.displayName || 'Unknown Student',
+            
+            // Submission content (if available)
+            submissionText: submission.assignmentSubmission?.attachments?.[0]?.link?.url || '',
+            attachments: [],
+            
+            // Status and timing
+            status: status,
+            submittedAt: submission.lastModifiedTime || submission.creationTime,
+            updatedAt: submission.updateTime || submission.lastModifiedTime || new Date().toISOString(),
+            
+            // Grading information
+            grade: grade,
+            
+            // Google Classroom specific
+            late: submission.late || false,
+            draftGrade: submission.draftGrade,
+            assignedGrade: submission.assignedGrade
+          };
+        });
+        
+        allSubmissions.push(...transformedSubmissions);
+        
+      } else {
+        debugLog(`Failed to fetch submissions for assignment ${assignment.id}: ${response.getResponseCode()}`);
+      }
+      
+    } catch (error) {
+      debugLog(`Error fetching submissions for assignment ${assignment.id}:`, error.toString());
+    }
+  });
+  
+  debugLog(`Batch submission fetch complete:`, {
+    totalAssignments: assignments.length,
+    totalApiCalls: totalApiCalls,
+    totalSubmissions: allSubmissions.length,
+    submissionsByStatus: {
+      pending: allSubmissions.filter(s => s.status === 'pending').length,
+      submitted: allSubmissions.filter(s => s.status === 'submitted').length,
+      graded: allSubmissions.filter(s => s.status === 'graded').length
+    }
+  });
+  
+  return allSubmissions;
 }
