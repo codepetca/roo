@@ -35,6 +35,12 @@ const AIGradingAPI = {
         throw new Error('Grading context is required');
       }
       
+      // Handle error contexts from batch processing
+      if (gradingContext.isError) {
+        this.debugLog('⚠️ Processing error context', gradingContext.error);
+        return this.createErrorResult(gradingContext, new Error(gradingContext.error));
+      }
+      
       // Add request metadata
       gradingContext.requestId = gradingContext.requestId || this.generateRequestId();
       gradingContext.metadata = gradingContext.metadata || this.createRequestMetadata();
@@ -343,6 +349,22 @@ const ContentExtractor = {
    * @returns {Object} Extracted content ready for AI processing
    */
   extractSubmissionContent(submission) {
+    // Validate submission input
+    if (!submission) {
+      this.debugLog('⚠️ No submission provided for content extraction');
+      return {
+        text: '',
+        structuredData: {},
+        sections: [],
+        images: [],
+        metadata: {
+          extractedAt: new Date().toISOString(),
+          extractionMethod: 'appscript',
+          extractionQuality: 'error'
+        }
+      };
+    }
+    
     this.debugLog('📄 Starting content extraction', `${submission.attachments?.length || 0} attachments`);
     
     const extractedContent = {

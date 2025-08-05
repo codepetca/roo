@@ -735,7 +735,44 @@
     }
     
     if (submission.feedback) {
-      document.getElementById('feedback-input').value = submission.feedback;
+      // Handle feedback as either string or object
+      if (typeof submission.feedback === 'string') {
+        document.getElementById('feedback-input').value = submission.feedback;
+      } else if (typeof submission.feedback === 'object' && submission.feedback !== null) {
+        // Format structured feedback
+        let formattedFeedback = '';
+        
+        if (submission.feedback.summary) {
+          formattedFeedback += submission.feedback.summary + '\n\n';
+        }
+        
+        if (submission.feedback.strengths && submission.feedback.strengths.length > 0) {
+          formattedFeedback += 'Strengths:\n';
+          submission.feedback.strengths.forEach(strength => {
+            formattedFeedback += '• ' + strength + '\n';
+          });
+          formattedFeedback += '\n';
+        }
+        
+        if (submission.feedback.improvements && submission.feedback.improvements.length > 0) {
+          formattedFeedback += 'Areas for Improvement:\n';
+          submission.feedback.improvements.forEach(improvement => {
+            formattedFeedback += '• ' + improvement + '\n';
+          });
+          formattedFeedback += '\n';
+        }
+        
+        if (submission.feedback.suggestions && submission.feedback.suggestions.length > 0) {
+          formattedFeedback += 'Suggestions:\n';
+          submission.feedback.suggestions.forEach(suggestion => {
+            formattedFeedback += '• ' + suggestion + '\n';
+          });
+        }
+        
+        document.getElementById('feedback-input').value = formattedFeedback.trim();
+      } else {
+        document.getElementById('feedback-input').value = String(submission.feedback);
+      }
     } else {
       document.getElementById('feedback-input').value = '';
     }
@@ -827,19 +864,42 @@
         if (result.success) {
           const gradeData = result.data;
           
+          // Extract score and feedback from grade structure
+          const score = gradeData.grade ? gradeData.grade.score : gradeData.score;
+          const feedback = gradeData.feedback;
+          const gradedAt = gradeData.metadata ? gradeData.metadata.gradedAt : gradeData.gradedAt;
+          
           // Update form with AI results
-          document.getElementById('score-input').value = gradeData.score;
-          document.getElementById('feedback-input').value = gradeData.feedback;
+          document.getElementById('score-input').value = score;
+          
+          // Format and display feedback
+          if (typeof feedback === 'object' && feedback !== null) {
+            let formattedFeedback = '';
+            if (feedback.summary) formattedFeedback += feedback.summary + '\n\n';
+            if (feedback.strengths && feedback.strengths.length > 0) {
+              formattedFeedback += 'Strengths:\n';
+              feedback.strengths.forEach(s => formattedFeedback += '• ' + s + '\n');
+              formattedFeedback += '\n';
+            }
+            if (feedback.improvements && feedback.improvements.length > 0) {
+              formattedFeedback += 'Areas for Improvement:\n';
+              feedback.improvements.forEach(i => formattedFeedback += '• ' + i + '\n');
+            }
+            document.getElementById('feedback-input').value = formattedFeedback.trim();
+          } else {
+            document.getElementById('feedback-input').value = feedback || '';
+          }
+          
           updatePercentageDisplay();
           
           // Show AI suggestions
           showAISuggestions(gradeData);
           
           // Update submission in memory
-          submission.score = gradeData.score;
-          submission.feedback = gradeData.feedback;
+          submission.score = score;
+          submission.feedback = feedback;
           submission.status = 'graded';
-          submission.gradedAt = gradeData.gradedAt;
+          submission.gradedAt = gradedAt;
           
           // Refresh submissions display
           displaySubmissions(AppState.submissions);
@@ -902,10 +962,11 @@
           results.forEach(gradeResult => {
             const submission = AppState.submissions.find(s => s.id === gradeResult.submissionId);
             if (submission) {
-              submission.score = gradeResult.score;
+              // Extract score from grade object
+              submission.score = gradeResult.grade ? gradeResult.grade.score : gradeResult.score;
               submission.feedback = gradeResult.feedback;
               submission.status = 'graded';
-              submission.gradedAt = gradeResult.gradedAt;
+              submission.gradedAt = gradeResult.metadata ? gradeResult.metadata.gradedAt : gradeResult.gradedAt;
             }
           });
           

@@ -534,24 +534,33 @@ async function gradeSubmissionWithAI(submissionData, assignmentData, gradingOpti
  */
 async function buildGradingContext(submission, assignment, options = {}) {
   debugLog('Building grading context', {
-    submissionId: submission.id,
-    assignmentId: assignment.id,
-    hasRubric: !!assignment.rubric,
-    hasQuizData: !!assignment.quizData
+    submissionId: submission?.id || 'unknown',
+    assignmentId: assignment?.id || 'unknown',
+    hasRubric: !!(assignment?.rubric),
+    hasQuizData: !!(assignment?.quizData)
   });
   
   try {
+    // Validate required inputs
+    if (!submission || !assignment) {
+      throw new Error('Missing required submission or assignment data');
+    }
+    
+    if (!submission.id || !assignment.id) {
+      throw new Error('Missing required ID fields in submission or assignment');
+    }
+    
     // Extract content from submission attachments
     const extractedContent = ContentExtractor.extractSubmissionContent(submission);
     
-    // Build assignment context
+    // Build assignment context with safe property access
     const assignmentContext = {
       id: assignment.id,
-      title: assignment.title,
-      description: assignment.description,
-      type: assignment.type,
+      title: assignment.title || 'Untitled Assignment',
+      description: assignment.description || '',
+      type: assignment.type || 'assignment',
       maxScore: assignment.maxScore || 100,
-      instructions: assignment.description,
+      instructions: assignment.description || '',
       materials: assignment.materials ? formatMaterialsForAI(assignment.materials) : undefined
     };
     
@@ -579,24 +588,24 @@ async function buildGradingContext(submission, assignment, options = {}) {
       };
     }
     
-    // Build submission content for AI
+    // Build submission content for AI with safe property access
     const submissionContent = {
-      studentId: submission.studentId,
-      studentName: submission.studentName,
+      studentId: submission.studentId || 'unknown',
+      studentName: submission.studentName || 'Unknown Student',
       contentType: determineContentType(submission, extractedContent),
-      text: extractedContent.text || submission.submissionText,
-      sections: extractedContent.sections,
-      images: extractedContent.images,
-      wordCount: (extractedContent.text || submission.submissionText || '').split(/\s+/).length,
+      text: extractedContent?.text || submission.submissionText || '',
+      sections: extractedContent?.sections || [],
+      images: extractedContent?.images || [],
+      wordCount: (extractedContent?.text || submission.submissionText || '').split(/\s+/).filter(w => w.length > 0).length,
       attachmentCount: submission.attachments?.length || 0,
-      submittedAt: submission.submittedAt,
-      extractedAt: extractedContent.metadata.extractedAt,
-      extractionMethod: extractedContent.metadata.extractionMethod,
-      extractionQuality: extractedContent.metadata.extractionQuality
+      submittedAt: submission.submittedAt || new Date().toISOString(),
+      extractedAt: extractedContent?.metadata?.extractedAt || new Date().toISOString(),
+      extractionMethod: extractedContent?.metadata?.extractionMethod || 'none',
+      extractionQuality: extractedContent?.metadata?.extractionQuality || 'unknown'
     };
     
     // Add quiz responses if available
-    if (submission.quizResponse) {
+    if (submission.quizResponse?.answers) {
       submissionContent.quizAnswers = submission.quizResponse.answers;
     }
     
@@ -737,21 +746,24 @@ function extractKeyPointsFromDescription(description) {
  * Determine content type for AI processing
  */
 function determineContentType(submission, extractedContent) {
-  if (submission.quizResponse) {
+  // Safe property access with defaults
+  if (submission?.quizResponse) {
     return 'quiz_response';
   }
   
-  if (extractedContent.sections && extractedContent.sections.length > 1) {
+  if (extractedContent?.sections && extractedContent.sections.length > 1) {
     return 'mixed';
   }
   
-  if (submission.attachments && submission.attachments.length > 0) {
+  if (submission?.attachments && submission.attachments.length > 0) {
     const primaryAttachment = submission.attachments[0];
-    switch (primaryAttachment.contentType) {
-      case 'document': return 'document';
-      case 'spreadsheet': return 'spreadsheet';
-      case 'presentation': return 'presentation';
-      default: return 'mixed';
+    if (primaryAttachment?.contentType) {
+      switch (primaryAttachment.contentType) {
+        case 'document': return 'document';
+        case 'spreadsheet': return 'spreadsheet';
+        case 'presentation': return 'presentation';
+        default: return 'mixed';
+      }
     }
   }
   
@@ -892,18 +904,33 @@ async function batchGradeSubmissions(submissions, assignment, gradingOptions = {
       // Real AI batch grading using AIGradingAPI
       const gradingContexts = [];
       
-      // Build grading context for each submission
+      // Build grading context for each submission with improved error handling
       for (const submission of submissions) {
         try {
+          // Validate submission before processing
+          if (!submission || !submission.id) {
+            throw new Error('Invalid submission: missing ID or submission data');
+          }
+          
           const context = await buildGradingContext(submission, assignment, gradingOptions);
           gradingContexts.push(context);
         } catch (error) {
-          debugLog('Error building context for submission', `${submission.id}: ${error.toString()}`);
-          // Add error context
+          const submissionId = submission?.id || 'unknown';
+          const studentName = submission?.studentName || 'Unknown Student';
+          debugLog('Error building context for submission', `${submissionId} (${studentName}): ${error.toString()}`);
+          
+          // Create error context that can be processed by AI grading API
           gradingContexts.push({
             requestId: AIGradingAPI.generateRequestId(),
-            submissionId: submission.id,
-            error: error.toString()
+            submissionId: submissionId,
+            studentName: studentName,
+            error: error.toString(),
+            isError: true, // Flag to identify error contexts
+            metadata: {
+              errorType: 'context_building_failed',
+              originalError: error.toString(),
+              gradedAt: new Date().toISOString()
+            }
           });
         }
       }

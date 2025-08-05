@@ -307,7 +307,30 @@ function gradeSubmission(submissionData) {
 // Batch grade multiple submissions
 function batchGrade(submissions) {
   console.log('Code.js: batchGrade called for', submissions.length, 'submissions');
-  return batchGradeSubmissions(submissions);
+  
+  // Validate submissions
+  if (!submissions || submissions.length === 0) {
+    return {
+      success: false,
+      error: 'No submissions provided for batch grading'
+    };
+  }
+  
+  // Extract assignment information from the first submission
+  // All submissions in a batch should be for the same assignment
+  const firstSubmission = submissions[0];
+  const assignment = {
+    id: firstSubmission.assignmentId || 'unknown',
+    title: firstSubmission.assignmentTitle || 'Assignment',
+    type: firstSubmission.type || 'assignment',
+    maxScore: firstSubmission.maxScore || 100,
+    description: firstSubmission.assignmentDescription || ''
+  };
+  
+  console.log('Code.js: Constructed assignment object:', assignment);
+  
+  // Call the actual batch grading function with both submissions and assignment
+  return batchGradeSubmissions(submissions, assignment);
 }
 
 // Save/update a grade
