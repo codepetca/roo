@@ -37,7 +37,6 @@ roo-app-*-firebase-adminsdk-*.json
 # Build outputs
 dist/
 build/
-lib/
 functions/lib/
 shared/dist/
 
