@@ -633,6 +633,23 @@
     
     const lateIndicator = submission.late ? '<span class="late-indicator">Late</span>' : '';
     
+    // Add feedback preview for graded submissions
+    let feedbackPreview = '';
+    if (submission.feedback && submission.status === 'graded') {
+      let previewText = '';
+      if (typeof submission.feedback === 'string') {
+        previewText = submission.feedback.substring(0, 80);
+      } else if (submission.feedback.summary) {
+        previewText = submission.feedback.summary.substring(0, 80);
+      }
+      
+      if (previewText) {
+        feedbackPreview = `<div class="feedback-preview" title="${escapeHtml(previewText)}">
+          💬 ${escapeHtml(previewText)}${previewText.length > 80 ? '...' : ''}
+        </div>`;
+      }
+    }
+    
     item.innerHTML = `
       <div class="submission-checkbox">
         <input type="checkbox" ${AppState.selectedSubmissions.has(submission.id) ? 'checked' : ''} 
@@ -644,6 +661,7 @@
           Submitted: ${formatDate(submission.submittedAt)}
           ${lateIndicator}
         </div>
+        ${feedbackPreview}
       </div>
       <div class="submission-status ${getStatusClass(submission.status)}">${getStatusText(submission.status)}</div>
       ${scoreDisplay}
@@ -895,16 +913,51 @@
           // Show AI suggestions
           showAISuggestions(gradeData);
           
-          // Update submission in memory
+          // Update submission in memory with proper status management
           submission.score = score;
           submission.feedback = feedback;
           submission.status = 'graded';
           submission.gradedAt = gradedAt;
+          submission.gradedBy = 'ai';
+          
+          // Log the update for debugging
+          console.log(`✅ Single grading completed for ${submission.id}:`, {
+            student: submission.studentName,
+            score: score,
+            status: submission.status,
+            hasFeedback: !!feedback
+          });
+          
+          // Auto-save to cache
+          showToast('Saving grade to cache...', 'info');
+          
+          const gradedSubmission = {
+            id: submission.id,
+            score: score,
+            feedback: feedback,
+            status: 'graded',
+            gradedAt: gradedAt,
+            gradedBy: 'ai'
+          };
+          
+          callServerFunction('updateGradedSubmissionsInCache', 
+            AppState.currentClassroom.id, 
+            [gradedSubmission]
+          ).then(cacheResult => {
+            if (cacheResult.success) {
+              showToast('AI grading completed and saved!', 'success');
+              console.log('✅ Grade auto-saved to cache:', cacheResult.updatedCount, 'submission(s)');
+            } else {
+              showToast('AI grading completed (cache save failed)', 'warning');
+              console.error('❌ Cache save failed:', cacheResult.error);
+            }
+          }).catch(error => {
+            console.error('❌ Cache save error:', error);
+            showToast('AI grading completed (cache save error)', 'warning');
+          });
           
           // Refresh submissions display
           displaySubmissions(AppState.submissions);
-          
-          showToast('AI grading completed successfully!', 'success');
         } else {
           showToast('AI grading failed: ' + result.error, 'error');
           updateSubmissionStatus(submission.id, 'pending');
@@ -958,7 +1011,7 @@
         if (result.success) {
           const results = result.data.results || [];
           
-          // Update submissions in memory
+          // Update submissions in memory with proper status management
           results.forEach(gradeResult => {
             const submission = AppState.submissions.find(s => s.id === gradeResult.submissionId);
             if (submission) {
@@ -967,15 +1020,53 @@
               submission.feedback = gradeResult.feedback;
               submission.status = 'graded';
               submission.gradedAt = gradeResult.metadata ? gradeResult.metadata.gradedAt : gradeResult.gradedAt;
+              submission.gradedBy = 'ai';
+              
+              // Log the update for debugging
+              console.log(`✅ Updated submission ${gradeResult.submissionId}:`, {
+                student: submission.studentName,
+                score: submission.score,
+                status: submission.status,
+                hasFeedback: !!submission.feedback
+              });
+            } else {
+              console.error(`❌ Submission not found for update: ${gradeResult.submissionId}`);
             }
           });
+          
+          // Prepare graded submissions for cache update
+          const gradedSubmissions = results.map(gradeResult => ({
+            id: gradeResult.submissionId,
+            score: gradeResult.grade ? gradeResult.grade.score : gradeResult.score,
+            feedback: gradeResult.feedback,
+            status: 'graded',
+            gradedAt: gradeResult.metadata ? gradeResult.metadata.gradedAt : gradeResult.gradedAt,
+            gradedBy: 'ai'
+          }));
           
           // Clear selections and refresh display
           AppState.selectedSubmissions.clear();
           displaySubmissions(AppState.submissions);
           updateSubmissionStats(calculateStats(AppState.submissions));
           
-          showToast(`Successfully graded ${results.length} submissions!`, 'success');
+          // Auto-save all graded submissions to cache
+          showToast('Saving batch grades to cache...', 'info');
+          
+          callServerFunction('updateGradedSubmissionsInCache', 
+            AppState.currentClassroom.id, 
+            gradedSubmissions
+          ).then(cacheResult => {
+            if (cacheResult.success) {
+              showToast(`Successfully graded ${results.length} submissions and saved to cache!`, 'success');
+              console.log('✅ Batch grades auto-saved to cache:', cacheResult.updatedCount, 'submission(s)');
+            } else {
+              showToast(`Graded ${results.length} submissions (cache save failed)`, 'warning');
+              console.error('❌ Cache save failed:', cacheResult.error);
+            }
+          }).catch(error => {
+            console.error('❌ Cache save error:', error);
+            showToast(`Graded ${results.length} submissions (cache save error)`, 'warning');
+          });
         } else {
           showToast('Batch grading failed: ' + result.error, 'error');
           // Reset failed submissions back to pending

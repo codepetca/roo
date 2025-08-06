@@ -13,8 +13,8 @@ export * from "./domain";
 // DTO schemas (API boundaries)
 export * from "./dto";
 
-// Dashboard cache schemas (for UI state management)
-export * from "./dashboard-cache";
+// Classroom snapshot schemas (for exports and UI state management)
+export * from "./classroom-snapshot";
 
 // Modular schemas for AI grading
 export * from "./assignment-base";

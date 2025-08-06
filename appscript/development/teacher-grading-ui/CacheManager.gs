@@ -1,19 +1,22 @@
 /**
- * Cache Manager - Server-side AppScript cache for teacher dashboard data
+ * Snapshot Manager - Server-side AppScript storage for classroom snapshot data
  * Uses PropertiesService for persistent storage across sessions
- * Implements the TeacherDashboardCache schema for consistent data structure
+ * Implements the ClassroomSnapshot schema for consistent data structure
+ * 
+ * Note: Previously called "CacheManager" - backward compatibility methods provided
  */
 
 const CacheManager = {
-  // Cache configuration
+  // Snapshot configuration  
   DEFAULT_EXPIRATION_MINUTES: 30,
-  CACHE_VERSION: '3.0.0', // Enhanced data fetching with materials, rubrics, and quiz data
+  SNAPSHOT_VERSION: '3.1.0', // Enhanced data fetching with materials, rubrics, and quiz data + snapshot terminology
+  
 
   /**
    * Get cache key for a specific teacher
    */
-  getCacheKey(teacherEmail) {
-    return `roo_dashboard_cache_${teacherEmail}`;
+  getSnapshotKey(teacherEmail) {
+    return `roo_classroom_snapshot_${teacherEmail}`;
   },
 
   /**
@@ -26,9 +29,9 @@ const CacheManager = {
   },
 
   /**
-   * Create cache metadata with expiration
+   * Create snapshot metadata with expiration
    */
-  createCacheMetadata(source, expirationMinutes = null) {
+  createSnapshotMetadata(source, expirationMinutes = null) {
     expirationMinutes = expirationMinutes || this.DEFAULT_EXPIRATION_MINUTES;
     const now = new Date();
     const expiresAt = new Date(now.getTime() + expirationMinutes * 60 * 1000);
@@ -37,14 +40,14 @@ const CacheManager = {
       fetchedAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       source: source,
-      version: this.CACHE_VERSION
+      version: this.SNAPSHOT_VERSION
     };
   },
 
   /**
-   * Check if cache metadata indicates expiration
+   * Check if snapshot metadata indicates expiration
    */
-  isCacheExpired(metadata) {
+  isSnapshotExpired(metadata) {
     if (!metadata || !metadata.expiresAt) {
       return true;
     }
@@ -52,33 +55,33 @@ const CacheManager = {
   },
 
   /**
-   * Save dashboard cache to PropertiesService
+   * Save classroom snapshot to PropertiesService
    */
-  saveDashboardCache(teacherEmail, cacheData) {
+  saveClassroomSnapshot(teacherEmail, snapshotData) {
     try {
-      this.debugLog('Saving dashboard cache', { 
+      this.debugLog('Saving classroom snapshot', { 
         teacher: teacherEmail,
-        classrooms: cacheData.classrooms?.length || 0,
-        source: cacheData.cacheMetadata?.source 
+        classrooms: snapshotData.classrooms?.length || 0,
+        source: snapshotData.snapshotMetadata?.source 
       });
       
-      const cacheKey = this.getCacheKey(teacherEmail);
-      const cacheString = JSON.stringify(cacheData);
+      const snapshotKey = this.getSnapshotKey(teacherEmail);
+      const snapshotString = JSON.stringify(snapshotData);
       
       // Use PropertiesService for server-side storage
-      PropertiesService.getUserProperties().setProperty(cacheKey, cacheString);
+      PropertiesService.getUserProperties().setProperty(snapshotKey, snapshotString);
       
-      this.debugLog('Cache saved successfully', { 
+      this.debugLog('Snapshot saved successfully', { 
         teacher: teacherEmail,
-        size: `${Math.round(cacheString.length / 1024)}KB` 
+        size: `${Math.round(snapshotString.length / 1024)}KB` 
       });
       
       return {
         success: true,
-        message: 'Cache saved successfully'
+        message: 'Snapshot saved successfully'
       };
     } catch (error) {
-      console.error('[CacheManager] Failed to save cache:', error);
+      console.error('[CacheManager] Failed to save snapshot:', error);
       return {
         success: false,
         error: error.toString()
@@ -87,70 +90,70 @@ const CacheManager = {
   },
 
   /**
-   * Load dashboard cache from PropertiesService
+   * Load classroom snapshot from PropertiesService
    */
-  loadDashboardCache(teacherEmail) {
+  loadClassroomSnapshot(teacherEmail) {
     try {
-      const cacheKey = this.getCacheKey(teacherEmail);
-      const cacheString = PropertiesService.getUserProperties().getProperty(cacheKey);
+      const snapshotKey = this.getSnapshotKey(teacherEmail);
+      const snapshotString = PropertiesService.getUserProperties().getProperty(snapshotKey);
       
-      if (!cacheString) {
-        this.debugLog('No cache found for teacher', { teacher: teacherEmail });
+      if (!snapshotString) {
+        this.debugLog('No snapshot found for teacher', { teacher: teacherEmail });
         return null;
       }
 
-      const cacheData = JSON.parse(cacheString);
-      this.debugLog('Cache loaded successfully', { 
+      const snapshotData = JSON.parse(snapshotString);
+      this.debugLog('Snapshot loaded successfully', { 
         teacher: teacherEmail,
-        classrooms: cacheData.classrooms?.length || 0,
-        fetchedAt: cacheData.cacheMetadata?.fetchedAt 
+        classrooms: snapshotData.classrooms?.length || 0,
+        fetchedAt: snapshotData.snapshotMetadata?.fetchedAt 
       });
 
-      return cacheData;
+      return snapshotData;
     } catch (error) {
-      console.error('[CacheManager] Failed to load cache:', error);
+      console.error('[CacheManager] Failed to load snapshot:', error);
       return null;
     }
   },
 
   /**
-   * Check if cache exists and is valid for a teacher
+   * Check if snapshot exists and is valid for a teacher
    */
-  isCacheValid(teacherEmail) {
-    const cache = this.loadDashboardCache(teacherEmail);
-    if (!cache || !cache.cacheMetadata) {
-      this.debugLog('Cache invalid: missing or no metadata', { teacher: teacherEmail });
+  isSnapshotValid(teacherEmail) {
+    const snapshot = this.loadClassroomSnapshot(teacherEmail);
+    if (!snapshot || !snapshot.snapshotMetadata) {
+      this.debugLog('Snapshot invalid: missing or no metadata', { teacher: teacherEmail });
       return false;
     }
 
-    const isExpired = this.isCacheExpired(cache.cacheMetadata);
-    const isVersionMismatch = cache.cacheMetadata.version !== this.CACHE_VERSION;
+    const isExpired = this.isSnapshotExpired(snapshot.snapshotMetadata);
+    const isVersionMismatch = snapshot.snapshotMetadata.version !== this.SNAPSHOT_VERSION;
 
-    this.debugLog('Cache validation result', {
+    this.debugLog('Snapshot validation result', {
       teacher: teacherEmail,
-      exists: !!cache,
+      exists: !!snapshot,
       expired: isExpired,
       versionMismatch: isVersionMismatch,
-      expiresAt: cache.cacheMetadata.expiresAt
+      expiresAt: snapshot.snapshotMetadata.expiresAt
     });
 
     return !isExpired && !isVersionMismatch;
   },
 
   /**
-   * Clear cache for a teacher
+   * Clear snapshot for a teacher
    */
-  clearCache(teacherEmail) {
+  clearSnapshot(teacherEmail) {
     try {
-      const cacheKey = this.getCacheKey(teacherEmail);
-      PropertiesService.getUserProperties().deleteProperty(cacheKey);
-      this.debugLog('Cache cleared successfully', { teacher: teacherEmail });
+      const snapshotKey = this.getSnapshotKey(teacherEmail);
+      PropertiesService.getUserProperties().deleteProperty(snapshotKey);
+      this.debugLog('Snapshot cleared successfully', { teacher: teacherEmail });
       return {
         success: true,
-        message: 'Cache cleared successfully'
+        message: 'Snapshot cleared successfully'
       };
     } catch (error) {
-      console.error('[CacheManager] Failed to clear cache:', error);
+      console.error('[CacheManager] Failed to clear snapshot:', error);
       return {
         success: false,
         error: error.toString()
@@ -159,15 +162,15 @@ const CacheManager = {
   },
 
   /**
-   * Transform Google Classroom courses to cache format
+   * Transform Google Classroom courses to snapshot format
    */
-  transformClassroomsToCacheFormat(courses, source = 'google-classroom') {
+  transformClassroomsToSnapshotFormat(courses, source = 'google-classroom') {
     if (!courses || !Array.isArray(courses)) {
-      this.debugLog('transformClassroomsToCacheFormat: no courses provided');
+      this.debugLog('transformClassroomsToSnapshotFormat: no courses provided');
       return [];
     }
 
-    this.debugLog('transformClassroomsToCacheFormat: transforming courses', {
+    this.debugLog('transformClassroomsToSnapshotFormat: transforming courses', {
       courseCount: courses.length,
       source: source,
       firstCourseAssignments: courses[0]?.assignments?.length || 0
@@ -226,7 +229,7 @@ const CacheManager = {
       return result;
     });
     
-    this.debugLog('transformClassroomsToCacheFormat: transformation complete', {
+    this.debugLog('transformClassroomsToSnapshotFormat: transformation complete', {
       transformedCount: transformed.length,
       totalAssignments: transformed.reduce((sum, c) => sum + (c.assignments?.length || 0), 0)
     });
@@ -277,12 +280,12 @@ const CacheManager = {
   },
 
   /**
-   * Create a complete dashboard cache structure
+   * Create a complete classroom snapshot structure
    */
-  createDashboardCache(teacher, classrooms, source = 'mock') {
-    const transformedClassrooms = this.transformClassroomsToCacheFormat(classrooms, source);
+  createClassroomSnapshot(teacher, classrooms, source = 'mock') {
+    const transformedClassrooms = this.transformClassroomsToSnapshotFormat(classrooms, source);
     const globalStats = this.calculateGlobalStats(transformedClassrooms);
-    const cacheMetadata = this.createCacheMetadata(source);
+    const snapshotMetadata = this.createSnapshotMetadata(source);
 
     return {
       teacher: {
@@ -293,24 +296,24 @@ const CacheManager = {
       },
       classrooms: transformedClassrooms,
       globalStats: globalStats,
-      cacheMetadata: cacheMetadata
+      snapshotMetadata: snapshotMetadata
     };
   },
 
   /**
-   * Update cache with additional data for a specific classroom
+   * Update snapshot with additional data for a specific classroom
    */
   updateClassroomData(teacherEmail, classroomId, updates) {
-    const cache = this.loadDashboardCache(teacherEmail);
-    if (!cache || !cache.classrooms) {
-      this.debugLog('Cannot update classroom data: no cache found', { teacher: teacherEmail });
+    const snapshot = this.loadClassroomSnapshot(teacherEmail);
+    if (!snapshot || !snapshot.classrooms) {
+      this.debugLog('Cannot update classroom data: no snapshot found', { teacher: teacherEmail });
       return {
         success: false,
-        error: 'No cache found for teacher'
+        error: 'No snapshot found for teacher'
       };
     }
 
-    const classroomIndex = cache.classrooms.findIndex(c => c.id === classroomId);
+    const classroomIndex = snapshot.classrooms.findIndex(c => c.id === classroomId);
     if (classroomIndex === -1) {
       this.debugLog('Cannot update classroom data: classroom not found', { 
         teacher: teacherEmail, 
@@ -318,12 +321,12 @@ const CacheManager = {
       });
       return {
         success: false,
-        error: 'Classroom not found in cache'
+        error: 'Classroom not found in snapshot'
       };
     }
 
     // Update the classroom with new data
-    const classroom = cache.classrooms[classroomIndex];
+    const classroom = snapshot.classrooms[classroomIndex];
     if (updates.assignments) {
       classroom.assignments = updates.assignments;
       classroom.assignmentCount = updates.assignments.length;
@@ -341,9 +344,9 @@ const CacheManager = {
     }
 
     // Recalculate global stats
-    cache.globalStats = this.calculateGlobalStats(cache.classrooms);
+    snapshot.globalStats = this.calculateGlobalStats(snapshot.classrooms);
 
-    // Save updated cache
-    return this.saveDashboardCache(teacherEmail, cache);
+    // Save updated snapshot
+    return this.saveClassroomSnapshot(teacherEmail, snapshot);
   }
 };

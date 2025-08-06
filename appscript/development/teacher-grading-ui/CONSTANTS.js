@@ -8,7 +8,7 @@ const DEPLOYMENT_ID = 'AKfycbxCACap-LCKNjYSx8oXAS2vxnjrvcXn6Weypd_dIr_wbiRPsIKh0
 
 // API Configuration  
 const API_CONFIG = {
-  USE_MOCK: true,  // Toggle between mock and real data
+  USE_MOCK: false,  // Toggle between mock and real data
   API_BASE_URL: 'https://roo-dev-12345.cloudfunctions.net/api/v2',
   API_KEY: 'YOUR_API_KEY_HERE',
   DEBUG: true

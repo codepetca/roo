@@ -300,15 +300,15 @@ function buildMockDashboardData() {
     return transformedClassroom;
   });
   
-  debugLog('Calling CacheManager.createDashboardCache', {
+  debugLog('Calling CacheManager.createClassroomSnapshot', {
     classroomCount: classrooms.length,
     totalAssignments: classrooms.reduce((sum, c) => sum + c.assignments.length, 0)
   });
   
   // Use server-side CacheManager to create proper structure
-  const result = CacheManager.createDashboardCache(teacher, classrooms, 'mock');
+  const result = CacheManager.createClassroomSnapshot(teacher, classrooms, 'mock');
   
-  debugLog('CacheManager.createDashboardCache result', {
+  debugLog('CacheManager.createClassroomSnapshot result', {
     hasClassrooms: !!result.classrooms,
     classroomCount: result.classrooms?.length || 0,
     firstClassroomAssignments: result.classrooms?.[0]?.assignments?.length || 0
@@ -443,7 +443,7 @@ function fetchRealDashboardData() {
     });
     
     // Use server-side CacheManager to create proper structure
-    const dashboardData = CacheManager.createDashboardCache(teacher, classrooms, 'google-classroom');
+    const dashboardData = CacheManager.createClassroomSnapshot(teacher, classrooms, 'google-classroom');
     
     return {
       success: true,
@@ -1164,23 +1164,41 @@ function fetchAllSubmissionsForClassroom(courseId, assignments, students, token)
         
         debugLog(`Found ${submissions.length} submissions for assignment ${assignment.id}`);
         
-        // Basic submission transformation (enhanced processing available in EnhancedData.js)
+        // Basic submission transformation with enhanced validation
         const transformedSubmissions = submissions.map(submission => {
           const student = studentMap[submission.userId] || {};
+          
+          // Validate required fields
+          if (!submission.id || !submission.userId) {
+            debugLog('⚠️ Invalid submission data - missing id or userId', submission);
+            return null;
+          }
+          
+          // Determine status more accurately
+          let status = 'pending';
+          if (submission.state === 'TURNED_IN') {
+            status = submission.assignedGrade !== undefined ? 'graded' : 'submitted';
+          } else if (submission.state === 'CREATED' || submission.state === 'NEW') {
+            status = 'pending';
+          }
+          
           return {
             id: submission.id,
             assignmentId: assignment.id,
             studentId: submission.userId,
-            studentName: student.name || student.displayName || 'Unknown Student',
+            studentName: student.name || student.displayName || `Student ${submission.userId}`,
             studentEmail: student.email || '',
-            submissionText: extractSubmissionText(submission),
-            status: submission.state === 'TURNED_IN' ? 
-              (submission.assignedGrade !== undefined ? 'graded' : 'submitted') : 'pending',
-            submittedAt: submission.lastModifiedTime || submission.creationTime,
+            submissionText: extractSubmissionText(submission) || '',
+            status: status,
+            submittedAt: submission.lastModifiedTime || submission.creationTime || new Date().toISOString(),
             late: submission.late || false,
-            attachments: submission.assignmentSubmission?.attachments || []
+            attachments: submission.assignmentSubmission?.attachments || [],
+            // Add Google Classroom specific fields for debugging
+            originalState: submission.state,
+            assignedGrade: submission.assignedGrade,
+            draftGrade: submission.draftGrade
           };
-        });
+        }).filter(submission => submission !== null); // Remove invalid submissions
         
         allSubmissions.push(...transformedSubmissions);
         
@@ -1193,18 +1211,32 @@ function fetchAllSubmissionsForClassroom(courseId, assignments, students, token)
     }
   });
   
+  // Deduplicate submissions - keep latest submission per student-assignment pair
+  const uniqueSubmissions = {};
+  allSubmissions.forEach(submission => {
+    const key = `${submission.assignmentId}-${submission.studentId}`;
+    if (!uniqueSubmissions[key] || 
+        new Date(submission.submittedAt) > new Date(uniqueSubmissions[key].submittedAt)) {
+      uniqueSubmissions[key] = submission;
+    }
+  });
+  
+  const deduplicatedSubmissions = Object.values(uniqueSubmissions);
+  
   debugLog(`Batch submission fetch complete:`, {
     totalAssignments: assignments.length,
     totalApiCalls: totalApiCalls,
     totalSubmissions: allSubmissions.length,
+    uniqueSubmissions: deduplicatedSubmissions.length,
+    duplicatesRemoved: allSubmissions.length - deduplicatedSubmissions.length,
     submissionsByStatus: {
-      pending: allSubmissions.filter(s => s.status === 'pending').length,
-      submitted: allSubmissions.filter(s => s.status === 'submitted').length,
-      graded: allSubmissions.filter(s => s.status === 'graded').length
+      pending: deduplicatedSubmissions.filter(s => s.status === 'pending').length,
+      submitted: deduplicatedSubmissions.filter(s => s.status === 'submitted').length,
+      graded: deduplicatedSubmissions.filter(s => s.status === 'graded').length
     }
   });
   
-  return allSubmissions;
+  return deduplicatedSubmissions;
 }
 
 // Enhanced data processing functions moved to EnhancedData.js

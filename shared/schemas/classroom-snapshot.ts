@@ -6,18 +6,18 @@ import { quizDataSchema } from "./quiz-data";
 import { enhancedSubmissionSchema } from "./submission";
 
 /**
- * Dashboard Cache Schemas
- * Comprehensive caching schemas for teacher dashboard data
+ * Classroom Snapshot Schemas
+ * Complete point-in-time capture of classroom data for export, import, and analysis
  * Compatible with both AppScript and Svelte frontends
  * Now using modular schema components for better maintainability
  * 
- * Location: shared/schemas/dashboard-cache.ts
+ * Location: shared/schemas/classroom-snapshot.ts
  */
 
 // ============================================
-// Base Cache Metadata Schema
+// Snapshot Metadata Schema
 // ============================================
-export const cacheMetadataSchema = z.object({
+export const snapshotMetadataSchema = z.object({
   fetchedAt: z.string().datetime(),
   expiresAt: z.string().datetime(),
   source: z.enum(['mock', 'google-classroom', 'roo-api']),
@@ -25,9 +25,9 @@ export const cacheMetadataSchema = z.object({
 });
 
 // ============================================
-// Teacher Profile Schema (for cache)
+// Teacher Profile Schema
 // ============================================
-export const teacherProfileCacheSchema = z.object({
+export const teacherProfileSchema = z.object({
   email: z.string().email(),
   name: z.string(),
   isTeacher: z.boolean().default(true),
@@ -87,7 +87,7 @@ export const legacyAssignmentSchema = z.object({
 // ============================================
 // Student Schema
 // ============================================
-export const studentCacheSchema = z.object({
+export const studentSnapshotSchema = z.object({
   id: z.string(),
   email: z.string().email(),
   name: z.string(),
@@ -122,8 +122,7 @@ export const studentCacheSchema = z.object({
 // Submission Schema (using enhanced modular schema)
 // ============================================
 // Note: Now using enhancedSubmissionSchema from submission.ts
-// Keeping legacy alias for backward compatibility
-export const submissionCacheSchema = enhancedSubmissionSchema;
+export const submissionSnapshotSchema = enhancedSubmissionSchema;
 
 // ============================================
 // Classroom Schema with Nested Data
@@ -156,8 +155,8 @@ export const classroomWithDataSchema = z.object({
   
   // Nested data for complete cache
   assignments: z.array(assignmentWithStatsSchema).default([]),
-  students: z.array(studentCacheSchema).default([]),
-  submissions: z.array(submissionCacheSchema).default([]),
+  students: z.array(studentSnapshotSchema).default([]),
+  submissions: z.array(submissionSnapshotSchema).default([]),
   
   // Teacher-specific settings
   teacherFolder: z.object({
@@ -177,11 +176,11 @@ export const classroomWithDataSchema = z.object({
 });
 
 // ============================================
-// Complete Teacher Dashboard Cache Schema
+// Complete Classroom Snapshot Schema
 // ============================================
-export const teacherDashboardCacheSchema = z.object({
+export const classroomSnapshotSchema = z.object({
   // Teacher information
-  teacher: teacherProfileCacheSchema,
+  teacher: teacherProfileSchema,
   
   // All classroom data with nested assignments, students, submissions
   classrooms: z.array(classroomWithDataSchema),
@@ -196,44 +195,44 @@ export const teacherDashboardCacheSchema = z.object({
     averageGrade: z.number().optional()
   }),
   
-  // Cache metadata
-  cacheMetadata: cacheMetadataSchema
+  // Snapshot metadata
+  snapshotMetadata: snapshotMetadataSchema
 });
 
 // ============================================
-// Partial Cache Schemas (for incremental updates)
+// Partial Snapshot Schemas (for incremental updates)
 // ============================================
-export const classroomPartialCacheSchema = z.object({
+export const classroomPartialSnapshotSchema = z.object({
   classroomId: z.string(),
   assignments: z.array(assignmentWithStatsSchema).optional(),
-  students: z.array(studentCacheSchema).optional(),
-  submissions: z.array(submissionCacheSchema).optional(),
+  students: z.array(studentSnapshotSchema).optional(),
+  submissions: z.array(submissionSnapshotSchema).optional(),
   lastUpdated: z.string().datetime()
 });
 
 // ============================================
 // Type Exports
 // ============================================
-export type CacheMetadata = z.infer<typeof cacheMetadataSchema>;
-export type TeacherProfileCache = z.infer<typeof teacherProfileCacheSchema>;
+export type SnapshotMetadata = z.infer<typeof snapshotMetadataSchema>;
+export type TeacherProfile = z.infer<typeof teacherProfileSchema>;
 export type AssignmentWithStats = z.infer<typeof assignmentWithStatsSchema>;
-export type StudentCache = z.infer<typeof studentCacheSchema>;
-export type SubmissionCache = z.infer<typeof submissionCacheSchema>; // Now uses EnhancedSubmission type
+export type StudentSnapshot = z.infer<typeof studentSnapshotSchema>;
+export type SubmissionSnapshot = z.infer<typeof submissionSnapshotSchema>; // Now uses EnhancedSubmission type
 export type ClassroomWithData = z.infer<typeof classroomWithDataSchema>;
-export type TeacherDashboardCache = z.infer<typeof teacherDashboardCacheSchema>;
-export type ClassroomPartialCache = z.infer<typeof classroomPartialCacheSchema>;
+export type ClassroomSnapshot = z.infer<typeof classroomSnapshotSchema>;
+export type ClassroomPartialSnapshot = z.infer<typeof classroomPartialSnapshotSchema>;
 
 // ============================================
 // Utility Functions
 // ============================================
 
 /**
- * Create cache metadata with expiration
+ * Create snapshot metadata with expiration
  */
-export function createCacheMetadata(
+export function createSnapshotMetadata(
   source: 'mock' | 'google-classroom' | 'roo-api',
   expirationMinutes: number = 30
-): CacheMetadata {
+): SnapshotMetadata {
   const now = new Date();
   const expiresAt = new Date(now.getTime() + expirationMinutes * 60 * 1000);
   
@@ -246,9 +245,9 @@ export function createCacheMetadata(
 }
 
 /**
- * Check if cache is expired
+ * Check if snapshot is expired
  */
-export function isCacheExpired(metadata: CacheMetadata): boolean {
+export function isSnapshotExpired(metadata: SnapshotMetadata): boolean {
   return new Date() > new Date(metadata.expiresAt);
 }
 
@@ -279,3 +278,4 @@ export function calculateGlobalStats(classrooms: ClassroomWithData[]) {
     averageGrade: averageGrade ? Math.round(averageGrade * 100) / 100 : undefined
   };
 }
+

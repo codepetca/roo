@@ -145,12 +145,12 @@ function getCachedDashboardData() {
   try {
     // Check if cache is valid
     debugLog('Cache', '🔧 Validating cache');
-    const isValid = CacheManager.isCacheValid(teacherEmail);
+    const isValid = CacheManager.isSnapshotValid(teacherEmail);
     debugLog('Cache', isValid ? '✅ Cache is valid' : '⚠️ Cache invalid/expired');
     
     if (isValid) {
       debugLog('Cache', '📥 Loading cached data');
-      const cachedData = CacheManager.loadDashboardCache(teacherEmail);
+      const cachedData = CacheManager.loadClassroomSnapshot(teacherEmail);
       
       if (cachedData) {
         debugLog('Cache', '🎉 Cache data loaded successfully', null, cachedData);
@@ -208,7 +208,7 @@ function fetchAndCacheDashboardData() {
       
       // Save to cache
       debugLog('Cache', '💾 Saving data to server cache');
-      const cacheResult = CacheManager.saveDashboardCache(teacherEmail, result.data);
+      const cacheResult = CacheManager.saveClassroomSnapshot(teacherEmail, result.data);
       debugLog('Cache', cacheResult.success ? '✅ Cache save successful' : '❌ Cache save failed', cacheResult.success ? null : cacheResult.error);
       
       logTiming('fetchAndCacheDashboardData', startTime, true);
@@ -243,11 +243,87 @@ function clearDashboardCache() {
   const teacherEmail = Session.getActiveUser().getEmail();
   
   try {
-    const result = CacheManager.clearCache(teacherEmail);
+    const result = CacheManager.clearSnapshot(teacherEmail);
     console.log('Cache clear result:', result);
     return result;
   } catch (error) {
     console.error('Error clearing cache:', error);
+    return {
+      success: false,
+      error: error.toString()
+    };
+  }
+}
+
+// Update graded submissions in cache
+function updateGradedSubmissionsInCache(classroomId, gradedSubmissions) {
+  const startTime = Date.now();
+  const teacherEmail = Session.getActiveUser().getEmail();
+  debugLog('Cache', '💾 Updating graded submissions in cache', `Classroom: ${classroomId}, Count: ${gradedSubmissions.length}`);
+  
+  try {
+    // Load current cache
+    const snapshot = CacheManager.loadClassroomSnapshot(teacherEmail);
+    if (!snapshot || !snapshot.classrooms) {
+      debugLog('Cache', '❌ No snapshot found for teacher');
+      return { success: false, error: 'No snapshot found' };
+    }
+    
+    // Find the classroom
+    const classroom = snapshot.classrooms.find(c => c.id === classroomId);
+    if (!classroom) {
+      debugLog('Cache', '❌ Classroom not found in snapshot', classroomId);
+      return { success: false, error: 'Classroom not found in snapshot' };
+    }
+    
+    // Update each graded submission
+    let updatedCount = 0;
+    gradedSubmissions.forEach(gradedSub => {
+      const index = classroom.submissions.findIndex(s => s.id === gradedSub.id);
+      if (index !== -1) {
+        // Merge the graded data with existing submission
+        classroom.submissions[index] = {
+          ...classroom.submissions[index],
+          score: gradedSub.score,
+          feedback: gradedSub.feedback,
+          status: gradedSub.status || 'graded',
+          gradedAt: gradedSub.gradedAt || new Date().toISOString(),
+          gradedBy: gradedSub.gradedBy || 'ai'
+        };
+        updatedCount++;
+      } else {
+        debugLog('Cache', '⚠️ Submission not found in cache', gradedSub.id);
+      }
+    });
+    
+    debugLog('Cache', `✅ Updated ${updatedCount}/${gradedSubmissions.length} submissions`);
+    
+    // Recalculate ungraded count
+    const previousUngraded = classroom.ungradedSubmissions;
+    classroom.ungradedSubmissions = classroom.submissions.filter(
+      s => s.status === 'pending' || s.status === 'submitted'
+    ).length;
+    
+    debugLog('Cache', `📊 Ungraded submissions: ${previousUngraded} → ${classroom.ungradedSubmissions}`);
+    
+    // Update the classroom in cache using CacheManager
+    const updateResult = CacheManager.updateClassroomData(teacherEmail, classroomId, {
+      submissions: classroom.submissions
+    });
+    
+    logTiming('updateGradedSubmissionsInCache', startTime, updateResult.success);
+    
+    return {
+      success: updateResult.success,
+      updatedCount: updatedCount,
+      error: updateResult.error,
+      timestamp: new Date().toISOString()
+    };
+    
+  } catch (error) {
+    debugLog('Cache', '❌ Error updating graded submissions', error.toString());
+    logTiming('updateGradedSubmissionsInCache', startTime, false);
+    
     return {
       success: false,
       error: error.toString()
@@ -386,7 +462,7 @@ function healthCheck() {
     debugLog('Health', '💾 Testing cache system');
     try {
       const teacherEmail = Session.getActiveUser().getEmail();
-      const cacheValid = CacheManager.isCacheValid(teacherEmail);
+      const cacheValid = CacheManager.isSnapshotValid(teacherEmail);
       results.components.cache = {
         status: 'healthy',
         details: `Cache valid: ${cacheValid}`
