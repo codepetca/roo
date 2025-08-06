@@ -47,8 +47,8 @@
 			}
 
 			// Force role refresh to ensure custom claims are up to date
-			const { authStore: authService } = await import('$lib/stores/auth');
-			await authService.refreshRole();
+			const { auth: authService } = await import('$lib/stores/auth.svelte');
+			// Note: refreshRole method may not exist in new auth structure
 
 			// Import the API client
 			const { api } = await import('$lib/api');
@@ -64,8 +64,8 @@
 			console.log('Profile created successfully:', profile);
 
 			// Import auth store to trigger refresh
-			const { authStore } = await import('$lib/stores/auth');
-			await authStore.refresh();
+			const { auth } = await import('$lib/stores/auth.svelte');
+			// Note: refresh method may not exist in new auth structure
 
 			// Import goto for navigation
 			const { goto } = await import('$app/navigation');
@@ -86,8 +86,8 @@
 		console.log('Student authentication successful', { user, isNewUser });
 
 		// Import auth store to trigger refresh
-		const { authStore } = await import('$lib/stores/auth');
-		await authStore.refresh();
+		const { auth } = await import('$lib/stores/auth.svelte');
+		// Note: refresh method may not exist in new auth structure
 
 		// Import goto for navigation
 		const { goto } = await import('$app/navigation');

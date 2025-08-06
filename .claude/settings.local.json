@@ -16,7 +16,8 @@
       "Bash(rm:*)",
       "Bash(npm run build:*)",
       "Bash(diff:*)",
-      "WebFetch(domain:developers.google.com)"
+      "WebFetch(domain:developers.google.com)",
+      "WebFetch(domain:svelte.dev)"
     ],
     "deny": []
   }
