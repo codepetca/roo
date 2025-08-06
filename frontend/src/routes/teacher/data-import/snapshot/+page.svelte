@@ -88,7 +88,9 @@
 	</div>
 
 	<!-- Progress Steps -->
-	<div class="flex items-center justify-center space-x-4">
+	<div class="flex items-center justify-center space-x-4" data-testid="progress-steps">
+		<!-- Hidden current step indicator for tests -->
+		<span data-testid="current-step" class="sr-only">{currentStep}</span>
 		<div class="flex items-center">
 			<div
 				class="flex h-8 w-8 items-center justify-center rounded-full {currentStep === 'upload'
@@ -181,7 +183,7 @@
 
 	<!-- Error Display -->
 	{#if snapshotStore.error}
-		<Alert variant="error" title="Import Error" dismissible onDismiss={snapshotStore.clearError}>
+		<Alert variant="error" title="Import Error" dismissible onDismiss={snapshotStore.clearError} data-testid="validation-error">
 			{#snippet children()}
 				{snapshotStore.error}
 			{/snippet}
@@ -194,18 +196,18 @@
 		<ClassroomSnapshotUploader onValidated={handleFileValidated} />
 	{:else if currentStep === 'preview'}
 		<!-- Step 2: Preview & Confirm -->
-		<div class="space-y-6">
+		<div class="space-y-6" data-testid="snapshot-preview">
 			<!-- Snapshot Overview -->
 			<SnapshotPreview snapshot={snapshotStore.currentSnapshot} />
 
 			<!-- Diff Viewer (if available) -->
 			{#if snapshotStore.showDiff && snapshotStore.diffData}
-				<SnapshotDiffViewer diffData={snapshotStore.diffData} />
+				<SnapshotDiffViewer diffData={snapshotStore.diffData} data-testid="diff-viewer" />
 			{/if}
 
 			<!-- Actions -->
 			<div class="flex justify-between">
-				<Button variant="secondary" onclick={startOver}>
+				<Button variant="secondary" onclick={startOver} data-testid="start-over-btn">
 					{#snippet children()}
 						<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 							<path
@@ -219,7 +221,7 @@
 					{/snippet}
 				</Button>
 
-				<Button variant="primary" onclick={confirmImport} loading={snapshotStore.importing}>
+				<Button variant="primary" onclick={confirmImport} loading={snapshotStore.importing} data-testid="confirm-import-btn">
 					{#snippet children()}
 						{#if snapshotStore.importing}
 							Importing Snapshot...
@@ -242,12 +244,13 @@
 		<!-- Step 3: Importing -->
 		<Card>
 			{#snippet children()}
-				<div class="space-y-4 text-center">
+				<div class="space-y-4 text-center" data-testid="import-progress">
 					<div
 						class="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-blue-600 border-r-transparent"
+						data-testid="importing-spinner"
 					></div>
 					<h3 class="text-lg font-semibold text-gray-900">Importing Snapshot...</h3>
-					<p class="text-sm text-gray-600">Please wait while we process your classroom data.</p>
+					<p class="text-sm text-gray-600" data-testid="import-status">Please wait while we process your classroom data.</p>
 				</div>
 			{/snippet}
 		</Card>
@@ -255,7 +258,7 @@
 		<!-- Step 4: Complete -->
 		<Card>
 			{#snippet children()}
-				<div class="space-y-6 text-center">
+				<div class="space-y-6 text-center" data-testid="import-success">
 					<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
 						<svg
 							class="h-8 w-8 text-green-600"
@@ -274,13 +277,13 @@
 
 					<div>
 						<h3 class="text-lg font-semibold text-gray-900">Snapshot Imported Successfully!</h3>
-						<p class="mt-2 text-sm text-gray-600">
+						<p class="mt-2 text-sm text-gray-600" data-testid="import-summary">
 							Your classroom data has been imported and is ready to use.
 						</p>
 					</div>
 
 					{#if importResult}
-						<div class="rounded-lg bg-green-50 p-4 text-left">
+						<div class="rounded-lg bg-green-50 p-4 text-left" data-testid="import-stats">
 							<h4 class="font-medium text-green-900">Import Summary</h4>
 							<div class="mt-2 text-sm text-green-800">
 								<p>{importResult.message}</p>
@@ -297,7 +300,7 @@
 								Import Another
 							{/snippet}
 						</Button>
-						<Button variant="primary" onclick={goToDashboard}>
+						<Button variant="primary" onclick={goToDashboard} data-testid="go-to-dashboard-btn">
 							{#snippet children()}
 								Go to Dashboard
 							{/snippet}

@@ -31,6 +31,8 @@ import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as 
 import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
 import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, createTeacherSheetOAuth, getTeacherOnboardingStatus, checkTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
 import { getTeacherClassrooms, getClassroomAssignments, getClassroomDetails, processClassroomSnapshot, getUngradedSubmissions as getClassroomUngradedSubmissions, updateClassroomCounts } from "./routes/classrooms";
+import { validateSnapshot, importSnapshot, getImportHistory, generateSnapshotDiff } from "./routes/snapshots";
+import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
 import { createOrUpdateProfile, sendPasscode, verifyPasscode, resetStudentAuth } from "./routes/auth";
@@ -202,9 +204,41 @@ export const api = onRequest(
         (request as RequestWithParams).params = { classroomId };
         await getClassroomAssignments(request, response); return;
       }
+      if (method === "GET" && path.startsWith("/classrooms/") && path.endsWith("/stats")) {
+        const classroomId = path.split("/classrooms/")[1].split("/stats")[0];
+        (request as RequestWithParams).params = { classroomId };
+        await getClassroomStats(request, response); return;
+      }
+      if (method === "GET" && path.startsWith("/classrooms/") && path.includes("/assignments/stats")) {
+        const classroomId = path.split("/classrooms/")[1].split("/assignments/stats")[0];
+        (request as RequestWithParams).params = { classroomId };
+        await getClassroomAssignmentsWithStats(request, response); return;
+      }
       if (method === "POST" && path === "/classrooms/sync-from-sheets") {
         // Legacy route - replaced with snapshot processing
         await processClassroomSnapshot(request, response); return;
+      }
+
+      // Snapshot import routes
+      if (method === "POST" && path === "/snapshots/validate") {
+        await validateSnapshot(request, response); return;
+      }
+      if (method === "POST" && path === "/snapshots/import") {
+        await importSnapshot(request, response); return;
+      }
+      if (method === "GET" && path === "/snapshots/history") {
+        await getImportHistory(request, response); return;
+      }
+      if (method === "POST" && path === "/snapshots/diff") {
+        await generateSnapshotDiff(request, response); return;
+      }
+
+      // Teacher dashboard routes
+      if (method === "GET" && path === "/teacher/dashboard") {
+        await getTeacherDashboard(request, response); return;
+      }
+      if (method === "GET" && path === "/teacher/classrooms") {
+        await getTeacherClassroomsBasic(request, response); return;
       }
 
       // Firestore Grade Management Routes

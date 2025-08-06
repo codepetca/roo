@@ -1,0 +1,331 @@
+import { Request, Response } from "express";
+import { logger } from "firebase-functions";
+import { FirestoreRepository } from "../services/firestore-repository";
+import { getUserFromRequest } from "../middleware/validation";
+import { 
+  TeacherDashboard,
+  ClassroomWithAssignments,
+  AssignmentWithStats
+} from "../../../shared/schemas/core";
+
+/**
+ * Teacher Dashboard API Routes
+ * Location: functions/src/routes/teacher-dashboard.ts
+ * 
+ * Provides aggregated data for teacher dashboard using normalized entities
+ */
+
+const repository = new FirestoreRepository();
+
+/**
+ * Get comprehensive teacher dashboard data
+ * GET /api/teacher/dashboard
+ */
+export async function getTeacherDashboard(req: Request, res: Response): Promise<Response> {
+  try {
+    // Get authenticated user
+    const user = await getUserFromRequest(req);
+    if (!user || user.role !== "teacher") {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Only teachers can access dashboard data" 
+      });
+    }
+
+    logger.info("Loading teacher dashboard", { teacherId: user.uid });
+
+    // Get or create teacher profile
+    let teacher = await repository.getTeacherByEmail(user.email!);
+    if (!teacher) {
+      // Create teacher profile if it doesn't exist
+      teacher = await repository.createTeacher({
+        email: user.email!,
+        name: user.displayName || user.email!.split('@')[0],
+        role: 'teacher',
+        classroomIds: []
+      });
+    }
+
+    // Get teacher's classrooms with assignments
+    const classrooms = await repository.getClassroomsByTeacher(teacher.id);
+    const classroomsWithAssignments: ClassroomWithAssignments[] = [];
+    
+    // Calculate global statistics
+    let totalStudents = 0;
+    let totalAssignments = 0;
+    let ungradedSubmissions = 0;
+    const recentActivity: Array<{ type: string; timestamp: Date; details: Record<string, unknown> }> = [];
+
+    for (const classroom of classrooms) {
+      // Get assignments for this classroom
+      const assignments = await repository.getAssignmentsByClassroom(classroom.id);
+      
+      classroomsWithAssignments.push({
+        ...classroom,
+        assignments
+      });
+
+      // Update counters
+      totalStudents += classroom.studentCount;
+      totalAssignments += assignments.length;
+      ungradedSubmissions += classroom.ungradedSubmissions;
+
+      // Get recent activity for this classroom (simplified)
+      const recentClassroomActivity = await repository.getRecentActivity(classroom.id, 5);
+      
+      // Transform to dashboard activity format
+      recentClassroomActivity.forEach(item => {
+        if ('submittedAt' in item) {
+          // It's a submission
+          recentActivity.push({
+            type: 'submission',
+            timestamp: item.submittedAt,
+            details: {
+              classroomId: item.classroomId,
+              classroomName: classroom.name,
+              studentName: item.studentName,
+              assignmentId: item.assignmentId
+            }
+          });
+        } else if ('gradedAt' in item) {
+          // It's a grade
+          recentActivity.push({
+            type: 'grade',
+            timestamp: item.gradedAt,
+            details: {
+              classroomId: item.classroomId,
+              classroomName: classroom.name,
+              studentId: item.studentId,
+              score: item.score,
+              maxScore: item.maxScore
+            }
+          });
+        }
+      });
+    }
+
+    // Sort recent activity by timestamp
+    recentActivity.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+
+    // Calculate average grade (simplified - would need more complex query in production)
+    const allGrades = await Promise.all(
+      classrooms.map(c => repository.getGradesByClassroom(c.id))
+    );
+    const flatGrades = allGrades.flat();
+    const averageGrade = flatGrades.length > 0 
+      ? flatGrades.reduce((sum, grade) => sum + grade.percentage, 0) / flatGrades.length
+      : undefined;
+
+    const dashboardData: TeacherDashboard = {
+      teacher,
+      classrooms: classroomsWithAssignments,
+      recentActivity: recentActivity.slice(0, 10), // Latest 10 activities
+      stats: {
+        totalStudents,
+        totalAssignments,
+        ungradedSubmissions,
+        averageGrade: averageGrade ? Math.round(averageGrade * 100) / 100 : undefined
+      }
+    };
+
+    logger.info("Teacher dashboard loaded successfully", {
+      teacherId: user.uid,
+      classroomCount: classrooms.length,
+      totalStudents,
+      totalAssignments
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: dashboardData
+    });
+
+  } catch (error) {
+    logger.error("Failed to load teacher dashboard", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to load dashboard data",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+}
+
+/**
+ * Get teacher's classrooms with basic info
+ * GET /api/teacher/classrooms
+ */
+export async function getTeacherClassroomsBasic(req: Request, res: Response): Promise<Response> {
+  try {
+    // Get authenticated user
+    const user = await getUserFromRequest(req);
+    if (!user || user.role !== "teacher") {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Only teachers can access classroom data" 
+      });
+    }
+
+    // Get teacher profile
+    const teacher = await repository.getTeacherByEmail(user.email!);
+    if (!teacher) {
+      return res.status(200).json({ 
+        success: true, 
+        data: [] 
+      });
+    }
+
+    // Get classrooms
+    const classrooms = await repository.getClassroomsByTeacher(teacher.id);
+    
+    return res.status(200).json({
+      success: true,
+      data: classrooms
+    });
+
+  } catch (error) {
+    logger.error("Failed to get teacher classrooms", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to get classrooms",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+}
+
+/**
+ * Get detailed statistics for a specific classroom
+ * GET /api/classrooms/:id/stats
+ */
+export async function getClassroomStats(req: Request, res: Response): Promise<Response> {
+  try {
+    // Get authenticated user
+    const user = await getUserFromRequest(req);
+    if (!user || user.role !== "teacher") {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Only teachers can access classroom statistics" 
+      });
+    }
+
+    const classroomId = (req as any).params.classroomId;
+    if (!classroomId) {
+      return res.status(400).json({
+        success: false,
+        error: "Classroom ID is required"
+      });
+    }
+
+    // Get classroom details
+    const classroom = await repository.getClassroom(classroomId);
+    if (!classroom) {
+      return res.status(404).json({
+        success: false,
+        error: "Classroom not found"
+      });
+    }
+
+    // Get assignments, students, and recent activity
+    const [assignments, students, recentActivity, grades] = await Promise.all([
+      repository.getAssignmentsByClassroom(classroomId),
+      repository.getEnrollmentsByClassroom(classroomId),
+      repository.getRecentActivity(classroomId, 15),
+      repository.getGradesByClassroom(classroomId)
+    ]);
+
+    // Calculate statistics
+    const stats = {
+      studentCount: students.length,
+      assignmentCount: assignments.length,
+      activeSubmissions: classroom.activeSubmissions,
+      ungradedSubmissions: classroom.ungradedSubmissions,
+      averageGrade: grades.length > 0 
+        ? Math.round((grades.reduce((sum, g) => sum + g.percentage, 0) / grades.length) * 100) / 100
+        : undefined,
+      submissionRate: classroom.activeSubmissions > 0 
+        ? Math.round((classroom.activeSubmissions / (students.length * assignments.length || 1)) * 100)
+        : 0
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        classroom,
+        students,
+        recentActivity,
+        statistics: stats
+      }
+    });
+
+  } catch (error) {
+    logger.error("Failed to get classroom stats", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to get classroom statistics",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+}
+
+/**
+ * Get assignments with submission stats for a classroom
+ * GET /api/classrooms/:id/assignments/stats
+ */
+export async function getClassroomAssignmentsWithStats(req: Request, res: Response): Promise<Response> {
+  try {
+    // Get authenticated user
+    const user = await getUserFromRequest(req);
+    if (!user || user.role !== "teacher") {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Only teachers can access assignment statistics" 
+      });
+    }
+
+    const classroomId = (req as any).params.classroomId;
+    if (!classroomId) {
+      return res.status(400).json({
+        success: false,
+        error: "Classroom ID is required"
+      });
+    }
+
+    // Get assignments for this classroom
+    const assignments = await repository.getAssignmentsByClassroom(classroomId);
+    const assignmentsWithStats: AssignmentWithStats[] = [];
+
+    for (const assignment of assignments) {
+      // Get submissions and grades for this assignment
+      const [submissions, grades] = await Promise.all([
+        repository.getSubmissionsByAssignment(assignment.id),
+        repository.getGradesByAssignment(assignment.id)
+      ]);
+
+      // Calculate statistics
+      const submissionsWithGrades = submissions.map(submission => ({
+        ...submission,
+        grade: grades.find(grade => grade.submissionId === submission.id) || null
+      }));
+
+      assignmentsWithStats.push({
+        ...assignment,
+        submissions: submissionsWithGrades,
+        recentSubmissions: submissions
+          .filter(s => s.submittedAt > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) // Last 7 days
+          .slice(0, 5) // Latest 5
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: assignmentsWithStats
+    });
+
+  } catch (error) {
+    logger.error("Failed to get classroom assignments with stats", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to get assignment statistics",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+}

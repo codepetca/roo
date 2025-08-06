@@ -128,12 +128,17 @@
 				ondrop={handleDrop}
 				onclick={openFileDialog}
 				onkeydown={handleKeyDown}
+				data-testid="file-drop-zone"
 			>
+				{#if isDragging}
+					<div class="absolute inset-0 rounded-lg bg-blue-100 bg-opacity-75" data-testid="drag-overlay"></div>
+				{/if}
 				{#if snapshotStore.validating}
 					<!-- Validating state -->
 					<div class="space-y-4">
 						<div
 							class="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-r-transparent"
+							data-testid="validating-spinner"
 						></div>
 						<div>
 							<h4 class="font-medium text-gray-900">Validating File...</h4>
@@ -142,7 +147,7 @@
 					</div>
 				{:else if snapshotStore.importFile && snapshotStore.currentSnapshot}
 					<!-- File validated successfully -->
-					<div class="space-y-4">
+					<div class="space-y-4" data-testid="validation-success">
 						<div
 							class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100"
 						>

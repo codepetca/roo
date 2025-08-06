@@ -42,8 +42,15 @@ import {
 	type StudentEnrollment,
 	type ClassroomWithAssignments,
 	type AssignmentWithStats,
-	type SubmissionWithGrade
+	type SubmissionWithGrade,
+	type TeacherDashboard
 } from '@shared/schemas/core';
+
+// Import snapshot schemas
+import {
+	classroomSnapshotSchema,
+	type ClassroomSnapshot
+} from '@shared/schemas/classroom-snapshot';
 
 /**
  * Type-safe API methods with runtime validation
@@ -451,6 +458,252 @@ export const api = {
 					displayName: z.string()
 				})
 			})
+		);
+	},
+
+	// Snapshot import endpoints
+	async validateSnapshot(snapshot: ClassroomSnapshot): Promise<{
+		isValid: boolean;
+		stats: {
+			classroomCount: number;
+			totalStudents: number;
+			totalAssignments: number;
+			totalSubmissions: number;
+			ungradedSubmissions: number;
+		};
+		metadata: any;
+		preview: {
+			classrooms: Array<{
+				id: string;
+				name: string;
+				studentCount: number;
+				assignmentCount: number;
+				ungradedSubmissions: number;
+			}>;
+		};
+	}> {
+		return typedApiRequest(
+			'/snapshots/validate',
+			{
+				method: 'POST',
+				body: JSON.stringify(snapshot)
+			},
+			z.object({
+				isValid: z.boolean(),
+				stats: z.object({
+					classroomCount: z.number(),
+					totalStudents: z.number(),
+					totalAssignments: z.number(),
+					totalSubmissions: z.number(),
+					ungradedSubmissions: z.number()
+				}),
+				metadata: z.any(),
+				preview: z.object({
+					classrooms: z.array(z.object({
+						id: z.string(),
+						name: z.string(),
+						studentCount: z.number(),
+						assignmentCount: z.number(),
+						ungradedSubmissions: z.number()
+					}))
+				})
+			})
+		);
+	},
+
+	async importSnapshot(snapshot: ClassroomSnapshot): Promise<{
+		snapshotId: string;
+		stats: {
+			classroomsCreated: number;
+			classroomsUpdated: number;
+			assignmentsCreated: number;
+			assignmentsUpdated: number;
+			submissionsCreated: number;
+			submissionsVersioned: number;
+			gradesPreserved: number;
+			gradesCreated: number;
+			enrollmentsCreated: number;
+			enrollmentsUpdated: number;
+			enrollmentsArchived: number;
+		};
+		processingTime: number;
+		summary: string;
+	}> {
+		return typedApiRequest(
+			'/snapshots/import',
+			{
+				method: 'POST',
+				body: JSON.stringify(snapshot)
+			},
+			z.object({
+				snapshotId: z.string(),
+				stats: z.object({
+					classroomsCreated: z.number(),
+					classroomsUpdated: z.number(),
+					assignmentsCreated: z.number(),
+					assignmentsUpdated: z.number(),
+					submissionsCreated: z.number(),
+					submissionsVersioned: z.number(),
+					gradesPreserved: z.number(),
+					gradesCreated: z.number(),
+					enrollmentsCreated: z.number(),
+					enrollmentsUpdated: z.number(),
+					enrollmentsArchived: z.number()
+				}),
+				processingTime: z.number(),
+				summary: z.string()
+			})
+		);
+	},
+
+	async getImportHistory(): Promise<Array<{
+		id: string;
+		timestamp: Date;
+		status: string;
+		stats: {
+			classroomsCreated: number;
+			assignmentsCreated: number;
+			submissionsCreated: number;
+		};
+	}>> {
+		return typedApiRequest(
+			'/snapshots/history',
+			{},
+			z.array(z.object({
+				id: z.string(),
+				timestamp: z.date(),
+				status: z.string(),
+				stats: z.object({
+					classroomsCreated: z.number(),
+					assignmentsCreated: z.number(),
+					submissionsCreated: z.number()
+				})
+			}))
+		);
+	},
+
+	async generateSnapshotDiff(snapshot: ClassroomSnapshot): Promise<{
+		hasExistingData: boolean;
+		isFirstImport: boolean;
+		existing?: {
+			classroomCount: number;
+		};
+		new: {
+			classroomCount: number;
+			totalAssignments: number;
+			totalSubmissions: number;
+		};
+		changes?: {
+			newClassrooms: number;
+		};
+	}> {
+		return typedApiRequest(
+			'/snapshots/diff',
+			{
+				method: 'POST',
+				body: JSON.stringify(snapshot)
+			},
+			z.object({
+				hasExistingData: z.boolean(),
+				isFirstImport: z.boolean(),
+				existing: z.object({
+					classroomCount: z.number()
+				}).optional(),
+				new: z.object({
+					classroomCount: z.number(),
+					totalAssignments: z.number(),
+					totalSubmissions: z.number()
+				}),
+				changes: z.object({
+					newClassrooms: z.number()
+				}).optional()
+			})
+		);
+	},
+
+	// Teacher dashboard endpoints
+	async getTeacherDashboard(): Promise<TeacherDashboard> {
+		const teacherDashboardSchema = z.object({
+			teacher: z.object({
+				id: z.string(),
+				email: z.string(),
+				name: z.string(),
+				role: z.literal('teacher'),
+				classroomIds: z.array(z.string()),
+				totalStudents: z.number(),
+				totalClassrooms: z.number(),
+				createdAt: z.date(),
+				updatedAt: z.date()
+			}),
+			classrooms: z.array(classroomSchema.extend({
+				assignments: z.array(assignmentSchema)
+			})),
+			recentActivity: z.array(z.object({
+				type: z.string(),
+				timestamp: z.date(),
+				details: z.record(z.unknown())
+			})),
+			stats: z.object({
+				totalStudents: z.number(),
+				totalAssignments: z.number(),
+				ungradedSubmissions: z.number(),
+				averageGrade: z.number().optional()
+			})
+		});
+
+		return typedApiRequest('/teacher/dashboard', {}, teacherDashboardSchema);
+	},
+
+	async getTeacherClassroomsBasic(): Promise<Classroom[]> {
+		return typedApiRequest('/teacher/classrooms', {}, z.array(classroomSchema));
+	},
+
+	async getClassroomStats(classroomId: string): Promise<{
+		classroom: Classroom;
+		students: StudentEnrollment[];
+		recentActivity: Array<Submission | Grade>;
+		statistics: {
+			studentCount: number;
+			assignmentCount: number;
+			activeSubmissions: number;
+			ungradedSubmissions: number;
+			averageGrade?: number;
+			submissionRate: number;
+		};
+	}> {
+		return typedApiRequest(
+			`/classrooms/${classroomId}/stats`,
+			{},
+			z.object({
+				classroom: classroomSchema,
+				students: z.array(studentEnrollmentSchema),
+				recentActivity: z.array(z.union([submissionSchema, gradeSchema])),
+				statistics: z.object({
+					studentCount: z.number(),
+					assignmentCount: z.number(),
+					activeSubmissions: z.number(),
+					ungradedSubmissions: z.number(),
+					averageGrade: z.number().optional(),
+					submissionRate: z.number()
+				})
+			})
+		);
+	},
+
+	async getClassroomAssignmentsWithStats(classroomId: string): Promise<AssignmentWithStats[]> {
+		return typedApiRequest(
+			`/classrooms/${classroomId}/assignments/stats`,
+			{},
+			z.array(
+				assignmentSchema.extend({
+					submissions: z.array(
+						submissionSchema.extend({
+							grade: gradeSchema.nullable()
+						})
+					),
+					recentSubmissions: z.array(submissionSchema)
+				})
+			)
 		);
 	}
 };

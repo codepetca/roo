@@ -5,6 +5,7 @@
  */
 
 import type { ClassroomSnapshot } from '@shared/schemas/classroom-snapshot';
+import { api } from '$lib/api';
 
 // Import workflow state
 let currentSnapshot = $state<ClassroomSnapshot | null>(null);
@@ -90,13 +91,18 @@ async function validateImportFile(): Promise<boolean> {
 			return false;
 		}
 
-		// Validate against classroom snapshot schema
-		// Import the schema and validate
+		// First validate locally against schema
 		const { classroomSnapshotSchema } = await import('@shared/schemas/classroom-snapshot');
-
 		const validation = classroomSnapshotSchema.safeParse(jsonData);
 		if (!validation.success) {
 			error = `Schema validation failed: ${validation.error.issues[0]?.message || 'Invalid format'}`;
+			return false;
+		}
+
+		// Now validate with backend API (includes business logic validation)
+		const validationResult = await api.validateSnapshot(validation.data);
+		if (!validationResult.isValid) {
+			error = 'Snapshot validation failed on server';
 			return false;
 		}
 
@@ -117,21 +123,33 @@ async function validateImportFile(): Promise<boolean> {
  * Compare current snapshot with previous import (if any)
  */
 async function generateDiff(): Promise<void> {
-	if (!currentSnapshot || !previousSnapshot) {
+	if (!currentSnapshot) {
 		diffData = null;
 		return;
 	}
 
 	try {
-		// Dynamic import of jsondiffpatch when needed
-		const { create } = await import('jsondiffpatch');
-		const differ = create({
-			objectHash: (obj: any) => obj.id || JSON.stringify(obj),
-			arrays: { detectMove: true }
-		});
+		// Generate diff using backend API (compares with existing data)
+		const diffResult = await api.generateSnapshotDiff(currentSnapshot);
+		diffData = diffResult;
+		showDiff = diffResult.hasExistingData;
 
-		diffData = differ.diff(previousSnapshot, currentSnapshot);
-		showDiff = true;
+		// Also generate local diff if we have a previous snapshot
+		if (previousSnapshot) {
+			const { create } = await import('jsondiffpatch');
+			const differ = create({
+				objectHash: (obj: any) => obj.id || JSON.stringify(obj),
+				arrays: { detectMove: true }
+			});
+
+			const localDiff = differ.diff(previousSnapshot, currentSnapshot);
+			
+			// Combine API diff with local diff data
+			diffData = {
+				...diffResult,
+				localDiff
+			};
+		}
 	} catch (err: unknown) {
 		console.error('Diff generation error:', err);
 		error = 'Failed to generate diff';
@@ -150,19 +168,18 @@ async function importSnapshot(): Promise<ImportResult> {
 		importing = true;
 		error = null;
 
-		// TODO: Replace with real API call when backend is ready
-		// For now, simulate the import process
-		await simulateImport();
+		// Use real API to import snapshot
+		const importResult = await api.importSnapshot(currentSnapshot);
 
 		// Add to history
 		const historyEntry: SnapshotHistoryEntry = {
-			id: crypto.randomUUID(),
+			id: importResult.snapshotId,
 			timestamp: new Date(),
 			source: currentSnapshot.snapshotMetadata.source,
-			classroomCount: currentSnapshot.classrooms.length,
-			studentCount: currentSnapshot.globalStats.totalStudents,
-			assignmentCount: currentSnapshot.globalStats.totalAssignments,
-			hasChanges: diffData !== null
+			classroomCount: importResult.stats.classroomsCreated + importResult.stats.classroomsUpdated,
+			studentCount: importResult.stats.enrollmentsCreated + importResult.stats.enrollmentsUpdated,
+			assignmentCount: importResult.stats.assignmentsCreated + importResult.stats.assignmentsUpdated,
+			hasChanges: importResult.stats.classroomsCreated > 0 || importResult.stats.assignmentsCreated > 0
 		};
 
 		importHistory = [historyEntry, ...importHistory];
@@ -172,8 +189,8 @@ async function importSnapshot(): Promise<ImportResult> {
 
 		return {
 			success: true,
-			snapshotId: historyEntry.id,
-			message: 'Snapshot imported successfully'
+			snapshotId: importResult.snapshotId,
+			message: importResult.summary
 		};
 	} catch (err: unknown) {
 		console.error('Import error:', err);
@@ -193,9 +210,19 @@ async function loadImportHistory(): Promise<void> {
 		loadingHistory = true;
 		error = null;
 
-		// TODO: Replace with real API call
-		// For now, use mock data
-		importHistory = [];
+		// Load history from API
+		const historyData = await api.getImportHistory();
+		
+		// Transform API data to our local format
+		importHistory = historyData.map(entry => ({
+			id: entry.id,
+			timestamp: entry.timestamp,
+			source: 'roo-api' as const, // API doesn't return source currently
+			classroomCount: entry.stats.classroomsCreated,
+			studentCount: 0, // API doesn't return this currently
+			assignmentCount: entry.stats.assignmentsCreated,
+			hasChanges: entry.stats.classroomsCreated > 0 || entry.stats.assignmentsCreated > 0
+		}));
 	} catch (err: unknown) {
 		console.error('Failed to load import history:', err);
 		error = err instanceof Error ? err.message : 'Failed to load import history';
@@ -223,18 +250,7 @@ function readFileAsText(file: File): Promise<string> {
 	});
 }
 
-/**
- * Helper: Simulate import process for development
- */
-async function simulateImport(): Promise<void> {
-	// Simulate API call delay
-	await new Promise((resolve) => setTimeout(resolve, 1500));
-
-	// Randomly simulate success/failure for testing
-	if (Math.random() > 0.9) {
-		throw new Error('Import failed (simulated error)');
-	}
-}
+// Removed simulateImport function - using real API calls now
 
 // Export reactive properties and actions (Svelte 5 style with closures)
 export const snapshotStore = {

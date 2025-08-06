@@ -4,3 +4,6 @@ export { default as PageHeader } from './PageHeader.svelte';
 export { default as LoadingSkeleton } from './LoadingSkeleton.svelte';
 export { default as ClassroomSidebar } from './ClassroomSidebar.svelte';
 export { default as AssignmentListItem } from './AssignmentListItem.svelte';
+export { default as ClassroomCard } from './ClassroomCard.svelte';
+export { default as AssignmentCard } from './AssignmentCard.svelte';
+export { default as StatCard } from './StatCard.svelte';
