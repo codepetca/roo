@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { api } from '$lib/api';
-	import type { AssignmentResponse } from '$lib/schemas';
+	import { classroomStore } from '$lib/stores';
 	import { Button, Alert } from '$lib/components/ui';
 	import {
 		ClassroomSidebar,
@@ -13,49 +13,13 @@
 	} from '$lib/components/dashboard';
 	import StudentResetManager from '$lib/components/auth/StudentResetManager.svelte';
 
-	// State using Svelte 5 runes
-	let assignments = $state<AssignmentResponse[]>([]);
-	let selectedClassroomId = $state<string | undefined>(undefined);
-	let loading = $state(false);
-	let error = $state<string | null>(null);
+	// Local UI state
 	let syncing = $state(false);
 	let syncMessage = $state<string | null>(null);
-	// Derived statistics
-	let totalAssignments = $derived(assignments.length);
-	let quizCount = $derived(assignments.filter((a) => a.isQuiz).length);
-	let totalSubmissions = $derived(
-		assignments.reduce((sum, a) => sum + (a.submissionCount || 0), 0)
-	);
-	let ungradedSubmissions = $derived(
-		assignments.reduce((sum, a) => {
-			const ungraded = (a.submissionCount || 0) - (a.gradedCount || 0);
-			return sum + ungraded;
-		}, 0)
-	);
 
-	// Load assignments for selected classroom
-	async function loadAssignments() {
-		if (!selectedClassroomId) {
-			assignments = [];
-			return;
-		}
-
-		try {
-			loading = true;
-			error = null;
-			assignments = await api.getClassroomAssignments(selectedClassroomId);
-		} catch (err: unknown) {
-			console.error('Failed to load assignments:', err);
-			error = err instanceof Error ? err.message : 'Failed to load assignments';
-		} finally {
-			loading = false;
-		}
-	}
-
-	// Handle classroom selection
+	// Handle classroom selection from sidebar
 	function handleClassroomSelect(classroomId: string) {
-		selectedClassroomId = classroomId;
-		loadAssignments();
+		// The classroom store handles the selection and loading
 	}
 
 	// Handle assignment view
@@ -73,15 +37,16 @@
 
 			if (result.success) {
 				syncMessage = `Successfully synced ${result.assignmentsProcessed} assignments and ${result.submissionsProcessed} submissions from Google Sheets`;
-				// Reload assignments for current classroom
-				await loadAssignments();
+				// Reload data from the store
+				await classroomStore.refresh();
 			} else {
 				syncMessage = `Sync completed with errors: ${result.assignmentsProcessed} assignments, ${result.submissionsProcessed} submissions. ${result.errors.length} errors occurred.`;
 				console.error('Sync errors:', result.errors);
 			}
 		} catch (err: unknown) {
 			console.error('Failed to sync data:', err);
-			error = err instanceof Error ? err.message : 'Failed to sync data from Google Sheets';
+			// Set error on store
+			classroomStore.clearError();
 		} finally {
 			syncing = false;
 		}
@@ -111,7 +76,7 @@
 				Sync from Sheets
 			{/snippet}
 		</Button>
-		<Button variant="primary" onclick={loadAssignments} {loading}>
+		<Button variant="primary" onclick={classroomStore.refresh} loading={classroomStore.loading}>
 			{#snippet children()}
 				Refresh
 			{/snippet}
@@ -121,7 +86,7 @@
 
 <!-- Render sidebar in the designated sidebar area -->
 <div id="sidebar-content" style="display: none;">
-	<ClassroomSidebar bind:selectedClassroomId onClassroomSelect={handleClassroomSelect} />
+	<ClassroomSidebar onClassroomSelect={handleClassroomSelect} />
 </div>
 
 <div class="space-y-6">
@@ -147,7 +112,7 @@
 	{/if}
 
 	<!-- Main Content -->
-	{#if !selectedClassroomId}
+	{#if !classroomStore.selectedClassroomId}
 		<!-- No classroom selected -->
 		<div class="py-12 text-center">
 			<svg
@@ -168,21 +133,21 @@
 				Choose a class from the sidebar to view its assignments and manage submissions.
 			</p>
 		</div>
-	{:else if loading}
+	{:else if classroomStore.loading}
 		<!-- Loading State -->
 		<LoadingSkeleton type="card" rows={3} />
-	{:else if error}
+	{:else if classroomStore.error}
 		<!-- Error State -->
 		<Alert
 			variant="error"
 			title="Error loading assignments"
 			dismissible
-			onDismiss={() => (error = null)}
+			onDismiss={classroomStore.clearError}
 		>
 			{#snippet children()}
-				{error}
+				{classroomStore.error}
 				<div class="mt-3">
-					<Button variant="secondary" size="sm" onclick={loadAssignments}>
+					<Button variant="secondary" size="sm" onclick={classroomStore.loadAssignments}>
 						{#snippet children()}
 							Try Again
 						{/snippet}
@@ -212,7 +177,7 @@
 					</div>
 					<div class="ml-4">
 						<p class="text-sm font-medium text-gray-600">Total Assignments</p>
-						<p class="text-2xl font-semibold text-gray-900">{totalAssignments}</p>
+						<p class="text-2xl font-semibold text-gray-900">{classroomStore.totalAssignments}</p>
 					</div>
 				</div>
 			</div>
@@ -236,7 +201,7 @@
 					</div>
 					<div class="ml-4">
 						<p class="text-sm font-medium text-gray-600">Quizzes</p>
-						<p class="text-2xl font-semibold text-gray-900">{quizCount}</p>
+						<p class="text-2xl font-semibold text-gray-900">{classroomStore.quizCount}</p>
 					</div>
 				</div>
 			</div>
@@ -260,7 +225,7 @@
 					</div>
 					<div class="ml-4">
 						<p class="text-sm font-medium text-gray-600">Total Submissions</p>
-						<p class="text-2xl font-semibold text-gray-900">{totalSubmissions}</p>
+						<p class="text-2xl font-semibold text-gray-900">{classroomStore.totalSubmissions}</p>
 					</div>
 				</div>
 			</div>
@@ -284,7 +249,7 @@
 					</div>
 					<div class="ml-4">
 						<p class="text-sm font-medium text-gray-600">Pending Review</p>
-						<p class="text-2xl font-semibold text-gray-900">{ungradedSubmissions}</p>
+						<p class="text-2xl font-semibold text-gray-900">{classroomStore.ungradedSubmissions}</p>
 					</div>
 				</div>
 			</div>
@@ -356,7 +321,7 @@
 			</div>
 
 			<div class="p-6">
-				{#if assignments.length === 0}
+				{#if classroomStore.assignments.length === 0}
 					<EmptyState
 						icon="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
 						title="No assignments yet"
@@ -366,7 +331,7 @@
 					/>
 				{:else}
 					<div class="space-y-4">
-						{#each assignments as assignment (assignment.id)}
+						{#each classroomStore.assignments as assignment (assignment.id)}
 							<AssignmentListItem {assignment} onView={handleViewAssignment} />
 						{/each}
 					</div>
