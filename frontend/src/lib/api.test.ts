@@ -1,0 +1,536 @@
+/**
+ * Unit tests for API client with mocking and error handling
+ * Location: frontend/src/lib/api.test.ts
+ */
+
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { AssignmentResponse, SubmissionResponse, GradeResponse } from '@shared/types';
+
+// Type aliases for backward compatibility
+type Assignment = AssignmentResponse;
+type Submission = SubmissionResponse;
+type Grade = GradeResponse;
+
+// Mock fetch globally
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+// Mock environment variables
+vi.mock('$env/static/public', () => ({
+	PUBLIC_USE_EMULATORS: 'true',
+	PUBLIC_FUNCTIONS_EMULATOR_URL: 'http://localhost:5001/test-project/us-central1',
+	PUBLIC_FIREBASE_API_KEY: 'test-api-key',
+	PUBLIC_FIREBASE_AUTH_DOMAIN: 'test.firebaseapp.com',
+	PUBLIC_FIREBASE_PROJECT_ID: 'test-project',
+	PUBLIC_FIREBASE_STORAGE_BUCKET: 'test.appspot.com',
+	PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '123456789',
+	PUBLIC_FIREBASE_APP_ID: '1:123456789:web:abcdef'
+}));
+
+// Mock Firebase functions
+vi.mock('./firebase', () => ({
+	firebaseAuth: {
+		currentUser: null
+	},
+	firebaseFunctions: {},
+	googleProvider: {},
+	signInWithGoogle: vi.fn(),
+	signOut: vi.fn(),
+	onAuthStateChange: vi.fn(),
+	getCurrentUserToken: vi.fn()
+}));
+
+vi.mock('firebase/functions', () => ({
+	httpsCallable: vi.fn()
+}));
+
+describe('API Client', () => {
+	let api: typeof import('./api')['api'];
+
+	beforeEach(async () => {
+		vi.clearAllMocks();
+		// Import API after mocks are set up
+		const apiModule = await import('./api');
+		api = apiModule.api;
+	});
+
+	afterEach(() => {
+		vi.clearAllMocks();
+	});
+
+	describe('API Base Configuration', () => {
+		it('should use emulator URL when in emulator mode', async () => {
+			const { API_BASE_URL } = await import('./api');
+			expect(API_BASE_URL).toBe('http://localhost:5001/test-project/us-central1');
+		});
+	});
+
+	describe('Error Handling', () => {
+		it('should handle HTTP errors properly', async () => {
+			mockFetch.mockResolvedValue({
+				ok: false,
+				status: 404,
+				json: () => Promise.resolve({ message: 'Not found' })
+			});
+
+			await expect(api.listAssignments()).rejects.toThrow('Not found');
+		});
+
+		it('should handle network errors', async () => {
+			mockFetch.mockRejectedValue(new Error('Network error'));
+
+			await expect(api.listAssignments()).rejects.toThrow('Network error');
+		});
+
+		it('should handle malformed JSON responses', async () => {
+			mockFetch.mockResolvedValue({
+				ok: false,
+				status: 500,
+				json: () => Promise.reject(new Error('Invalid JSON'))
+			});
+
+			await expect(api.listAssignments()).rejects.toThrow('Unknown error');
+		});
+	});
+
+	describe('Assignments API', () => {
+		const mockAssignments: Assignment[] = [
+			{
+				id: 'assignment-1',
+				classroomId: 'classroom-1',
+				title: 'Test Assignment',
+				description: 'A test assignment',
+				dueDate: { _seconds: 1642694400, _nanoseconds: 0 },
+				maxPoints: 100,
+				gradingRubric: {
+					enabled: true,
+					criteria: ['Content', 'Grammar'],
+					promptTemplate: 'Grade this assignment'
+				},
+				isQuiz: false,
+				formId: undefined,
+				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
+				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+			},
+			{
+				id: 'quiz-1',
+				classroomId: 'classroom-1',
+				title: 'Test Quiz',
+				description: 'A test quiz',
+				dueDate: { _seconds: 1642694400, _nanoseconds: 0 },
+				maxPoints: 50,
+				gradingRubric: {
+					enabled: true,
+					criteria: ['Correctness']
+				},
+				isQuiz: true,
+				formId: 'form-123',
+				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
+				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+			}
+		];
+
+		it('should list assignments successfully', async () => {
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: mockAssignments
+					})
+			});
+
+			const result = await api.listAssignments();
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/assignments',
+				expect.objectContaining({
+					headers: {
+						'Content-Type': 'application/json'
+					}
+				})
+			);
+			expect(result).toEqual(mockAssignments);
+		});
+
+		it('should handle empty assignments list', async () => {
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: null
+					})
+			});
+
+			const result = await api.listAssignments();
+			expect(result).toEqual([]);
+		});
+
+		it('should create assignment successfully', async () => {
+			const newAssignment = mockAssignments[0];
+			const createRequest = {
+				title: 'Test Assignment',
+				description: 'A test assignment',
+				maxPoints: 100
+			};
+
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: newAssignment
+					})
+			});
+
+			const result = await api.createAssignment(createRequest);
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/assignments',
+				expect.objectContaining({
+					method: 'POST',
+					body: JSON.stringify(createRequest)
+				})
+			);
+			expect(result).toEqual(newAssignment);
+		});
+	});
+
+	describe('Submissions API', () => {
+		const mockSubmissions: Submission[] = [
+			{
+				id: 'submission-1',
+				assignmentId: 'assignment-1',
+				studentId: 'student-1',
+				studentEmail: 'student@test.com',
+				studentName: 'Test Student',
+				submittedAt: { _seconds: 1642694400, _nanoseconds: 0 },
+				documentUrl: 'https://example.com/doc',
+				status: 'pending',
+				content: 'Student submission content',
+				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
+				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+			}
+		];
+
+		it('should get submissions by assignment', async () => {
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: mockSubmissions
+					})
+			});
+
+			const result = await api.getSubmissionsByAssignment('assignment-1');
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/submissions/assignment/assignment-1',
+				expect.any(Object)
+			);
+			expect(result).toEqual(mockSubmissions);
+		});
+
+		it('should get individual submission', async () => {
+			const mockSubmission = mockSubmissions[0];
+
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: mockSubmission
+					})
+			});
+
+			const result = await api.getSubmission('submission-1');
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/submissions/submission-1',
+				expect.any(Object)
+			);
+			expect(result).toEqual(mockSubmission);
+		});
+
+		it('should create submission successfully', async () => {
+			const newSubmission = mockSubmissions[0];
+			const createRequest = {
+				assignmentId: 'assignment-1',
+				studentId: 'student-1',
+				studentName: 'Test Student',
+				studentEmail: 'student@test.com',
+				submissionText: 'Student submission content',
+				status: 'pending' as const
+			};
+
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: newSubmission
+					})
+			});
+
+			const result = await api.createSubmission(createRequest);
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/submissions',
+				expect.objectContaining({
+					method: 'POST',
+					body: JSON.stringify(createRequest)
+				})
+			);
+			expect(result).toEqual(newSubmission);
+		});
+
+		it('should update submission status', async () => {
+			const updateRequest = {
+				status: 'graded' as const,
+				gradeId: 'grade-1'
+			};
+
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: { ...mockSubmissions[0], status: 'graded' }
+					})
+			});
+
+			const result = await api.updateSubmissionStatus('submission-1', updateRequest);
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/submissions/submission-1/status',
+				expect.objectContaining({
+					method: 'PATCH',
+					body: JSON.stringify(updateRequest)
+				})
+			);
+			expect(result.status).toBe('graded');
+		});
+	});
+
+	describe('Grades API', () => {
+		const mockGrades: Grade[] = [
+			{
+				id: 'grade-1',
+				submissionId: 'submission-1',
+				assignmentId: 'assignment-1',
+				studentId: 'student-1',
+				score: 85,
+				maxScore: 100,
+				feedback: 'Good work!',
+				gradingDetails: {
+					criteria: [
+						{
+							name: 'Content',
+							score: 85,
+							maxScore: 100,
+							feedback: 'Well written content'
+						}
+					]
+				},
+				gradedBy: 'ai',
+				gradedAt: { _seconds: 1642694400, _nanoseconds: 0 },
+				postedToClassroom: false,
+				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
+				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+			}
+		];
+
+		it('should get grades by assignment', async () => {
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: mockGrades
+					})
+			});
+
+			const result = await api.getGradesByAssignment('assignment-1');
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/grades/assignment/assignment-1',
+				expect.any(Object)
+			);
+			expect(result).toEqual(mockGrades);
+		});
+
+		it('should get grade by submission', async () => {
+			const mockGrade = mockGrades[0];
+
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: mockGrade
+					})
+			});
+
+			const result = await api.getGradeBySubmission('submission-1');
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/grades/submission/submission-1',
+				expect.any(Object)
+			);
+			expect(result).toEqual(mockGrade);
+		});
+	});
+
+	describe('Grading API', () => {
+		it('should grade quiz successfully', async () => {
+			const gradingRequest = {
+				submissionId: 'submission-1',
+				formId: 'form-123',
+				assignmentId: 'assignment-1',
+				studentId: 'student-1',
+				studentName: 'Test Student',
+				studentAnswers: { '1': 'A', '2': 'B' }
+			};
+
+			const gradingResult = {
+				gradeId: 'grade-1',
+				grading: {
+					totalScore: 85,
+					totalPossible: 100,
+					questionGrades: [
+						{
+							questionNumber: 1,
+							isCorrect: true,
+							studentAnswer: 'A',
+							correctAnswer: 'A',
+							points: 50
+						}
+					]
+				}
+			};
+
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: gradingResult
+					})
+			});
+
+			const result = await api.gradeQuiz(gradingRequest);
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/grade-quiz',
+				expect.objectContaining({
+					method: 'POST',
+					body: JSON.stringify(gradingRequest)
+				})
+			);
+			expect(result).toEqual(gradingResult);
+		});
+
+		it('should grade code successfully', async () => {
+			const gradingRequest = {
+				submissionId: 'submission-1',
+				submissionText: 'function hello() { return "Hello World"; }',
+				assignmentId: 'assignment-1',
+				assignmentTitle: 'Coding Assignment',
+				studentId: 'student-1',
+				studentName: 'Test Student',
+				maxPoints: 100,
+				isCodeAssignment: true
+			};
+
+			const gradingResult = {
+				gradeId: 'grade-1',
+				grading: {
+					score: 90,
+					feedback: 'Excellent implementation!',
+					criteriaScores: [
+						{
+							name: 'Logic',
+							score: 90,
+							maxScore: 100,
+							feedback: 'Good logical structure'
+						}
+					]
+				}
+			};
+
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: gradingResult
+					})
+			});
+
+			const result = await api.gradeCode(gradingRequest);
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/grade-code',
+				expect.objectContaining({
+					method: 'POST',
+					body: JSON.stringify(gradingRequest)
+				})
+			);
+			expect(result).toEqual(gradingResult);
+		});
+	});
+
+	describe('Health Check', () => {
+		it('should check API status', async () => {
+			const statusResponse = {
+				status: 'healthy',
+				version: '1.0.0',
+				endpoints: ['/assignments', '/submissions', '/grades']
+			};
+
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () => Promise.resolve(statusResponse)
+			});
+
+			const result = await api.getStatus();
+
+			expect(mockFetch).toHaveBeenCalledWith(
+				'http://localhost:5001/test-project/us-central1/api/',
+				expect.any(Object)
+			);
+			expect(result).toEqual(statusResponse);
+		});
+	});
+
+	describe('Type Safety', () => {
+		it('should handle API response validation', async () => {
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: false,
+						error: 'Validation failed'
+					})
+			});
+
+			await expect(api.listAssignments()).rejects.toThrow('Validation failed');
+		});
+
+		it('should return empty arrays for null data', async () => {
+			mockFetch.mockResolvedValue({
+				ok: true,
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: null
+					})
+			});
+
+			const result = await api.getSubmissionsByAssignment('assignment-1');
+			expect(result).toEqual([]);
+		});
+	});
+});
