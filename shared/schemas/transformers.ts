@@ -1,338 +1,566 @@
-import * as admin from "firebase-admin";
-// Removed getCurrentTimestamp import - using admin.firestore.Timestamp.now() directly
-import type {
-  SheetAssignment,
-  SheetSubmission,
-  SheetAnswerKey
-} from "./source";
-import type {
-  AssignmentDomain,
-  SubmissionDomain,
-  QuizAnswerKeyDomain,
-  GradeDomain,
-  ClassroomDomain,
-  UserDomain
-} from "./domain";
-import type {
-  AssignmentResponse,
-  SubmissionResponse,
-  GradeResponse,
-  SerializedTimestamp,
-  ClassroomResponse,
-  UserProfileResponse
-} from "./dto";
+import { 
+  ClassroomSnapshot, 
+  ClassroomWithData, 
+  AssignmentWithStats, 
+  StudentSnapshot, 
+  SubmissionSnapshot 
+} from './classroom-snapshot';
+import {
+  Teacher,
+  Classroom,
+  Assignment,
+  Submission,
+  Grade,
+  StudentEnrollment,
+  TeacherInput,
+  ClassroomInput,
+  AssignmentInput,
+  SubmissionInput,
+  GradeInput
+} from './core';
 
 /**
- * Transformer utilities for converting between different schema representations
+ * Transformation utilities for converting between ClassroomSnapshot and Core schemas
+ * Location: shared/schemas/transformers.ts
+ * 
+ * These functions handle the transformation from the Google Classroom snapshot format
+ * to our normalized DataConnect-ready schemas.
  */
-
-// ============================================
-// Timestamp Transformers
-// ============================================
 
 /**
- * Convert Firebase Timestamp to serialized format for API responses
+ * Generate stable IDs for entities to ensure consistency across snapshots
  */
-export function serializeTimestamp(timestamp: admin.firestore.Timestamp | admin.firestore.FieldValue): SerializedTimestamp {
-  if (timestamp instanceof admin.firestore.Timestamp) {
-    return {
-      _seconds: timestamp.seconds,
-      _nanoseconds: timestamp.nanoseconds
-    };
+export class StableIdGenerator {
+  static classroom(externalId: string): string {
+    return `classroom_${externalId}`;
   }
-  // For FieldValue (serverTimestamp), return current time as fallback
-  const now = admin.firestore.Timestamp.now();
+
+  static assignment(classroomId: string, externalId: string): string {
+    return `${classroomId}_assignment_${externalId}`;
+  }
+
+  static submission(classroomId: string, assignmentId: string, studentId: string): string {
+    return `${classroomId}_${assignmentId}_${studentId}`;
+  }
+
+  static student(studentEmail: string): string {
+    // Use email as stable identifier for students
+    return `student_${studentEmail.replace('@', '_at_').replace('.', '_')}`;
+  }
+
+  static enrollment(classroomId: string, studentId: string): string {
+    return `${classroomId}_${studentId}`;
+  }
+
+  static grade(submissionId: string, version: number): string {
+    return `${submissionId}_grade_v${version}`;
+  }
+}
+
+/**
+ * Transform a ClassroomSnapshot into normalized core entities
+ */
+export function snapshotToCore(snapshot: ClassroomSnapshot): {
+  teacher: TeacherInput;
+  classrooms: ClassroomInput[];
+  assignments: AssignmentInput[];
+  submissions: SubmissionInput[];
+  enrollments: StudentEnrollment[];
+} {
+  const teacher = transformTeacher(snapshot.teacher, snapshot.classrooms);
+  const classrooms: ClassroomInput[] = [];
+  const assignments: AssignmentInput[] = [];
+  const submissions: SubmissionInput[] = [];
+  const enrollments: StudentEnrollment[] = [];
+
+  for (const classroomData of snapshot.classrooms) {
+    // Transform classroom
+    const classroom = transformClassroom(classroomData, snapshot.teacher.email);
+    classrooms.push(classroom);
+
+    // Transform assignments for this classroom
+    for (const assignmentData of classroomData.assignments) {
+      const assignment = transformAssignment(
+        assignmentData,
+        StableIdGenerator.classroom(classroomData.id)
+      );
+      assignments.push(assignment);
+    }
+
+    // Transform students/enrollments for this classroom
+    for (const studentData of classroomData.students) {
+      const enrollment = transformStudentEnrollment(
+        studentData,
+        StableIdGenerator.classroom(classroomData.id)
+      );
+      enrollments.push(enrollment);
+    }
+
+    // Transform submissions for this classroom
+    for (const submissionData of classroomData.submissions) {
+      const submission = transformSubmission(
+        submissionData,
+        StableIdGenerator.classroom(classroomData.id)
+      );
+      submissions.push(submission);
+    }
+  }
+
   return {
-    _seconds: now.seconds,
-    _nanoseconds: now.nanoseconds
+    teacher,
+    classrooms,
+    assignments,
+    submissions,
+    enrollments
   };
 }
 
 /**
- * Convert serialized timestamp to Firebase Timestamp
+ * Transform teacher profile from snapshot to core schema
  */
-export function deserializeTimestamp(serialized: SerializedTimestamp): admin.firestore.Timestamp {
-  return new admin.firestore.Timestamp(serialized._seconds, serialized._nanoseconds);
-}
-
-/**
- * Parse date string to Firebase Timestamp
- */
-export function parseDateToTimestamp(dateString: string): admin.firestore.Timestamp | undefined {
-  if (!dateString) return undefined;
+function transformTeacher(
+  teacherProfile: ClassroomSnapshot['teacher'],
+  classrooms: ClassroomWithData[]
+): TeacherInput {
+  const classroomIds = classrooms.map(c => StableIdGenerator.classroom(c.id));
   
-  try {
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return undefined;
-    return admin.firestore.Timestamp.fromDate(date);
-  } catch {
-    return undefined;
-  }
+  return {
+    email: teacherProfile.email,
+    name: teacherProfile.name,
+    role: 'teacher' as const,
+    classroomIds
+  };
 }
 
-// ============================================
-// Source to Domain Transformers
-// ============================================
+/**
+ * Transform classroom from snapshot to core schema
+ */
+function transformClassroom(
+  classroom: ClassroomWithData,
+  teacherEmail: string
+): ClassroomInput {
+  const classroomId = StableIdGenerator.classroom(classroom.id);
+  const studentIds = classroom.students.map(s => StableIdGenerator.student(s.email));
+  const assignmentIds = classroom.assignments.map(a => 
+    StableIdGenerator.assignment(classroomId, a.id)
+  );
+
+  return {
+    teacherId: teacherEmail, // Will be resolved to teacher ID in repository
+    name: classroom.name,
+    section: classroom.section,
+    description: classroom.description,
+    externalId: classroom.id,
+    enrollmentCode: classroom.enrollmentCode,
+    alternateLink: classroom.alternateLink,
+    courseState: classroom.courseState === 'DECLINED' || classroom.courseState === 'SUSPENDED' 
+      ? 'ARCHIVED' 
+      : classroom.courseState as 'ACTIVE' | 'ARCHIVED' | 'PROVISIONED',
+    studentIds,
+    assignmentIds
+  };
+}
 
 /**
- * Transform SheetAssignment to AssignmentDomain
+ * Transform assignment from snapshot to core schema
  */
-export function sheetAssignmentToDomain(
-  sheet: SheetAssignment,
+function transformAssignment(
+  assignment: AssignmentWithStats,
   classroomId: string
-): Omit<AssignmentDomain, "createdAt" | "updatedAt"> {
+): AssignmentInput {
+  // Map assignment type
+  let type: 'coding' | 'quiz' | 'written' | 'form' = 'written';
+  if (assignment.type === 'quiz') {
+    type = 'quiz';
+  } else if (assignment.type === 'form') {
+    type = 'form';
+  } else if (assignment.quizData) {
+    type = 'quiz';
+  }
+
+  // Map status
+  let status: 'draft' | 'published' | 'closed' = 'published';
+  if (assignment.status === 'draft') {
+    status = 'draft';
+  } else if (assignment.status === 'closed') {
+    status = 'closed';
+  }
+
   return {
-    id: sheet.id,
     classroomId,
-    title: sheet.title,
-    description: sheet.description,
-    dueDate: parseDateToTimestamp(sheet.dueDate),
-    maxPoints: parseInt(sheet.maxPoints?.toString() || "100"),
-    gradingRubric: {
+    title: assignment.title,
+    description: assignment.description || '',
+    type,
+    dueDate: assignment.dueDate ? new Date(assignment.dueDate) : undefined,
+    maxScore: assignment.maxScore,
+    rubric: assignment.rubric ? {
       enabled: true,
-      criteria: ["Content", "Grammar", "Structure"],
-      promptTemplate: undefined
+      criteria: assignment.rubric.criteria.map((c: any) => ({
+        id: c.id || crypto.randomUUID(),
+        title: c.title || '',
+        description: c.description || '',
+        maxPoints: c.maxPoints || c.points || 0
+      }))
+    } : undefined,
+    status,
+    externalId: assignment.id,
+    alternateLink: assignment.alternateLink,
+    workType: assignment.workType
+  };
+}
+
+/**
+ * Transform student enrollment from snapshot to core schema
+ */
+function transformStudentEnrollment(
+  student: StudentSnapshot,
+  classroomId: string
+): StudentEnrollment {
+  const now = new Date();
+  const studentId = StableIdGenerator.student(student.email);
+  const enrollmentId = StableIdGenerator.enrollment(classroomId, studentId);
+
+  return {
+    id: enrollmentId,
+    classroomId,
+    studentId,
+    email: student.email,
+    name: student.name,
+    firstName: student.firstName,
+    lastName: student.lastName,
+    displayName: student.displayName,
+    enrolledAt: student.joinTime ? new Date(student.joinTime) : now,
+    status: 'active',
+    submissionCount: student.submissionCount || 0,
+    gradedSubmissionCount: student.gradedSubmissionCount || 0,
+    averageGrade: student.overallGrade,
+    externalId: student.id,
+    userId: student.userId,
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
+/**
+ * Transform submission from snapshot to core schema
+ */
+function transformSubmission(
+  submission: SubmissionSnapshot,
+  classroomId: string
+): SubmissionInput {
+  const studentId = StableIdGenerator.student(submission.studentEmail);
+  const assignmentId = StableIdGenerator.assignment(classroomId, submission.assignmentId);
+
+  // Map status
+  let status: 'draft' | 'submitted' | 'graded' | 'returned' = 'submitted';
+  if (submission.status === 'pending' || submission.status === 'submitted') {
+    status = 'submitted';
+  } else if (submission.status === 'graded') {
+    status = 'graded';
+  } else if (submission.status === 'returned') {
+    status = 'returned';
+  }
+
+  // Transform attachments
+  const attachments = submission.attachments.map(att => {
+    if ('type' in att) {
+      if (att.type === 'driveFile') {
+        return {
+          type: 'driveFile' as const,
+          url: att.alternateLink,
+          name: att.title,
+          mimeType: att.mimeType
+        };
+      } else if (att.type === 'link') {
+        return {
+          type: 'link' as const,
+          url: att.url,
+          name: att.title,
+          mimeType: undefined
+        };
+      }
+    }
+    // Fallback for unknown attachment types
+    return {
+      type: 'file' as const,
+      url: '',
+      name: 'Unknown attachment',
+      mimeType: undefined
+    };
+  });
+
+  return {
+    assignmentId,
+    classroomId,
+    studentId,
+    studentEmail: submission.studentEmail,
+    studentName: submission.studentName,
+    content: submission.submissionText || '',
+    attachments,
+    status,
+    submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : new Date(),
+    importedAt: new Date(),
+    source: 'import',
+    externalId: submission.id,
+    late: submission.late || false
+  };
+}
+
+/**
+ * Transform grade from snapshot submission to core grade schema
+ */
+export function extractGradeFromSubmission(
+  submission: SubmissionSnapshot,
+  classroomId: string
+): GradeInput | null {
+  if (!submission.grade) {
+    return null;
+  }
+
+  const studentId = StableIdGenerator.student(submission.studentEmail);
+  const assignmentId = StableIdGenerator.assignment(classroomId, submission.assignmentId);
+  const submissionId = StableIdGenerator.submission(classroomId, assignmentId, studentId);
+
+  const grade = submission.grade;
+  
+  return {
+    submissionId,
+    assignmentId,
+    studentId,
+    classroomId,
+    score: grade.score,
+    maxScore: grade.maxScore,
+    feedback: grade.feedback || '',
+    privateComments: grade.privateComments,
+    rubricScores: grade.rubricScore ? 
+      grade.rubricScore.criterionScores.map(cs => ({
+        criterionId: crypto.randomUUID(),
+        criterionTitle: cs.criterionTitle,
+        score: cs.points,
+        maxScore: cs.points, // Assuming points is max for now
+        feedback: cs.feedback
+      })) : undefined,
+    gradedAt: grade.gradedAt ? new Date(grade.gradedAt) : new Date(),
+    gradedBy: grade.gradedBy === 'system' ? 'auto' : grade.gradedBy,
+    gradingMethod: grade.gradingMethod || 'points',
+    submissionVersionGraded: 1, // Default to version 1
+    submissionContentSnapshot: submission.submissionText,
+    isLocked: grade.gradedBy === 'manual',
+    lockedReason: grade.gradedBy === 'manual' ? 'Manual grade' : undefined,
+    aiGradingInfo: grade.aiGradingInfo
+  };
+}
+
+/**
+ * Merge new snapshot data with existing data, preserving grades
+ */
+export interface MergeResult {
+  toCreate: {
+    classrooms: Classroom[];
+    assignments: Assignment[];
+    submissions: Submission[];
+    enrollments: StudentEnrollment[];
+    grades: Grade[];
+  };
+  toUpdate: {
+    classrooms: Classroom[];
+    assignments: Assignment[];
+    submissions: Submission[];
+    enrollments: StudentEnrollment[];
+  };
+  toArchive: {
+    submissionIds: string[];
+    enrollmentIds: string[];
+  };
+}
+
+export function mergeSnapshotWithExisting(
+  snapshot: ReturnType<typeof snapshotToCore>,
+  existing: {
+    classrooms: Classroom[];
+    assignments: Assignment[];
+    submissions: Submission[];
+    enrollments: StudentEnrollment[];
+    grades: Grade[];
+  }
+): MergeResult {
+  const result: MergeResult = {
+    toCreate: {
+      classrooms: [],
+      assignments: [],
+      submissions: [],
+      enrollments: [],
+      grades: []
     },
-    isQuiz: false, // Will be determined by checking if formId exists
-    formId: undefined,
-    sourceFileId: undefined,
-    submissionType: sheet.submissionType
+    toUpdate: {
+      classrooms: [],
+      assignments: [],
+      submissions: [],
+      enrollments: []
+    },
+    toArchive: {
+      submissionIds: [],
+      enrollmentIds: []
+    }
   };
+
+  // Create maps for efficient lookups
+  const existingClassrooms = new Map(existing.classrooms.map(c => [c.externalId, c]));
+  const existingAssignments = new Map(existing.assignments.map(a => [a.externalId, a]));
+  const existingSubmissions = new Map(existing.submissions.map(s => [
+    `${s.classroomId}_${s.assignmentId}_${s.studentId}`,
+    s
+  ]));
+  const existingEnrollments = new Map(existing.enrollments.map(e => [
+    `${e.classroomId}_${e.studentId}`,
+    e
+  ]));
+
+  // Process classrooms
+  for (const classroom of snapshot.classrooms) {
+    const existing = existingClassrooms.get(classroom.externalId!);
+    if (existing) {
+      // Update existing classroom
+      result.toUpdate.classrooms.push({
+        ...existing,
+        ...classroom,
+        id: existing.id,
+        createdAt: existing.createdAt,
+        updatedAt: new Date()
+      } as Classroom);
+    } else {
+      // Create new classroom
+      result.toCreate.classrooms.push({
+        ...classroom,
+        id: StableIdGenerator.classroom(classroom.externalId!),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as Classroom);
+    }
+  }
+
+  // Process assignments
+  for (const assignment of snapshot.assignments) {
+    const existing = existingAssignments.get(assignment.externalId!);
+    if (existing) {
+      // Update existing assignment
+      result.toUpdate.assignments.push({
+        ...existing,
+        ...assignment,
+        id: existing.id,
+        createdAt: existing.createdAt,
+        updatedAt: new Date()
+      } as Assignment);
+    } else {
+      // Create new assignment
+      const classroomId = assignment.classroomId;
+      result.toCreate.assignments.push({
+        ...assignment,
+        id: StableIdGenerator.assignment(classroomId, assignment.externalId!),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as Assignment);
+    }
+  }
+
+  // Process submissions - this is where versioning matters
+  for (const submission of snapshot.submissions) {
+    const submissionKey = `${submission.classroomId}_${submission.assignmentId}_${submission.studentId}`;
+    const existing = existingSubmissions.get(submissionKey);
+    
+    if (existing) {
+      // Check if content has changed
+      const contentChanged = 
+        existing.content !== submission.content ||
+        JSON.stringify(existing.attachments) !== JSON.stringify(submission.attachments);
+      
+      if (contentChanged) {
+        // Create new version of submission
+        result.toCreate.submissions.push({
+          ...submission,
+          id: `${submissionKey}_v${existing.version + 1}`,
+          version: existing.version + 1,
+          previousVersionId: existing.id,
+          isLatest: true,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        } as Submission);
+        
+        // Mark old version as not latest
+        result.toUpdate.submissions.push({
+          ...existing,
+          isLatest: false,
+          updatedAt: new Date()
+        });
+      } else {
+        // Just update metadata
+        result.toUpdate.submissions.push({
+          ...existing,
+          ...submission,
+          id: existing.id,
+          version: existing.version,
+          createdAt: existing.createdAt,
+          updatedAt: new Date()
+        } as Submission);
+      }
+    } else {
+      // Create new submission
+      result.toCreate.submissions.push({
+        ...submission,
+        id: StableIdGenerator.submission(
+          submission.classroomId,
+          submission.assignmentId,
+          submission.studentId
+        ),
+        version: 1,
+        isLatest: true,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      } as Submission);
+    }
+  }
+
+  // Process enrollments
+  const snapshotEnrollmentKeys = new Set<string>();
+  for (const enrollment of snapshot.enrollments) {
+    const enrollmentKey = `${enrollment.classroomId}_${enrollment.studentId}`;
+    snapshotEnrollmentKeys.add(enrollmentKey);
+    
+    const existing = existingEnrollments.get(enrollmentKey);
+    if (existing) {
+      // Update existing enrollment
+      result.toUpdate.enrollments.push({
+        ...existing,
+        ...enrollment,
+        id: existing.id,
+        createdAt: existing.createdAt,
+        updatedAt: new Date()
+      });
+    } else {
+      // Create new enrollment
+      result.toCreate.enrollments.push({
+        ...enrollment,
+        id: StableIdGenerator.enrollment(enrollment.classroomId, enrollment.studentId),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+  }
+
+  // Find enrollments to archive (not in snapshot anymore)
+  for (const [key, enrollment] of existingEnrollments) {
+    if (!snapshotEnrollmentKeys.has(key)) {
+      result.toArchive.enrollmentIds.push(enrollment.id);
+    }
+  }
+
+  return result;
 }
 
 /**
- * Transform SheetSubmission to SubmissionDomain
+ * Calculate percentage from score and maxScore
  */
-export function sheetSubmissionToDomain(
-  sheet: SheetSubmission
-): Omit<SubmissionDomain, "id" | "createdAt" | "updatedAt"> {
-  const studentName = `${sheet.studentFirstName} ${sheet.studentLastName}`.trim();
-  
-  return {
-    assignmentId: sheet.id, // Using submission ID as assignment reference
-    studentId: sheet.studentEmail, // Using email as student ID for now
-    studentEmail: sheet.studentEmail,
-    studentName: studentName || sheet.studentEmail,
-    submittedAt: parseDateToTimestamp(sheet.submissionDate) || admin.firestore.Timestamp.now(),
-    documentUrl: undefined,
-    content: sheet.submissionText,
-    status: sheet.gradingStatus === "graded" ? "graded" : "pending",
-    sourceSheetName: sheet.sourceSheetName,
-    sourceFileId: sheet.sourceFileId,
-    formId: sheet.formId,
-    gradeId: undefined
-  };
-}
-
-/**
- * Transform array of SheetAnswerKey rows to QuizAnswerKeyDomain
- */
-export function sheetAnswerKeysToDomain(
-  sheets: SheetAnswerKey[]
-): QuizAnswerKeyDomain | null {
-  if (sheets.length === 0) return null;
-  
-  const firstRow = sheets[0];
-  const questions = sheets.map(sheet => ({
-    questionNumber: sheet.questionNumber,
-    questionText: sheet.questionText,
-    questionType: sheet.questionType,
-    points: sheet.points,
-    correctAnswer: sheet.correctAnswer,
-    answerExplanation: sheet.answerExplanation,
-    gradingStrictness: sheet.gradingStrictness
-  }));
-  
-  const totalPoints = questions.reduce((sum, q) => sum + q.points, 0);
-  
-  return {
-    formId: firstRow.formId,
-    assignmentTitle: firstRow.assignmentTitle,
-    courseId: firstRow.courseId,
-    questions,
-    totalPoints
-  };
-}
-
-// ============================================
-// Domain to DTO Transformers
-// ============================================
-
-/**
- * Transform AssignmentDomain to AssignmentResponse DTO
- */
-export function assignmentDomainToDto(domain: AssignmentDomain): AssignmentResponse {
-  return {
-    id: domain.id,
-    createdAt: serializeTimestamp(domain.createdAt),
-    updatedAt: serializeTimestamp(domain.updatedAt),
-    classroomId: domain.classroomId,
-    title: domain.title,
-    description: domain.description,
-    dueDate: domain.dueDate ? serializeTimestamp(domain.dueDate) : undefined,
-    maxPoints: domain.maxPoints,
-    gradingRubric: domain.gradingRubric,
-    isQuiz: domain.isQuiz,
-    formId: domain.formId,
-    sourceFileId: domain.sourceFileId
-  };
-}
-
-/**
- * Transform SubmissionDomain to SubmissionResponse DTO
- */
-export function submissionDomainToDto(domain: SubmissionDomain): SubmissionResponse {
-  return {
-    id: domain.id,
-    createdAt: serializeTimestamp(domain.createdAt),
-    updatedAt: serializeTimestamp(domain.updatedAt),
-    assignmentId: domain.assignmentId,
-    studentId: domain.studentId,
-    studentEmail: domain.studentEmail,
-    studentName: domain.studentName,
-    submittedAt: serializeTimestamp(domain.submittedAt),
-    documentUrl: domain.documentUrl,
-    content: domain.content,
-    status: domain.status
-  };
-}
-
-/**
- * Transform GradeDomain to GradeResponse DTO
- */
-export function gradeDomainToDto(domain: GradeDomain): GradeResponse {
-  return {
-    id: domain.id,
-    createdAt: serializeTimestamp(domain.createdAt),
-    updatedAt: serializeTimestamp(domain.updatedAt),
-    submissionId: domain.submissionId,
-    assignmentId: domain.assignmentId,
-    studentId: domain.studentId,
-    score: domain.score,
-    maxScore: domain.maxScore,
-    feedback: domain.feedback,
-    gradingDetails: domain.gradingDetails,
-    gradedBy: domain.gradedBy,
-    gradedAt: serializeTimestamp(domain.gradedAt),
-    postedToClassroom: domain.postedToClassroom
-  };
-}
-
-/**
- * Transform ClassroomDomain to ClassroomResponse DTO
- */
-export function classroomDomainToDto(domain: ClassroomDomain): ClassroomResponse {
-  return {
-    id: domain.id,
-    createdAt: serializeTimestamp(domain.createdAt),
-    updatedAt: serializeTimestamp(domain.updatedAt),
-    name: domain.name,
-    courseCode: domain.courseCode,
-    teacherId: domain.teacherId,
-    studentIds: domain.studentIds || []
-  };
-}
-
-// ============================================
-// Batch Transformers
-// ============================================
-
-/**
- * Transform array of AssignmentDomain to AssignmentResponse DTOs
- */
-export function assignmentsDomainToDto(domains: AssignmentDomain[]): AssignmentResponse[] {
-  return domains.map(assignmentDomainToDto);
-}
-
-/**
- * Transform array of SubmissionDomain to SubmissionResponse DTOs
- */
-export function submissionsDomainToDto(domains: SubmissionDomain[]): SubmissionResponse[] {
-  return domains.map(submissionDomainToDto);
-}
-
-/**
- * Transform array of GradeDomain to GradeResponse DTOs
- */
-export function gradesDomainToDto(domains: GradeDomain[]): GradeResponse[] {
-  return domains.map(gradeDomainToDto);
-}
-
-// ============================================
-// Sheet Row Parsers
-// ============================================
-
-/**
- * Parse raw sheet rows into objects that match schema input expectations
- * These will be validated and transformed by the schemas
- */
-export function parseAssignmentRow(row: string[]): Partial<SheetAssignment> {
-  return {
-    id: row[0] || "",
-    courseId: row[1] || "",
-    title: row[2] || "",
-    description: row[3] || "",
-    dueDate: row[4] || "",
-    maxPoints: parseInt(row[5] || "100"),
-    submissionType: (row[6] as "forms" | "files" | "mixed") || "mixed",
-    createdDate: row[7] || ""
-  };
-}
-
-export function parseSubmissionRow(row: string[]): Partial<SheetSubmission> {
-  return {
-    id: row[0] || "",
-    assignmentTitle: row[1] || "",
-    courseId: row[2] || "",
-    studentFirstName: row[3] || "",
-    studentLastName: row[4] || "",
-    studentEmail: row[5] || "",
-    submissionText: row[6] || "",
-    submissionDate: row[7] || "",
-    currentGrade: row[8] || undefined,
-    gradingStatus: (row[9] as "pending" | "graded" | "reviewed") || "pending",
-    maxPoints: parseInt(row[10] || "100"),
-    sourceSheetName: row[11] || "",
-    assignmentDescription: row[12] || "",
-    lastProcessed: row[13] || "",
-    sourceFileId: row[14] || "",
-    isQuiz: row[15] === "true",
-    formId: row[16] || ""
-  };
-}
-
-export function parseAnswerKeyRow(row: string[]): Partial<SheetAnswerKey> {
-  return {
-    formId: row[0] || "",
-    assignmentTitle: row[1] || "",
-    courseId: row[2] || "",
-    questionNumber: parseInt(row[3] || "0"),
-    questionText: row[4] || "",
-    questionType: row[5] || "",
-    points: parseInt(row[6] || "0"),
-    correctAnswer: row[7] || "",
-    answerExplanation: row[8] || "",
-    gradingStrictness: (row[9] as "strict" | "standard" | "generous") || "generous"
-  };
-}
-
-// ============================================
-// User Domain/DTO Transformers
-// ============================================
-
-/**
- * Transform user domain object to DTO response
- */
-export function userDomainToDto(user: UserDomain): UserProfileResponse {
-  return {
-    id: user.id,
-    email: user.email,
-    displayName: user.displayName,
-    role: user.role,
-    classroomIds: user.classroomIds,
-    isActive: user.isActive,
-    lastLogin: user.lastLogin ? serializeTimestamp(user.lastLogin) : undefined,
-    createdAt: serializeTimestamp(user.createdAt),
-    updatedAt: serializeTimestamp(user.updatedAt)
-  };
+export function calculatePercentage(score: number, maxScore: number): number {
+  if (maxScore === 0) return 0;
+  return Math.round((score / maxScore) * 100);
 }

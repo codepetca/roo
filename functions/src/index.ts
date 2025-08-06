@@ -30,7 +30,7 @@ import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngra
 import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as getFirestoreUngradedSubmissions, createSubmission, getSubmissionsByAssignment, getSubmissionById, updateSubmissionStatus } from "./routes/grades";
 import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
 import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, createTeacherSheetOAuth, getTeacherOnboardingStatus, checkTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
-import { getTeacherClassrooms, getClassroomAssignments, syncClassroomsFromSheets } from "./routes/classrooms";
+import { getTeacherClassrooms, getClassroomAssignments, getClassroomDetails, processClassroomSnapshot, getUngradedSubmissions as getClassroomUngradedSubmissions, updateClassroomCounts } from "./routes/classrooms";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
 import { createOrUpdateProfile, sendPasscode, verifyPasscode, resetStudentAuth } from "./routes/auth";
@@ -203,7 +203,8 @@ export const api = onRequest(
         await getClassroomAssignments(request, response); return;
       }
       if (method === "POST" && path === "/classrooms/sync-from-sheets") {
-        await syncClassroomsFromSheets(request, response); return;
+        // Legacy route - replaced with snapshot processing
+        await processClassroomSnapshot(request, response); return;
       }
 
       // Firestore Grade Management Routes

@@ -45,7 +45,7 @@ vi.mock('firebase/functions', () => ({
 }));
 
 describe('API Client', () => {
-	let api: typeof import('./api')['api'];
+	let api: (typeof import('./api'))['api'];
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
@@ -67,13 +67,17 @@ describe('API Client', () => {
 
 	describe('Error Handling', () => {
 		it('should handle HTTP errors properly', async () => {
-			mockFetch.mockResolvedValue({
+			// Create a proper Response-like object that can be called multiple times
+			const mockResponse = {
 				ok: false,
 				status: 404,
-				json: () => Promise.resolve({ message: 'Not found' })
-			});
+				statusText: 'Not Found',
+				json: vi.fn().mockResolvedValue({ message: 'Not found' })
+			};
 
-			await expect(api.listAssignments()).rejects.toThrow('Not found');
+			mockFetch.mockResolvedValue(mockResponse);
+
+			await expect(api.listAssignments()).rejects.toThrow('Not Found');
 		});
 
 		it('should handle network errors', async () => {
@@ -490,9 +494,15 @@ describe('API Client', () => {
 				endpoints: ['/assignments', '/submissions', '/grades']
 			};
 
+			// Wrap in ApiResponse format for typedApiRequest
+			const wrappedResponse = {
+				success: true,
+				data: statusResponse
+			};
+
 			mockFetch.mockResolvedValue({
 				ok: true,
-				json: () => Promise.resolve(statusResponse)
+				json: () => Promise.resolve(wrappedResponse)
 			});
 
 			const result = await api.getStatus();

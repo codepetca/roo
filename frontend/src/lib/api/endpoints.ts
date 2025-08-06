@@ -10,17 +10,11 @@
 import { z } from 'zod';
 import { typedApiRequest } from './client';
 import {
-	assignmentResponseSchema,
-	submissionResponseSchema,
-	gradeResponseSchema,
+	// Legacy schemas (keeping for backward compatibility)
 	answerKeyResponseSchema,
 	healthCheckResponseSchema,
-	classroomResponseSchema,
-	type CreateAssignmentRequest,
-	type AssignmentResponse,
-	type CreateSubmissionRequest,
-	type SubmissionResponse,
-	type GradeResponse,
+	submissionResponseSchema,
+	gradeResponseSchema,
 	type GradeQuizRequest,
 	type GradeCodeRequest,
 	type GradingResultResponse,
@@ -30,8 +24,26 @@ import {
 	type GetSheetsSubmissionsRequest,
 	type UpdateSubmissionStatusRequest,
 	type HealthCheckResponse,
-	type ClassroomResponse
+	type SubmissionResponse,
+	type GradeResponse
 } from '../schemas';
+
+// Import new core schemas
+import {
+	classroomSchema,
+	assignmentSchema,
+	submissionSchema,
+	gradeSchema,
+	studentEnrollmentSchema,
+	type Classroom,
+	type Assignment,
+	type Submission,
+	type Grade,
+	type StudentEnrollment,
+	type ClassroomWithAssignments,
+	type AssignmentWithStats,
+	type SubmissionWithGrade
+} from '@shared/schemas/core';
 
 /**
  * Type-safe API methods with runtime validation
@@ -43,88 +55,169 @@ export const api = {
 		return typedApiRequest('/', {}, healthCheckResponseSchema);
 	},
 
-	// Assignments
-	async listAssignments(): Promise<AssignmentResponse[]> {
-		return typedApiRequest('/assignments', {}, z.array(assignmentResponseSchema));
+	// Assignments (using new core schemas)
+	async listAssignments(): Promise<Assignment[]> {
+		return typedApiRequest('/assignments', {}, z.array(assignmentSchema));
 	},
 
-	async createAssignment(data: CreateAssignmentRequest): Promise<AssignmentResponse> {
+	async createAssignment(data: Partial<Assignment>): Promise<Assignment> {
 		return typedApiRequest(
 			'/assignments',
 			{
 				method: 'POST',
 				body: JSON.stringify(data)
 			},
-			assignmentResponseSchema
+			assignmentSchema
 		);
 	},
 
-	async listAssignmentsByClassroom(classroomId: string): Promise<AssignmentResponse[]> {
+	async listAssignmentsByClassroom(classroomId: string): Promise<Assignment[]> {
 		return typedApiRequest(
 			`/assignments?classroomId=${classroomId}`,
 			{},
-			z.array(assignmentResponseSchema)
+			z.array(assignmentSchema)
 		);
 	},
 
-	// Classrooms
-	async getTeacherClassrooms(): Promise<ClassroomResponse[]> {
-		return typedApiRequest('/classrooms/teacher', {}, z.array(classroomResponseSchema));
+	// Classrooms (using new core schemas)
+	async getTeacherClassrooms(): Promise<ClassroomWithAssignments[]> {
+		return typedApiRequest(
+			'/classrooms/teacher',
+			{},
+			z.array(
+				classroomSchema.extend({
+					assignments: z.array(assignmentSchema)
+				})
+			)
+		);
 	},
 
-	async getClassroomAssignments(classroomId: string): Promise<AssignmentResponse[]> {
+	async getClassroomAssignments(classroomId: string): Promise<AssignmentWithStats[]> {
 		return typedApiRequest(
 			`/classrooms/${classroomId}/assignments`,
 			{},
-			z.array(assignmentResponseSchema)
+			z.array(
+				assignmentSchema.extend({
+					submissions: z.array(
+						submissionSchema.extend({
+							grade: gradeSchema.nullable()
+						})
+					),
+					recentSubmissions: z.array(submissionSchema)
+				})
+			)
 		);
 	},
 
-	// Submissions
-	async createSubmission(data: CreateSubmissionRequest): Promise<SubmissionResponse> {
+	async getClassroomDetails(classroomId: string): Promise<{
+		classroom: Classroom;
+		students: StudentEnrollment[];
+		recentActivity: Array<Submission | Grade>;
+		statistics: {
+			studentCount: number;
+			assignmentCount: number;
+			activeSubmissions: number;
+			ungradedSubmissions: number;
+		};
+	}> {
+		return typedApiRequest(
+			`/classrooms/${classroomId}/details`,
+			{},
+			z.object({
+				classroom: classroomSchema,
+				students: z.array(studentEnrollmentSchema),
+				recentActivity: z.array(z.union([submissionSchema, gradeSchema])),
+				statistics: z.object({
+					studentCount: z.number(),
+					assignmentCount: z.number(),
+					activeSubmissions: z.number(),
+					ungradedSubmissions: z.number()
+				})
+			})
+		);
+	},
+
+	// Submissions (using new core schemas)
+	async createSubmission(data: Partial<Submission>): Promise<Submission> {
 		return typedApiRequest(
 			'/submissions',
 			{
 				method: 'POST',
 				body: JSON.stringify(data)
 			},
-			submissionResponseSchema
+			submissionSchema
 		);
 	},
 
-	async getSubmissionsByAssignment(assignmentId: string): Promise<SubmissionResponse[]> {
+	async getSubmissionsByAssignment(assignmentId: string): Promise<SubmissionWithGrade[]> {
 		return typedApiRequest(
 			`/submissions/assignment/${assignmentId}`,
 			{},
-			z.array(submissionResponseSchema)
+			z.array(
+				submissionSchema.extend({
+					grade: gradeSchema.nullable()
+				})
+			)
 		);
 	},
 
-	async getSubmission(submissionId: string): Promise<SubmissionResponse> {
-		return typedApiRequest(`/submissions/${submissionId}`, {}, submissionResponseSchema);
+	async getSubmission(submissionId: string): Promise<SubmissionWithGrade> {
+		return typedApiRequest(
+			`/submissions/${submissionId}`,
+			{},
+			submissionSchema.extend({
+				grade: gradeSchema.nullable()
+			})
+		);
 	},
 
 	async updateSubmissionStatus(
 		submissionId: string,
 		data: UpdateSubmissionStatusRequest
-	): Promise<SubmissionResponse> {
+	): Promise<Submission> {
 		return typedApiRequest(
 			`/submissions/${submissionId}/status`,
 			{
 				method: 'PATCH',
 				body: JSON.stringify(data)
 			},
-			submissionResponseSchema
+			submissionSchema
 		);
 	},
 
-	// Grades
-	async getGradesByAssignment(assignmentId: string): Promise<GradeResponse[]> {
-		return typedApiRequest(`/grades/assignment/${assignmentId}`, {}, z.array(gradeResponseSchema));
+	// Grades (using new core schemas)
+	async getGradesByAssignment(assignmentId: string): Promise<Grade[]> {
+		return typedApiRequest(`/grades/assignment/${assignmentId}`, {}, z.array(gradeSchema));
 	},
 
-	async getGradeBySubmission(submissionId: string): Promise<GradeResponse> {
-		return typedApiRequest(`/grades/submission/${submissionId}`, {}, gradeResponseSchema);
+	async getGradeBySubmission(submissionId: string): Promise<Grade> {
+		return typedApiRequest(`/grades/submission/${submissionId}`, {}, gradeSchema);
+	},
+
+	async getGradeHistory(submissionId: string): Promise<
+		Array<{
+			grade: Grade;
+			version: number;
+			timestamp: Date;
+			reason: string;
+		}>
+	> {
+		return typedApiRequest(
+			`/grades/submission/${submissionId}/history`,
+			{},
+			z.array(
+				z.object({
+					grade: gradeSchema,
+					version: z.number(),
+					timestamp: z.date(),
+					reason: z.string()
+				})
+			)
+		);
+	},
+
+	async getUngradedSubmissions(): Promise<Submission[]> {
+		return typedApiRequest('/submissions/ungraded', {}, z.array(submissionSchema));
 	},
 
 	// AI Grading
@@ -203,7 +296,7 @@ export const api = {
 		return typedApiRequest('/sheets/all-submissions', {}, z.array(submissionResponseSchema));
 	},
 
-	async getUngradedSubmissions(): Promise<SubmissionResponse[]> {
+	async getSheetsUngradedSubmissions(): Promise<SubmissionResponse[]> {
 		return typedApiRequest('/sheets/ungraded', {}, z.array(submissionResponseSchema));
 	},
 

@@ -1,16 +1,28 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
-import { db } from "../config/firebase";
-import { classroomDomainSchema, assignmentDomainSchema } from "../schemas/domain";
-import { type ClassroomResponse } from "../schemas/dto";
-import { classroomDomainToDto, assignmentDomainToDto } from "../schemas/transformers";
+import { FirestoreRepository } from "../services/firestore-repository";
+import { SnapshotProcessor } from "../services/snapshot-processor";
 import { getUserFromRequest } from "../middleware/validation";
-import { processDocumentTimestamps, serializeDocumentTimestamps } from "../utils/timestamps";
-import { createClassroomSyncService } from "../services/classroom-sync";
+import { 
+  Classroom, 
+  Assignment, 
+  StudentEnrollment,
+  ClassroomWithAssignments,
+  AssignmentWithStats
+} from "../../../shared/schemas/core";
+import { classroomSnapshotSchema } from "../../../shared/schemas/classroom-snapshot";
 
 /**
- * Get all classrooms for the authenticated teacher (OPTIMIZED VERSION)
- * Uses batch queries to avoid N+1 problem and proper timestamp handling
+ * Updated Classroom API Routes using DataConnect-Ready Architecture
+ * Location: functions/src/routes/classrooms.ts
+ * 
+ * Uses new FirestoreRepository and core schemas for type safety
+ */
+
+const repository = new FirestoreRepository();
+
+/**
+ * Get all classrooms for the authenticated teacher
  */
 export async function getTeacherClassrooms(req: Request, res: Response): Promise<Response> {
   try {
@@ -23,139 +35,39 @@ export async function getTeacherClassrooms(req: Request, res: Response): Promise
       });
     }
 
-    // Step 1: Get all classrooms for this teacher
-    const classroomsSnapshot = await db
-      .collection("classrooms")
-      .where("teacherId", "==", user.uid)
-      .orderBy("name")
-      .get();
-
-    if (classroomsSnapshot.empty) {
+    // Get classrooms using new repository
+    const classrooms = await repository.getClassroomsByTeacher(user.uid);
+    
+    if (classrooms.length === 0) {
       return res.status(200).json({ 
         success: true, 
         data: [] 
       });
     }
 
-    const classroomIds = classroomsSnapshot.docs.map(doc => doc.id);
+    // Build response with assignments for each classroom
+    const classroomsWithAssignments: ClassroomWithAssignments[] = [];
     
-    // Step 2: Batch query all assignments for all classrooms
-    const assignmentsSnapshot = await db
-      .collection("assignments")
-      .where("classroomId", "in", classroomIds)
-      .get();
-
-    // Group assignments by classroom
-    const assignmentsByClassroom = new Map<string, string[]>();
-    for (const doc of assignmentsSnapshot.docs) {
-      const classroomId = doc.data().classroomId;
-      if (!assignmentsByClassroom.has(classroomId)) {
-        assignmentsByClassroom.set(classroomId, []);
-      }
-      assignmentsByClassroom.get(classroomId)!.push(doc.id);
+    for (const classroom of classrooms) {
+      const assignments = await repository.getAssignmentsByClassroom(classroom.id);
+      classroomsWithAssignments.push({
+        ...classroom,
+        assignments
+      });
     }
 
-    // Step 3: Batch query submission counts
-    const allAssignmentIds = assignmentsSnapshot.docs.map(doc => doc.id);
-    
-    let totalSubmissionsData = new Map<string, number>();
-    let ungradedSubmissionsData = new Map<string, number>();
-
-    if (allAssignmentIds.length > 0) {
-      // Firebase 'in' queries are limited to 10 items, so we need to batch them
-      const batches = [];
-      for (let i = 0; i < allAssignmentIds.length; i += 10) {
-        batches.push(allAssignmentIds.slice(i, i + 10));
-      }
-
-      // Get total submissions
-      for (const batch of batches) {
-        const submissionsSnapshot = await db
-          .collection("submissions")
-          .where("assignmentId", "in", batch)
-          .get();
-
-        for (const doc of submissionsSnapshot.docs) {
-          const assignmentId = doc.data().assignmentId;
-          totalSubmissionsData.set(assignmentId, (totalSubmissionsData.get(assignmentId) || 0) + 1);
-        }
-      }
-
-      // Get ungraded submissions
-      for (const batch of batches) {
-        const ungradedSnapshot = await db
-          .collection("submissions")
-          .where("assignmentId", "in", batch)
-          .where("status", "==", "pending")
-          .get();
-
-        for (const doc of ungradedSnapshot.docs) {
-          const assignmentId = doc.data().assignmentId;
-          ungradedSubmissionsData.set(assignmentId, (ungradedSubmissionsData.get(assignmentId) || 0) + 1);
-        }
-      }
-    }
-
-    // Step 4: Process classrooms with aggregated data
-    const classrooms: ClassroomResponse[] = [];
-    
-    for (const doc of classroomsSnapshot.docs) {
-      try {
-        const rawData = { ...doc.data(), id: doc.id };
-        
-        // Process timestamps using centralized function
-        const processedData = processDocumentTimestamps(rawData);
-        
-        // Validate with domain schema
-        const classroom = classroomDomainSchema.parse(processedData);
-        
-        // Calculate aggregated metrics
-        const assignmentIds = assignmentsByClassroom.get(doc.id) || [];
-        const assignmentCount = assignmentIds.length;
-        
-        let totalSubmissions = 0;
-        let ungradedSubmissions = 0;
-        
-        for (const assignmentId of assignmentIds) {
-          totalSubmissions += totalSubmissionsData.get(assignmentId) || 0;
-          ungradedSubmissions += ungradedSubmissionsData.get(assignmentId) || 0;
-        }
-        
-        // Convert to DTO and serialize timestamps for API response
-        const classroomDto = classroomDomainToDto(classroom);
-        const serializedClassroom = serializeDocumentTimestamps(classroomDto);
-        
-        const classroomResponse = {
-          ...serializedClassroom,
-          assignmentCount,
-          totalSubmissions,
-          ungradedSubmissions
-        };
-        
-        classrooms.push(classroomResponse);
-        
-      } catch (error) {
-        logger.error("Error processing classroom:", { 
-          classroomId: doc.id, 
-          error: error instanceof Error ? error.message : error,
-          data: doc.data()
-        });
-        // Continue processing other classrooms instead of failing completely
-      }
-    }
-
-    logger.info("Retrieved teacher classrooms (optimized)", { 
+    logger.info("Retrieved teacher classrooms", { 
       teacherId: user.uid, 
       count: classrooms.length
     });
 
     return res.status(200).json({ 
       success: true, 
-      data: classrooms 
+      data: classroomsWithAssignments 
     });
 
   } catch (error) {
-    logger.error("Error fetching teacher classrooms (optimized):", error);
+    logger.error("Error fetching teacher classrooms:", error);
     return res.status(500).json({ 
       success: false, 
       error: "Failed to fetch classrooms",
@@ -165,8 +77,7 @@ export async function getTeacherClassrooms(req: Request, res: Response): Promise
 }
 
 /**
- * Get assignments for a specific classroom with submission counts
- * Location: functions/src/routes/classrooms.ts:95
+ * Get assignments for a specific classroom with submission statistics
  */
 export async function getClassroomAssignments(req: Request, res: Response): Promise<Response> {
   try {
@@ -187,79 +98,59 @@ export async function getClassroomAssignments(req: Request, res: Response): Prom
       });
     }
 
-    // Verify classroom exists and user has access
-    const classroomDoc = await db.collection("classrooms").doc(classroomId).get();
-    if (!classroomDoc.exists) {
+    // Get classroom using new repository
+    const classroom = await repository.getClassroom(classroomId);
+    if (!classroom) {
       return res.status(404).json({ 
         success: false, 
         error: "Classroom not found" 
       });
     }
 
-    const classroom = classroomDomainSchema.parse({ 
-      ...classroomDoc.data(), 
-      id: classroomDoc.id 
-    });
-
-    // Check access: teacher owns it or student is enrolled
+    // Check access permissions
     if (user.role === "teacher" && classroom.teacherId !== user.uid) {
       return res.status(403).json({ 
         success: false, 
         error: "Access denied to this classroom" 
       });
     }
-    if (user.role === "student" && !classroom.studentIds?.includes(user.uid)) {
-      return res.status(403).json({ 
-        success: false, 
-        error: "Access denied to this classroom" 
-      });
-    }
 
-    // Get assignments for this classroom
-    const assignmentsSnapshot = await db
-      .collection("assignments")
-      .where("classroomId", "==", classroomId)
-      .orderBy("createdAt", "desc")
-      .get();
-
-    const assignments = [];
-    for (const doc of assignmentsSnapshot.docs) {
-      try {
-        const data = doc.data();
-        const assignment = assignmentDomainSchema.parse({ ...data, id: doc.id });
-        
-        // Get submission count for this assignment
-        const submissionsSnapshot = await db
-          .collection("submissions")
-          .where("assignmentId", "==", doc.id)
-          .get();
-        
-        const submissionCount = submissionsSnapshot.size;
-        
-        // Get graded count
-        const gradedSnapshot = await db
-          .collection("submissions")
-          .where("assignmentId", "==", doc.id)
-          .where("status", "==", "graded")
-          .get();
-        
-        const gradedCount = gradedSnapshot.size;
-        
-        // Create response with additional metadata
-        const assignmentResponse = {
-          ...assignmentDomainToDto(assignment),
-          submissionCount,
-          gradedCount,
-          classroomName: classroom.name
-        };
-        
-        assignments.push(assignmentResponse);
-      } catch (error) {
-        logger.error("Error parsing assignment:", { 
-          assignmentId: doc.id, 
-          error 
+    if (user.role === "student") {
+      // Check if student is enrolled in this classroom
+      const enrollments = await repository.getEnrollmentsByStudent(user.uid);
+      const isEnrolled = enrollments.some(e => e.classroomId === classroomId);
+      
+      if (!isEnrolled) {
+        return res.status(403).json({ 
+          success: false, 
+          error: "Access denied to this classroom" 
         });
       }
+    }
+
+    // Get assignments with statistics
+    const assignments = await repository.getAssignmentsByClassroom(classroomId);
+    const assignmentsWithStats: AssignmentWithStats[] = [];
+
+    for (const assignment of assignments) {
+      const submissions = await repository.getSubmissionsByAssignment(assignment.id);
+      const recentSubmissions = submissions.slice(0, 10); // Last 10 submissions
+
+      // Add grade information to submissions
+      const submissionsWithGrades = await Promise.all(
+        submissions.map(async (submission) => {
+          const grade = submission.gradeId 
+            ? await repository.getGrade(submission.gradeId)
+            : null;
+          return { ...submission, grade };
+        })
+      );
+
+      assignmentsWithStats.push({
+        ...assignment,
+        submissions: submissionsWithGrades,
+        recentSubmissions
+      });
     }
 
     logger.info("Retrieved classroom assignments", { 
@@ -269,94 +160,269 @@ export async function getClassroomAssignments(req: Request, res: Response): Prom
 
     return res.status(200).json({ 
       success: true, 
-      data: assignments 
+      data: assignmentsWithStats 
     });
+
   } catch (error) {
     logger.error("Error fetching classroom assignments:", error);
     return res.status(500).json({ 
       success: false, 
-      error: "Failed to fetch assignments" 
+      error: "Failed to fetch assignments",
+      details: error instanceof Error ? error.message : "Unknown error"
     });
   }
 }
 
 /**
- * Sync classrooms and students from Google Sheets submissions data
- * Location: functions/src/routes/classrooms.ts:281
- * Route: POST /classrooms/sync-from-sheets
+ * Get classroom details with student enrollments
  */
-export async function syncClassroomsFromSheets(req: Request, res: Response): Promise<Response> {
+export async function getClassroomDetails(req: Request, res: Response): Promise<Response> {
   try {
+    const classroomId = req.params.classroomId;
+    if (!classroomId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Classroom ID is required" 
+      });
+    }
+
     // Get authenticated user
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        error: "Authentication required" 
+      });
+    }
+
+    // Get classroom
+    const classroom = await repository.getClassroom(classroomId);
+    if (!classroom) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "Classroom not found" 
+      });
+    }
+
+    // Check access permissions
+    if (user.role === "teacher" && classroom.teacherId !== user.uid) {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Access denied to this classroom" 
+      });
+    }
+
+    // Get student enrollments
+    const enrollments = await repository.getEnrollmentsByClassroom(classroomId);
+    
+    // Get recent activity
+    const recentActivity = await repository.getRecentActivity(classroomId, 20);
+
+    const response = {
+      classroom,
+      students: enrollments,
+      recentActivity,
+      statistics: {
+        studentCount: classroom.studentCount,
+        assignmentCount: classroom.assignmentCount,
+        activeSubmissions: classroom.activeSubmissions,
+        ungradedSubmissions: classroom.ungradedSubmissions
+      }
+    };
+
+    return res.status(200).json({ 
+      success: true, 
+      data: response 
+    });
+
+  } catch (error) {
+    logger.error("Error fetching classroom details:", error);
+    return res.status(500).json({ 
+      success: false, 
+      error: "Failed to fetch classroom details",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+}
+
+/**
+ * Process a classroom snapshot (webhook endpoint)
+ * This replaces the old sheet sync functionality
+ */
+export async function processClassroomSnapshot(req: Request, res: Response): Promise<Response> {
+  try {
+    // Get authenticated user (for webhook, this should be service auth)
     const user = await getUserFromRequest(req);
     if (!user || user.role !== "teacher") {
       return res.status(403).json({ 
         success: false, 
-        error: "Only teachers can sync classrooms from sheets" 
+        error: "Only teachers can process classroom snapshots" 
       });
     }
 
-    // Validate request body
-    const { spreadsheetId } = req.body;
-    if (!spreadsheetId || typeof spreadsheetId !== "string") {
-      return res.status(400).json({ 
-        success: false, 
-        error: "spreadsheetId is required and must be a string" 
-      });
-    }
+    // Validate request body as classroom snapshot
+    const snapshotData = req.body;
+    const snapshot = classroomSnapshotSchema.parse(snapshotData);
 
-    logger.info("Starting classroom sync from sheets", { 
+    logger.info("Processing classroom snapshot", { 
       teacherId: user.uid, 
-      spreadsheetId 
+      classroomCount: snapshot.classrooms.length,
+      totalSubmissions: snapshot.globalStats.totalSubmissions
     });
 
-    // Perform the sync
-    const syncService = createClassroomSyncService();
-    const result = await syncService.syncClassroomsFromSheets(user.uid, spreadsheetId);
+    // Process snapshot using new architecture
+    const processor = new SnapshotProcessor();
+    const result = await processor.processSnapshot(snapshot);
 
     if (result.success) {
-      logger.info("Classroom sync completed successfully", {
+      logger.info("Classroom snapshot processed successfully", {
         teacherId: user.uid,
-        spreadsheetId,
-        result
+        stats: result.stats,
+        processingTime: result.processingTime
       });
 
       return res.status(200).json({
         success: true,
         data: {
-          classroomsCreated: result.classroomsCreated,
-          classroomsUpdated: result.classroomsUpdated,
-          studentsCreated: result.studentsCreated,
-          studentsUpdated: result.studentsUpdated,
-          totalErrors: result.errors.length
+          stats: result.stats,
+          processingTime: result.processingTime,
+          errorCount: result.errors.length
         },
-        message: `Successfully synced ${result.classroomsCreated + result.classroomsUpdated} classrooms and ${result.studentsCreated + result.studentsUpdated} students`
+        message: `Successfully processed snapshot with ${result.stats.classroomsCreated + result.stats.classroomsUpdated} classrooms`
       });
     } else {
-      logger.warn("Classroom sync completed with errors", {
+      logger.warn("Classroom snapshot processed with errors", {
         teacherId: user.uid,
-        spreadsheetId,
         errors: result.errors
       });
 
       return res.status(207).json({ // 207 Multi-Status for partial success
         success: false,
         data: {
-          classroomsCreated: result.classroomsCreated,
-          classroomsUpdated: result.classroomsUpdated,
-          studentsCreated: result.studentsCreated,
-          studentsUpdated: result.studentsUpdated,
+          stats: result.stats,
+          processingTime: result.processingTime,
           errors: result.errors
         },
-        error: "Sync completed with some errors. Check the errors array for details."
+        error: "Snapshot processed with some errors. Check the errors array for details."
       });
     }
 
   } catch (error) {
-    logger.error("Error syncing classrooms from sheets:", error);
+    logger.error("Error processing classroom snapshot:", error);
     return res.status(500).json({ 
       success: false, 
-      error: "Failed to sync classrooms from sheets",
+      error: "Failed to process classroom snapshot",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+}
+
+/**
+ * Get ungraded submissions for teacher dashboard
+ */
+export async function getUngradedSubmissions(req: Request, res: Response): Promise<Response> {
+  try {
+    // Get authenticated user
+    const user = await getUserFromRequest(req);
+    if (!user || user.role !== "teacher") {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Only teachers can access ungraded submissions" 
+      });
+    }
+
+    // Get all classrooms for this teacher
+    const classrooms = await repository.getClassroomsByTeacher(user.uid);
+    const classroomIds = classrooms.map(c => c.id);
+
+    // Get ungraded submissions across all classrooms
+    const ungradedSubmissions = [];
+    for (const classroomId of classroomIds) {
+      const submissions = await repository.getUngradedSubmissions(classroomId);
+      ungradedSubmissions.push(...submissions);
+    }
+
+    // Sort by submission date (oldest first for grading priority)
+    ungradedSubmissions.sort((a, b) => 
+      a.submittedAt.getTime() - b.submittedAt.getTime()
+    );
+
+    logger.info("Retrieved ungraded submissions", { 
+      teacherId: user.uid, 
+      count: ungradedSubmissions.length 
+    });
+
+    return res.status(200).json({ 
+      success: true, 
+      data: ungradedSubmissions 
+    });
+
+  } catch (error) {
+    logger.error("Error fetching ungraded submissions:", error);
+    return res.status(500).json({ 
+      success: false, 
+      error: "Failed to fetch ungraded submissions",
+      details: error instanceof Error ? error.message : "Unknown error"
+    });
+  }
+}
+
+/**
+ * Update classroom counts and statistics (maintenance endpoint)
+ */
+export async function updateClassroomCounts(req: Request, res: Response): Promise<Response> {
+  try {
+    const classroomId = req.params.classroomId;
+    if (!classroomId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: "Classroom ID is required" 
+      });
+    }
+
+    // Get authenticated user
+    const user = await getUserFromRequest(req);
+    if (!user || user.role !== "teacher") {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Only teachers can update classroom counts" 
+      });
+    }
+
+    // Verify classroom ownership
+    const classroom = await repository.getClassroom(classroomId);
+    if (!classroom) {
+      return res.status(404).json({ 
+        success: false, 
+        error: "Classroom not found" 
+      });
+    }
+
+    if (classroom.teacherId !== user.uid) {
+      return res.status(403).json({ 
+        success: false, 
+        error: "Access denied to this classroom" 
+      });
+    }
+
+    // Update counts using repository
+    await repository.updateCounts(classroomId);
+
+    logger.info("Updated classroom counts", { 
+      teacherId: user.uid, 
+      classroomId 
+    });
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "Classroom counts updated successfully"
+    });
+
+  } catch (error) {
+    logger.error("Error updating classroom counts:", error);
+    return res.status(500).json({ 
+      success: false, 
+      error: "Failed to update classroom counts",
       details: error instanceof Error ? error.message : "Unknown error"
     });
   }

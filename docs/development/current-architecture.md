@@ -50,14 +50,18 @@ Personal Google Sheets (_roo_data)
 Firebase Functions (Data Sync)
 ```
 
-### **3. AI Grading & Storage**
+### **3. AI Grading & Storage (NEW: DataConnect-Ready Architecture)**
 ```
-Firestore (Submissions Collection)
+Classroom Snapshot (Google/AppScript)
+    ↓ (Transform via shared/schemas/transformers.ts)
+Normalized Core Entities (Teacher, Classroom, Assignment, Submission, Grade)
+    ↓ (Version-aware merge preserving existing grades)
+Firestore Repository (functions/src/services/firestore-repository.ts)
     ↓ (AI processing trigger)
-Gemini 1.5 Flash (Generous grading)
-    ↓ (Results storage)
-Firestore (Grades & Feedback)
-    ↓ (Display only - no write-back)
+Gemini 1.5 Flash + Grade Versioning Service
+    ↓ (Versioned results with conflict resolution)
+Firestore (Grades with full history)
+    ↓ (Display with grade history)
 Teacher & Student Dashboards
 ```
 
@@ -74,10 +78,12 @@ Teacher & Student Dashboards
 - **Testing**: 90+ tests covering all services and business logic
 
 **Key Services:**
+- **Snapshot Processor**: Transforms Google Classroom snapshots to normalized entities
+- **Grade Versioning**: Preserves grade history, protects manual grades from AI overwrites
+- **Firestore Repository**: DataConnect-ready CRUD operations for all entities
 - **Classroom Sync**: Webhook-based data synchronization from AppScript
 - **Student Management**: Firestore-based tracking with roster updates
 - **Authentication**: Firebase Auth integration for teachers and students
-- **Database**: Firestore collections for classrooms, students, submissions, grades
 
 ### 🚧 **In Development**
 
@@ -130,21 +136,33 @@ Teacher & Student Dashboards
 - **Security**: Webhook authentication with API keys
 - **Data Flow**: One-way from forms → sheets → Firebase (no write-back)
 
-## Database Schema (Firestore)
+## Database Schema (DataConnect-Ready Architecture)
 
-### **Primary Collections**
-- **`teachers/`**: Teacher profiles, OAuth tokens, sheet configurations
-- **`classrooms/`**: Classroom definitions synced from Google Sheets
-- **`students/`**: Student roster with status tracking (active/dropped/not-submitted)
-- **`assignments/`**: Assignment metadata from Google Forms
-- **`submissions/`**: Student submission data from forms
-- **`grades/`**: AI-generated grades and feedback (no write-back to sheets)
+### **Core Entity Collections (NEW)**
+- **`teachers/`**: Teacher profiles with denormalized classroom counts
+- **`classrooms/`**: Normalized classroom entities with cached statistics
+- **`assignments/`**: Assignment definitions with rubric support
+- **`submissions/`**: Versioned submissions with `isLatest` flag
+- **`grades/`**: Versioned grades with full audit trail
+- **`enrollments/`**: Student-classroom relationships with performance tracking
 
-### **Key Schema Patterns**
+### **Legacy Collections (Transitioning)**
+- **`students/`**: Student roster (being moved to enrollments)
+
+### **Key Schema Features**
+- **Version Control**: All entities have `version`, `isLatest`, `previousVersionId`
+- **Stable IDs**: Consistent entity IDs across snapshot updates
+- **Grade Protection**: Manual grades locked, AI grades can be updated
+- **Denormalized Counts**: Fast dashboard queries without complex aggregations
+- **Audit Trail**: Complete history of all grade changes
+- **Conflict Resolution**: Intelligent merging preserves existing work
+
+### **Schema Architecture Patterns**
+- **Shared Core Schemas**: `shared/schemas/core.ts` - normalized entities
+- **Transformation Pipeline**: `shared/schemas/transformers.ts` - snapshot → core
 - **Comprehensive Zod Validation**: All data validated at API boundaries
-- **Shared Types**: Single source of truth in `shared/types.ts`
-- **Timestamp Handling**: Environment-aware converters for emulator vs production
-- **Error Resilience**: Graceful handling of missing documents and malformed data
+- **Type Safety**: Shared types between frontend and backend
+- **Firebase Admin SDK**: Proper server-side operations
 
 ## Security Architecture
 

@@ -19,7 +19,7 @@ let error = $state<string | null>(null);
 let importHistory = $state<SnapshotHistoryEntry[]>([]);
 let loadingHistory = $state(false);
 
-// Diff state  
+// Diff state
 let diffData = $state<any>(null); // Will be jsondiffpatch result
 let showDiff = $state(false);
 
@@ -80,7 +80,7 @@ async function validateImportFile(): Promise<boolean> {
 
 		// Read file content
 		const fileContent = await readFileAsText(importFile);
-		
+
 		// Parse JSON
 		let jsonData;
 		try {
@@ -93,7 +93,7 @@ async function validateImportFile(): Promise<boolean> {
 		// Validate against classroom snapshot schema
 		// Import the schema and validate
 		const { classroomSnapshotSchema } = await import('@shared/schemas/classroom-snapshot');
-		
+
 		const validation = classroomSnapshotSchema.safeParse(jsonData);
 		if (!validation.success) {
 			error = `Schema validation failed: ${validation.error.issues[0]?.message || 'Invalid format'}`;
@@ -104,7 +104,6 @@ async function validateImportFile(): Promise<boolean> {
 		currentSnapshot = validation.data;
 		uploadProgress = 100;
 		return true;
-
 	} catch (err: unknown) {
 		console.error('Validation error:', err);
 		error = err instanceof Error ? err.message : 'Failed to validate file';
@@ -133,7 +132,6 @@ async function generateDiff(): Promise<void> {
 
 		diffData = differ.diff(previousSnapshot, currentSnapshot);
 		showDiff = true;
-
 	} catch (err: unknown) {
 		console.error('Diff generation error:', err);
 		error = 'Failed to generate diff';
@@ -177,7 +175,6 @@ async function importSnapshot(): Promise<ImportResult> {
 			snapshotId: historyEntry.id,
 			message: 'Snapshot imported successfully'
 		};
-
 	} catch (err: unknown) {
 		console.error('Import error:', err);
 		const message = err instanceof Error ? err.message : 'Failed to import snapshot';
@@ -199,7 +196,6 @@ async function loadImportHistory(): Promise<void> {
 		// TODO: Replace with real API call
 		// For now, use mock data
 		importHistory = [];
-
 	} catch (err: unknown) {
 		console.error('Failed to load import history:', err);
 		error = err instanceof Error ? err.message : 'Failed to load import history';
@@ -232,8 +228,8 @@ function readFileAsText(file: File): Promise<string> {
  */
 async function simulateImport(): Promise<void> {
 	// Simulate API call delay
-	await new Promise(resolve => setTimeout(resolve, 1500));
-	
+	await new Promise((resolve) => setTimeout(resolve, 1500));
+
 	// Randomly simulate success/failure for testing
 	if (Math.random() > 0.9) {
 		throw new Error('Import failed (simulated error)');
@@ -243,17 +239,39 @@ async function simulateImport(): Promise<void> {
 // Export reactive properties and actions (Svelte 5 style with closures)
 export const snapshotStore = {
 	// Reactive state accessed via getters to maintain reactivity
-	get currentSnapshot() { return currentSnapshot; },
-	get previousSnapshot() { return previousSnapshot; },
-	get importFile() { return importFile; },
-	get uploadProgress() { return uploadProgress; },
-	get importing() { return importing; },
-	get validating() { return validating; },
-	get error() { return error; },
-	get importHistory() { return importHistory; },
-	get loadingHistory() { return loadingHistory; },
-	get diffData() { return diffData; },
-	get showDiff() { return showDiff; },
+	get currentSnapshot() {
+		return currentSnapshot;
+	},
+	get previousSnapshot() {
+		return previousSnapshot;
+	},
+	get importFile() {
+		return importFile;
+	},
+	get uploadProgress() {
+		return uploadProgress;
+	},
+	get importing() {
+		return importing;
+	},
+	get validating() {
+		return validating;
+	},
+	get error() {
+		return error;
+	},
+	get importHistory() {
+		return importHistory;
+	},
+	get loadingHistory() {
+		return loadingHistory;
+	},
+	get diffData() {
+		return diffData;
+	},
+	get showDiff() {
+		return showDiff;
+	},
 
 	// Actions
 	setImportFile,

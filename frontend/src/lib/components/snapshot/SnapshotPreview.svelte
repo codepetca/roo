@@ -119,12 +119,14 @@
 					</div>
 					<div class="space-y-3">
 						{#each snapshot.classrooms.slice(0, 5) as classroom (classroom.id)}
-							<div class="flex items-center justify-between border-b border-gray-100 pb-3 last:border-b-0 last:pb-0">
+							<div
+								class="flex items-center justify-between border-b border-gray-100 pb-3 last:border-b-0 last:pb-0"
+							>
 								<div class="flex-1">
 									<div class="font-medium text-gray-900">{classroom.name}</div>
 									<div class="text-sm text-gray-500">
-										{classroom.studentCount} students • 
-										{classroom.assignments.length} assignments • 
+										{classroom.studentCount} students •
+										{classroom.assignments.length} assignments •
 										{classroom.submissions.length} submissions
 									</div>
 									{#if classroom.section}
@@ -132,8 +134,8 @@
 									{/if}
 								</div>
 								<div class="flex items-center space-x-2">
-									<Badge 
-										variant={classroom.courseState === 'ACTIVE' ? 'success' : 'default'} 
+									<Badge
+										variant={classroom.courseState === 'ACTIVE' ? 'success' : 'default'}
 										size="sm"
 									>
 										{#snippet children()}
@@ -154,27 +156,32 @@
 		</Card>
 
 		<!-- Sample Assignments -->
-		{#if snapshot.classrooms.some(c => c.assignments.length > 0)}
+		{#if snapshot.classrooms.some((c) => c.assignments.length > 0)}
 			<Card>
 				{#snippet children()}
 					<div class="space-y-4">
 						<h4 class="font-medium text-gray-900">Sample Assignments</h4>
 						<div class="space-y-3">
 							{#each snapshot.classrooms
-								.flatMap(c => c.assignments.map(a => ({ ...a, classroomName: c.name })))
+								.flatMap((c) => c.assignments.map((a) => ({ ...a, classroomName: c.name })))
 								.slice(0, 5) as assignment}
-								<div class="flex items-center justify-between border-b border-gray-100 pb-3 last:border-b-0 last:pb-0">
+								<div
+									class="flex items-center justify-between border-b border-gray-100 pb-3 last:border-b-0 last:pb-0"
+								>
 									<div class="flex-1">
 										<div class="font-medium text-gray-900">{assignment.title}</div>
 										<div class="text-sm text-gray-500">
-											{assignment.classroomName} • 
-											Max Score: {assignment.maxScore} • 
+											{assignment.classroomName} • Max Score: {assignment.maxScore} •
 											{assignment.submissionStats?.total || 0} submissions
 										</div>
 									</div>
 									<div class="flex items-center space-x-2">
-										<Badge 
-											variant={assignment.status === 'published' ? 'success' : assignment.status === 'draft' ? 'warning' : 'default'} 
+										<Badge
+											variant={assignment.status === 'published'
+												? 'success'
+												: assignment.status === 'draft'
+													? 'warning'
+													: 'default'}
 											size="sm"
 										>
 											{#snippet children()}
@@ -205,11 +212,15 @@
 					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 						<div>
 							<dt class="text-sm font-medium text-gray-500">Fetched At</dt>
-							<dd class="mt-1 text-sm text-gray-900">{formatDate(snapshot.snapshotMetadata.fetchedAt)}</dd>
+							<dd class="mt-1 text-sm text-gray-900">
+								{formatDate(snapshot.snapshotMetadata.fetchedAt)}
+							</dd>
 						</div>
 						<div>
 							<dt class="text-sm font-medium text-gray-500">Expires At</dt>
-							<dd class="mt-1 text-sm text-gray-900">{formatDate(snapshot.snapshotMetadata.expiresAt)}</dd>
+							<dd class="mt-1 text-sm text-gray-900">
+								{formatDate(snapshot.snapshotMetadata.expiresAt)}
+							</dd>
 						</div>
 						<div>
 							<dt class="text-sm font-medium text-gray-500">Source</dt>
@@ -227,8 +238,8 @@
 {:else}
 	<Card>
 		{#snippet children()}
-			<div class="text-center py-8">
-				<div class="text-gray-400 text-sm">No snapshot data available to preview</div>
+			<div class="py-8 text-center">
+				<div class="text-sm text-gray-400">No snapshot data available to preview</div>
 			</div>
 		{/snippet}
 	</Card>

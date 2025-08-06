@@ -33,10 +33,17 @@ npm run deploy           # Deploy to Firebase
 
 - **Frontend**: SvelteKit 2.x + **Svelte 5** (REQUIRED) + TypeScript + TailwindCSS
 - **Backend**: Firebase Functions + TypeScript + Zod validation
-- **Database**: Firestore + Google Sheets (legacy)
+- **Database**: Firestore + Google Sheets (legacy) + **NEW: DataConnect-Ready Architecture**
 - **AI**: Google Gemini 1.5 Flash
 - **Testing**: Vitest (comprehensive test suite with 90+ tests) + mocked services
 - **Type Safety**: Comprehensive Zod validation + shared types + TypeScript strict mode
+
+### **NEW: DataConnect-Ready Schema Architecture**
+- **Core Entities**: `shared/schemas/core.ts` - Teacher, Classroom, Assignment, Submission, Grade, StudentEnrollment
+- **Transformers**: `shared/schemas/transformers.ts` - Snapshot → Normalized entity conversion
+- **Repository**: `functions/src/services/firestore-repository.ts` - CRUD operations
+- **Grade Versioning**: `functions/src/services/grade-versioning.ts` - Preserves graded work across updates
+- **Processor**: `functions/src/services/snapshot-processor.ts` - Orchestrates transformation pipeline
 
 ## File Organization Principles
 
@@ -49,16 +56,22 @@ npm run deploy           # Deploy to Firebase
 
 This project implements **comprehensive type safety** at every layer:
 
-1. **Shared Types Package** (`shared/`): Single source of truth for all data structures
-2. **Centralized Zod Validation** (`functions/src/schemas/`): All API schemas in one place
-3. **Type-Safe Frontend API Client** (`frontend/src/lib/api.ts`): Runtime validation of responses
-4. **Firebase Timestamp Handling**: Environment-aware converters
+1. **Shared Core Schemas** (`shared/schemas/core.ts`): Normalized entities with versioning
+2. **Transformation Pipeline** (`shared/schemas/transformers.ts`): Snapshot → Core conversion
+3. **Repository Services** (`functions/src/services/`): Type-safe CRUD with Firebase Admin SDK
+4. **Grade Versioning** (`functions/src/services/grade-versioning.ts`): Protected grade history
+5. **Frontend API Client** (`frontend/src/lib/api.ts`): Runtime validation of responses
 
-### Type Safety Rules (MANDATORY)
-🚨 **NEVER use `any` or `unknown` types** - Always define proper interfaces
-🚨 **ALWAYS validate API inputs** - Use centralized Zod schemas  
-🚨 **ALWAYS use shared types** - Import from `@shared/types` in frontend
-🚨 **ALWAYS handle timestamps properly** - Use `getCurrentTimestamp()` and converters
+### Entity Architecture Rules (MANDATORY)
+🚨 **ALWAYS use core entities** - Import from `shared/schemas/core.ts`
+🚨 **NEVER bypass repository** - Use `FirestoreRepository` for all CRUD operations
+🚨 **PROTECT grades** - Use `GradeVersioningService` for all grade operations  
+🚨 **PRESERVE history** - All entities have `version`, `isLatest`, timestamps
+🚨 **STABLE IDs** - Use `StableIdGenerator` for consistent entity identification
+
+### Legacy Compatibility
+- **Old schemas**: `functions/src/schemas/` still exist but being replaced
+- **Migration**: Use `SnapshotProcessor` to convert legacy data
 
 ## Firebase Emulator Development
 

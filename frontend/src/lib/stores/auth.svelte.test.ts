@@ -78,14 +78,15 @@ describe('Auth Store', () => {
 
 		// Reset document.cookie
 		document.cookie = '';
-		
+
 		// Default fetch mock for user profile API
 		mockFetch.mockResolvedValue({
 			ok: true,
-			json: () => Promise.resolve({
-				success: true,
-				data: { role: 'student' } // Default role
-			})
+			json: () =>
+				Promise.resolve({
+					success: true,
+					data: { role: 'student' } // Default role
+				})
 		});
 
 		// Import auth after mocks are set up
@@ -116,14 +117,15 @@ describe('Auth Store', () => {
 
 			mockGetIdToken.mockResolvedValue('mock-token');
 			mockSignInWithEmailAndPassword.mockResolvedValue({ user: mockUser });
-			
+
 			// Mock the user profile API to return teacher role
 			mockFetch.mockResolvedValue({
 				ok: true,
-				json: () => Promise.resolve({
-					success: true,
-					data: { role: 'teacher' }
-				})
+				json: () =>
+					Promise.resolve({
+						success: true,
+						data: { role: 'teacher' }
+					})
 			});
 
 			await auth.signIn('teacher@test.com', 'password');

@@ -12,10 +12,10 @@
 	// Helper to format diff keys into readable labels
 	function formatDiffKey(key: string): string {
 		const keyMap: Record<string, string> = {
-			'classrooms': 'Classrooms',
-			'globalStats': 'Statistics',
-			'teacher': 'Teacher Info',
-			'snapshotMetadata': 'Metadata'
+			classrooms: 'Classrooms',
+			globalStats: 'Statistics',
+			teacher: 'Teacher Info',
+			snapshotMetadata: 'Metadata'
 		};
 		return keyMap[key] || key;
 	}
@@ -34,7 +34,7 @@
 	// Helper to get change summary
 	function getChangeSummary(key: string, change: any): string {
 		const changeType = getChangeType(change);
-		
+
 		switch (changeType) {
 			case 'added':
 				return `Added new ${formatDiffKey(key).toLowerCase()}`;
@@ -71,7 +71,7 @@
 	// Helper to count deep changes
 	function countChanges(obj: any): number {
 		if (!obj || typeof obj !== 'object') return 0;
-		
+
 		let count = 0;
 		for (const [key, value] of Object.entries(obj)) {
 			if (Array.isArray(value)) {
@@ -90,9 +90,15 @@
 		if (Array.isArray(change)) {
 			const changeType = getChangeType(change);
 			if (changeType === 'added') {
-				return `+ ${JSON.stringify(change[0])}`.slice(0, 100) + (JSON.stringify(change[0]).length > 100 ? '...' : '');
+				return (
+					`+ ${JSON.stringify(change[0])}`.slice(0, 100) +
+					(JSON.stringify(change[0]).length > 100 ? '...' : '')
+				);
 			} else if (changeType === 'removed') {
-				return `- ${JSON.stringify(change[0])}`.slice(0, 100) + (JSON.stringify(change[0]).length > 100 ? '...' : '');
+				return (
+					`- ${JSON.stringify(change[0])}`.slice(0, 100) +
+					(JSON.stringify(change[0]).length > 100 ? '...' : '')
+				);
 			} else if (changeType === 'modified') {
 				return `${JSON.stringify(change[0])} → ${JSON.stringify(change[1])}`.slice(0, 100) + '...';
 			}
@@ -136,7 +142,7 @@
 											{/snippet}
 										</Badge>
 									</div>
-									<p class="text-sm text-gray-600 mt-1">
+									<p class="mt-1 text-sm text-gray-600">
 										{getChangeSummary(key, change)}
 									</p>
 								</div>
@@ -152,10 +158,14 @@
 											<div class="text-red-600">- {renderDiffValue(change)}</div>
 										{:else if changeType === 'modified'}
 											<div class="text-red-600">- {JSON.stringify(change[0]).slice(0, 100)}...</div>
-											<div class="text-green-600">+ {JSON.stringify(change[1]).slice(0, 100)}...</div>
+											<div class="text-green-600">
+												+ {JSON.stringify(change[1]).slice(0, 100)}...
+											</div>
 										{/if}
 									{:else}
-										<div class="text-gray-600">{JSON.stringify(change, null, 2).slice(0, 200)}...</div>
+										<div class="text-gray-600">
+											{JSON.stringify(change, null, 2).slice(0, 200)}...
+										</div>
 									{/if}
 								</div>
 							{/if}
@@ -167,12 +177,17 @@
 				<div class="rounded-lg bg-yellow-50 p-4">
 					<div class="flex">
 						<svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-							<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+							<path
+								fill-rule="evenodd"
+								d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+								clip-rule="evenodd"
+							/>
 						</svg>
 						<div class="ml-3">
 							<h5 class="font-medium text-yellow-800">Review Changes Carefully</h5>
-							<p class="text-sm text-yellow-700 mt-1">
-								These changes will be applied to your classroom data. Make sure everything looks correct before proceeding with the import.
+							<p class="mt-1 text-sm text-yellow-700">
+								These changes will be applied to your classroom data. Make sure everything looks
+								correct before proceeding with the import.
 							</p>
 						</div>
 					</div>
@@ -180,12 +195,22 @@
 			{:else}
 				<div class="rounded-lg bg-green-50 p-6 text-center">
 					<div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
-						<svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+						<svg
+							class="h-6 w-6 text-green-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M5 13l4 4L19 7"
+							/>
 						</svg>
 					</div>
 					<h5 class="mt-3 font-medium text-green-900">No Changes Detected</h5>
-					<p class="text-sm text-green-700 mt-1">
+					<p class="mt-1 text-sm text-green-700">
 						This snapshot contains the same data as your previous import.
 					</p>
 				</div>

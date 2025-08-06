@@ -64,7 +64,16 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 	});
 
 	if (!response.ok) {
-		throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+		// Try to extract error message from response body
+		try {
+			const errorData = await response.json();
+			const errorMessage =
+				errorData.message || errorData.error || response.statusText || 'Unknown error';
+			throw new Error(errorMessage);
+		} catch (parseError) {
+			// If we can't parse the error response, fall back to status text
+			throw new Error(response.statusText || 'Unknown error');
+		}
 	}
 
 	return response.json();
@@ -82,7 +91,7 @@ export async function typedApiRequest<T>(
 	schema: z.ZodType<T>
 ): Promise<T> {
 	const rawResponse = await apiRequest<ApiResponse<T>>(endpoint, options);
-	
+
 	// Handle wrapped API response format
 	if (!rawResponse.success) {
 		throw new Error(rawResponse.error || 'API request failed');

@@ -185,9 +185,15 @@ if (browser) {
 // Export reactive properties and actions (Svelte 5 style with closures)
 export const auth = {
 	// Reactive state accessed via getters to maintain reactivity
-	get user() { return user; },
-	get loading() { return loading; },
-	get error() { return error; },
+	get user() {
+		return user;
+	},
+	get loading() {
+		return loading;
+	},
+	get error() {
+		return error;
+	},
 
 	// Actions
 	signIn,

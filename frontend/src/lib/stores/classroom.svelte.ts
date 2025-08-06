@@ -15,19 +15,15 @@ let loading = $state(false);
 let error = $state<string | null>(null);
 
 // Derived values (Svelte 5 proper syntax - no arrow functions)
-let selectedClassroom = $derived(
-	classrooms.find(c => c.id === selectedClassroomId) || null
-);
+let selectedClassroom = $derived(classrooms.find((c) => c.id === selectedClassroomId) || null);
 
 let hasClassrooms = $derived(classrooms.length > 0);
 
 let totalAssignments = $derived(assignments.length);
 
-let quizCount = $derived(assignments.filter(a => a.isQuiz).length);
+let quizCount = $derived(assignments.filter((a) => a.isQuiz).length);
 
-let totalSubmissions = $derived(
-	assignments.reduce((sum, a) => sum + (a.submissionCount || 0), 0)
-);
+let totalSubmissions = $derived(assignments.reduce((sum, a) => sum + (a.submissionCount || 0), 0));
 
 let ungradedSubmissions = $derived(
 	assignments.reduce((sum, a) => {
@@ -87,7 +83,7 @@ async function loadAssignments(): Promise<void> {
  */
 async function selectClassroom(classroomId: string): Promise<void> {
 	if (selectedClassroomId === classroomId) return;
-	
+
 	selectedClassroomId = classroomId;
 	await loadAssignments();
 }
@@ -120,17 +116,39 @@ function clearError(): void {
 // Export reactive properties and actions (Svelte 5 style with closures)
 export const classroomStore = {
 	// Reactive state and derived values accessed via getters to maintain reactivity
-	get classrooms() { return classrooms; },
-	get selectedClassroomId() { return selectedClassroomId; },
-	get selectedClassroom() { return selectedClassroom; },
-	get assignments() { return assignments; },
-	get loading() { return loading; },
-	get error() { return error; },
-	get hasClassrooms() { return hasClassrooms; },
-	get totalAssignments() { return totalAssignments; },
-	get quizCount() { return quizCount; },
-	get totalSubmissions() { return totalSubmissions; },
-	get ungradedSubmissions() { return ungradedSubmissions; },
+	get classrooms() {
+		return classrooms;
+	},
+	get selectedClassroomId() {
+		return selectedClassroomId;
+	},
+	get selectedClassroom() {
+		return selectedClassroom;
+	},
+	get assignments() {
+		return assignments;
+	},
+	get loading() {
+		return loading;
+	},
+	get error() {
+		return error;
+	},
+	get hasClassrooms() {
+		return hasClassrooms;
+	},
+	get totalAssignments() {
+		return totalAssignments;
+	},
+	get quizCount() {
+		return quizCount;
+	},
+	get totalSubmissions() {
+		return totalSubmissions;
+	},
+	get ungradedSubmissions() {
+		return ungradedSubmissions;
+	},
 
 	// Actions
 	loadClassrooms,

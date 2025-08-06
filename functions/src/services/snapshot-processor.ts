@@ -1,0 +1,448 @@
+import { ClassroomSnapshot } from '../../../shared/schemas/classroom-snapshot';
+import {
+  snapshotToCore,
+  mergeSnapshotWithExisting,
+  extractGradeFromSubmission,
+  StableIdGenerator
+} from '../../../shared/schemas/transformers';
+import { FirestoreRepository } from './firestore-repository';
+import { GradeVersioningService } from './grade-versioning';
+import { 
+  Classroom, 
+  Assignment, 
+  Submission, 
+  StudentEnrollment,
+  Grade
+} from '../../../shared/schemas/core';
+import { logger } from '../utils/logger';
+
+/**
+ * Snapshot Processor Service
+ * Location: functions/src/services/snapshot-processor.ts
+ * 
+ * Processes incoming classroom snapshots, transforms them to normalized entities,
+ * merges with existing data while preserving grades, and updates the database.
+ */
+
+export interface ProcessingResult {
+  success: boolean;
+  stats: {
+    classroomsCreated: number;
+    classroomsUpdated: number;
+    assignmentsCreated: number;
+    assignmentsUpdated: number;
+    submissionsCreated: number;
+    submissionsVersioned: number;
+    gradesPreserved: number;
+    gradesCreated: number;
+    enrollmentsCreated: number;
+    enrollmentsUpdated: number;
+    enrollmentsArchived: number;
+  };
+  errors: Array<{
+    entity: string;
+    id: string;
+    error: string;
+  }>;
+  processingTime: number;
+}
+
+export class SnapshotProcessor {
+  private repository: FirestoreRepository;
+  private gradeService: GradeVersioningService;
+
+  constructor() {
+    this.repository = new FirestoreRepository();
+    this.gradeService = new GradeVersioningService();
+  }
+
+  /**
+   * Process a complete classroom snapshot
+   */
+  async processSnapshot(snapshot: ClassroomSnapshot): Promise<ProcessingResult> {
+    const startTime = Date.now();
+    const result: ProcessingResult = {
+      success: true,
+      stats: {
+        classroomsCreated: 0,
+        classroomsUpdated: 0,
+        assignmentsCreated: 0,
+        assignmentsUpdated: 0,
+        submissionsCreated: 0,
+        submissionsVersioned: 0,
+        gradesPreserved: 0,
+        gradesCreated: 0,
+        enrollmentsCreated: 0,
+        enrollmentsUpdated: 0,
+        enrollmentsArchived: 0
+      },
+      errors: [],
+      processingTime: 0
+    };
+
+    try {
+      // Step 1: Transform snapshot to core entities
+      logger.info('Transforming snapshot to core entities');
+      const transformed = snapshotToCore(snapshot);
+
+      // Step 2: Process teacher
+      await this.processTeacher(transformed.teacher, snapshot.teacher.email);
+
+      // Step 3: Get existing data for merge
+      logger.info('Fetching existing data for merge');
+      const existing = await this.getExistingData(transformed);
+
+      // Step 4: Merge with existing data
+      logger.info('Merging with existing data');
+      const mergeResult = mergeSnapshotWithExisting(transformed, existing);
+
+      // Step 5: Process creates
+      logger.info('Creating new entities');
+      await this.processCreates(mergeResult, result);
+
+      // Step 6: Process updates
+      logger.info('Updating existing entities');
+      await this.processUpdates(mergeResult, result);
+
+      // Step 7: Process archives
+      logger.info('Archiving removed entities');
+      await this.processArchives(mergeResult, result);
+
+      // Step 8: Extract and process grades from submissions
+      logger.info('Processing grades from submissions');
+      await this.processGrades(snapshot, result);
+
+      // Step 9: Update denormalized counts
+      logger.info('Updating denormalized counts');
+      await this.updateCounts(transformed.classrooms);
+
+      result.processingTime = Date.now() - startTime;
+      logger.info(`Snapshot processing completed in ${result.processingTime}ms`, result.stats);
+
+    } catch (error) {
+      logger.error('Error processing snapshot', error);
+      result.success = false;
+      result.errors.push({
+        entity: 'snapshot',
+        id: 'global',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Process teacher entity
+   */
+  private async processTeacher(teacherInput: any, email: string): Promise<void> {
+    const existingTeacher = await this.repository.getTeacherByEmail(email);
+    
+    if (!existingTeacher) {
+      await this.repository.createTeacher(teacherInput);
+    } else {
+      await this.repository.updateTeacher(existingTeacher.id, {
+        ...teacherInput,
+        totalClassrooms: teacherInput.classroomIds.length
+      });
+    }
+  }
+
+  /**
+   * Get existing data for merge comparison
+   */
+  private async getExistingData(transformed: ReturnType<typeof snapshotToCore>) {
+    const classroomIds = transformed.classrooms.map(c => 
+      StableIdGenerator.classroom(c.externalId!)
+    );
+
+    // Fetch all existing data in parallel
+    const [classrooms, assignments, submissions, enrollments, grades] = await Promise.all([
+      this.getExistingClassrooms(classroomIds),
+      this.getExistingAssignments(classroomIds),
+      this.getExistingSubmissions(classroomIds),
+      this.getExistingEnrollments(classroomIds),
+      this.getExistingGrades(classroomIds)
+    ]);
+
+    return {
+      classrooms,
+      assignments,
+      submissions,
+      enrollments,
+      grades
+    };
+  }
+
+  /**
+   * Get existing classrooms
+   */
+  private async getExistingClassrooms(classroomIds: string[]): Promise<Classroom[]> {
+    const classrooms: Classroom[] = [];
+    
+    for (const id of classroomIds) {
+      const classroom = await this.repository.getClassroom(id);
+      if (classroom) {
+        classrooms.push(classroom);
+      }
+    }
+
+    return classrooms;
+  }
+
+  /**
+   * Get existing assignments for classrooms
+   */
+  private async getExistingAssignments(classroomIds: string[]): Promise<Assignment[]> {
+    const assignments: Assignment[] = [];
+    
+    for (const classroomId of classroomIds) {
+      const classroomAssignments = await this.repository.getAssignmentsByClassroom(classroomId);
+      assignments.push(...classroomAssignments);
+    }
+
+    return assignments;
+  }
+
+  /**
+   * Get existing submissions for classrooms
+   */
+  private async getExistingSubmissions(classroomIds: string[]): Promise<Submission[]> {
+    const submissions: Submission[] = [];
+    
+    for (const classroomId of classroomIds) {
+      const ungradedSubmissions = await this.repository.getUngradedSubmissions(classroomId);
+      submissions.push(...ungradedSubmissions);
+    }
+
+    return submissions;
+  }
+
+  /**
+   * Get existing enrollments for classrooms
+   */
+  private async getExistingEnrollments(classroomIds: string[]): Promise<StudentEnrollment[]> {
+    const enrollments: StudentEnrollment[] = [];
+    
+    for (const classroomId of classroomIds) {
+      const classroomEnrollments = await this.repository.getEnrollmentsByClassroom(classroomId);
+      enrollments.push(...classroomEnrollments);
+    }
+
+    return enrollments;
+  }
+
+  /**
+   * Get existing grades for classrooms
+   */
+  private async getExistingGrades(classroomIds: string[]): Promise<Grade[]> {
+    const grades: Grade[] = [];
+    
+    for (const classroomId of classroomIds) {
+      const classroomGrades = await this.repository.getGradesByClassroom(classroomId);
+      grades.push(...classroomGrades);
+    }
+
+    return grades;
+  }
+
+  /**
+   * Process entity creates
+   */
+  private async processCreates(
+    mergeResult: ReturnType<typeof mergeSnapshotWithExisting>,
+    result: ProcessingResult
+  ): Promise<void> {
+    // Create classrooms
+    for (const classroom of mergeResult.toCreate.classrooms) {
+      try {
+        await this.repository.createClassroom(classroom);
+        result.stats.classroomsCreated++;
+      } catch (error) {
+        this.logError(result, 'classroom', classroom.id, error);
+      }
+    }
+
+    // Create assignments
+    for (const assignment of mergeResult.toCreate.assignments) {
+      try {
+        await this.repository.createAssignment(assignment);
+        result.stats.assignmentsCreated++;
+      } catch (error) {
+        this.logError(result, 'assignment', assignment.id, error);
+      }
+    }
+
+    // Create submissions
+    for (const submission of mergeResult.toCreate.submissions) {
+      try {
+        await this.repository.createSubmission(submission);
+        if (submission.version > 1) {
+          result.stats.submissionsVersioned++;
+        } else {
+          result.stats.submissionsCreated++;
+        }
+      } catch (error) {
+        this.logError(result, 'submission', submission.id, error);
+      }
+    }
+
+    // Create enrollments
+    for (const enrollment of mergeResult.toCreate.enrollments) {
+      try {
+        await this.repository.createEnrollment(enrollment);
+        result.stats.enrollmentsCreated++;
+      } catch (error) {
+        this.logError(result, 'enrollment', enrollment.id, error);
+      }
+    }
+  }
+
+  /**
+   * Process entity updates
+   */
+  private async processUpdates(
+    mergeResult: ReturnType<typeof mergeSnapshotWithExisting>,
+    result: ProcessingResult
+  ): Promise<void> {
+    // Update classrooms
+    for (const classroom of mergeResult.toUpdate.classrooms) {
+      try {
+        await this.repository.updateClassroom(classroom.id, classroom);
+        result.stats.classroomsUpdated++;
+      } catch (error) {
+        this.logError(result, 'classroom', classroom.id, error);
+      }
+    }
+
+    // Update assignments
+    for (const assignment of mergeResult.toUpdate.assignments) {
+      try {
+        await this.repository.updateAssignment(assignment.id, assignment);
+        result.stats.assignmentsUpdated++;
+      } catch (error) {
+        this.logError(result, 'assignment', assignment.id, error);
+      }
+    }
+
+    // Update submissions
+    for (const submission of mergeResult.toUpdate.submissions) {
+      try {
+        await this.repository.updateSubmission(submission.id, submission);
+      } catch (error) {
+        this.logError(result, 'submission', submission.id, error);
+      }
+    }
+
+    // Update enrollments
+    for (const enrollment of mergeResult.toUpdate.enrollments) {
+      try {
+        await this.repository.updateEnrollment(enrollment.id, enrollment);
+        result.stats.enrollmentsUpdated++;
+      } catch (error) {
+        this.logError(result, 'enrollment', enrollment.id, error);
+      }
+    }
+  }
+
+  /**
+   * Process entity archives
+   */
+  private async processArchives(
+    mergeResult: ReturnType<typeof mergeSnapshotWithExisting>,
+    result: ProcessingResult
+  ): Promise<void> {
+    // Archive enrollments
+    for (const enrollmentId of mergeResult.toArchive.enrollmentIds) {
+      try {
+        await this.repository.archiveEnrollment(enrollmentId);
+        result.stats.enrollmentsArchived++;
+      } catch (error) {
+        this.logError(result, 'enrollment', enrollmentId, error);
+      }
+    }
+  }
+
+  /**
+   * Process grades from snapshot submissions
+   */
+  private async processGrades(
+    snapshot: ClassroomSnapshot,
+    result: ProcessingResult
+  ): Promise<void> {
+    const gradeInputs: Array<{
+      gradeInput: any;
+      submission: Submission;
+    }> = [];
+
+    // Extract grades from submissions
+    for (const classroom of snapshot.classrooms) {
+      const classroomId = StableIdGenerator.classroom(classroom.id);
+      
+      for (const submissionSnapshot of classroom.submissions) {
+        if (submissionSnapshot.grade) {
+          const gradeInput = extractGradeFromSubmission(submissionSnapshot, classroomId);
+          if (gradeInput) {
+            const submissionId = StableIdGenerator.submission(
+              classroomId,
+              StableIdGenerator.assignment(classroomId, submissionSnapshot.assignmentId),
+              StableIdGenerator.student(submissionSnapshot.studentEmail)
+            );
+            
+            const submission = await this.repository.getSubmission(submissionId);
+            if (submission) {
+              gradeInputs.push({ gradeInput, submission });
+            }
+          }
+        }
+      }
+    }
+
+    // Process grades with versioning
+    if (gradeInputs.length > 0) {
+      const gradeResult = await this.gradeService.batchProcessGrades(gradeInputs);
+      
+      result.stats.gradesCreated = gradeResult.created.length;
+      result.stats.gradesPreserved = gradeResult.conflicts.filter(
+        c => c.resolution === 'keep_existing'
+      ).length;
+      
+      // Log conflicts
+      for (const conflict of gradeResult.conflicts) {
+        if (conflict.resolution === 'keep_existing') {
+          logger.info(`Grade preserved: ${conflict.reason}`, {
+            submissionId: conflict.submissionId
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Update denormalized counts for classrooms
+   */
+  private async updateCounts(classrooms: any[]): Promise<void> {
+    for (const classroom of classrooms) {
+      const classroomId = StableIdGenerator.classroom(classroom.externalId!);
+      try {
+        await this.repository.updateCounts(classroomId);
+      } catch (error) {
+        logger.error(`Failed to update counts for classroom ${classroomId}`, error);
+      }
+    }
+  }
+
+  /**
+   * Log processing error
+   */
+  private logError(
+    result: ProcessingResult,
+    entity: string,
+    id: string,
+    error: unknown
+  ): void {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error(`Error processing ${entity} ${id}`, error);
+    result.errors.push({ entity, id, error: errorMessage });
+  }
+}
