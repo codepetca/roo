@@ -135,12 +135,23 @@ var ClassroomSnapshotExporter = {
       console.log('Fetching classroom list...');
       let classrooms = DataCollectors.collectClassrooms();
       
-      // Filter by selected classrooms if specified
-      if (config.selectedClassrooms && config.selectedClassrooms.length > 0) {
-        classrooms = classrooms.filter(classroom => 
-          config.selectedClassrooms.includes(classroom.id)
-        );
-        console.log(`Filtered to ${classrooms.length} selected classrooms`);
+      // Handle classroom selection
+      if (config.selectedClassrooms) {
+        if (config.selectedClassrooms.length === 0) {
+          // No classrooms selected - return empty array (safe behavior)
+          console.log('No classrooms selected - returning empty dataset');
+          return [];
+        } else {
+          // Filter to only selected classrooms
+          classrooms = classrooms.filter(classroom => 
+            config.selectedClassrooms.includes(classroom.id)
+          );
+          console.log(`Filtered to ${classrooms.length} selected classrooms`);
+        }
+      } else {
+        // Fallback: if selectedClassrooms is null/undefined, default to no classrooms for safety
+        console.log('No classroom selection provided - defaulting to empty for safety');
+        return [];
       }
       
       // Limit number of classrooms if specified

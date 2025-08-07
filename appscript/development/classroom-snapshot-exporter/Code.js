@@ -77,6 +77,16 @@ function exportClassroomSnapshot(options = {}) {
   try {
     console.log('Starting classroom snapshot export...', options);
     
+    // Safety check: Ensure selectedClassrooms is provided and not empty
+    if (!options.selectedClassrooms || options.selectedClassrooms.length === 0) {
+      console.warn('No classrooms selected for export - blocking export for safety');
+      return {
+        success: false,
+        error: 'No classrooms selected',
+        message: 'Please select at least one classroom to export'
+      };
+    }
+    
     // Get current user info
     const user = Session.getActiveUser();
     if (!user.getEmail()) {
@@ -178,12 +188,25 @@ function testExport() {
   try {
     console.log('Running export test...');
     
+    // For test export, get the first selected classroom or use the first available classroom
+    const classroomListResult = getClassroomList();
+    if (!classroomListResult.success || !classroomListResult.classrooms.length) {
+      return {
+        success: false,
+        error: 'No classrooms available for testing'
+      };
+    }
+    
+    // Use the first classroom for testing
+    const firstClassroom = classroomListResult.classrooms[0];
+    
     // Test with limited data first
     const result = exportClassroomSnapshot({
       maxClassrooms: 1,
       maxStudentsPerClass: 5,
       maxSubmissionsPerAssignment: 3,
-      includeSubmissions: false // Start without submissions for faster testing
+      includeSubmissions: false, // Start without submissions for faster testing
+      selectedClassrooms: [firstClassroom.id] // Always select at least one classroom for testing
     });
     
     if (result.success) {

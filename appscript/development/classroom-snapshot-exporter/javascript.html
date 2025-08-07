@@ -338,7 +338,7 @@ function getExportOptions() {
         includeSubmissions,
         includeMaterials,
         includeQuizData,
-        selectedClassrooms: selectedClassrooms.length > 0 ? selectedClassrooms : null
+        selectedClassrooms: selectedClassrooms // Always return the array (empty or populated)
     };
 }
 
