@@ -224,28 +224,22 @@ var ClassroomSnapshotExporter = {
         SchemaAdapters.adaptStudent(student, classroom.id)
       );
       
-      // Get submissions if requested
+      // Get submissions if requested - using adaptive collection strategy
       let allSubmissions = [];
       if (config.includeSubmissions) {
-        console.log(`  Fetching submissions for ${classroom.name}...`);
+        const assignmentCount = enrichedClassroom.assignments.length;
+        const studentCount = enrichedClassroom.students.length;
         
-        for (const assignment of enrichedClassroom.assignments) {
-          try {
-            const submissions = DataCollectors.collectSubmissions(
-              classroom.id, 
-              assignment.id, 
-              config
-            );
-            
-            const adaptedSubmissions = submissions.map(submission => 
-              SchemaAdapters.adaptSubmission(submission, assignment)
-            );
-            
-            allSubmissions = allSubmissions.concat(adaptedSubmissions);
-            
-          } catch (submissionError) {
-            console.warn(`  Error getting submissions for assignment ${assignment.title}:`, submissionError.message);
-          }
+        console.log(`  Fetching submissions for ${classroom.name} (${studentCount} students, ${assignmentCount} assignments)...`);
+        
+        if (assignmentCount <= studentCount) {
+          // Use per-assignment collection (fewer assignments than students)
+          console.log(`  Using per-assignment collection strategy`);
+          allSubmissions = this.collectSubmissionsByAssignment(classroom, enrichedClassroom, config);
+        } else {
+          // Use per-student collection (more assignments than students)
+          console.log(`  Using per-student collection strategy`);
+          allSubmissions = this.collectSubmissionsByStudent(classroom, enrichedClassroom, config);
         }
       }
       
@@ -265,6 +259,88 @@ var ClassroomSnapshotExporter = {
       console.error(`Error enriching classroom ${classroom.name}:`, error);
       throw error;
     }
+  },
+  
+  /**
+   * Collect submissions using per-assignment strategy
+   * Optimal when assignments <= students
+   * @param {Object} classroom - Classroom object
+   * @param {Object} enrichedClassroom - Enriched classroom with assignments and students
+   * @param {Object} config - Export configuration
+   * @returns {Array} Array of all submissions
+   */
+  collectSubmissionsByAssignment: function(classroom, enrichedClassroom, config) {
+    let allSubmissions = [];
+    const totalAssignments = enrichedClassroom.assignments.length;
+    
+    for (let i = 0; i < enrichedClassroom.assignments.length; i++) {
+      const assignment = enrichedClassroom.assignments[i];
+      
+      try {
+        console.log(`    Assignment ${i + 1}/${totalAssignments}: ${assignment.title}`);
+        
+        const submissions = DataCollectors.collectSubmissions(
+          classroom.id, 
+          assignment.id, 
+          config
+        );
+        
+        const adaptedSubmissions = submissions.map(submission => 
+          SchemaAdapters.adaptSubmission(submission, assignment)
+        );
+        
+        allSubmissions = allSubmissions.concat(adaptedSubmissions);
+        
+      } catch (submissionError) {
+        console.warn(`    Error getting submissions for assignment ${assignment.title}:`, submissionError.message);
+      }
+    }
+    
+    return allSubmissions;
+  },
+  
+  /**
+   * Collect submissions using per-student strategy
+   * Optimal when students < assignments
+   * @param {Object} classroom - Classroom object
+   * @param {Object} enrichedClassroom - Enriched classroom with assignments and students
+   * @param {Object} config - Export configuration
+   * @returns {Array} Array of all submissions
+   */
+  collectSubmissionsByStudent: function(classroom, enrichedClassroom, config) {
+    let allSubmissions = [];
+    const totalStudents = enrichedClassroom.students.length;
+    
+    for (let i = 0; i < enrichedClassroom.students.length; i++) {
+      const student = enrichedClassroom.students[i];
+      
+      try {
+        console.log(`    Student ${i + 1}/${totalStudents}: ${student.profile.name.fullName}`);
+        
+        const studentSubmissions = DataCollectors.collectStudentSubmissions(
+          classroom.id,
+          student.profile.id
+        );
+        
+        // Map submissions to assignments and adapt
+        const adaptedSubmissions = studentSubmissions.map(submission => {
+          const assignment = enrichedClassroom.assignments.find(a => a.id === submission.courseWorkId);
+          const assignmentInfo = assignment || { 
+            id: submission.courseWorkId, 
+            title: 'Unknown Assignment',
+            maxPoints: submission.maxPoints || 100
+          };
+          return SchemaAdapters.adaptSubmission(submission, assignmentInfo);
+        });
+        
+        allSubmissions = allSubmissions.concat(adaptedSubmissions);
+        
+      } catch (submissionError) {
+        console.warn(`    Error getting submissions for student ${student.profile.name.fullName}:`, submissionError.message);
+      }
+    }
+    
+    return allSubmissions;
   },
   
   /**

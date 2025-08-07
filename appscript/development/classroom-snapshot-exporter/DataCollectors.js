@@ -8,8 +8,47 @@ var DataCollectors = {
   
   // API configuration
   API_BASE: 'https://classroom.googleapis.com/v1',
-  RATE_LIMIT_DELAY: 200, // ms between API calls
   MAX_PAGE_SIZE: 100,
+  
+  // Adaptive rate limiter
+  RateLimiter: {
+    currentDelay: 50,  // Start optimistic at 50ms
+    minDelay: 25,      // Minimum delay
+    maxDelay: 500,     // Maximum delay for severe rate limiting
+    consecutiveSuccesses: 0,
+    
+    // Get current delay
+    getDelay: function() {
+      return this.currentDelay;
+    },
+    
+    // Called after successful API call
+    onSuccess: function() {
+      this.consecutiveSuccesses++;
+      // Reduce delay after multiple successes
+      if (this.consecutiveSuccesses >= 3 && this.currentDelay > this.minDelay) {
+        this.currentDelay = Math.max(this.minDelay, this.currentDelay - 5);
+        this.consecutiveSuccesses = 0;
+        console.log(`Rate limiter optimized: reduced to ${this.currentDelay}ms`);
+      }
+    },
+    
+    // Called when rate limited (429 error)
+    onRateLimit: function() {
+      this.consecutiveSuccesses = 0;
+      this.currentDelay = Math.min(this.maxDelay, this.currentDelay * 2);
+      console.log(`Rate limited - increasing delay to ${this.currentDelay}ms`);
+    },
+    
+    // Called on other API errors
+    onError: function() {
+      this.consecutiveSuccesses = 0;
+      // Slight increase on errors
+      if (this.currentDelay < 100) {
+        this.currentDelay = Math.min(this.maxDelay, this.currentDelay + 10);
+      }
+    }
+  },
   
   /**
    * Get OAuth token for API calls
@@ -53,26 +92,42 @@ var DataCollectors = {
       
       if (responseCode === 200) {
         const data = JSON.parse(response.getContentText());
+        this.RateLimiter.onSuccess(); // Track successful call
         return data;
       } else if (responseCode === 404) {
         console.warn(`Resource not found: ${url}`);
+        this.RateLimiter.onSuccess(); // 404 is not a rate limit issue
         return null;
+      } else if (responseCode === 429) {
+        console.warn(`Rate limited: ${url}`);
+        this.RateLimiter.onRateLimit();
+        // Wait longer and retry once
+        Utilities.sleep(this.RateLimiter.getDelay() * 2);
+        const retryResponse = UrlFetchApp.fetch(url, fetchOptions);
+        if (retryResponse.getResponseCode() === 200) {
+          return JSON.parse(retryResponse.getContentText());
+        } else {
+          throw new Error(`Rate limited - retry failed with code ${retryResponse.getResponseCode()}`);
+        }
       } else {
         console.error(`API request failed: ${responseCode} - ${response.getContentText()}`);
+        this.RateLimiter.onError();
         throw new Error(`API request failed with code ${responseCode}`);
       }
       
     } catch (error) {
       console.error(`API request error for ${url}:`, error);
+      this.RateLimiter.onError();
       throw error;
     }
   },
   
   /**
-   * Add rate limiting delay
+   * Add adaptive rate limiting delay
    */
   rateLimitDelay: function() {
-    Utilities.sleep(this.RATE_LIMIT_DELAY);
+    const delay = this.RateLimiter.getDelay();
+    Utilities.sleep(delay);
   },
   
   /**
@@ -437,6 +492,48 @@ var DataCollectors = {
     } catch (error) {
       console.warn('Error getting user profile:', error.message);
       return null;
+    }
+  },
+  
+  /**
+   * Collect ALL submissions for a student across all assignments in a classroom
+   * More efficient than per-assignment when student count < assignment count
+   * @param {string} courseId - Course ID
+   * @param {string} studentId - Student ID
+   * @returns {Array} Array of all submission objects for this student
+   */
+  collectStudentSubmissions: function(courseId, studentId) {
+    try {
+      console.log(`Collecting all submissions for student ${studentId}...`);
+      
+      const url = `${this.API_BASE}/courses/${courseId}/students/${studentId}/studentSubmissions?pageSize=${this.MAX_PAGE_SIZE}`;
+      const response = this.makeApiRequest(url);
+      
+      if (!response || !response.studentSubmissions) {
+        console.log(`No submissions found for student ${studentId}`);
+        return [];
+      }
+      
+      let submissions = response.studentSubmissions;
+      
+      // Filter to only submitted work
+      submissions = submissions.filter(submission => {
+        const state = submission.state || 'NEW';
+        return state !== 'NEW' && state !== 'CREATED';
+      });
+      
+      // Enhance submissions with student work content
+      submissions = submissions.map(submission => {
+        this.rateLimitDelay(); // Rate limiting between enhancements
+        return this.enhanceSubmission(submission, courseId);
+      });
+      
+      console.log(`Collected ${submissions.length} submissions for student ${studentId}`);
+      return submissions;
+      
+    } catch (error) {
+      console.error(`Error collecting submissions for student ${studentId}:`, error);
+      return [];
     }
   },
   

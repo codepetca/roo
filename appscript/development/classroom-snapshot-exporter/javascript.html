@@ -598,16 +598,20 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Simulate progress for user feedback
+// Enhanced progress simulation with more granular feedback
 function simulateProgress(callback) {
     let progress = 0;
     const steps = [
-        { progress: 10, message: 'Connecting to Google Classroom...' },
-        { progress: 25, message: 'Loading classroom information...' },
-        { progress: 40, message: 'Fetching assignments...' },
-        { progress: 60, message: 'Collecting student data...' },
-        { progress: 80, message: 'Processing submissions...' },
-        { progress: 95, message: 'Finalizing export...' }
+        { progress: 5, message: 'Initializing export...' },
+        { progress: 10, message: 'Connecting to Google Classroom API...' },
+        { progress: 20, message: 'Loading classroom information...' },
+        { progress: 30, message: 'Fetching assignments...' },
+        { progress: 40, message: 'Collecting student enrollment data...' },
+        { progress: 50, message: 'Analyzing optimal collection strategy...' },
+        { progress: 60, message: 'Collecting submissions (optimized method)...' },
+        { progress: 75, message: 'Processing submission content...' },
+        { progress: 85, message: 'Calculating statistics...' },
+        { progress: 95, message: 'Finalizing snapshot data...' }
     ];
     
     let stepIndex = 0;
@@ -621,7 +625,14 @@ function simulateProgress(callback) {
             clearInterval(interval);
             if (callback) callback();
         }
-    }, 1000);
+    }, 800); // Slightly faster updates for better UX
+}
+
+// Real-time progress updates from server (if available)
+function updateProgressFromServer(progressData) {
+    if (progressData && progressData.percentage !== undefined) {
+        updateProgress(progressData.percentage, progressData.message || 'Processing...');
+    }
 }
 
 // Classroom Selection Functions
