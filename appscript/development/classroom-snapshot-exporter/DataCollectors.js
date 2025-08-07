@@ -496,48 +496,6 @@ var DataCollectors = {
   },
   
   /**
-   * Collect ALL submissions for a student across all assignments in a classroom
-   * More efficient than per-assignment when student count < assignment count
-   * @param {string} courseId - Course ID
-   * @param {string} studentId - Student ID
-   * @returns {Array} Array of all submission objects for this student
-   */
-  collectStudentSubmissions: function(courseId, studentId) {
-    try {
-      console.log(`Collecting all submissions for student ${studentId}...`);
-      
-      const url = `${this.API_BASE}/courses/${courseId}/students/${studentId}/studentSubmissions?pageSize=${this.MAX_PAGE_SIZE}`;
-      const response = this.makeApiRequest(url);
-      
-      if (!response || !response.studentSubmissions) {
-        console.log(`No submissions found for student ${studentId}`);
-        return [];
-      }
-      
-      let submissions = response.studentSubmissions;
-      
-      // Filter to only submitted work
-      submissions = submissions.filter(submission => {
-        const state = submission.state || 'NEW';
-        return state !== 'NEW' && state !== 'CREATED';
-      });
-      
-      // Enhance submissions with student work content
-      submissions = submissions.map(submission => {
-        this.rateLimitDelay(); // Rate limiting between enhancements
-        return this.enhanceSubmission(submission, courseId);
-      });
-      
-      console.log(`Collected ${submissions.length} submissions for student ${studentId}`);
-      return submissions;
-      
-    } catch (error) {
-      console.error(`Error collecting submissions for student ${studentId}:`, error);
-      return [];
-    }
-  },
-  
-  /**
    * Health check - test API connectivity
    * @returns {Object} Health check result
    */
