@@ -80,6 +80,22 @@
                             </svg>
                             Load My Classrooms
                         </button>
+                        
+                        <!-- Classroom Selection Controls -->
+                        <div id="classroomControls" class="classroom-controls" style="display: none;">
+                            <div class="control-group">
+                                <small class="control-label">Quick Selection:</small>
+                                <div class="control-buttons">
+                                    <button class="btn btn-xs btn-outline" onclick="selectRecentClassrooms()">Recent (3)</button>
+                                    <button class="btn btn-xs btn-outline" onclick="selectAllClassrooms()">All</button>
+                                    <button class="btn btn-xs btn-outline" onclick="selectNoClassrooms()">None</button>
+                                </div>
+                            </div>
+                            <div class="selection-info">
+                                <small id="selectionCount">3 classrooms selected for export</small>
+                            </div>
+                        </div>
+                        
                         <div id="classroomList" class="classroom-list" style="display: none;">
                             <!-- Classrooms will be populated here -->
                         </div>
@@ -94,7 +110,7 @@
                 <h3>Export Actions</h3>
                 
                 <div class="action-buttons">
-                    <button class="btn btn-outline" onclick="runTest()">
+                    <button class="btn btn-outline" onclick="runTest()" id="testBtn" disabled>
                         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M9 11l3 3l8-8"></path>
                             <path d="M21 12c-.5 0-1-.2-1.4-.6L15 7"></path>
@@ -103,7 +119,7 @@
                         Test Export (Sample Data)
                     </button>
                     
-                    <button class="btn btn-primary" onclick="exportData()" id="exportBtn">
+                    <button class="btn btn-primary" onclick="exportData()" id="exportBtn" disabled>
                         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7,10 12,15 17,10"></polyline>
@@ -113,9 +129,12 @@
                     </button>
                 </div>
                 
-                <div class="action-info">
-                    <p><strong>Test Export:</strong> Exports limited data to verify functionality</p>
-                    <p><strong>Full Export:</strong> Exports all classroom data in Roo-compatible format</p>
+                <div class="action-info" id="actionInfo">
+                    <p id="disabledMessage" class="disabled-message"><em>Connect to Google Classroom and load your classrooms to enable exports</em></p>
+                    <div id="enabledMessages" style="display: none;">
+                        <p><strong>Test Export:</strong> Exports limited data to verify functionality</p>
+                        <p><strong>Full Export:</strong> Exports all classroom data in Roo-compatible format</p>
+                    </div>
                 </div>
             </div>
         </section>

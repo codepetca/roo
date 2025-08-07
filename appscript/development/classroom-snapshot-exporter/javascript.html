@@ -85,9 +85,15 @@ function handleConnectionResult(result) {
     if (result.success) {
         updateStatus('success', `
             <strong>✓ Connected to Google Classroom</strong><br>
-            <small>API access verified • Ready to export classroom data</small>
+            <small>API access verified • Loading your classrooms...</small>
         `);
-        showToast('Connection successful!', 'success');
+        showToast('Connection successful! Loading classrooms...', 'success');
+        
+        // Auto-load classrooms after successful connection
+        setTimeout(() => {
+            loadClassrooms();
+        }, 1000);
+        
     } else {
         updateStatus('error', `
             <strong>✗ Connection Failed</strong><br>
@@ -123,48 +129,157 @@ function updateStatus(type, message, loading = false) {
 // Classroom Loading Functions
 function loadClassrooms() {
     console.log('Loading classrooms...');
+    
+    // Update load button to show loading state
+    const loadBtn = document.querySelector('button[onclick="loadClassrooms()"]');
+    if (loadBtn) {
+        loadBtn.disabled = true;
+        loadBtn.innerHTML = `
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            </svg>
+            Loading Classrooms...
+        `;
+        loadBtn.classList.add('loading');
+    }
+    
+    updateStatus('info', `
+        <strong>Loading Classrooms...</strong><br>
+        <small>Fetching your Google Classroom data...</small>
+    `, true);
+    
     showToast('Loading classrooms...', 'info');
     
     google.script.run
-        .withSuccessHandler(handleClassroomsLoaded)
-        .withFailureHandler(handleClassroomsError)
+        .withSuccessHandler(handleClassroomsLoadedComplete)
+        .withFailureHandler(handleClassroomsErrorComplete)
         .getClassroomList();
+}
+
+function handleClassroomsLoadedComplete(result) {
+    // Reset load button
+    const loadBtn = document.querySelector('button[onclick="loadClassrooms()"]');
+    if (loadBtn) {
+        loadBtn.disabled = false;
+        loadBtn.innerHTML = `
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            </svg>
+            Reload Classrooms
+        `;
+        loadBtn.classList.remove('loading');
+    }
+    
+    handleClassroomsLoaded(result);
+}
+
+function handleClassroomsErrorComplete(error) {
+    // Reset load button
+    const loadBtn = document.querySelector('button[onclick="loadClassrooms()"]');
+    if (loadBtn) {
+        loadBtn.disabled = false;
+        loadBtn.innerHTML = `
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            </svg>
+            Retry Load Classrooms
+        `;
+        loadBtn.classList.remove('loading');
+    }
+    
+    handleClassroomsError(error);
 }
 
 function handleClassroomsLoaded(result) {
     console.log('Classrooms loaded:', result);
     
-    if (result.success && result.classrooms.length > 0) {
+    if (result.success && result.classrooms && Array.isArray(result.classrooms) && result.classrooms.length > 0) {
         displayClassrooms(result.classrooms);
+        enableExportButtons();
+        updateStatus('success', `
+            <strong>✓ Ready to Export</strong><br>
+            <small>${result.classrooms.length} classrooms loaded • ${document.querySelectorAll('#classroomList input[type="checkbox"]:checked').length} selected for export</small>
+        `);
         showToast(`Loaded ${result.classrooms.length} classrooms`, 'success');
     } else if (result.success) {
         showToast('No classrooms found', 'warning');
-        elements.classroomList().style.display = 'none';
+        const classroomList = elements.classroomList();
+        if (classroomList) classroomList.style.display = 'none';
+        updateStatus('warning', `
+            <strong>⚠ No Classrooms Found</strong><br>
+            <small>No active classrooms found in your Google Classroom account</small>
+        `);
     } else {
-        showToast('Failed to load classrooms: ' + result.error, 'error');
+        showToast('Failed to load classrooms: ' + (result.error || 'Unknown error'), 'error');
+        updateStatus('error', `
+            <strong>✗ Failed to Load Classrooms</strong><br>
+            <small>${result.error || 'Unknown error'}</small>
+        `);
     }
 }
 
 function handleClassroomsError(error) {
     console.error('Error loading classrooms:', error);
-    showToast('Error loading classrooms: ' + error.message, 'error');
+    const errorMessage = error && error.message ? error.message : 'Unknown error';
+    showToast('Error loading classrooms: ' + errorMessage, 'error');
 }
 
 function displayClassrooms(classrooms) {
     const classroomList = elements.classroomList();
-    if (!classroomList) return;
+    const classroomControls = document.getElementById('classroomControls');
     
-    classroomList.innerHTML = classrooms.map(classroom => `
-        <div class="classroom-item">
-            <input type="checkbox" id="classroom-${classroom.id}" value="${classroom.id}" checked>
-            <div class="classroom-info">
-                <h5>${escapeHtml(classroom.name)}</h5>
-                <small>${classroom.section ? escapeHtml(classroom.section) + ' • ' : ''}${classroom.studentCount}</small>
+    if (!classroomList || !Array.isArray(classrooms)) return;
+    
+    classroomList.innerHTML = classrooms.map((classroom, index) => {
+        if (!classroom || !classroom.id) return '';
+        
+        const name = classroom.name || 'Unnamed Classroom';
+        const section = classroom.section ? escapeHtml(classroom.section) + ' • ' : '';
+        const studentCount = classroom.studentCount || 0;
+        
+        // Format last activity date
+        const lastActivity = formatLastActivity(classroom.updateTime || classroom.creationTime);
+        
+        // Only check first 3 classrooms by default (most recent)
+        const isChecked = classroom.isRecent || index < 3;
+        const recentBadge = classroom.isRecent ? '<span class="recent-badge">Recent</span>' : '';
+        const itemClass = classroom.isRecent ? 'classroom-item recent' : 'classroom-item';
+        
+        return `
+            <div class="${itemClass}">
+                <input type="checkbox" id="classroom-${classroom.id}" value="${classroom.id}" ${isChecked ? 'checked' : ''} onchange="updateSelectionCount()">
+                <div class="classroom-info">
+                    <h5>${escapeHtml(name)} ${recentBadge}</h5>
+                    <small>${section}${studentCount} students • Last activity: ${lastActivity}</small>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).filter(html => html !== '').join('');
     
     classroomList.style.display = 'block';
+    if (classroomControls) classroomControls.style.display = 'block';
+    
+    // Update selection count after displaying
+    setTimeout(updateSelectionCount, 100);
+}
+
+function formatLastActivity(dateString) {
+    if (!dateString) return 'Unknown';
+    
+    try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
+        
+        if (diffDays === 0) return 'Today';
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays} days ago`;
+        if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+        if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+        return `${Math.floor(diffDays / 365)} years ago`;
+    } catch (error) {
+        return dateString.split('T')[0]; // Fallback to date part
+    }
 }
 
 // Export Functions
@@ -214,8 +329,10 @@ function getExportOptions() {
     const includeQuizData = document.getElementById('includeQuizData')?.checked || false;
     
     // Get selected classrooms
-    const selectedClassrooms = Array.from(document.querySelectorAll('#classroomList input[type="checkbox"]:checked'))
-        .map(cb => cb.value);
+    const checkboxes = document.querySelectorAll('#classroomList input[type="checkbox"]:checked');
+    const selectedClassrooms = checkboxes ? Array.from(checkboxes)
+        .filter(cb => cb && cb.value)
+        .map(cb => cb.value) : [];
     
     return {
         includeSubmissions,
@@ -268,31 +385,42 @@ function handleExportError(error) {
     
     updateProgress(0, 'Export failed');
     setTimeout(hideProgressSection, 2000);
-    showToast('Export error: ' + error.message, 'error');
+    const errorMessage = error && error.message ? error.message : 'Unknown error';
+    showToast('Export error: ' + errorMessage, 'error');
 }
 
 // Progress Functions
 function showProgressSection() {
-    elements.progressSection().style.display = 'block';
-    elements.resultsSection().style.display = 'none';
+    const progressSection = elements.progressSection();
+    const resultsSection = elements.resultsSection();
+    
+    if (progressSection) progressSection.style.display = 'block';
+    if (resultsSection) resultsSection.style.display = 'none';
     
     // Scroll to progress section
-    elements.progressSection().scrollIntoView({ behavior: 'smooth' });
+    if (progressSection) progressSection.scrollIntoView({ behavior: 'smooth' });
 }
 
 function hideProgressSection() {
-    elements.progressSection().style.display = 'none';
+    const progressSection = elements.progressSection();
+    if (progressSection) progressSection.style.display = 'none';
 }
 
 function updateProgress(percentage, message) {
-    elements.progressFill().style.width = percentage + '%';
-    elements.progressDetails().innerHTML = `<p>${message}</p>`;
+    const progressFill = elements.progressFill();
+    const progressDetails = elements.progressDetails();
+    
+    if (progressFill) progressFill.style.width = percentage + '%';
+    if (progressDetails) progressDetails.innerHTML = `<p>${message}</p>`;
 }
 
 // Results Functions
 function showResults(title, result, isTest) {
-    elements.resultsTitle().textContent = title;
-    elements.resultsSection().style.display = 'block';
+    const resultsTitle = elements.resultsTitle();
+    const resultsSection = elements.resultsSection();
+    
+    if (resultsTitle) resultsTitle.textContent = title;
+    if (resultsSection) resultsSection.style.display = 'block';
     
     let content = '';
     
@@ -365,11 +493,14 @@ function showResults(title, result, isTest) {
         `;
     }
     
-    elements.resultsContent().innerHTML = content;
-    elements.resultsActions().style.display = result.success && !isTest ? 'flex' : 'none';
+    const resultsContent = elements.resultsContent();
+    const resultsActions = elements.resultsActions();
+    
+    if (resultsContent) resultsContent.innerHTML = content;
+    if (resultsActions) resultsActions.style.display = result.success && !isTest ? 'flex' : 'none';
     
     // Scroll to results
-    elements.resultsSection().scrollIntoView({ behavior: 'smooth' });
+    if (resultsSection) resultsSection.scrollIntoView({ behavior: 'smooth' });
 }
 
 // Download and Preview Functions
@@ -385,7 +516,8 @@ function downloadSnapshot() {
         
         const teacherEmail = currentSnapshotData.teacher?.email || 'teacher';
         const timestamp = new Date().toISOString().split('T')[0];
-        const filename = `classroom-snapshot-${teacherEmail.split('@')[0]}-${timestamp}.json`;
+        const emailPrefix = teacherEmail.includes('@') ? teacherEmail.split('@')[0] : teacherEmail;
+        const filename = `classroom-snapshot-${emailPrefix}-${timestamp}.json`;
         
         // Create download link
         const url = URL.createObjectURL(blob);
@@ -492,6 +624,88 @@ function simulateProgress(callback) {
     }, 1000);
 }
 
+// Classroom Selection Functions
+function selectRecentClassrooms() {
+    const checkboxes = document.querySelectorAll('#classroomList input[type="checkbox"]');
+    checkboxes.forEach((cb, index) => {
+        cb.checked = index < 3; // Check first 3 (most recent)
+    });
+    updateSelectionCount();
+    showToast('Selected 3 most recent classrooms', 'info');
+}
+
+function selectAllClassrooms() {
+    const checkboxes = document.querySelectorAll('#classroomList input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = true);
+    updateSelectionCount();
+    showToast('Selected all classrooms', 'info');
+}
+
+function selectNoClassrooms() {
+    const checkboxes = document.querySelectorAll('#classroomList input[type="checkbox"]');
+    checkboxes.forEach(cb => cb.checked = false);
+    updateSelectionCount();
+    showToast('Deselected all classrooms', 'info');
+}
+
+function updateSelectionCount() {
+    const checkboxes = document.querySelectorAll('#classroomList input[type="checkbox"]:checked');
+    const count = checkboxes.length;
+    const selectionCount = document.getElementById('selectionCount');
+    
+    if (selectionCount) {
+        const plural = count === 1 ? 'classroom' : 'classrooms';
+        selectionCount.textContent = `${count} ${plural} selected for export`;
+        
+        // Visual feedback for selection
+        if (count === 0) {
+            selectionCount.style.color = '#dc3545'; // Red
+            disableExportButtons(); // Disable if no classrooms selected
+        } else if (count <= 3) {
+            selectionCount.style.color = '#28a745'; // Green
+            enableExportButtons();
+        } else {
+            selectionCount.style.color = '#ffc107'; // Orange/Yellow
+            enableExportButtons();
+        }
+    }
+    
+    // Update status with current selection
+    updateStatus('success', `
+        <strong>✓ Ready to Export</strong><br>
+        <small>${document.querySelectorAll('#classroomList .classroom-item').length} classrooms loaded • ${count} selected for export</small>
+    `);
+}
+
+// Button control functions
+function enableExportButtons() {
+    const testBtn = document.getElementById('testBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const disabledMessage = document.getElementById('disabledMessage');
+    const enabledMessages = document.getElementById('enabledMessages');
+    
+    if (testBtn) testBtn.disabled = false;
+    if (exportBtn) exportBtn.disabled = false;
+    
+    // Show enabled messages, hide disabled message
+    if (disabledMessage) disabledMessage.style.display = 'none';
+    if (enabledMessages) enabledMessages.style.display = 'block';
+}
+
+function disableExportButtons() {
+    const testBtn = document.getElementById('testBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const disabledMessage = document.getElementById('disabledMessage');
+    const enabledMessages = document.getElementById('enabledMessages');
+    
+    if (testBtn) testBtn.disabled = true;
+    if (exportBtn) exportBtn.disabled = true;
+    
+    // Show disabled message, hide enabled messages
+    if (disabledMessage) disabledMessage.style.display = 'block';
+    if (enabledMessages) enabledMessages.style.display = 'none';
+}
+
 // Export functions for global access
 window.checkConnection = checkConnection;
 window.loadClassrooms = loadClassrooms;
@@ -501,6 +715,10 @@ window.downloadSnapshot = downloadSnapshot;
 window.previewSnapshot = previewSnapshot;
 window.copyToClipboard = copyToClipboard;
 window.closePreview = closePreview;
+window.selectRecentClassrooms = selectRecentClassrooms;
+window.selectAllClassrooms = selectAllClassrooms;
+window.selectNoClassrooms = selectNoClassrooms;
+window.updateSelectionCount = updateSelectionCount;
 
 console.log('Classroom Snapshot Exporter JavaScript loaded');
 </script>

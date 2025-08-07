@@ -141,14 +141,24 @@ function getClassroomList() {
   try {
     const classrooms = DataCollectors.collectClassrooms();
     
+    // Sort classrooms by updateTime (most recent first)
+    const sortedClassrooms = classrooms.sort((a, b) => {
+      const dateA = new Date(a.updateTime || a.creationTime || 0);
+      const dateB = new Date(b.updateTime || b.creationTime || 0);
+      return dateB - dateA; // Descending order (newest first)
+    });
+    
     return {
       success: true,
-      classrooms: classrooms.map(classroom => ({
+      classrooms: sortedClassrooms.map((classroom, index) => ({
         id: classroom.id,
         name: classroom.name,
         section: classroom.section,
         studentCount: classroom.enrollmentCode ? 'Active' : 'Archived',
-        courseState: classroom.courseState
+        courseState: classroom.courseState,
+        updateTime: classroom.updateTime,
+        creationTime: classroom.creationTime,
+        isRecent: index < 3 // Mark first 3 as recent
       }))
     };
     
