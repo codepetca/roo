@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classroom Snapshot Exporter</title>
+    <?!= include('styles'); ?>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>
+                <svg class="icon-large" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+                Classroom Snapshot Exporter
+            </h1>
+            <p class="subtitle">Export your Google Classroom data for Roo Auto-Grading Platform</p>
+        </header>
+
+        <!-- Status Section -->
+        <section class="status-section">
+            <div class="status-card" id="statusCard">
+                <div class="status-header">
+                    <h3>Connection Status</h3>
+                    <button class="btn btn-secondary btn-small" onclick="checkConnection()">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M1 4v6h6"></path>
+                            <path d="M23 20v-6h-6"></path>
+                            <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"></path>
+                        </svg>
+                        Check Connection
+                    </button>
+                </div>
+                <div class="status-content" id="statusContent">
+                    <p>Click "Check Connection" to verify Google Classroom access.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Export Configuration -->
+        <section class="config-section">
+            <div class="config-card">
+                <h3>Export Configuration</h3>
+                
+                <div class="form-group">
+                    <h4>Data Options</h4>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="includeSubmissions" checked>
+                            <span class="checkbox-custom"></span>
+                            Include Student Submissions
+                            <small>Export student work and responses</small>
+                        </label>
+                        
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="includeMaterials" checked>
+                            <span class="checkbox-custom"></span>
+                            Include Assignment Materials
+                            <small>Files, links, and other assignment resources</small>
+                        </label>
+                        
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="includeQuizData">
+                            <span class="checkbox-custom"></span>
+                            Include Quiz Data
+                            <small>Quiz questions and answer choices (when available)</small>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <h4>Classroom Selection</h4>
+                    <div class="classroom-selection">
+                        <button class="btn btn-secondary" onclick="loadClassrooms()">
+                            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            </svg>
+                            Load My Classrooms
+                        </button>
+                        <div id="classroomList" class="classroom-list" style="display: none;">
+                            <!-- Classrooms will be populated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Actions Section -->
+        <section class="actions-section">
+            <div class="actions-card">
+                <h3>Export Actions</h3>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-outline" onclick="runTest()">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M9 11l3 3l8-8"></path>
+                            <path d="M21 12c-.5 0-1-.2-1.4-.6L15 7"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        Test Export (Sample Data)
+                    </button>
+                    
+                    <button class="btn btn-primary" onclick="exportData()" id="exportBtn">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7,10 12,15 17,10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Export Full Data
+                    </button>
+                </div>
+                
+                <div class="action-info">
+                    <p><strong>Test Export:</strong> Exports limited data to verify functionality</p>
+                    <p><strong>Full Export:</strong> Exports all classroom data in Roo-compatible format</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Progress Section -->
+        <section class="progress-section" id="progressSection" style="display: none;">
+            <div class="progress-card">
+                <h3>Export Progress</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-details" id="progressDetails">
+                    <p>Initializing export...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results-section" id="resultsSection" style="display: none;">
+            <div class="results-card">
+                <h3 id="resultsTitle">Export Results</h3>
+                <div class="results-content" id="resultsContent">
+                    <!-- Results will be populated here -->
+                </div>
+                <div class="results-actions" id="resultsActions" style="display: none;">
+                    <button class="btn btn-primary" onclick="downloadSnapshot()" id="downloadBtn">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7,10 12,15 17,10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download Snapshot
+                    </button>
+                    <button class="btn btn-secondary" onclick="previewSnapshot()">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        Preview Data
+                    </button>
+                    <button class="btn btn-outline" onclick="copyToClipboard()">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Preview Modal -->
+        <div class="modal" id="previewModal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Snapshot Preview</h3>
+                    <button class="modal-close" onclick="closePreview()">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <pre id="previewContent" class="code-block"></pre>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closePreview()">Close</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>
+                <strong>Roo Classroom Snapshot Exporter</strong> - 
+                Compatible with <a href="https://roo.app" target="_blank">Roo Auto-Grading Platform</a>
+            </p>
+            <p>
+                <small>
+                    This tool exports your Google Classroom data in a format compatible with Roo's snapshot import feature.
+                    Your data is processed locally and never stored on external servers.
+                </small>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <?!= include('javascript'); ?>
+</body>
+</html>

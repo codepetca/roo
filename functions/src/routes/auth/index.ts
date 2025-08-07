@@ -25,3 +25,8 @@ export {
   verifyPasscode,
   resetStudentAuth
 } from './passcode';
+
+// User deletion (for testing)
+export {
+  deleteUser
+} from './delete';

@@ -17,7 +17,9 @@
       "Bash(npm run build:*)",
       "Bash(diff:*)",
       "WebFetch(domain:developers.google.com)",
-      "WebFetch(domain:svelte.dev)"
+      "WebFetch(domain:svelte.dev)",
+      "Bash(npm run test:e2e:*)",
+      "Bash(clasp push:*)"
     ],
     "deny": []
   }

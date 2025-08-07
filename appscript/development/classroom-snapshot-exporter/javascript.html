@@ -1,0 +1,506 @@
+<script>
+// Classroom Snapshot Exporter JavaScript
+
+// Global state
+let currentSnapshotData = null;
+let exportInProgress = false;
+
+// DOM elements
+const elements = {
+    statusCard: () => document.getElementById('statusCard'),
+    statusContent: () => document.getElementById('statusContent'),
+    classroomList: () => document.getElementById('classroomList'),
+    progressSection: () => document.getElementById('progressSection'),
+    progressFill: () => document.getElementById('progressFill'),
+    progressDetails: () => document.getElementById('progressDetails'),
+    resultsSection: () => document.getElementById('resultsSection'),
+    resultsTitle: () => document.getElementById('resultsTitle'),
+    resultsContent: () => document.getElementById('resultsContent'),
+    resultsActions: () => document.getElementById('resultsActions'),
+    previewModal: () => document.getElementById('previewModal'),
+    previewContent: () => document.getElementById('previewContent'),
+    exportBtn: () => document.getElementById('exportBtn'),
+    toastContainer: () => document.getElementById('toastContainer')
+};
+
+// Initialize the app
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Classroom Snapshot Exporter initialized');
+    
+    // Check connection on load
+    setTimeout(checkConnection, 500);
+    
+    // Set up event listeners
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key) {
+                case 'Enter':
+                    e.preventDefault();
+                    exportData();
+                    break;
+                case 't':
+                    e.preventDefault();
+                    runTest();
+                    break;
+                case 'r':
+                    e.preventDefault();
+                    checkConnection();
+                    break;
+            }
+        }
+        
+        // ESC to close modal
+        if (e.key === 'Escape') {
+            closePreview();
+        }
+    });
+    
+    // Click outside modal to close
+    elements.previewModal()?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closePreview();
+        }
+    });
+}
+
+// Connection and Status Functions
+function checkConnection() {
+    console.log('Checking Google Classroom connection...');
+    updateStatus('info', 'Checking Google Classroom connection...', true);
+    
+    google.script.run
+        .withSuccessHandler(handleConnectionResult)
+        .withFailureHandler(handleConnectionError)
+        .checkPermissions();
+}
+
+function handleConnectionResult(result) {
+    console.log('Connection check result:', result);
+    
+    if (result.success) {
+        updateStatus('success', `
+            <strong>✓ Connected to Google Classroom</strong><br>
+            <small>API access verified • Ready to export classroom data</small>
+        `);
+        showToast('Connection successful!', 'success');
+    } else {
+        updateStatus('error', `
+            <strong>✗ Connection Failed</strong><br>
+            <small>${result.error}</small>
+        `);
+        showToast('Connection failed: ' + result.error, 'error');
+    }
+}
+
+function handleConnectionError(error) {
+    console.error('Connection check error:', error);
+    updateStatus('error', `
+        <strong>✗ Connection Error</strong><br>
+        <small>Failed to check API access: ${error.message}</small>
+    `);
+    showToast('Connection error: ' + error.message, 'error');
+}
+
+function updateStatus(type, message, loading = false) {
+    const statusContent = elements.statusContent();
+    if (!statusContent) return;
+    
+    statusContent.className = `status-content ${type}`;
+    statusContent.innerHTML = message;
+    
+    if (loading) {
+        statusContent.classList.add('loading');
+    } else {
+        statusContent.classList.remove('loading');
+    }
+}
+
+// Classroom Loading Functions
+function loadClassrooms() {
+    console.log('Loading classrooms...');
+    showToast('Loading classrooms...', 'info');
+    
+    google.script.run
+        .withSuccessHandler(handleClassroomsLoaded)
+        .withFailureHandler(handleClassroomsError)
+        .getClassroomList();
+}
+
+function handleClassroomsLoaded(result) {
+    console.log('Classrooms loaded:', result);
+    
+    if (result.success && result.classrooms.length > 0) {
+        displayClassrooms(result.classrooms);
+        showToast(`Loaded ${result.classrooms.length} classrooms`, 'success');
+    } else if (result.success) {
+        showToast('No classrooms found', 'warning');
+        elements.classroomList().style.display = 'none';
+    } else {
+        showToast('Failed to load classrooms: ' + result.error, 'error');
+    }
+}
+
+function handleClassroomsError(error) {
+    console.error('Error loading classrooms:', error);
+    showToast('Error loading classrooms: ' + error.message, 'error');
+}
+
+function displayClassrooms(classrooms) {
+    const classroomList = elements.classroomList();
+    if (!classroomList) return;
+    
+    classroomList.innerHTML = classrooms.map(classroom => `
+        <div class="classroom-item">
+            <input type="checkbox" id="classroom-${classroom.id}" value="${classroom.id}" checked>
+            <div class="classroom-info">
+                <h5>${escapeHtml(classroom.name)}</h5>
+                <small>${classroom.section ? escapeHtml(classroom.section) + ' • ' : ''}${classroom.studentCount}</small>
+            </div>
+        </div>
+    `).join('');
+    
+    classroomList.style.display = 'block';
+}
+
+// Export Functions
+function runTest() {
+    if (exportInProgress) {
+        showToast('Export already in progress', 'warning');
+        return;
+    }
+    
+    console.log('Running test export...');
+    exportInProgress = true;
+    
+    showProgressSection();
+    updateProgress(10, 'Starting test export...');
+    
+    google.script.run
+        .withSuccessHandler(handleTestResult)
+        .withFailureHandler(handleExportError)
+        .testExport();
+}
+
+function exportData() {
+    if (exportInProgress) {
+        showToast('Export already in progress', 'warning');
+        return;
+    }
+    
+    console.log('Starting full export...');
+    exportInProgress = true;
+    
+    // Get export options
+    const options = getExportOptions();
+    console.log('Export options:', options);
+    
+    showProgressSection();
+    updateProgress(5, 'Initializing export...');
+    
+    google.script.run
+        .withSuccessHandler(handleExportResult)
+        .withFailureHandler(handleExportError)
+        .exportClassroomSnapshot(options);
+}
+
+function getExportOptions() {
+    const includeSubmissions = document.getElementById('includeSubmissions')?.checked || false;
+    const includeMaterials = document.getElementById('includeMaterials')?.checked || false;
+    const includeQuizData = document.getElementById('includeQuizData')?.checked || false;
+    
+    // Get selected classrooms
+    const selectedClassrooms = Array.from(document.querySelectorAll('#classroomList input[type="checkbox"]:checked'))
+        .map(cb => cb.value);
+    
+    return {
+        includeSubmissions,
+        includeMaterials,
+        includeQuizData,
+        selectedClassrooms: selectedClassrooms.length > 0 ? selectedClassrooms : null
+    };
+}
+
+function handleTestResult(result) {
+    console.log('Test export result:', result);
+    exportInProgress = false;
+    
+    if (result.success) {
+        updateProgress(100, 'Test export completed successfully!');
+        setTimeout(() => {
+            hideProgressSection();
+            showResults('Test Export Successful', result, true);
+        }, 1000);
+        showToast('Test export completed!', 'success');
+    } else {
+        updateProgress(0, 'Test export failed');
+        setTimeout(hideProgressSection, 2000);
+        showToast('Test export failed: ' + result.error, 'error');
+    }
+}
+
+function handleExportResult(result) {
+    console.log('Full export result:', result);
+    exportInProgress = false;
+    
+    if (result.success) {
+        currentSnapshotData = result.data;
+        updateProgress(100, 'Export completed successfully!');
+        setTimeout(() => {
+            hideProgressSection();
+            showResults('Export Completed', result, false);
+        }, 1000);
+        showToast('Export completed successfully!', 'success');
+    } else {
+        updateProgress(0, 'Export failed');
+        setTimeout(hideProgressSection, 2000);
+        showToast('Export failed: ' + result.error, 'error');
+    }
+}
+
+function handleExportError(error) {
+    console.error('Export error:', error);
+    exportInProgress = false;
+    
+    updateProgress(0, 'Export failed');
+    setTimeout(hideProgressSection, 2000);
+    showToast('Export error: ' + error.message, 'error');
+}
+
+// Progress Functions
+function showProgressSection() {
+    elements.progressSection().style.display = 'block';
+    elements.resultsSection().style.display = 'none';
+    
+    // Scroll to progress section
+    elements.progressSection().scrollIntoView({ behavior: 'smooth' });
+}
+
+function hideProgressSection() {
+    elements.progressSection().style.display = 'none';
+}
+
+function updateProgress(percentage, message) {
+    elements.progressFill().style.width = percentage + '%';
+    elements.progressDetails().innerHTML = `<p>${message}</p>`;
+}
+
+// Results Functions
+function showResults(title, result, isTest) {
+    elements.resultsTitle().textContent = title;
+    elements.resultsSection().style.display = 'block';
+    
+    let content = '';
+    
+    if (result.success && result.data) {
+        const stats = result.data.globalStats || {};
+        
+        content = `
+            <div class="results-summary">
+                <h4>Export Summary</h4>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-number">${stats.totalClassrooms || 0}</span>
+                        <span class="stat-label">Classrooms</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${stats.totalStudents || 0}</span>
+                        <span class="stat-label">Students</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${stats.totalAssignments || 0}</span>
+                        <span class="stat-label">Assignments</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-number">${stats.totalSubmissions || 0}</span>
+                        <span class="stat-label">Submissions</span>
+                    </div>
+                    ${stats.ungradedSubmissions !== undefined ? `
+                    <div class="stat-item">
+                        <span class="stat-number">${stats.ungradedSubmissions}</span>
+                        <span class="stat-label">Ungraded</span>
+                    </div>
+                    ` : ''}
+                    ${stats.averageGrade !== undefined && stats.averageGrade !== null ? `
+                    <div class="stat-item">
+                        <span class="stat-number">${stats.averageGrade.toFixed(1)}%</span>
+                        <span class="stat-label">Avg Grade</span>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        if (!isTest) {
+            content += `
+                <div style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <p><strong>✓ Data Ready for Import</strong></p>
+                    <p><small>Your classroom snapshot is ready to import into the Roo platform. 
+                    Download the file and use the "Import Snapshot" feature in your Roo teacher dashboard.</small></p>
+                </div>
+            `;
+        }
+    } else if (result.success && isTest) {
+        content = `
+            <div style="background: #d4edda; padding: 15px; border-radius: 8px;">
+                <p><strong>✓ Export System Working</strong></p>
+                <p>The export functionality is working correctly. ${result.message || ''}</p>
+                ${result.sampleData ? `
+                <p><small>Sample data: ${result.sampleData.classroomCount} classroom(s), 
+                ${result.sampleData.studentCount} student(s), ${result.sampleData.assignmentCount} assignment(s)</small></p>
+                ` : ''}
+            </div>
+        `;
+    } else {
+        content = `
+            <div style="background: #f8d7da; padding: 15px; border-radius: 8px;">
+                <p><strong>✗ Export Failed</strong></p>
+                <p>${result.error || 'Unknown error occurred'}</p>
+                ${result.details ? `<p><small>${result.details}</small></p>` : ''}
+            </div>
+        `;
+    }
+    
+    elements.resultsContent().innerHTML = content;
+    elements.resultsActions().style.display = result.success && !isTest ? 'flex' : 'none';
+    
+    // Scroll to results
+    elements.resultsSection().scrollIntoView({ behavior: 'smooth' });
+}
+
+// Download and Preview Functions
+function downloadSnapshot() {
+    if (!currentSnapshotData) {
+        showToast('No snapshot data available', 'error');
+        return;
+    }
+    
+    try {
+        const jsonString = JSON.stringify(currentSnapshotData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        
+        const teacherEmail = currentSnapshotData.teacher?.email || 'teacher';
+        const timestamp = new Date().toISOString().split('T')[0];
+        const filename = `classroom-snapshot-${teacherEmail.split('@')[0]}-${timestamp}.json`;
+        
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showToast('Snapshot downloaded successfully!', 'success');
+    } catch (error) {
+        console.error('Download error:', error);
+        showToast('Failed to download snapshot', 'error');
+    }
+}
+
+function previewSnapshot() {
+    if (!currentSnapshotData) {
+        showToast('No snapshot data available', 'error');
+        return;
+    }
+    
+    try {
+        const jsonString = JSON.stringify(currentSnapshotData, null, 2);
+        elements.previewContent().textContent = jsonString;
+        elements.previewModal().style.display = 'flex';
+    } catch (error) {
+        console.error('Preview error:', error);
+        showToast('Failed to preview snapshot', 'error');
+    }
+}
+
+function closePreview() {
+    elements.previewModal().style.display = 'none';
+}
+
+function copyToClipboard() {
+    if (!currentSnapshotData) {
+        showToast('No snapshot data available', 'error');
+        return;
+    }
+    
+    try {
+        const jsonString = JSON.stringify(currentSnapshotData, null, 2);
+        navigator.clipboard.writeText(jsonString).then(() => {
+            showToast('Snapshot copied to clipboard!', 'success');
+        }).catch(error => {
+            console.error('Clipboard error:', error);
+            showToast('Failed to copy to clipboard', 'error');
+        });
+    } catch (error) {
+        console.error('Copy error:', error);
+        showToast('Failed to copy snapshot', 'error');
+    }
+}
+
+// Utility Functions
+function showToast(message, type = 'info', duration = 4000) {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    
+    elements.toastContainer().appendChild(toast);
+    
+    // Auto-remove toast
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.parentNode.removeChild(toast);
+        }
+    }, duration);
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Simulate progress for user feedback
+function simulateProgress(callback) {
+    let progress = 0;
+    const steps = [
+        { progress: 10, message: 'Connecting to Google Classroom...' },
+        { progress: 25, message: 'Loading classroom information...' },
+        { progress: 40, message: 'Fetching assignments...' },
+        { progress: 60, message: 'Collecting student data...' },
+        { progress: 80, message: 'Processing submissions...' },
+        { progress: 95, message: 'Finalizing export...' }
+    ];
+    
+    let stepIndex = 0;
+    
+    const interval = setInterval(() => {
+        if (stepIndex < steps.length) {
+            const step = steps[stepIndex];
+            updateProgress(step.progress, step.message);
+            stepIndex++;
+        } else {
+            clearInterval(interval);
+            if (callback) callback();
+        }
+    }, 1000);
+}
+
+// Export functions for global access
+window.checkConnection = checkConnection;
+window.loadClassrooms = loadClassrooms;
+window.runTest = runTest;
+window.exportData = exportData;
+window.downloadSnapshot = downloadSnapshot;
+window.previewSnapshot = previewSnapshot;
+window.copyToClipboard = copyToClipboard;
+window.closePreview = closePreview;
+
+console.log('Classroom Snapshot Exporter JavaScript loaded');
+</script>
