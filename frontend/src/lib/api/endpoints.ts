@@ -461,6 +461,7 @@ export const api = {
 		);
 	},
 
+
 	// Snapshot import endpoints
 	async validateSnapshot(snapshot: ClassroomSnapshot): Promise<{
 		isValid: boolean;

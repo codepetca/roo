@@ -46,22 +46,22 @@
 				sessionStorage.setItem('google_access_token', accessToken);
 			}
 
-			// Force role refresh to ensure custom claims are up to date
-			const { auth: authService } = await import('$lib/stores/auth.svelte');
-			// Note: refreshRole method may not exist in new auth structure
-
-			// Import the API client
-			const { api } = await import('$lib/api');
-
-			// Create or update user profile in backend
-			const profile = await api.createOrUpdateProfile({
-				role: 'teacher',
-				email: user.email,
-				displayName: user.displayName,
-				isSignup
-			});
-
-			console.log('Profile created successfully:', profile);
+			// Create teacher profile with role using callable function (consistent with other auth flows)
+			try {
+				console.log('Creating teacher profile with role...');
+				const { httpsCallable } = await import('firebase/functions');
+				const { firebaseFunctions } = await import('$lib/firebase');
+				
+				const createProfile = httpsCallable(firebaseFunctions, 'createProfileForExistingUser');
+				const profileResult = await createProfile({
+					uid: user.uid,
+					role: 'teacher'
+				});
+				console.log('Teacher profile created:', profileResult.data);
+			} catch (error) {
+				console.error('Profile creation failed:', error);
+				throw error;
+			}
 
 			// Import auth store to trigger refresh
 			const { auth } = await import('$lib/stores/auth.svelte');

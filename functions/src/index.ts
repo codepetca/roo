@@ -35,7 +35,7 @@ import { validateSnapshot, importSnapshot, getImportHistory, generateSnapshotDif
 import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
-import { createOrUpdateProfile, sendPasscode, verifyPasscode, resetStudentAuth } from "./routes/auth";
+import { sendPasscode, verifyPasscode, resetStudentAuth } from "./routes/auth";
 import { debugSheetsPermissions } from "./routes/debug";
 import { getServiceAccountInfo, testSheetAccess } from "./routes/webhook-debug";
 
@@ -276,9 +276,7 @@ export const api = onRequest(
       }
 
       // Auth routes
-      if (method === "POST" && path === "/auth/profile") {
-        await createOrUpdateProfile(request, response); return;
-      }
+      // Note: Profile creation now handled by 'createProfileForExistingUser' callable function
       if (method === "POST" && path === "/auth/send-passcode") {
         await sendPasscode(request, response); return;
       }
