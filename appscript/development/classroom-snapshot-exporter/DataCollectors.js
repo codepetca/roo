@@ -496,6 +496,185 @@ var DataCollectors = {
   },
   
   /**
+   * Collect submissions for multiple assignments in parallel using batched requests
+   * Much faster than sequential collection for classrooms with many assignments
+   * @param {string} courseId - Course ID
+   * @param {Array} assignments - Array of assignment objects
+   * @param {Object} config - Configuration options
+   * @returns {Array} Array of all submission objects across all assignments
+   */
+  collectSubmissionsParallel: function(courseId, assignments, config = {}) {
+    try {
+      if (!assignments || assignments.length === 0) {
+        console.log('No assignments provided for parallel collection');
+        return [];
+      }
+      
+      const totalAssignments = assignments.length;
+      const batchSize = Math.min(8, Math.max(1, Math.floor(50 / Math.max(1, totalAssignments / 10)))); // Adaptive batch size
+      const allSubmissions = [];
+      
+      console.log(`Starting parallel submission collection for ${totalAssignments} assignments (batch size: ${batchSize})`);
+      
+      // Process assignments in batches
+      for (let i = 0; i < assignments.length; i += batchSize) {
+        const batch = assignments.slice(i, i + batchSize);
+        const batchNumber = Math.floor(i / batchSize) + 1;
+        const totalBatches = Math.ceil(assignments.length / batchSize);
+        
+        console.log(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} assignments)`);
+        
+        try {
+          const batchSubmissions = this.processBatchParallel(courseId, batch, config);
+          allSubmissions.push(...batchSubmissions);
+          
+          // Small delay between batches to respect rate limits
+          if (i + batchSize < assignments.length) {
+            Utilities.sleep(100);
+          }
+          
+        } catch (batchError) {
+          console.error(`Error processing batch ${batchNumber}:`, batchError.message);
+          // Continue with next batch rather than failing completely
+        }
+      }
+      
+      console.log(`Parallel collection completed: ${allSubmissions.length} submissions from ${totalAssignments} assignments`);
+      return allSubmissions;
+      
+    } catch (error) {
+      console.error('Error in parallel submission collection:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Process a batch of assignments in parallel using UrlFetchApp.fetchAll
+   * @param {string} courseId - Course ID
+   * @param {Array} assignments - Batch of assignments to process
+   * @param {Object} config - Configuration options
+   * @returns {Array} Array of submissions from this batch
+   */
+  processBatchParallel: function(courseId, assignments, config) {
+    try {
+      const token = this.getAuthToken();
+      const batchSubmissions = [];
+      
+      // Prepare parallel requests for all assignments in this batch
+      const requests = assignments.map(assignment => {
+        const url = `${this.API_BASE}/courses/${courseId}/courseWork/${assignment.id}/studentSubmissions?pageSize=${this.MAX_PAGE_SIZE}`;
+        return {
+          url: url,
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          method: 'GET'
+        };
+      });
+      
+      // Make all requests in parallel
+      console.log(`  Making ${requests.length} parallel API calls...`);
+      const responses = UrlFetchApp.fetchAll(requests);
+      
+      // Process responses
+      for (let i = 0; i < responses.length; i++) {
+        const response = responses[i];
+        const assignment = assignments[i];
+        
+        try {
+          const responseCode = response.getResponseCode();
+          
+          if (responseCode === 200) {
+            const data = JSON.parse(response.getContentText());
+            this.RateLimiter.onSuccess(); // Track successful call
+            
+            if (data && data.studentSubmissions) {
+              let submissions = data.studentSubmissions;
+              
+              // Filter to only submitted work
+              submissions = submissions.filter(submission => {
+                const state = submission.state || 'NEW';
+                return state !== 'NEW' && state !== 'CREATED';
+              });
+              
+              // Apply max submissions limit if specified
+              if (config.maxSubmissionsPerAssignment && submissions.length > config.maxSubmissionsPerAssignment) {
+                submissions = submissions.slice(0, config.maxSubmissionsPerAssignment);
+                console.log(`    Limited to ${submissions.length} submissions for assignment ${assignment.title}`);
+              }
+              
+              // Enhance submissions (but without individual rate limiting since we're batching)
+              const enhancedSubmissions = submissions.map(submission => {
+                return this.enhanceSubmissionQuick(submission, courseId);
+              });
+              
+              batchSubmissions.push(...enhancedSubmissions);
+              console.log(`    Collected ${enhancedSubmissions.length} submissions for ${assignment.title}`);
+            }
+            
+          } else if (responseCode === 404) {
+            console.warn(`    Assignment not found: ${assignment.title}`);
+            this.RateLimiter.onSuccess(); // 404 is not a rate limit issue
+            
+          } else if (responseCode === 429) {
+            console.warn(`    Rate limited for assignment: ${assignment.title}`);
+            this.RateLimiter.onRateLimit();
+            // For parallel requests, we can't easily retry individual items
+            // The next batch will have increased delays
+            
+          } else {
+            console.error(`    API error ${responseCode} for assignment ${assignment.title}: ${response.getContentText()}`);
+            this.RateLimiter.onError();
+          }
+          
+        } catch (parseError) {
+          console.error(`    Error processing response for assignment ${assignment.title}:`, parseError.message);
+        }
+      }
+      
+      return batchSubmissions;
+      
+    } catch (error) {
+      console.error('Error in batch parallel processing:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Quick submission enhancement without rate limiting (for use in parallel processing)
+   * @param {Object} submission - Basic submission object
+   * @param {string} courseId - Course ID
+   * @returns {Object} Enhanced submission
+   */
+  enhanceSubmissionQuick: function(submission, courseId) {
+    try {
+      const enhanced = { ...submission };
+      
+      // Process attachments to get student work (simplified version)
+      if (submission.assignmentSubmission && submission.assignmentSubmission.attachments) {
+        enhanced.studentWork = this.extractStudentWork(submission.assignmentSubmission.attachments);
+      }
+      
+      // Add grade information if available
+      if (submission.assignedGrade !== undefined) {
+        enhanced.grade = {
+          score: submission.assignedGrade,
+          maxScore: submission.courseWorkType === 'ASSIGNMENT' ? 100 : undefined,
+          feedback: submission.feedback || '',
+          gradedAt: submission.updateTime
+        };
+      }
+      
+      return enhanced;
+      
+    } catch (error) {
+      console.warn(`Error enhancing submission ${submission.id}:`, error.message);
+      return submission;
+    }
+  },
+  
+  /**
    * Health check - test API connectivity
    * @returns {Object} Health check result
    */

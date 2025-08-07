@@ -224,28 +224,43 @@ var ClassroomSnapshotExporter = {
         SchemaAdapters.adaptStudent(student, classroom.id)
       );
       
-      // Get submissions if requested
+      // Get submissions if requested - using parallel collection for better performance
       let allSubmissions = [];
       if (config.includeSubmissions) {
-        console.log(`  Fetching submissions for ${classroom.name}...`);
+        const assignmentCount = enrichedClassroom.assignments.length;
+        console.log(`  Fetching submissions for ${classroom.name} (${assignmentCount} assignments)...`);
         
-        for (const assignment of enrichedClassroom.assignments) {
+        if (assignmentCount >= 5) {
+          // Use parallel collection for classrooms with many assignments
+          console.log(`  Using parallel collection for ${assignmentCount} assignments...`);
           try {
-            const submissions = DataCollectors.collectSubmissions(
-              classroom.id, 
-              assignment.id, 
+            const parallelSubmissions = DataCollectors.collectSubmissionsParallel(
+              classroom.id,
+              enrichedClassroom.assignments,
               config
             );
             
-            const adaptedSubmissions = submissions.map(submission => 
-              SchemaAdapters.adaptSubmission(submission, assignment)
-            );
+            // Adapt submissions to schema format
+            allSubmissions = parallelSubmissions.map(submission => {
+              // Find the corresponding assignment for proper adaptation
+              const assignment = enrichedClassroom.assignments.find(a => a.id === submission.courseWorkId);
+              const assignmentInfo = assignment || {
+                id: submission.courseWorkId,
+                title: 'Unknown Assignment',
+                maxPoints: submission.maxPoints || 100
+              };
+              return SchemaAdapters.adaptSubmission(submission, assignmentInfo);
+            });
             
-            allSubmissions = allSubmissions.concat(adaptedSubmissions);
-            
-          } catch (submissionError) {
-            console.warn(`  Error getting submissions for assignment ${assignment.title}:`, submissionError.message);
+          } catch (parallelError) {
+            console.warn(`  Parallel collection failed, falling back to sequential: ${parallelError.message}`);
+            allSubmissions = this.collectSubmissionsSequential(classroom, enrichedClassroom, config);
           }
+          
+        } else {
+          // Use sequential collection for small numbers of assignments
+          console.log(`  Using sequential collection for ${assignmentCount} assignments...`);
+          allSubmissions = this.collectSubmissionsSequential(classroom, enrichedClassroom, config);
         }
       }
       
@@ -265,6 +280,38 @@ var ClassroomSnapshotExporter = {
       console.error(`Error enriching classroom ${classroom.name}:`, error);
       throw error;
     }
+  },
+  
+  /**
+   * Sequential submission collection (fallback method)
+   * @param {Object} classroom - Classroom object
+   * @param {Object} enrichedClassroom - Enriched classroom with assignments and students
+   * @param {Object} config - Export configuration
+   * @returns {Array} Array of all submissions
+   */
+  collectSubmissionsSequential: function(classroom, enrichedClassroom, config) {
+    const allSubmissions = [];
+    
+    for (const assignment of enrichedClassroom.assignments) {
+      try {
+        const submissions = DataCollectors.collectSubmissions(
+          classroom.id,
+          assignment.id,
+          config
+        );
+        
+        const adaptedSubmissions = submissions.map(submission =>
+          SchemaAdapters.adaptSubmission(submission, assignment)
+        );
+        
+        allSubmissions.push(...adaptedSubmissions);
+        
+      } catch (submissionError) {
+        console.warn(`  Error getting submissions for assignment ${assignment.title}:`, submissionError.message);
+      }
+    }
+    
+    return allSubmissions;
   },
   
   
