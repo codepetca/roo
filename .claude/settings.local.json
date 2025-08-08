@@ -19,7 +19,8 @@
       "WebFetch(domain:developers.google.com)",
       "WebFetch(domain:svelte.dev)",
       "Bash(npm run test:e2e:*)",
-      "Bash(clasp push:*)"
+      "Bash(clasp push:*)",
+      "Bash(npm run:*)"
     ],
     "deny": []
   }
