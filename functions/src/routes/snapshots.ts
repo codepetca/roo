@@ -49,7 +49,24 @@ export async function validateSnapshot(req: Request, res: Response): Promise<Res
       message: "Snapshot validation endpoint is working",
       data: {
         isValid: true,
-        validated: true
+        stats: {
+          classroomCount: snapshot.classrooms?.length || 0,
+          totalStudents: snapshot.globalStats?.totalStudents || 0,
+          totalAssignments: snapshot.globalStats?.totalAssignments || 0,
+          totalSubmissions: snapshot.globalStats?.totalSubmissions || 0,
+          ungradedSubmissions: snapshot.globalStats?.ungradedSubmissions || 0
+        },
+        metadata: snapshot.snapshotMetadata || {},
+        preview: {
+          classrooms: snapshot.classrooms?.slice(0, 5).map((classroom: any) => ({
+            id: classroom.id || 'unknown',
+            name: classroom.name || classroom.courseGroupEmail || 'Unnamed Classroom',
+            studentCount: classroom.studentCount || 0,
+            assignmentCount: classroom.assignments?.length || 0,
+            ungradedSubmissions: classroom.assignments?.reduce((acc: number, assignment: any) => 
+              acc + (assignment.submissionStats?.pending || 0), 0) || 0
+          })) || []
+        }
       }
     });
 
