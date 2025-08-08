@@ -2,8 +2,8 @@ import {
   Grade, 
   GradeInput, 
   Submission 
-} from '../../../shared/schemas/core';
-import { StableIdGenerator, calculatePercentage } from '../../../shared/schemas/transformers';
+} from '@shared/schemas/core';
+import { StableIdGenerator, calculatePercentage } from '@shared/schemas/transformers';
 import { db, getCurrentTimestamp } from '../config/firebase';
 import * as admin from 'firebase-admin';
 

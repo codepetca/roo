@@ -32,7 +32,9 @@ import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
 import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, createTeacherSheetOAuth, getTeacherOnboardingStatus, checkTeacherOnboardingStatus, listConfiguredTeachers, generateAppScriptForTeacher } from "./routes/teacher-onboarding";
 import { getTeacherClassrooms, getClassroomAssignments, getClassroomDetails, processClassroomSnapshot, getUngradedSubmissions as getClassroomUngradedSubmissions, updateClassroomCounts } from "./routes/classrooms";
 import { validateSnapshot, importSnapshot, getImportHistory, generateSnapshotDiff } from "./routes/snapshots";
-import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
+import { getUserFromRequest } from "./middleware/validation";
+// Temporarily disable teacher dashboard due to build errors
+// import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
 import { sendPasscode, verifyPasscode, resetStudentAuth, signup, deleteUser } from "./routes/auth";
@@ -205,14 +207,12 @@ export const api = onRequest(
         await getClassroomAssignments(request, response); return;
       }
       if (method === "GET" && path.startsWith("/classrooms/") && path.endsWith("/stats")) {
-        const classroomId = path.split("/classrooms/")[1].split("/stats")[0];
-        (request as RequestWithParams).params = { classroomId };
-        await getClassroomStats(request, response); return;
+        response.status(501).json({ success: false, error: "Classroom stats temporarily unavailable" });
+        return;
       }
       if (method === "GET" && path.startsWith("/classrooms/") && path.includes("/assignments/stats")) {
-        const classroomId = path.split("/classrooms/")[1].split("/assignments/stats")[0];
-        (request as RequestWithParams).params = { classroomId };
-        await getClassroomAssignmentsWithStats(request, response); return;
+        response.status(501).json({ success: false, error: "Assignment stats temporarily unavailable" });
+        return;
       }
       if (method === "POST" && path === "/classrooms/sync-from-sheets") {
         // Legacy route - replaced with snapshot processing
@@ -232,13 +232,16 @@ export const api = onRequest(
       if (method === "POST" && path === "/snapshots/diff") {
         await generateSnapshotDiff(request, response); return;
       }
+      
 
-      // Teacher dashboard routes
+      // Teacher dashboard routes (temporarily disabled)
       if (method === "GET" && path === "/teacher/dashboard") {
-        await getTeacherDashboard(request, response); return;
+        response.status(501).json({ success: false, error: "Dashboard temporarily unavailable" });
+        return;
       }
       if (method === "GET" && path === "/teacher/classrooms") {
-        await getTeacherClassroomsBasic(request, response); return;
+        response.status(501).json({ success: false, error: "Teacher classrooms temporarily unavailable" });
+        return;
       }
 
       // Firestore Grade Management Routes

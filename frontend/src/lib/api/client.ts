@@ -30,11 +30,14 @@ export const API_BASE_URL =
  */
 async function getAuthToken(): Promise<string | null> {
 	if (!firebaseAuth.currentUser) {
+		console.warn('No authenticated user found for API request');
 		return null;
 	}
 
 	try {
-		return await firebaseAuth.currentUser.getIdToken();
+		const token = await firebaseAuth.currentUser.getIdToken();
+		console.debug('Auth token obtained for API request', { uid: firebaseAuth.currentUser.uid });
+		return token;
 	} catch (error) {
 		console.error('Failed to get auth token:', error);
 		return null;
@@ -58,21 +61,28 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 		headers.Authorization = `Bearer ${token}`;
 	}
 
-	const response = await fetch(`${API_BASE_URL}/api${endpoint}`, {
+	const fullUrl = `${API_BASE_URL}/api${endpoint}`;
+	console.debug('API Request:', { method: options.method || 'GET', url: fullUrl, hasAuth: !!token });
+
+	const response = await fetch(fullUrl, {
 		...options,
 		headers
 	});
 
 	if (!response.ok) {
-		// Try to extract error message from response body
+		// Enhanced error reporting with HTTP details
+		const url = `${API_BASE_URL}/api${endpoint}`;
+		
 		try {
 			const errorData = await response.json();
 			const errorMessage =
 				errorData.message || errorData.error || response.statusText || 'Unknown error';
-			throw new Error(errorMessage);
+			
+			// Include HTTP status and URL in error for debugging
+			throw new Error(`${response.status} ${errorMessage} (${options.method || 'GET'} ${url})`);
 		} catch (parseError) {
-			// If we can't parse the error response, fall back to status text
-			throw new Error(response.statusText || 'Unknown error');
+			// If we can't parse the error response, include full context
+			throw new Error(`${response.status} ${response.statusText || 'Network Error'} (${options.method || 'GET'} ${url})`);
 		}
 	}
 

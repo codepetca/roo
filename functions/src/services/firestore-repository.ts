@@ -10,7 +10,7 @@ import {
   AssignmentInput,
   SubmissionInput,
   GradeInput
-} from '../../../shared/schemas/core';
+} from '@shared/schemas/core';
 import { db, getCurrentTimestamp, FieldValue } from '../config/firebase';
 import * as admin from 'firebase-admin';
 

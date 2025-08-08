@@ -548,11 +548,11 @@ export function mergeSnapshotWithExisting(
   }
 
   // Find enrollments to archive (not in snapshot anymore)
-  for (const [key, enrollment] of existingEnrollments) {
+  existingEnrollments.forEach((enrollment, key) => {
     if (!snapshotEnrollmentKeys.has(key)) {
       result.toArchive.enrollmentIds.push(enrollment.id);
     }
-  }
+  });
 
   return result;
 }

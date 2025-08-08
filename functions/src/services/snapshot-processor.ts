@@ -1,10 +1,10 @@
-import { ClassroomSnapshot } from '../../../shared/schemas/classroom-snapshot';
+import { ClassroomSnapshot } from '@shared/schemas/classroom-snapshot';
 import {
   snapshotToCore,
   mergeSnapshotWithExisting,
   extractGradeFromSubmission,
   StableIdGenerator
-} from '../../../shared/schemas/transformers';
+} from '@shared/schemas/transformers';
 import { FirestoreRepository } from './firestore-repository';
 import { GradeVersioningService } from './grade-versioning';
 import { 
@@ -13,7 +13,7 @@ import {
   Submission, 
   StudentEnrollment,
   Grade
-} from '../../../shared/schemas/core';
+} from '@shared/schemas/core';
 import { logger } from '../utils/logger';
 
 /**

@@ -24,6 +24,12 @@ export const TEST_USERS = {
     displayName: 'E2E Test Teacher',
     role: 'teacher' as const
   },
+  codepetTeacher: {
+    uid: 'codepet-teacher-123',
+    email: 'test.codepet@gmail.com',
+    displayName: 'CodePet Test Teacher',
+    role: 'teacher' as const
+  },
   student: {
     uid: 'student-e2e-123', 
     email: 'e2e.student@test.com',
@@ -80,20 +86,24 @@ export class AuthHelper {
 
   /**
    * Login as teacher with mock authentication
+   * @param customEmail - Optional custom email (defaults to e2e.teacher@test.com)
    */
-  async loginAsTeacher() {
-    await this.setupAuthMocks(TEST_USERS.teacher);
+  async loginAsTeacher(customEmail?: string) {
+    const teacher = customEmail === 'test.codepet@gmail.com' 
+      ? TEST_USERS.codepetTeacher
+      : customEmail 
+        ? { ...TEST_USERS.teacher, email: customEmail, displayName: customEmail.split('@')[0] }
+        : TEST_USERS.teacher;
+    
+    await this.setupAuthMocks(teacher);
     
     // Add localStorage items that the app might expect
-    await this.page.addInitScript(() => {
-      localStorage.setItem('auth_user', JSON.stringify({
-        uid: 'teacher-e2e-123',
-        email: 'e2e.teacher@test.com',
-        displayName: 'E2E Test Teacher',
-        role: 'teacher'
-      }));
+    await this.page.addInitScript((teacherData) => {
+      localStorage.setItem('auth_user', JSON.stringify(teacherData));
       localStorage.setItem('auth_token', 'mock-firebase-token');
-    });
+      // Add Google access token for import functionality
+      sessionStorage.setItem('google_access_token', 'mock-google-access-token');
+    }, teacher);
   }
 
   /**

@@ -73,23 +73,41 @@ This project implements **comprehensive type safety** at every layer:
 - **Old schemas**: `functions/src/schemas/` still exist but being replaced
 - **Migration**: Use `SnapshotProcessor` to convert legacy data
 
-## Firebase Emulator Development
+## E2E Testing Guidelines
 
-The project uses Firebase Local Emulator Suite for safe local development.
+**🚨 IMPORTANT: NO EMULATORS FOR E2E TESTS**
+- **NEVER use emulators** for E2E tests - they add unnecessary complexity
+- **Always test against real Firebase staging project**
+- **Mock Authentication**: Use mock auth to bypass Google OAuth in tests
+- **DO NOT run `npm run emulators`** for E2E testing
+- **Real Firebase**: All E2E tests run against staging Firebase instance
 
-#### Emulator Services
+### E2E Test Execution
+```bash
+# NO EMULATORS! Test directly against staging
+cd frontend
+npm run dev              # Connects to staging Firebase
+npx playwright test      # Run E2E tests
+```
+
+### Mock Authentication for E2E
+- Teachers require Google OAuth in production
+- E2E tests use mock authentication to bypass OAuth
+- Mock auth injects tokens directly into browser storage
+- Test with `test.codepet@gmail.com` as default teacher
+
+## Firebase Emulator Development (Local Development Only)
+
+The project supports Firebase Local Emulator Suite for local development (NOT for E2E tests).
+
+#### Emulator Services (Development Only)
 - **Auth**: http://localhost:9099 (mock authentication)
 - **Firestore**: http://localhost:8080 (local database)
 - **Functions**: http://localhost:5001 (API endpoints)
 - **Emulator UI**: http://localhost:4000 (visual debugging)
 
-#### Test Credentials (after seeding)
-- Teacher: `teacher@test.com` / `test123`
-- Student 1: `student1@test.com` / `test123`
-- Student 2: `student2@test.com` / `test123`
-
 #### Critical Firebase Development Patterns
-**🚨 IMPORTANT: serverTimestamp() Issues in Emulators**
+**🚨 IMPORTANT: serverTimestamp() Issues**
 - Always use environment-aware timestamp handling
 - Import Firebase Admin directly, avoid re-exports
 - Build after TypeScript changes (`npm run build`)

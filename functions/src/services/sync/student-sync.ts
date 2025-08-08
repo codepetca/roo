@@ -8,8 +8,8 @@
  */
 
 import { logger } from "firebase-functions";
-import { db, getCurrentTimestamp } from "../config/firebase";
-import { userDomainSchema, type UserDomain } from "../schemas/domain";
+import { db, getCurrentTimestamp } from "../../config/firebase";
+import { userDomainSchema, type UserDomain } from "@shared/schemas/domain";
 import { ExtractedStudent } from "./types";
 
 /**

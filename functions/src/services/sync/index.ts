@@ -9,6 +9,7 @@
 
 // Types
 export type {
+  OverallSyncResult,
   ClassroomSyncResult,
   ExtractedClassroom,
   ExtractedStudent,
@@ -17,6 +18,13 @@ export type {
 } from "./types";
 
 // Core sync functions
+import { extractClassroomsAndStudents } from "./data-extractor";
+import { syncStudent } from "./student-sync";
+import { syncClassroom } from "./classroom-sync";
+import { updateStudentClassroomAssociations } from "./association-sync";
+import { syncClassroomsFromSheets } from "./orchestrator";
+
+// Re-export for public API
 export { extractClassroomsAndStudents } from "./data-extractor";
 export { syncStudent } from "./student-sync";
 export { syncClassroom } from "./classroom-sync";
@@ -25,11 +33,25 @@ export { syncClassroomsFromSheets } from "./orchestrator";
 
 // Backward compatibility - ClassroomSyncService class wrapper
 export class ClassroomSyncService {
-  extractClassroomsAndStudents = extractClassroomsAndStudents;
-  syncStudent = syncStudent;
-  syncClassroom = syncClassroom;
-  updateStudentClassroomAssociations = updateStudentClassroomAssociations;
-  syncClassroomsFromSheets = syncClassroomsFromSheets;
+  async extractClassroomsAndStudents(...args: Parameters<typeof extractClassroomsAndStudents>) {
+    return extractClassroomsAndStudents(...args);
+  }
+  
+  async syncStudent(...args: Parameters<typeof syncStudent>) {
+    return syncStudent(...args);
+  }
+  
+  async syncClassroom(...args: Parameters<typeof syncClassroom>) {
+    return syncClassroom(...args);
+  }
+  
+  async updateStudentClassroomAssociations(...args: Parameters<typeof updateStudentClassroomAssociations>) {
+    return updateStudentClassroomAssociations(...args);
+  }
+  
+  async syncClassroomsFromSheets(...args: Parameters<typeof syncClassroomsFromSheets>) {
+    return syncClassroomsFromSheets(...args);
+  }
 }
 
 /**

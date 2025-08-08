@@ -7,7 +7,7 @@ import { logger } from "firebase-functions";
 import { db, getCurrentTimestamp } from "./firebase";
 import { createSheetsService } from "../services/sheets";
 import { serializeTimestamp } from "../schemas/transformers";
-import type { TeacherConfiguration, SheetVerificationResult, SerializedTimestamp } from "../../../shared/types";
+import type { TeacherConfiguration, SheetVerificationResult, SerializedTimestamp } from "@shared/types";
 
 export interface TeacherConfig {
   email: string;

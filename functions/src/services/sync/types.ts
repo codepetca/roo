@@ -7,7 +7,7 @@
  * @patterns Type definitions for sync operations
  */
 
-export interface ClassroomSyncResult {
+export interface OverallSyncResult {
   success: boolean;
   classroomsCreated: number;
   classroomsUpdated: number;

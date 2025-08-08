@@ -257,9 +257,10 @@ var SchemaAdapters = {
    * Converts Google Classroom StudentSubmission to SubmissionSnapshot schema format
    * @param {Object} submission - Google Classroom studentSubmission object
    * @param {Object} assignment - Assignment object for context
+   * @param {Object} studentData - Student object for email and name (optional)
    * @returns {Object} SubmissionSnapshot compatible object
    */
-  adaptSubmission: function(submission, assignment) {
+  adaptSubmission: function(submission, assignment, studentData) {
     try {
       const now = new Date().toISOString();
       
@@ -279,6 +280,10 @@ var SchemaAdapters = {
         assignmentId: submission.courseWorkId || assignment?.id || '',
         assignmentName: assignment?.title || 'Unknown Assignment',
         studentId: submission.userId || '',
+        
+        // Student information (required by enhanced submission schema)
+        studentEmail: studentData?.email || studentData?.profile?.emailAddress || 'unknown@example.com',
+        studentName: studentData?.name || studentData?.displayName || studentData?.profile?.name?.fullName || 'Unknown Student',
         
         // Submission status and timing
         status: status,
@@ -323,6 +328,8 @@ var SchemaAdapters = {
         assignmentId: submission.courseWorkId || assignment?.id || '',
         assignmentName: assignment?.title || 'Unknown Assignment',
         studentId: submission.userId || '',
+        studentEmail: studentData?.email || studentData?.profile?.emailAddress || 'unknown@example.com',
+        studentName: studentData?.name || studentData?.displayName || studentData?.profile?.name?.fullName || 'Unknown Student',
         status: 'pending',
         submittedAt: new Date().toISOString(),
         studentWork: '',

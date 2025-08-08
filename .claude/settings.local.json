@@ -20,7 +20,11 @@
       "WebFetch(domain:svelte.dev)",
       "Bash(npm run test:e2e:*)",
       "Bash(clasp push:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(jq:*)",
+      "Bash(python3 scripts/anonymize-snapshot.py:*)",
+      "Bash(curl:*)",
+      "Bash(firebase functions:list:*)"
     ],
     "deny": []
   }

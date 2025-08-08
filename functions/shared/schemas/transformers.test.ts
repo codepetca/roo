@@ -62,7 +62,7 @@ describe('snapshotToCore transformation', () => {
         id: 'assignment_456',
         title: 'Test Assignment',
         description: 'A test assignment',
-        type: 'written',
+        type: 'assignment',
         status: 'published',
         maxScore: 100,
         creationTime: '2024-01-01T00:00:00Z',

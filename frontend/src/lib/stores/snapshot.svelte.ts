@@ -95,14 +95,37 @@ async function validateImportFile(): Promise<boolean> {
 		const { classroomSnapshotSchema } = await import('@shared/schemas/classroom-snapshot');
 		const validation = classroomSnapshotSchema.safeParse(jsonData);
 		if (!validation.success) {
-			error = `Schema validation failed: ${validation.error.issues[0]?.message || 'Invalid format'}`;
+			// Format a more helpful error message showing the exact path and issue
+			const firstIssue = validation.error.issues[0];
+			if (firstIssue) {
+				const path = firstIssue.path.join('.');
+				const fieldName = firstIssue.path[firstIssue.path.length - 1];
+				const message = firstIssue.message;
+
+				// Create a more descriptive error message
+				if (path) {
+					error = `Validation failed at '${path}': ${message}`;
+				} else {
+					error = `Schema validation failed: ${message}`;
+				}
+			} else {
+				error = 'Schema validation failed: Invalid format';
+			}
 			return false;
 		}
 
 		// Now validate with backend API (includes business logic validation)
-		const validationResult = await api.validateSnapshot(validation.data);
-		if (!validationResult.isValid) {
-			error = 'Snapshot validation failed on server';
+		try {
+			const validationResult = await api.validateSnapshot(validation.data);
+			if (!validationResult.isValid) {
+				error = 'Snapshot validation failed on server';
+				return false;
+			}
+		} catch (apiError) {
+			// Provide detailed API error information
+			const errorMessage = apiError instanceof Error ? apiError.message : 'API validation failed';
+			error = `Server validation failed: ${errorMessage}`;
+			console.error('API validation error:', apiError);
 			return false;
 		}
 
@@ -143,7 +166,7 @@ async function generateDiff(): Promise<void> {
 			});
 
 			const localDiff = differ.diff(previousSnapshot, currentSnapshot);
-			
+
 			// Combine API diff with local diff data
 			diffData = {
 				...diffResult,
@@ -178,8 +201,10 @@ async function importSnapshot(): Promise<ImportResult> {
 			source: currentSnapshot.snapshotMetadata.source,
 			classroomCount: importResult.stats.classroomsCreated + importResult.stats.classroomsUpdated,
 			studentCount: importResult.stats.enrollmentsCreated + importResult.stats.enrollmentsUpdated,
-			assignmentCount: importResult.stats.assignmentsCreated + importResult.stats.assignmentsUpdated,
-			hasChanges: importResult.stats.classroomsCreated > 0 || importResult.stats.assignmentsCreated > 0
+			assignmentCount:
+				importResult.stats.assignmentsCreated + importResult.stats.assignmentsUpdated,
+			hasChanges:
+				importResult.stats.classroomsCreated > 0 || importResult.stats.assignmentsCreated > 0
 		};
 
 		importHistory = [historyEntry, ...importHistory];
@@ -212,9 +237,9 @@ async function loadImportHistory(): Promise<void> {
 
 		// Load history from API
 		const historyData = await api.getImportHistory();
-		
+
 		// Transform API data to our local format
-		importHistory = historyData.map(entry => ({
+		importHistory = historyData.map((entry) => ({
 			id: entry.id,
 			timestamp: entry.timestamp,
 			source: 'roo-api' as const, // API doesn't return source currently

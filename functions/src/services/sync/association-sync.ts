@@ -8,8 +8,8 @@
  */
 
 import { logger } from "firebase-functions";
-import { db, getCurrentTimestamp } from "../config/firebase";
-import { type ClassroomDomain, type UserDomain } from "../schemas/domain";
+import { db, getCurrentTimestamp } from "../../config/firebase";
+import { type ClassroomDomain, type UserDomain } from "@shared/schemas/domain";
 
 /**
  * Update student classroom associations based on current classroom memberships

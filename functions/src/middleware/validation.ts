@@ -196,7 +196,7 @@ export function sendApiResponse<T>(
  * Extract user information from request using Firebase Auth token verification
  * Now checks Firestore user profile for role instead of inferring from email
  */
-export async function getUserFromRequest(req: Request): Promise<{ uid: string; email: string; role: "teacher" | "student" } | null> {
+export async function getUserFromRequest(req: Request): Promise<{ uid: string; email: string; role: "teacher" | "student"; displayName?: string } | null> {
   try {
     const authHeader = req.headers.authorization;
     
@@ -239,7 +239,8 @@ export async function getUserFromRequest(req: Request): Promise<{ uid: string; e
     return {
       uid: decodedToken.uid,
       email: decodedToken.email || "",
-      role
+      role,
+      displayName: decodedToken.name || decodedToken.email?.split('@')[0]
     };
   } catch (error) {
     console.error("Failed to verify Firebase token:", error);

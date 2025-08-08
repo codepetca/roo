@@ -224,6 +224,15 @@ var ClassroomSnapshotExporter = {
         SchemaAdapters.adaptStudent(student, classroom.id)
       );
       
+      // Create student lookup map for efficient access when processing submissions
+      const studentMap = {};
+      students.forEach(student => {
+        const studentId = student.userId || student.profile?.id;
+        if (studentId) {
+          studentMap[studentId] = student;
+        }
+      });
+      
       // Get submissions if requested - using parallel collection for better performance
       let allSubmissions = [];
       if (config.includeSubmissions) {
@@ -249,18 +258,20 @@ var ClassroomSnapshotExporter = {
                 title: 'Unknown Assignment',
                 maxPoints: submission.maxPoints || 100
               };
-              return SchemaAdapters.adaptSubmission(submission, assignmentInfo);
+              // Look up student data for this submission
+              const studentData = studentMap[submission.userId] || null;
+              return SchemaAdapters.adaptSubmission(submission, assignmentInfo, studentData);
             });
             
           } catch (parallelError) {
             console.warn(`  Parallel collection failed, falling back to sequential: ${parallelError.message}`);
-            allSubmissions = this.collectSubmissionsSequential(classroom, enrichedClassroom, config);
+            allSubmissions = this.collectSubmissionsSequential(classroom, enrichedClassroom, config, studentMap);
           }
           
         } else {
           // Use sequential collection for small numbers of assignments
           console.log(`  Using sequential collection for ${assignmentCount} assignments...`);
-          allSubmissions = this.collectSubmissionsSequential(classroom, enrichedClassroom, config);
+          allSubmissions = this.collectSubmissionsSequential(classroom, enrichedClassroom, config, studentMap);
         }
       }
       
@@ -287,9 +298,10 @@ var ClassroomSnapshotExporter = {
    * @param {Object} classroom - Classroom object
    * @param {Object} enrichedClassroom - Enriched classroom with assignments and students
    * @param {Object} config - Export configuration
+   * @param {Object} studentMap - Map of studentId to student data
    * @returns {Array} Array of all submissions
    */
-  collectSubmissionsSequential: function(classroom, enrichedClassroom, config) {
+  collectSubmissionsSequential: function(classroom, enrichedClassroom, config, studentMap) {
     const allSubmissions = [];
     
     for (const assignment of enrichedClassroom.assignments) {
@@ -300,9 +312,11 @@ var ClassroomSnapshotExporter = {
           config
         );
         
-        const adaptedSubmissions = submissions.map(submission =>
-          SchemaAdapters.adaptSubmission(submission, assignment)
-        );
+        const adaptedSubmissions = submissions.map(submission => {
+          // Look up student data for this submission
+          const studentData = studentMap ? studentMap[submission.userId] : null;
+          return SchemaAdapters.adaptSubmission(submission, assignment, studentData);
+        });
         
         allSubmissions.push(...adaptedSubmissions);
         

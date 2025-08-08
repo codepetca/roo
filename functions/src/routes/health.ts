@@ -41,7 +41,11 @@ export async function getApiStatus(req: Request, res: Response) {
         "GET /submissions/{id}": "Get a specific submission by ID",
         "PATCH /submissions/{id}/status": "Update submission status",
         "POST /webhooks/classroom-sync": "Sync classrooms from Google Sheets (webhook)",
-        "GET /webhooks/status": "Get webhook status"
+        "GET /webhooks/status": "Get webhook status",
+        "POST /snapshots/validate": "Validate classroom snapshot",
+        "POST /snapshots/import": "Import classroom snapshot",
+        "GET /snapshots/history": "Get import history",
+        "POST /snapshots/diff": "Generate snapshot diff"
       }
     });
   } catch (error) {

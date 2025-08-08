@@ -1,27 +1,33 @@
 {
   "compilerOptions": {
     "module": "commonjs",
+    "target": "es2018",
+    "lib": ["es2018"],
     "noImplicitReturns": false,
     "noUnusedLocals": false,
-    "outDir": "lib",
+    "noEmit": false,
+    "outDir": "./lib",
     "sourceMap": true,
     "strict": false,
-    "target": "es2017",
     "skipLibCheck": true,
     "baseUrl": ".",
     "moduleResolution": "node",
+    "downlevelIteration": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "paths": {
-      "@shared/*": ["../shared/*"]
-    }
+      "@shared/*": ["shared/*"]
+    },
+    "plugins": [
+      { "transform": "typescript-transform-paths" }
+    ]
   },
-  "compileOnSave": true,
   "include": [
-    "src"
+    "src",
+    "shared"
   ],
   "exclude": [
     "node_modules",
-    "lib",
-    "../shared",
     "src/index-original.ts",
     "src/test/**/*.ts"
   ]

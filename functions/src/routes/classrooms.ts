@@ -9,8 +9,8 @@ import {
   StudentEnrollment,
   ClassroomWithAssignments,
   AssignmentWithStats
-} from "../../../shared/schemas/core";
-import { classroomSnapshotSchema } from "../../../shared/schemas/classroom-snapshot";
+} from "@shared/schemas/core";
+import { classroomSnapshotSchema } from "@shared/schemas/classroom-snapshot";
 
 /**
  * Updated Classroom API Routes using DataConnect-Ready Architecture

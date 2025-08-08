@@ -6,7 +6,7 @@ import {
   TeacherDashboard,
   ClassroomWithAssignments,
   AssignmentWithStats
-} from "../../../shared/schemas/core";
+} from "@shared/schemas/core";
 
 /**
  * Teacher Dashboard API Routes
@@ -54,7 +54,7 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
     let totalStudents = 0;
     let totalAssignments = 0;
     let ungradedSubmissions = 0;
-    const recentActivity: Array<{ type: string; timestamp: Date; details: Record<string, unknown> }> = [];
+    const recentActivity: Array<{ type: "submission" | "grade" | "assignment"; timestamp: Date; details: Record<string, unknown> }> = [];
 
     for (const classroom of classrooms) {
       // Get assignments for this classroom
@@ -294,11 +294,14 @@ export async function getClassroomAssignmentsWithStats(req: Request, res: Respon
     const assignmentsWithStats: AssignmentWithStats[] = [];
 
     for (const assignment of assignments) {
-      // Get submissions and grades for this assignment
-      const [submissions, grades] = await Promise.all([
-        repository.getSubmissionsByAssignment(assignment.id),
-        repository.getGradesByAssignment(assignment.id)
-      ]);
+      // Get submissions for this assignment
+      const submissions = await repository.getSubmissionsByAssignment(assignment.id);
+      
+      // Get grades by filtering from classroom grades (workaround until getGradesByAssignment is implemented)
+      const allGrades = await repository.getGradesByClassroom(classroomId);
+      const grades = allGrades.filter(grade => 
+        submissions.some(sub => sub.id === grade.submissionId)
+      );
 
       // Calculate statistics
       const submissionsWithGrades = submissions.map(submission => ({

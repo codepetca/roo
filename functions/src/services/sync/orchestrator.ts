@@ -8,7 +8,7 @@
  */
 
 import { logger } from "firebase-functions";
-import { ClassroomSyncResult } from "./types";
+import { OverallSyncResult } from "./types";
 import { extractClassroomsAndStudents } from "./data-extractor";
 import { syncStudent } from "./student-sync";
 import { syncClassroom } from "./classroom-sync";
@@ -20,8 +20,8 @@ import { updateStudentClassroomAssociations } from "./association-sync";
  * @param spreadsheetId - Google Sheets spreadsheet ID to sync from
  * @returns Sync result with counts and any errors
  */
-export async function syncClassroomsFromSheets(teacherId: string, spreadsheetId: string): Promise<ClassroomSyncResult> {
-  const result: ClassroomSyncResult = {
+export async function syncClassroomsFromSheets(teacherId: string, spreadsheetId: string): Promise<OverallSyncResult> {
+  const result: OverallSyncResult = {
     success: false,
     classroomsCreated: 0,
     classroomsUpdated: 0,

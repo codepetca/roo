@@ -8,7 +8,7 @@
  */
 
 import { logger } from "firebase-functions";
-import { type SheetSubmission } from "../schemas/source";
+import { type SheetSubmission } from "@shared/schemas/source";
 import { ExtractedClassroom, ExtractedStudent } from "./types";
 
 /**

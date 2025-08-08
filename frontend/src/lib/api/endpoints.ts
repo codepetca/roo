@@ -28,7 +28,7 @@ import {
 	type GradeResponse
 } from '../schemas';
 
-// Import new core schemas
+// Import new core schemas - using TypeScript source files to avoid CommonJS issues
 import {
 	classroomSchema,
 	assignmentSchema,
