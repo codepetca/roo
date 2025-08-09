@@ -12,21 +12,21 @@
 export {
   signup,
   createOrUpdateProfile
-} from './signup';
+} from "./signup";
 
 // Session and user information
 export {
   getCurrentUser
-} from './session';
+} from "./session";
 
 // Student passcode authentication
 export {
   sendPasscode,
   verifyPasscode,
   resetStudentAuth
-} from './passcode';
+} from "./passcode";
 
 // User deletion (for testing)
 export {
   deleteUser
-} from './delete';
+} from "./delete";

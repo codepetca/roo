@@ -71,7 +71,7 @@ export async function sendPasscode(req: Request, res: Response): Promise<void> {
 
     // In development/testing, return the passcode in response
     // Remove this in production and only send via email
-    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isDevelopment = process.env.NODE_ENV === "development";
     
     res.status(200).json({
       success: true,
@@ -179,12 +179,12 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
     try {
       userRecord = await auth.getUserByEmail(email);
     } catch (error: any) {
-      if (error.code === 'auth/user-not-found') {
+      if (error.code === "auth/user-not-found") {
         // Create new user account
         userRecord = await auth.createUser({
           email,
           emailVerified: true, // Email verified via passcode
-          displayName: email.split('@')[0]
+          displayName: email.split("@")[0]
         });
         isNewUser = true;
 
@@ -198,17 +198,17 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
     }
 
     // Set custom claims for student role
-    await auth.setCustomUserClaims(userRecord.uid, { role: 'student' });
+    await auth.setCustomUserClaims(userRecord.uid, { role: "student" });
 
     // Create or update user profile
     const profileData = {
       uid: userRecord.uid,
       email: email,
-      displayName: userRecord.displayName || email.split('@')[0],
-      role: 'student',
+      displayName: userRecord.displayName || email.split("@")[0],
+      role: "student",
       updatedAt: new Date(),
       emailVerified: true,
-      authMethod: 'passcode',
+      authMethod: "passcode",
       lastPasscodeLogin: new Date(),
       studentData: {
         enrolledClasses: [],
@@ -253,7 +253,7 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
         uid: userRecord.uid,
         email: email,
         displayName: profileData.displayName,
-        role: 'student'
+        role: "student"
       }
     });
 
@@ -261,7 +261,7 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
     logger.error("Verify passcode error", { error: error.message, stack: error.stack });
     
     // Handle specific errors
-    if (error.code === 'auth/email-already-exists') {
+    if (error.code === "auth/email-already-exists") {
       res.status(409).json({
         error: "Email already exists",
         message: "An account with this email already exists"
@@ -284,7 +284,7 @@ export async function resetStudentAuth(req: Request, res: Response): Promise<voi
   try {
     // Get authenticated teacher from token
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       res.status(401).json({
         error: "Unauthorized",
         message: "Teacher authentication required"
@@ -292,7 +292,7 @@ export async function resetStudentAuth(req: Request, res: Response): Promise<voi
       return;
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(" ")[1];
     const auth = getAuth();
     
     // Verify teacher token
@@ -301,7 +301,7 @@ export async function resetStudentAuth(req: Request, res: Response): Promise<voi
     
     // Get teacher profile to verify role
     const teacherDoc = await db.collection("users").doc(decodedToken.uid).get();
-    if (!teacherDoc.exists || teacherDoc.data()?.role !== 'teacher') {
+    if (!teacherDoc.exists || teacherDoc.data()?.role !== "teacher") {
       res.status(403).json({
         error: "Forbidden",
         message: "Only teachers can reset student authentication"
@@ -346,7 +346,7 @@ export async function resetStudentAuth(req: Request, res: Response): Promise<voi
       });
     } catch (error: any) {
       // Student might not exist yet, which is fine
-      if (error.code !== 'auth/user-not-found') {
+      if (error.code !== "auth/user-not-found") {
         logger.warn("Could not reset student auth status", { 
           error: error.message, 
           studentEmail 
@@ -372,7 +372,7 @@ export async function resetStudentAuth(req: Request, res: Response): Promise<voi
   } catch (error: any) {
     logger.error("Reset student auth error", { error: error.message, stack: error.stack });
     
-    if (error.code === 'auth/id-token-expired' || error.code === 'auth/invalid-id-token') {
+    if (error.code === "auth/id-token-expired" || error.code === "auth/invalid-id-token") {
       res.status(401).json({
         error: "Unauthorized",
         message: "Invalid or expired teacher token"

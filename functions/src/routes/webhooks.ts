@@ -16,11 +16,11 @@ import { SERVICE_ACCOUNT_EMAIL, db, getCurrentTimestamp } from "../config/fireba
 export async function handleClassroomSyncWebhook(req: Request, res: Response): Promise<Response> {
   try {
     // Validate API key
-    const apiKey = req.headers['x-api-key'] as string;
+    const apiKey = req.headers["x-api-key"] as string;
     if (!validateApiKey(apiKey)) {
       logger.warn("Webhook called with invalid API key", {
         ip: req.ip,
-        userAgent: req.headers['user-agent'],
+        userAgent: req.headers["user-agent"],
         timestamp: new Date().toISOString()
       });
       
@@ -58,9 +58,9 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
     });
 
     // Check if teacher exists, create if not
-    const teacherSnapshot = await db.collection('users')
-      .where('email', '==', actualTeacherId)
-      .where('role', '==', 'teacher')
+    const teacherSnapshot = await db.collection("users")
+      .where("email", "==", actualTeacherId)
+      .where("role", "==", "teacher")
       .limit(1)
       .get();
 
@@ -70,10 +70,10 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
       });
 
       try {
-        await db.collection('users').add({
+        await db.collection("users").add({
           email: actualTeacherId,
-          role: 'teacher',
-          displayName: actualTeacherId.split('@')[0],
+          role: "teacher",
+          displayName: actualTeacherId.split("@")[0],
           isActive: true,
           createdAt: getCurrentTimestamp(),
           updatedAt: getCurrentTimestamp()
@@ -120,11 +120,11 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
 
     // Store sync history for debugging
     try {
-      await db.collection('webhook_sync_history').add({
+      await db.collection("webhook_sync_history").add({
         teacherId: actualTeacherId,
         spreadsheetId,
         timestamp: getCurrentTimestamp(),
-        source: 'appscript-webhook',
+        source: "appscript-webhook",
         success: result.success,
         results: {
           classroomsCreated: result.classroomsCreated,
@@ -133,7 +133,7 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
           studentsUpdated: result.studentsUpdated,
           errors: result.errors
         },
-        apiKeyUsed: apiKey.substring(0, 12) + '...' // Don't store full API key
+        apiKeyUsed: apiKey.substring(0, 12) + "..." // Don't store full API key
       });
     } catch (historyError) {
       logger.error("Failed to store sync history", {
@@ -182,14 +182,14 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
 
     // Store failed sync in history
     try {
-      await db.collection('webhook_sync_history').add({
-        teacherId: req.body?.teacherId || 'unknown',
-        spreadsheetId: req.body?.spreadsheetId || 'unknown',
+      await db.collection("webhook_sync_history").add({
+        teacherId: req.body?.teacherId || "unknown",
+        spreadsheetId: req.body?.spreadsheetId || "unknown",
         timestamp: getCurrentTimestamp(),
-        source: 'appscript-webhook',
+        source: "appscript-webhook",
         success: false,
         error: error instanceof Error ? error.message : String(error),
-        apiKeyUsed: (req.headers['x-api-key'] as string)?.substring(0, 12) + '...' || 'none'
+        apiKeyUsed: (req.headers["x-api-key"] as string)?.substring(0, 12) + "..." || "none"
       });
     } catch (historyError) {
       logger.error("Failed to store error sync history", {
@@ -200,7 +200,7 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
     // Check for specific permission errors and provide helpful guidance
     const errorMessage = error instanceof Error ? error.message : String(error);
     
-    if (errorMessage.includes('403') || errorMessage.includes('permission') || errorMessage.includes('Access denied')) {
+    if (errorMessage.includes("403") || errorMessage.includes("permission") || errorMessage.includes("Access denied")) {
       return res.status(403).json({
         success: false,
         error: "Permission denied accessing Google Sheet",
@@ -234,7 +234,7 @@ export async function handleClassroomSyncWebhook(req: Request, res: Response): P
 export async function getWebhookStatus(req: Request, res: Response): Promise<Response> {
   try {
     // Validate API key for status endpoint too
-    const apiKey = req.headers['x-api-key'] as string;
+    const apiKey = req.headers["x-api-key"] as string;
     if (!validateApiKey(apiKey)) {
       return res.status(401).json({
         success: false,
@@ -290,7 +290,7 @@ function getValidApiKeys(): string[] {
   const envApiKeys = process.env.WEBHOOK_API_KEYS;
   
   if (envApiKeys) {
-    return envApiKeys.split(',').map(key => key.trim());
+    return envApiKeys.split(",").map(key => key.trim());
   }
 
   // Fallback - use stable development keys

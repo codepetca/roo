@@ -40,8 +40,8 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
       // Create teacher profile if it doesn't exist
       teacher = await repository.createTeacher({
         email: user.email!,
-        name: user.displayName || user.email!.split('@')[0],
-        role: 'teacher',
+        name: user.displayName || user.email!.split("@")[0],
+        role: "teacher",
         classroomIds: []
       });
     }
@@ -75,10 +75,10 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
       
       // Transform to dashboard activity format
       recentClassroomActivity.forEach(item => {
-        if ('submittedAt' in item) {
+        if ("submittedAt" in item) {
           // It's a submission
           recentActivity.push({
-            type: 'submission',
+            type: "submission",
             timestamp: item.submittedAt,
             details: {
               classroomId: item.classroomId,
@@ -87,10 +87,10 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
               assignmentId: item.assignmentId
             }
           });
-        } else if ('gradedAt' in item) {
+        } else if ("gradedAt" in item) {
           // It's a grade
           recentActivity.push({
-            type: 'grade',
+            type: "grade",
             timestamp: item.gradedAt,
             details: {
               classroomId: item.classroomId,
@@ -133,6 +133,36 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
       classroomCount: classrooms.length,
       totalStudents,
       totalAssignments
+    });
+
+    // Debug logging to help identify schema validation issues
+    logger.info("Dashboard response structure debug", {
+      teacherId: user.uid,
+      teacher: {
+        id: teacher.id,
+        email: teacher.email,
+        name: teacher.name,
+        role: teacher.role,
+        createdAt: teacher.createdAt,
+        updatedAt: teacher.updatedAt
+      },
+      classroomsCount: classroomsWithAssignments.length,
+      recentActivityCount: recentActivity.length,
+      recentActivitySample: recentActivity.slice(0, 2).map(activity => ({
+        type: activity.type,
+        timestamp: activity.timestamp,
+        timestampType: typeof activity.timestamp,
+        detailsKeys: Object.keys(activity.details)
+      })),
+      stats: dashboardData.stats,
+      sampleClassroom: classroomsWithAssignments[0] ? {
+        id: classroomsWithAssignments[0].id,
+        name: classroomsWithAssignments[0].name,
+        createdAt: classroomsWithAssignments[0].createdAt,
+        updatedAt: classroomsWithAssignments[0].updatedAt,
+        createdAtType: typeof classroomsWithAssignments[0].createdAt,
+        assignmentsCount: classroomsWithAssignments[0].assignments.length
+      } : null
     });
 
     return res.status(200).json({

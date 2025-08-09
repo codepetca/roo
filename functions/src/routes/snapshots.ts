@@ -33,7 +33,7 @@ export async function validateSnapshot(req: Request, res: Response): Promise<Res
 
     // Basic validation for now
     const snapshot = req.body;
-    if (!snapshot || typeof snapshot !== 'object') {
+    if (!snapshot || typeof snapshot !== "object") {
       return res.status(400).json({
         success: false,
         error: "Invalid JSON format"
@@ -59,8 +59,8 @@ export async function validateSnapshot(req: Request, res: Response): Promise<Res
         metadata: snapshot.snapshotMetadata || {},
         preview: {
           classrooms: snapshot.classrooms?.slice(0, 5).map((classroom: any) => ({
-            id: classroom.id || 'unknown',
-            name: classroom.name || classroom.courseGroupEmail || 'Unnamed Classroom',
+            id: classroom.id || "unknown",
+            name: classroom.name || classroom.courseGroupEmail || "Unnamed Classroom",
             studentCount: classroom.studentCount || 0,
             assignmentCount: classroom.assignments?.length || 0,
             ungradedSubmissions: classroom.assignments?.reduce((acc: number, assignment: any) => 
@@ -97,7 +97,7 @@ export async function importSnapshot(req: Request, res: Response): Promise<Respo
 
     // Basic validation for now
     const snapshot = req.body;
-    if (!snapshot || typeof snapshot !== 'object') {
+    if (!snapshot || typeof snapshot !== "object") {
       return res.status(400).json({
         success: false,
         error: "Invalid JSON format"
@@ -195,7 +195,7 @@ export async function generateSnapshotDiff(req: Request, res: Response): Promise
 
     // Basic validation for now
     const snapshot = req.body;
-    if (!snapshot || typeof snapshot !== 'object') {
+    if (!snapshot || typeof snapshot !== "object") {
       return res.status(400).json({
         success: false,
         error: "Invalid JSON format"

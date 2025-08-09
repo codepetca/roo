@@ -9,4 +9,4 @@
  */
 
 // Re-export everything from the new modular auth structure
-export * from './auth/index';
+export * from "./auth/index";

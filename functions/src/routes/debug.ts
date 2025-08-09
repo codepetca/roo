@@ -338,7 +338,7 @@ async function testSharingFunctionality(req: Request) {
     // Test Drive API access by listing files (this tests the drive scope)
     const listResponse = await drive.files.list({
       pageSize: 1,
-      fields: 'files(id, name)'
+      fields: "files(id, name)"
     });
     
     test.details.driveApiAccessible = true;

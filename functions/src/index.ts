@@ -1,7 +1,7 @@
 // Clear any explicit credential environment variables FIRST - before any imports
 if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  console.log('Cleared GOOGLE_APPLICATION_CREDENTIALS environment variable');
+  console.log("Cleared GOOGLE_APPLICATION_CREDENTIALS environment variable");
 }
 
 import { onRequest, onCall } from "firebase-functions/v2/https";
@@ -33,8 +33,7 @@ import { startTeacherOnboarding, completeTeacherOnboarding, createTeacherSheet, 
 import { getTeacherClassrooms, getClassroomAssignments, getClassroomDetails, processClassroomSnapshot, getUngradedSubmissions as getClassroomUngradedSubmissions, updateClassroomCounts } from "./routes/classrooms";
 import { validateSnapshot, importSnapshot, getImportHistory, generateSnapshotDiff } from "./routes/snapshots";
 import { getUserFromRequest } from "./middleware/validation";
-// Temporarily disable teacher dashboard due to build errors
-// import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
+import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
 import { sendPasscode, verifyPasscode, resetStudentAuth, signup, deleteUser } from "./routes/auth";
@@ -57,14 +56,14 @@ export const api = onRequest(
   },
   async (request, response): Promise<void> => {
     // Set CORS headers manually for development
-    response.set('Access-Control-Allow-Origin', '*');
-    response.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    response.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, Accept');
-    response.set('Access-Control-Allow-Credentials', 'true');
+    response.set("Access-Control-Allow-Origin", "*");
+    response.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    response.set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept");
+    response.set("Access-Control-Allow-Credentials", "true");
 
     // Handle preflight requests
-    if (request.method === 'OPTIONS') {
-      response.status(204).send('');
+    if (request.method === "OPTIONS") {
+      response.status(204).send("");
       return Promise.resolve();
     }
 
@@ -207,12 +206,14 @@ export const api = onRequest(
         await getClassroomAssignments(request, response); return;
       }
       if (method === "GET" && path.startsWith("/classrooms/") && path.endsWith("/stats")) {
-        response.status(501).json({ success: false, error: "Classroom stats temporarily unavailable" });
-        return;
+        const classroomId = path.split("/classrooms/")[1].split("/stats")[0];
+        (request as RequestWithParams).params = { classroomId };
+        await getClassroomStats(request, response); return;
       }
       if (method === "GET" && path.startsWith("/classrooms/") && path.includes("/assignments/stats")) {
-        response.status(501).json({ success: false, error: "Assignment stats temporarily unavailable" });
-        return;
+        const classroomId = path.split("/classrooms/")[1].split("/assignments/stats")[0];
+        (request as RequestWithParams).params = { classroomId };
+        await getClassroomAssignmentsWithStats(request, response); return;
       }
       if (method === "POST" && path === "/classrooms/sync-from-sheets") {
         // Legacy route - replaced with snapshot processing
@@ -234,14 +235,12 @@ export const api = onRequest(
       }
       
 
-      // Teacher dashboard routes (temporarily disabled)
+      // Teacher dashboard routes
       if (method === "GET" && path === "/teacher/dashboard") {
-        response.status(501).json({ success: false, error: "Dashboard temporarily unavailable" });
-        return;
+        await getTeacherDashboard(request, response); return;
       }
       if (method === "GET" && path === "/teacher/classrooms") {
-        response.status(501).json({ success: false, error: "Teacher classrooms temporarily unavailable" });
-        return;
+        await getTeacherClassroomsBasic(request, response); return;
       }
 
       // Firestore Grade Management Routes
@@ -375,13 +374,13 @@ export const onUserCreated = auth.user().onCreate(async (user) => {
 
     // If no profile exists after waiting, create with default role
     // This handles edge cases where frontend fails to create profile
-    const role = user.customClaims?.role || 'student';
+    const role = user.customClaims?.role || "student";
 
     // Create user profile
     const profileData = {
       uid: user.uid,
-      email: user.email || '',
-      displayName: user.displayName || user.email?.split('@')[0] || 'User',
+      email: user.email || "",
+      displayName: user.displayName || user.email?.split("@")[0] || "User",
       role: role,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -396,7 +395,7 @@ export const onUserCreated = auth.user().onCreate(async (user) => {
     };
 
     // Add role-specific fields
-    if (role === 'teacher') {
+    if (role === "teacher") {
       Object.assign(profileData, {
         teacherData: {
           configuredSheets: false,
@@ -405,7 +404,7 @@ export const onUserCreated = auth.user().onCreate(async (user) => {
           classrooms: []
         }
       });
-    } else if (role === 'student') {
+    } else if (role === "student") {
       Object.assign(profileData, {
         studentData: {
           enrolledClasses: [],
@@ -420,7 +419,7 @@ export const onUserCreated = auth.user().onCreate(async (user) => {
       uid: user.uid,
       email: user.email,
       role: role,
-      calledBy: 'onUserCreated (after 2s delay)'
+      calledBy: "onUserCreated (after 2s delay)"
     });
 
   } catch (error) {
@@ -472,9 +471,9 @@ export const createProfileForExistingUser = onCall(
       // Create profile
       const profileData = {
         uid: user.uid,
-        email: user.email || '',
-        displayName: user.displayName || user.email?.split('@')[0] || 'User',
-        role: role || user.customClaims?.role || 'student',
+        email: user.email || "",
+        displayName: user.displayName || user.email?.split("@")[0] || "User",
+        role: role || user.customClaims?.role || "student",
         createdAt: new Date(),
         updatedAt: new Date(),
         emailVerified: user.emailVerified || false,
@@ -488,7 +487,7 @@ export const createProfileForExistingUser = onCall(
       };
 
       // Add role-specific fields
-      if (profileData.role === 'teacher') {
+      if (profileData.role === "teacher") {
         Object.assign(profileData, {
           teacherData: {
             configuredSheets: false,
@@ -497,7 +496,7 @@ export const createProfileForExistingUser = onCall(
             classrooms: []
           }
         });
-      } else if (profileData.role === 'student') {
+      } else if (profileData.role === "student") {
         Object.assign(profileData, {
           studentData: {
             enrolledClasses: [],
@@ -511,7 +510,7 @@ export const createProfileForExistingUser = onCall(
       logger.info("User profile created successfully", { 
         uid: user.uid, 
         role: profileData.role,
-        calledBy: 'createProfileForExistingUser'
+        calledBy: "createProfileForExistingUser"
       });
       
       return { 

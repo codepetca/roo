@@ -38,7 +38,7 @@ export async function deleteUser(req: Request, res: Response): Promise<void> {
       const userRecord = await auth.getUser(uid);
       
       // SAFETY CHECK: Only allow deletion of test accounts
-      if (!userRecord.email?.includes('@test.roo.app') && !userRecord.email?.includes('.test.')) {
+      if (!userRecord.email?.includes("@test.roo.app") && !userRecord.email?.includes(".test.")) {
         logger.warn("Attempted to delete non-test user", { uid, email: userRecord.email });
         res.status(403).json({
           error: "Forbidden",

@@ -26,7 +26,7 @@ export async function getServiceAccountInfo(req: Request, res: Response): Promis
       const tokenInfo = await client.getAccessToken();
       if (tokenInfo && tokenInfo.token) {
         // Use the OAuth2 API to get token info
-        const oauth2 = google.oauth2({ version: 'v2', auth: auth });
+        const oauth2 = google.oauth2({ version: "v2", auth: auth });
         const tokenInfoResponse = await oauth2.tokeninfo();
         serviceAccountEmail = tokenInfoResponse.data.email || "unknown";
       }
@@ -43,8 +43,8 @@ export async function getServiceAccountInfo(req: Request, res: Response): Promis
     }
     
     // Get recent sync history
-    const recentSyncs = await db.collection('webhook_sync_history')
-      .orderBy('timestamp', 'desc')
+    const recentSyncs = await db.collection("webhook_sync_history")
+      .orderBy("timestamp", "desc")
       .limit(5)
       .get();
     
@@ -60,9 +60,9 @@ export async function getServiceAccountInfo(req: Request, res: Response): Promis
         projectId: projectId
       },
       environment: {
-        FUNCTIONS_EMULATOR: process.env.FUNCTIONS_EMULATOR || 'not set',
-        GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS || 'not set',
-        NODE_ENV: process.env.NODE_ENV || 'not set'
+        FUNCTIONS_EMULATOR: process.env.FUNCTIONS_EMULATOR || "not set",
+        GOOGLE_APPLICATION_CREDENTIALS: process.env.GOOGLE_APPLICATION_CREDENTIALS || "not set",
+        NODE_ENV: process.env.NODE_ENV || "not set"
       },
       recentSyncHistory: syncHistory,
       timestamp: new Date().toISOString()
@@ -125,10 +125,10 @@ export async function testSheetAccess(req: Request, res: Response): Promise<Resp
     const errorDetails: any = { message: errorMessage };
     
     // Check for specific Google API errors
-    if (error instanceof Error && 'code' in error) {
+    if (error instanceof Error && "code" in error) {
       errorDetails.code = (error as any).code;
     }
-    if (error instanceof Error && 'errors' in error) {
+    if (error instanceof Error && "errors" in error) {
       errorDetails.errors = (error as any).errors;
     }
     

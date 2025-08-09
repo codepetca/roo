@@ -2,11 +2,11 @@ import {
   Grade, 
   GradeInput, 
   Submission 
-} from '@shared/schemas/core';
-import { StableIdGenerator, calculatePercentage } from '@shared/schemas/transformers';
-import { db, getCurrentTimestamp } from '../config/firebase';
-import { cleanForFirestore } from './firestore-repository';
-import * as admin from 'firebase-admin';
+} from "@shared/schemas/core";
+import { StableIdGenerator, calculatePercentage } from "@shared/schemas/transformers";
+import { db, getCurrentTimestamp } from "../config/firebase";
+import { cleanForFirestore } from "./firestore-repository";
+import * as admin from "firebase-admin";
 
 /**
  * Grade Versioning Service
@@ -28,7 +28,7 @@ export interface GradeConflict {
   submissionId: string;
   existingGrade: Grade;
   newGrade: GradeInput;
-  resolution: 'keep_existing' | 'use_new' | 'create_version';
+  resolution: "keep_existing" | "use_new" | "create_version";
   reason: string;
 }
 
@@ -36,16 +36,16 @@ export interface GradeConflict {
  * Service for managing grade versions and history
  */
 export class GradeVersioningService {
-  private readonly gradesCollection = 'grades';
-  private readonly gradeHistoryCollection = 'gradeHistory';
+  private readonly gradesCollection = "grades";
+  private readonly gradeHistoryCollection = "gradeHistory";
 
   /**
    * Get all grade versions for a specific submission
    */
   async getGradeHistory(submissionId: string): Promise<GradeVersion[]> {
     const snapshot = await db.collection(this.gradeHistoryCollection)
-      .where('submissionId', '==', submissionId)
-      .orderBy('version', 'desc')
+      .where("submissionId", "==", submissionId)
+      .orderBy("version", "desc")
       .get();
 
     return snapshot.docs.map(doc => {
@@ -54,7 +54,7 @@ export class GradeVersioningService {
         grade: { ...data, id: doc.id } as Grade,
         version: data.version,
         timestamp: data.gradedAt.toDate(),
-        reason: data.versionReason || 'Grade update'
+        reason: data.versionReason || "Grade update"
       };
     });
   }
@@ -64,8 +64,8 @@ export class GradeVersioningService {
    */
   async getLatestGrade(submissionId: string): Promise<Grade | null> {
     const snapshot = await db.collection(this.gradesCollection)
-      .where('submissionId', '==', submissionId)
-      .where('isLatest', '==', true)
+      .where("submissionId", "==", submissionId)
+      .where("isLatest", "==", true)
       .get();
 
     if (snapshot.empty) {
@@ -94,8 +94,8 @@ export class GradeVersioningService {
 
     for (const batch of batches) {
       const snapshot = await db.collection(this.gradesCollection)
-        .where('submissionId', 'in', batch)
-        .where('isLatest', '==', true)
+        .where("submissionId", "in", batch)
+        .where("isLatest", "==", true)
         .get();
       snapshot.docs.forEach(doc => {
         const grade = { ...doc.data(), id: doc.id } as Grade;
@@ -112,7 +112,7 @@ export class GradeVersioningService {
   async createGradeVersion(
     gradeInput: GradeInput,
     submission: Submission,
-    reason: string = 'New grade'
+    reason: string = "New grade"
   ): Promise<Grade> {
     const batch = db.batch();
     
@@ -137,7 +137,7 @@ export class GradeVersioningService {
       const historyRef = db.collection(this.gradeHistoryCollection).doc(existingGrade.id);
       batch.set(historyRef, cleanForFirestore({
         ...existingGrade,
-        versionReason: 'Superseded by new version',
+        versionReason: "Superseded by new version",
         archivedAt: getCurrentTimestamp()
       }));
     }
@@ -166,10 +166,10 @@ export class GradeVersioningService {
     }));
 
     // Update submission with grade reference
-    const submissionRef = db.collection('submissions').doc(submission.id);
+    const submissionRef = db.collection("submissions").doc(submission.id);
     batch.update(submissionRef, cleanForFirestore({
       gradeId: gradeId,
-      status: 'graded',
+      status: "graded",
       updatedAt: getCurrentTimestamp()
     }));
 
@@ -190,19 +190,19 @@ export class GradeVersioningService {
         submissionId: existingGrade.submissionId,
         existingGrade,
         newGrade: newGradeInput,
-        resolution: 'keep_existing',
-        reason: `Grade is locked: ${existingGrade.lockedReason || 'Manual grade protection'}`
+        resolution: "keep_existing",
+        reason: `Grade is locked: ${existingGrade.lockedReason || "Manual grade protection"}`
       };
     }
 
     // Rule 2: Manual grades take precedence over AI grades
-    if (existingGrade.gradedBy === 'manual' && newGradeInput.gradedBy === 'ai') {
+    if (existingGrade.gradedBy === "manual" && newGradeInput.gradedBy === "ai") {
       return {
         submissionId: existingGrade.submissionId,
         existingGrade,
         newGrade: newGradeInput,
-        resolution: 'keep_existing',
-        reason: 'Manual grades take precedence over AI grades'
+        resolution: "keep_existing",
+        reason: "Manual grades take precedence over AI grades"
       };
     }
 
@@ -216,8 +216,8 @@ export class GradeVersioningService {
         submissionId: existingGrade.submissionId,
         existingGrade,
         newGrade: newGradeInput,
-        resolution: 'keep_existing',
-        reason: 'Grades are identical'
+        resolution: "keep_existing",
+        reason: "Grades are identical"
       };
     }
 
@@ -226,13 +226,13 @@ export class GradeVersioningService {
       submissionId: existingGrade.submissionId,
       existingGrade,
       newGrade: newGradeInput,
-      resolution: 'create_version',
-      reason: 'Grade has changed - creating new version'
+      resolution: "create_version",
+      reason: "Grade has changed - creating new version"
     };
   }
 
   /**
-   * Batch process grade updates with conflict resolution
+   * Batch process grade updates with conflict resolution using batch operations
    */
   async batchProcessGrades(
     gradeInputs: Array<{ gradeInput: GradeInput; submission: Submission }>
@@ -247,33 +247,119 @@ export class GradeVersioningService {
     const created: Grade[] = [];
     const updated: Grade[] = [];
     const conflicts: GradeConflict[] = [];
+    
+    // Prepare batch operations
+    const batch = db.batch();
+    let operationCount = 0;
+    const batches: admin.firestore.WriteBatch[] = [batch];
+    
+    // Helper to get current batch (creates new if limit reached)
+    const getCurrentBatch = () => {
+      if (operationCount >= 499) { // Leave room for safety
+        const newBatch = db.batch();
+        batches.push(newBatch);
+        operationCount = 0;
+      }
+      return batches[batches.length - 1];
+    };
 
     for (const { gradeInput, submission } of gradeInputs) {
       const existingGrade = existingGrades.get(submission.id);
+      const currentBatch = getCurrentBatch();
 
       if (!existingGrade) {
         // No existing grade, create new one
-        const newGrade = await this.createGradeVersion(
-          gradeInput,
-          submission,
-          'Initial grade'
-        );
+        const gradeId = StableIdGenerator.grade(submission.id, 1);
+        const gradeRef = db.collection(this.gradesCollection).doc(gradeId);
+        
+        const newGrade: Grade = {
+          ...gradeInput,
+          id: gradeId,
+          version: 1,
+          isLatest: true,
+          percentage: calculatePercentage(gradeInput.score, gradeInput.maxScore),
+          submissionVersionGraded: submission.version,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        currentBatch.set(gradeRef, cleanForFirestore({
+          ...newGrade,
+          createdAt: getCurrentTimestamp(),
+          updatedAt: getCurrentTimestamp(),
+          versionReason: "Initial grade"
+        }));
+        
+        // Update submission with grade reference
+        const submissionRef = db.collection("submissions").doc(submission.id);
+        currentBatch.update(submissionRef, cleanForFirestore({
+          gradeId: gradeId,
+          status: "graded",
+          updatedAt: getCurrentTimestamp()
+        }));
+        
+        operationCount += 2;
         created.push(newGrade);
       } else {
         // Resolve conflict
         const conflict = this.resolveGradeConflict(existingGrade, gradeInput);
         conflicts.push(conflict);
 
-        if (conflict.resolution === 'create_version') {
-          const newGrade = await this.createGradeVersion(
-            gradeInput,
-            submission,
-            conflict.reason
-          );
+        if (conflict.resolution === "create_version") {
+          const version = existingGrade.version + 1;
+          const gradeId = StableIdGenerator.grade(submission.id, version);
+          const gradeRef = db.collection(this.gradesCollection).doc(gradeId);
+          
+          // Mark existing grade as not latest
+          const existingRef = db.collection(this.gradesCollection).doc(existingGrade.id);
+          currentBatch.update(existingRef, cleanForFirestore({
+            isLatest: false,
+            updatedAt: getCurrentTimestamp()
+          }));
+          
+          // Archive existing grade to history
+          const historyRef = db.collection(this.gradeHistoryCollection).doc(existingGrade.id);
+          currentBatch.set(historyRef, cleanForFirestore({
+            ...existingGrade,
+            versionReason: "Superseded by new version",
+            archivedAt: getCurrentTimestamp()
+          }));
+          
+          // Create new grade version
+          const newGrade: Grade = {
+            ...gradeInput,
+            id: gradeId,
+            version,
+            isLatest: true,
+            percentage: calculatePercentage(gradeInput.score, gradeInput.maxScore),
+            submissionVersionGraded: submission.version,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+          
+          currentBatch.set(gradeRef, cleanForFirestore({
+            ...newGrade,
+            createdAt: getCurrentTimestamp(),
+            updatedAt: getCurrentTimestamp(),
+            versionReason: conflict.reason,
+            previousGradeId: existingGrade.id
+          }));
+          
+          // Update submission with new grade reference
+          const submissionRef = db.collection("submissions").doc(submission.id);
+          currentBatch.update(submissionRef, cleanForFirestore({
+            gradeId: gradeId,
+            updatedAt: getCurrentTimestamp()
+          }));
+          
+          operationCount += 4;
           updated.push(newGrade);
         }
       }
     }
+    
+    // Commit all batches in parallel
+    await Promise.all(batches.map(b => b.commit()));
 
     return { created, updated, conflicts };
   }
@@ -315,8 +401,8 @@ export class GradeVersioningService {
     manualGrades: number;
   }> {
     const snapshot = await db.collection(this.gradesCollection)
-      .where('classroomId', '==', classroomId)
-      .where('isLatest', '==', true)
+      .where("classroomId", "==", classroomId)
+      .where("isLatest", "==", true)
       .get();
     const grades = snapshot.docs.map(doc => doc.data() as Grade);
 
@@ -332,8 +418,8 @@ export class GradeVersioningService {
 
     const totalScore = grades.reduce((sum, g) => sum + g.percentage, 0);
     const lockedGrades = grades.filter(g => g.isLocked).length;
-    const aiGrades = grades.filter(g => g.gradedBy === 'ai').length;
-    const manualGrades = grades.filter(g => g.gradedBy === 'manual').length;
+    const aiGrades = grades.filter(g => g.gradedBy === "ai").length;
+    const manualGrades = grades.filter(g => g.gradedBy === "manual").length;
 
     return {
       totalGrades: grades.length,
@@ -371,7 +457,7 @@ export class GradeVersioningService {
       privateComments: targetGrade.grade.privateComments,
       rubricScores: targetGrade.grade.rubricScores,
       gradedAt: new Date(),
-      gradedBy: 'manual',
+      gradedBy: "manual",
       gradingMethod: targetGrade.grade.gradingMethod,
       submissionVersionGraded: targetGrade.grade.submissionVersionGraded,
       submissionContentSnapshot: targetGrade.grade.submissionContentSnapshot,
@@ -396,7 +482,7 @@ export class GradeVersioningService {
    * Helper to get submission by ID
    */
   private async getSubmissionById(submissionId: string): Promise<Submission | null> {
-    const submissionRef = db.collection('submissions').doc(submissionId);
+    const submissionRef = db.collection("submissions").doc(submissionId);
     const snapshot = await submissionRef.get();
     
     if (!snapshot.exists) {

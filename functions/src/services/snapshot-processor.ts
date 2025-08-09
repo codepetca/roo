@@ -1,20 +1,20 @@
-import { ClassroomSnapshot } from '@shared/schemas/classroom-snapshot';
+import { ClassroomSnapshot } from "@shared/schemas/classroom-snapshot";
 import {
   snapshotToCore,
   mergeSnapshotWithExisting,
   extractGradeFromSubmission,
   StableIdGenerator
-} from '@shared/schemas/transformers';
-import { FirestoreRepository } from './firestore-repository';
-import { GradeVersioningService } from './grade-versioning';
+} from "@shared/schemas/transformers";
+import { FirestoreRepository } from "./firestore-repository";
+import { GradeVersioningService } from "./grade-versioning";
 import { 
   Classroom, 
   Assignment, 
   Submission, 
   StudentEnrollment,
   Grade
-} from '@shared/schemas/core';
-import { logger } from '../utils/logger';
+} from "@shared/schemas/core";
+import { logger } from "../utils/logger";
 
 /**
  * Snapshot Processor Service
@@ -82,50 +82,50 @@ export class SnapshotProcessor {
 
     try {
       // Step 1: Transform snapshot to core entities
-      logger.info('Transforming snapshot to core entities');
+      logger.info("Transforming snapshot to core entities");
       const transformed = snapshotToCore(snapshot);
 
       // Step 2: Process teacher
       await this.processTeacher(transformed.teacher, snapshot.teacher.email);
 
       // Step 3: Get existing data for merge
-      logger.info('Fetching existing data for merge');
+      logger.info("Fetching existing data for merge");
       const existing = await this.getExistingData(transformed);
 
       // Step 4: Merge with existing data
-      logger.info('Merging with existing data');
+      logger.info("Merging with existing data");
       const mergeResult = mergeSnapshotWithExisting(transformed, existing);
 
       // Step 5: Process creates
-      logger.info('Creating new entities');
+      logger.info("Creating new entities");
       await this.processCreates(mergeResult, result);
 
       // Step 6: Process updates
-      logger.info('Updating existing entities');
+      logger.info("Updating existing entities");
       await this.processUpdates(mergeResult, result);
 
       // Step 7: Process archives
-      logger.info('Archiving removed entities');
+      logger.info("Archiving removed entities");
       await this.processArchives(mergeResult, result);
 
       // Step 8: Extract and process grades from submissions
-      logger.info('Processing grades from submissions');
+      logger.info("Processing grades from submissions");
       await this.processGrades(snapshot, result);
 
       // Step 9: Update denormalized counts
-      logger.info('Updating denormalized counts');
+      logger.info("Updating denormalized counts");
       await this.updateCounts(transformed.classrooms);
 
       result.processingTime = Date.now() - startTime;
       logger.info(`Snapshot processing completed in ${result.processingTime}ms`, result.stats);
 
     } catch (error) {
-      logger.error('Error processing snapshot', error);
+      logger.error("Error processing snapshot", error);
       result.success = false;
       result.errors.push({
-        entity: 'snapshot',
-        id: 'global',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        entity: "snapshot",
+        id: "global",
+        error: error instanceof Error ? error.message : "Unknown error"
       });
     }
 
@@ -247,119 +247,129 @@ export class SnapshotProcessor {
   }
 
   /**
-   * Process entity creates
+   * Process entity creates using batch operations for performance
    */
   private async processCreates(
     mergeResult: ReturnType<typeof mergeSnapshotWithExisting>,
     result: ProcessingResult
   ): Promise<void> {
-    // Create classrooms
-    for (const classroom of mergeResult.toCreate.classrooms) {
-      try {
-        await this.repository.createClassroom(classroom);
-        result.stats.classroomsCreated++;
-      } catch (error) {
-        this.logError(result, 'classroom', classroom.id, error);
-      }
-    }
-
-    // Create assignments
-    for (const assignment of mergeResult.toCreate.assignments) {
-      try {
-        await this.repository.createAssignment(assignment);
-        result.stats.assignmentsCreated++;
-      } catch (error) {
-        this.logError(result, 'assignment', assignment.id, error);
-      }
-    }
-
-    // Create submissions
-    for (const submission of mergeResult.toCreate.submissions) {
-      try {
-        await this.repository.createSubmission(submission);
-        if (submission.version > 1) {
-          result.stats.submissionsVersioned++;
-        } else {
-          result.stats.submissionsCreated++;
-        }
-      } catch (error) {
-        this.logError(result, 'submission', submission.id, error);
-      }
-    }
-
-    // Create enrollments
-    for (const enrollment of mergeResult.toCreate.enrollments) {
-      try {
-        await this.repository.createEnrollment(enrollment);
-        result.stats.enrollmentsCreated++;
-      } catch (error) {
-        this.logError(result, 'enrollment', enrollment.id, error);
-      }
+    try {
+      // Process all creates in parallel using batch operations
+      await Promise.all([
+        // Batch create classrooms (cast as the id is guaranteed to exist after merge)
+        this.repository.batchCreate("classrooms", mergeResult.toCreate.classrooms as any[])
+          .then(() => {
+            result.stats.classroomsCreated = mergeResult.toCreate.classrooms.length;
+          }),
+        
+        // Batch create assignments
+        this.repository.batchCreate("assignments", mergeResult.toCreate.assignments as any[])
+          .then(() => {
+            result.stats.assignmentsCreated = mergeResult.toCreate.assignments.length;
+          }),
+        
+        // Batch create submissions
+        this.repository.batchCreate("submissions", mergeResult.toCreate.submissions as any[])
+          .then(() => {
+            const versioned = mergeResult.toCreate.submissions.filter(s => s.version > 1);
+            result.stats.submissionsVersioned = versioned.length;
+            result.stats.submissionsCreated = mergeResult.toCreate.submissions.length - versioned.length;
+          }),
+        
+        // Batch create enrollments
+        this.repository.batchCreate("enrollments", mergeResult.toCreate.enrollments as any[])
+          .then(() => {
+            result.stats.enrollmentsCreated = mergeResult.toCreate.enrollments.length;
+          })
+      ]);
+      
+      logger.info("Batch creates completed", {
+        classrooms: result.stats.classroomsCreated,
+        assignments: result.stats.assignmentsCreated,
+        submissions: result.stats.submissionsCreated + result.stats.submissionsVersioned,
+        enrollments: result.stats.enrollmentsCreated
+      });
+    } catch (error) {
+      logger.error("Batch create failed", error);
+      this.logError(result, "batch-create", "multiple", error);
     }
   }
 
   /**
-   * Process entity updates
+   * Process entity updates using batch operations for performance
    */
   private async processUpdates(
     mergeResult: ReturnType<typeof mergeSnapshotWithExisting>,
     result: ProcessingResult
   ): Promise<void> {
-    // Update classrooms
-    for (const classroom of mergeResult.toUpdate.classrooms) {
-      try {
-        await this.repository.updateClassroom(classroom.id, classroom);
-        result.stats.classroomsUpdated++;
-      } catch (error) {
-        this.logError(result, 'classroom', classroom.id, error);
-      }
-    }
-
-    // Update assignments
-    for (const assignment of mergeResult.toUpdate.assignments) {
-      try {
-        await this.repository.updateAssignment(assignment.id, assignment);
-        result.stats.assignmentsUpdated++;
-      } catch (error) {
-        this.logError(result, 'assignment', assignment.id, error);
-      }
-    }
-
-    // Update submissions
-    for (const submission of mergeResult.toUpdate.submissions) {
-      try {
-        await this.repository.updateSubmission(submission.id, submission);
-      } catch (error) {
-        this.logError(result, 'submission', submission.id, error);
-      }
-    }
-
-    // Update enrollments
-    for (const enrollment of mergeResult.toUpdate.enrollments) {
-      try {
-        await this.repository.updateEnrollment(enrollment.id, enrollment);
-        result.stats.enrollmentsUpdated++;
-      } catch (error) {
-        this.logError(result, 'enrollment', enrollment.id, error);
-      }
+    try {
+      // Prepare batch updates
+      const classroomUpdates = mergeResult.toUpdate.classrooms.map(c => ({ id: c.id, data: c }));
+      const assignmentUpdates = mergeResult.toUpdate.assignments.map(a => ({ id: a.id, data: a }));
+      const submissionUpdates = mergeResult.toUpdate.submissions.map(s => ({ id: s.id, data: s }));
+      const enrollmentUpdates = mergeResult.toUpdate.enrollments.map(e => ({ id: e.id, data: e }));
+      
+      // Process all updates in parallel using batch operations
+      await Promise.all([
+        // Batch update classrooms
+        this.repository.batchUpdate("classrooms", classroomUpdates)
+          .then(() => {
+            result.stats.classroomsUpdated = classroomUpdates.length;
+          }),
+        
+        // Batch update assignments
+        this.repository.batchUpdate("assignments", assignmentUpdates)
+          .then(() => {
+            result.stats.assignmentsUpdated = assignmentUpdates.length;
+          }),
+        
+        // Batch update submissions
+        this.repository.batchUpdate("submissions", submissionUpdates),
+        
+        // Batch update enrollments
+        this.repository.batchUpdate("enrollments", enrollmentUpdates)
+          .then(() => {
+            result.stats.enrollmentsUpdated = enrollmentUpdates.length;
+          })
+      ]);
+      
+      logger.info("Batch updates completed", {
+        classrooms: result.stats.classroomsUpdated,
+        assignments: result.stats.assignmentsUpdated,
+        submissions: submissionUpdates.length,
+        enrollments: result.stats.enrollmentsUpdated
+      });
+    } catch (error) {
+      logger.error("Batch update failed", error);
+      this.logError(result, "batch-update", "multiple", error);
     }
   }
 
   /**
-   * Process entity archives
+   * Process entity archives using batch operations
    */
   private async processArchives(
     mergeResult: ReturnType<typeof mergeSnapshotWithExisting>,
     result: ProcessingResult
   ): Promise<void> {
-    // Archive enrollments
-    for (const enrollmentId of mergeResult.toArchive.enrollmentIds) {
-      try {
-        await this.repository.archiveEnrollment(enrollmentId);
-        result.stats.enrollmentsArchived++;
-      } catch (error) {
-        this.logError(result, 'enrollment', enrollmentId, error);
+    try {
+      if (mergeResult.toArchive.enrollmentIds.length > 0) {
+        // Batch archive enrollments by updating their status
+        const archiveUpdates = mergeResult.toArchive.enrollmentIds.map(id => ({
+          id,
+          data: { status: "removed" as const } as any
+        }));
+        
+        await this.repository.batchUpdate("enrollments", archiveUpdates);
+        result.stats.enrollmentsArchived = archiveUpdates.length;
+        
+        logger.info("Batch archives completed", {
+          enrollments: result.stats.enrollmentsArchived
+        });
       }
+    } catch (error) {
+      logger.error("Batch archive failed", error);
+      this.logError(result, "batch-archive", "multiple", error);
     }
   }
 
@@ -404,12 +414,12 @@ export class SnapshotProcessor {
       
       result.stats.gradesCreated = gradeResult.created.length;
       result.stats.gradesPreserved = gradeResult.conflicts.filter(
-        c => c.resolution === 'keep_existing'
+        c => c.resolution === "keep_existing"
       ).length;
       
       // Log conflicts
       for (const conflict of gradeResult.conflicts) {
-        if (conflict.resolution === 'keep_existing') {
+        if (conflict.resolution === "keep_existing") {
           logger.info(`Grade preserved: ${conflict.reason}`, {
             submissionId: conflict.submissionId
           });
@@ -419,16 +429,26 @@ export class SnapshotProcessor {
   }
 
   /**
-   * Update denormalized counts for classrooms
+   * Update denormalized counts for classrooms using parallel operations
    */
   private async updateCounts(classrooms: any[]): Promise<void> {
-    for (const classroom of classrooms) {
-      const classroomId = StableIdGenerator.classroom(classroom.externalId!);
-      try {
-        await this.repository.updateCounts(classroomId);
-      } catch (error) {
-        logger.error(`Failed to update counts for classroom ${classroomId}`, error);
-      }
+    try {
+      // Update all classroom counts in parallel
+      await Promise.all(
+        classrooms.map(classroom => {
+          const classroomId = StableIdGenerator.classroom(classroom.externalId!);
+          return this.repository.updateCounts(classroomId)
+            .catch(error => {
+              logger.error(`Failed to update counts for classroom ${classroomId}`, error);
+            });
+        })
+      );
+      
+      logger.info("Classroom counts updated", {
+        classrooms: classrooms.length
+      });
+    } catch (error) {
+      logger.error("Failed to update classroom counts", error);
     }
   }
 
@@ -441,7 +461,7 @@ export class SnapshotProcessor {
     id: string,
     error: unknown
   ): void {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logger.error(`Error processing ${entity} ${id}`, error);
     result.errors.push({ entity, id, error: errorMessage });
   }

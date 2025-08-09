@@ -50,13 +50,13 @@ export class SheetsService {
       });
       
       // Provide more helpful error messages for common issues
-      if (error.message.includes('URLSearchParams')) {
+      if (error.message.includes("URLSearchParams")) {
         return new Error(`${baseMessage}: Node.js compatibility issue. Please ensure you're using Node.js 20.`);
       }
-      if (error.message.includes('403')) {
+      if (error.message.includes("403")) {
         return new Error(`${baseMessage}: Access denied. Check Google Sheets API permissions and service account access.`);
       }
-      if (error.message.includes('404')) {
+      if (error.message.includes("404")) {
         return new Error(`${baseMessage}: Spreadsheet not found. Check spreadsheet ID: ${this.spreadsheetId}`);
       }
       
@@ -78,10 +78,10 @@ export class SheetsService {
         spreadsheetId: this.spreadsheetId
       });
       
-      logger.info(`Sheets connection test successful - spreadsheet: ${response.data.properties?.title || 'Unknown'}`);
+      logger.info(`Sheets connection test successful - spreadsheet: ${response.data.properties?.title || "Unknown"}`);
       return true;
     } catch (error) {
-      this.handleApiError(error, 'connection test');
+      this.handleApiError(error, "connection test");
       return false;
     }
   }
@@ -129,7 +129,7 @@ export class SheetsService {
       // Validate and transform the entire array at once
       return sheetAssignmentsArraySchema.parse(parsedRows);
     } catch (error) {
-      throw this.handleApiError(error, 'fetching assignments');
+      throw this.handleApiError(error, "fetching assignments");
     }
   }
 

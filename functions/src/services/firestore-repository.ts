@@ -10,9 +10,9 @@ import {
   AssignmentInput,
   SubmissionInput,
   GradeInput
-} from '@shared/schemas/core';
-import { db, getCurrentTimestamp, FieldValue } from '../config/firebase';
-import * as admin from 'firebase-admin';
+} from "@shared/schemas/core";
+import { db, getCurrentTimestamp, FieldValue } from "../config/firebase";
+import * as admin from "firebase-admin";
 
 /**
  * Firestore Repository Service
@@ -37,7 +37,7 @@ export function cleanForFirestore<T extends Record<string, any>>(obj: T): T {
       continue;
     } else if (
       value !== null && 
-      typeof value === 'object' && 
+      typeof value === "object" && 
       !Array.isArray(value) && 
       !isTimestampOrDate(value)
     ) {
@@ -46,7 +46,7 @@ export function cleanForFirestore<T extends Record<string, any>>(obj: T): T {
     } else if (Array.isArray(value)) {
       // Clean arrays (remove undefined elements)
       cleaned[key] = value.filter(item => item !== undefined).map(item => 
-        (item !== null && typeof item === 'object' && !isTimestampOrDate(item)) 
+        (item !== null && typeof item === "object" && !isTimestampOrDate(item)) 
           ? cleanForFirestore(item) 
           : item
       ) as any;
@@ -64,18 +64,71 @@ export function cleanForFirestore<T extends Record<string, any>>(obj: T): T {
  */
 function isTimestampOrDate(value: any): boolean {
   return value instanceof Date || 
-         (value && typeof value.toDate === 'function' && typeof value.seconds === 'number');
+         (value && typeof value.toDate === "function" && typeof value.seconds === "number");
+}
+
+/**
+ * Serialize Firestore timestamps to ISO strings for API responses
+ * This ensures consistent timestamp format across Admin SDK (backend) and Web SDK (frontend)
+ */
+function serializeTimestamps<T extends Record<string, any>>(doc: T): T {
+  if (!doc || typeof doc !== 'object') {
+    return doc;
+  }
+
+  const serialized = { ...doc };
+
+  for (const key in serialized) {
+    const value = serialized[key] as any;
+    
+    // Check for Date objects
+    if (value instanceof Date) {
+      serialized[key] = value.toISOString() as any;
+    }
+    // Check if it's an empty object that should be a timestamp (common Firestore issue)
+    else if (value && typeof value === 'object' && Object.keys(value).length === 0 && 
+             (key === 'createdAt' || key === 'updatedAt' || key === 'gradedAt' || key === 'submittedAt' || key === 'dueDate')) {
+      // Empty timestamp object - use current time as fallback
+      console.warn(`Empty timestamp object found for ${key}, using fallback`);
+      serialized[key] = new Date().toISOString() as any;
+    }
+    // Check for Firestore Timestamp by structure (Admin SDK format)
+    else if (value && typeof value === 'object' && 'seconds' in value && 'nanoseconds' in value) {
+      serialized[key] = new Date((value as any).seconds * 1000).toISOString() as any;
+    }
+    // Check for Firestore Timestamp by structure (Web SDK format)  
+    else if (value && typeof value === 'object' && '_seconds' in value && '_nanoseconds' in value) {
+      serialized[key] = new Date((value as any)._seconds * 1000).toISOString() as any;
+    }
+    // Check if it has toDate method (Firestore Timestamp with methods preserved)
+    else if (value && typeof value === 'object' && typeof (value as any).toDate === "function") {
+      serialized[key] = (value as any).toDate().toISOString() as any;
+    }
+    // Recursively handle arrays
+    else if (Array.isArray(value)) {
+      serialized[key] = value.map(item => 
+        (item && typeof item === "object") ? serializeTimestamps(item) : item
+      ) as any;
+    }
+    // Recursively handle nested objects (but not timestamps)
+    else if (value && typeof value === "object" && 
+             !('seconds' in value) && !('_seconds' in value)) {
+      serialized[key] = serializeTimestamps(value) as any;
+    }
+  }
+
+  return serialized;
 }
 
 export class FirestoreRepository {
   // Collection names
   private readonly collections = {
-    teachers: 'teachers',
-    classrooms: 'classrooms',
-    assignments: 'assignments',
-    submissions: 'submissions',
-    grades: 'grades',
-    enrollments: 'enrollments'
+    teachers: "teachers",
+    classrooms: "classrooms",
+    assignments: "assignments",
+    submissions: "submissions",
+    grades: "grades",
+    enrollments: "enrollments"
   };
 
   // ============================================
@@ -83,7 +136,7 @@ export class FirestoreRepository {
   // ============================================
 
   async createTeacher(input: TeacherInput): Promise<Teacher> {
-    const teacherId = `teacher_${input.email.replace('@', '_at_').replace('.', '_')}`;
+    const teacherId = `teacher_${input.email.replace("@", "_at_").replace(".", "_")}`;
     const teacherRef = db.collection(this.collections.teachers).doc(teacherId);
     
     const teacher: Teacher = {
@@ -101,11 +154,12 @@ export class FirestoreRepository {
       updatedAt: getCurrentTimestamp()
     }));
 
-    return teacher;
+    // Return serialized version for consistency
+    return serializeTimestamps(teacher);
   }
 
   async getTeacherByEmail(email: string): Promise<Teacher | null> {
-    const teacherId = `teacher_${email.replace('@', '_at_').replace('.', '_')}`;
+    const teacherId = `teacher_${email.replace("@", "_at_").replace(".", "_")}`;
     const teacherRef = db.collection(this.collections.teachers).doc(teacherId);
     const snapshot = await teacherRef.get();
 
@@ -113,7 +167,8 @@ export class FirestoreRepository {
       return null;
     }
 
-    return { ...snapshot.data(), id: snapshot.id } as Teacher;
+    const teacher = { ...snapshot.data(), id: snapshot.id } as Teacher;
+    return serializeTimestamps(teacher);
   }
 
   async updateTeacher(id: string, updates: Partial<Teacher>): Promise<void> {
@@ -160,16 +215,20 @@ export class FirestoreRepository {
       return null;
     }
 
-    return { ...snapshot.data(), id: snapshot.id } as Classroom;
+    const classroom = { ...snapshot.data(), id: snapshot.id } as Classroom;
+    return serializeTimestamps(classroom);
   }
 
   async getClassroomsByTeacher(teacherId: string): Promise<Classroom[]> {
     const snapshot = await db.collection(this.collections.classrooms)
-      .where('teacherId', '==', teacherId)
-      .orderBy('updatedAt', 'desc')
+      .where("teacherId", "==", teacherId)
+      .orderBy("updatedAt", "desc")
       .get();
 
-    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Classroom));
+    return snapshot.docs.map(doc => {
+      const classroom = { ...doc.data(), id: doc.id } as Classroom;
+      return serializeTimestamps(classroom);
+    });
   }
 
   async updateClassroom(id: string, updates: Partial<Classroom>): Promise<void> {
@@ -215,16 +274,20 @@ export class FirestoreRepository {
       return null;
     }
 
-    return { ...snapshot.data(), id: snapshot.id } as Assignment;
+    const assignment = { ...snapshot.data(), id: snapshot.id } as Assignment;
+    return serializeTimestamps(assignment);
   }
 
   async getAssignmentsByClassroom(classroomId: string): Promise<Assignment[]> {
     const snapshot = await db.collection(this.collections.assignments)
-      .where('classroomId', '==', classroomId)
-      .orderBy('dueDate', 'asc')
+      .where("classroomId", "==", classroomId)
+      .orderBy("dueDate", "asc")
       .get();
 
-    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Assignment));
+    return snapshot.docs.map(doc => {
+      const assignment = { ...doc.data(), id: doc.id } as Assignment;
+      return serializeTimestamps(assignment);
+    });
   }
 
   async updateAssignment(id: string, updates: Partial<Assignment>): Promise<void> {
@@ -277,13 +340,13 @@ export class FirestoreRepository {
     onlyLatest: boolean = true
   ): Promise<Submission[]> {
     let query = db.collection(this.collections.submissions)
-      .where('assignmentId', '==', assignmentId);
+      .where("assignmentId", "==", assignmentId);
 
     if (onlyLatest) {
-      query = query.where('isLatest', '==', true);
+      query = query.where("isLatest", "==", true);
     }
 
-    const snapshot = await query.orderBy('submittedAt', 'desc').get();
+    const snapshot = await query.orderBy("submittedAt", "desc").get();
     return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Submission));
   }
 
@@ -292,14 +355,14 @@ export class FirestoreRepository {
     classroomId?: string
   ): Promise<Submission[]> {
     let query = db.collection(this.collections.submissions)
-      .where('studentId', '==', studentId)
-      .where('isLatest', '==', true);
+      .where("studentId", "==", studentId)
+      .where("isLatest", "==", true);
 
     if (classroomId) {
-      query = query.where('classroomId', '==', classroomId);
+      query = query.where("classroomId", "==", classroomId);
     }
 
-    const snapshot = await query.orderBy('submittedAt', 'desc').get();
+    const snapshot = await query.orderBy("submittedAt", "desc").get();
     return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Submission));
   }
 
@@ -389,9 +452,9 @@ export class FirestoreRepository {
 
   async getGradesByClassroom(classroomId: string): Promise<Grade[]> {
     const snapshot = await db.collection(this.collections.grades)
-      .where('classroomId', '==', classroomId)
-      .where('isLatest', '==', true)
-      .orderBy('gradedAt', 'desc')
+      .where("classroomId", "==", classroomId)
+      .where("isLatest", "==", true)
+      .orderBy("gradedAt", "desc")
       .get();
 
     return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Grade));
@@ -434,9 +497,9 @@ export class FirestoreRepository {
 
   async getEnrollmentsByClassroom(classroomId: string): Promise<StudentEnrollment[]> {
     const snapshot = await db.collection(this.collections.enrollments)
-      .where('classroomId', '==', classroomId)
-      .where('status', '==', 'active')
-      .orderBy('name', 'asc')
+      .where("classroomId", "==", classroomId)
+      .where("status", "==", "active")
+      .orderBy("name", "asc")
       .get();
 
     return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudentEnrollment));
@@ -444,8 +507,8 @@ export class FirestoreRepository {
 
   async getEnrollmentsByStudent(studentId: string): Promise<StudentEnrollment[]> {
     const snapshot = await db.collection(this.collections.enrollments)
-      .where('studentId', '==', studentId)
-      .where('status', '==', 'active')
+      .where("studentId", "==", studentId)
+      .where("status", "==", "active")
       .get();
 
     return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudentEnrollment));
@@ -460,46 +523,71 @@ export class FirestoreRepository {
   }
 
   async archiveEnrollment(id: string): Promise<void> {
-    await this.updateEnrollment(id, { status: 'removed' });
+    await this.updateEnrollment(id, { status: "removed" });
   }
 
   // ============================================
   // Batch Operations
   // ============================================
 
+  /**
+   * Chunk array into batches of specified size (Firestore limit is 500)
+   */
+  private chunkArray<T>(array: T[], chunkSize: number = 500): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < array.length; i += chunkSize) {
+      chunks.push(array.slice(i, i + chunkSize));
+    }
+    return chunks;
+  }
+
   async batchCreate<T extends { id: string }>(
     collectionName: string,
     items: T[]
   ): Promise<void> {
-    const batch = db.batch();
+    if (items.length === 0) return;
     
-    for (const item of items) {
-      const docRef = db.collection(collectionName).doc(item.id);
-      batch.set(docRef, cleanForFirestore({
-        ...item,
-        createdAt: getCurrentTimestamp(),
-        updatedAt: getCurrentTimestamp()
-      }));
+    // Process in chunks of 500 (Firestore batch limit)
+    const chunks = this.chunkArray(items, 500);
+    
+    for (const chunk of chunks) {
+      const batch = db.batch();
+      
+      for (const item of chunk) {
+        const docRef = db.collection(collectionName).doc(item.id);
+        batch.set(docRef, cleanForFirestore({
+          ...item,
+          createdAt: getCurrentTimestamp(),
+          updatedAt: getCurrentTimestamp()
+        }));
+      }
+      
+      await batch.commit();
     }
-
-    await batch.commit();
   }
 
   async batchUpdate<T extends { id: string }>(
     collectionName: string,
     updates: Array<{ id: string; data: Partial<T> }>
   ): Promise<void> {
-    const batch = db.batch();
+    if (updates.length === 0) return;
     
-    for (const update of updates) {
-      const docRef = db.collection(collectionName).doc(update.id);
-      batch.update(docRef, cleanForFirestore({
-        ...update.data,
-        updatedAt: getCurrentTimestamp()
-      }));
+    // Process in chunks of 500 (Firestore batch limit)
+    const chunks = this.chunkArray(updates, 500);
+    
+    for (const chunk of chunks) {
+      const batch = db.batch();
+      
+      for (const update of chunk) {
+        const docRef = db.collection(collectionName).doc(update.id);
+        batch.update(docRef, cleanForFirestore({
+          ...update.data,
+          updatedAt: getCurrentTimestamp()
+        }));
+      }
+      
+      await batch.commit();
     }
-
-    await batch.commit();
   }
 
   async batchDelete(collectionName: string, ids: string[]): Promise<void> {
@@ -519,14 +607,14 @@ export class FirestoreRepository {
 
   async getUngradedSubmissions(classroomId?: string): Promise<Submission[]> {
     let query = db.collection(this.collections.submissions)
-      .where('status', 'in', ['submitted', 'draft'])
-      .where('isLatest', '==', true);
+      .where("status", "in", ["submitted", "draft"])
+      .where("isLatest", "==", true);
 
     if (classroomId) {
-      query = query.where('classroomId', '==', classroomId);
+      query = query.where("classroomId", "==", classroomId);
     }
 
-    const snapshot = await query.orderBy('submittedAt', 'asc').get();
+    const snapshot = await query.orderBy("submittedAt", "asc").get();
     return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Submission));
   }
 
@@ -536,38 +624,44 @@ export class FirestoreRepository {
   ): Promise<Array<Submission | Grade>> {
     // Get recent submissions
     const submissionsSnapshot = await db.collection(this.collections.submissions)
-      .where('classroomId', '==', classroomId)
-      .where('isLatest', '==', true)
-      .orderBy('submittedAt', 'desc')
+      .where("classroomId", "==", classroomId)
+      .where("isLatest", "==", true)
+      .orderBy("submittedAt", "desc")
       .limit(limitCount)
       .get();
 
     // Get recent grades
     const gradesSnapshot = await db.collection(this.collections.grades)
-      .where('classroomId', '==', classroomId)
-      .where('isLatest', '==', true)
-      .orderBy('gradedAt', 'desc')
+      .where("classroomId", "==", classroomId)
+      .where("isLatest", "==", true)
+      .orderBy("gradedAt", "desc")
       .limit(limitCount)
       .get();
 
-    const submissions = submissionsSnapshot.docs.map(doc => ({ 
-      ...doc.data(), 
-      id: doc.id,
-      type: 'submission' 
-    } as Submission & { type: string }));
+    const submissions = submissionsSnapshot.docs.map(doc => {
+      const submission = { 
+        ...doc.data(), 
+        id: doc.id,
+        type: "submission" 
+      } as Submission & { type: string };
+      return serializeTimestamps(submission);
+    });
 
-    const grades = gradesSnapshot.docs.map(doc => ({ 
-      ...doc.data(), 
-      id: doc.id,
-      type: 'grade'
-    } as Grade & { type: string }));
+    const grades = gradesSnapshot.docs.map(doc => {
+      const grade = { 
+        ...doc.data(), 
+        id: doc.id,
+        type: "grade"
+      } as Grade & { type: string };
+      return serializeTimestamps(grade);
+    });
 
     // Combine and sort by timestamp
     const combined = [...submissions, ...grades].sort((a, b) => {
-      const aTime = 'submittedAt' in a 
+      const aTime = "submittedAt" in a 
         ? (a as Submission).submittedAt 
         : (a as Grade).gradedAt;
-      const bTime = 'submittedAt' in b 
+      const bTime = "submittedAt" in b 
         ? (b as Submission).submittedAt 
         : (b as Grade).gradedAt;
       return bTime.getTime() - aTime.getTime();
@@ -586,7 +680,7 @@ export class FirestoreRepository {
     ]);
 
     const ungradedCount = submissions.filter(s => 
-      s.status === 'submitted' && !grades.find(g => g.submissionId === s.id)
+      s.status === "submitted" && !grades.find(g => g.submissionId === s.id)
     ).length;
 
     // Update classroom counts

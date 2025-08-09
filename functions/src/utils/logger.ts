@@ -3,6 +3,6 @@
  * Location: functions/src/utils/logger.ts
  */
 
-import * as functions from 'firebase-functions';
+import * as functions from "firebase-functions";
 
 export const logger = functions.logger;

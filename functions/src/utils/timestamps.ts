@@ -95,9 +95,9 @@ export function toAppTimestamp(value: FirestoreTimestampData): AppTimestamp | nu
   }
 
   // Serialized timestamp object
-  if (typeof value === 'object' && '_seconds' in value) {
+  if (typeof value === "object" && "_seconds" in value) {
     const obj = value as SerializedTimestamp;
-    if (typeof obj._seconds === 'number') {
+    if (typeof obj._seconds === "number") {
       return new admin.firestore.Timestamp(obj._seconds, obj._nanoseconds || 0);
     }
   }
@@ -108,7 +108,7 @@ export function toAppTimestamp(value: FirestoreTimestampData): AppTimestamp | nu
   }
 
   // ISO string
-  if (typeof value === 'string') {
+  if (typeof value === "string") {
     try {
       return admin.firestore.Timestamp.fromDate(new Date(value));
     } catch {
@@ -117,7 +117,7 @@ export function toAppTimestamp(value: FirestoreTimestampData): AppTimestamp | nu
   }
 
   // Unix timestamp (number)
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     try {
       return admin.firestore.Timestamp.fromMillis(value);
     } catch {
@@ -166,7 +166,7 @@ export function toISOString(timestamp: AppTimestamp): string {
  */
 export function processDocumentTimestamps<T extends Record<string, any>>(
   doc: T, 
-  timestampFields: string[] = ['createdAt', 'updatedAt', 'dueDate', 'submittedAt', 'gradedAt']
+  timestampFields: string[] = ["createdAt", "updatedAt", "dueDate", "submittedAt", "gradedAt"]
 ): T {
   const processed = { ...doc } as any;
 
@@ -200,7 +200,7 @@ export function processDocumentsTimestamps<T extends Record<string, any>>(
  */
 export function serializeDocumentTimestamps<T extends Record<string, any>>(
   doc: T,
-  timestampFields: string[] = ['createdAt', 'updatedAt', 'dueDate', 'submittedAt', 'gradedAt']
+  timestampFields: string[] = ["createdAt", "updatedAt", "dueDate", "submittedAt", "gradedAt"]
 ): T {
   const serialized = { ...doc } as any;
 
@@ -228,10 +228,10 @@ export function isValidTimestamp(value: any): value is AppTimestamp {
  * Check if a value is a serialized timestamp
  */
 export function isSerializedTimestamp(value: any): value is SerializedTimestamp {
-  return typeof value === 'object' && 
+  return typeof value === "object" && 
          value !== null && 
-         typeof value._seconds === 'number' && 
-         typeof value._nanoseconds === 'number';
+         typeof value._seconds === "number" && 
+         typeof value._nanoseconds === "number";
 }
 
 // ============================================

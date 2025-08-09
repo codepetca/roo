@@ -9,4 +9,4 @@
  */
 
 // Re-export everything from the new modular AI structure
-export * from './ai/index';
+export * from "./ai/index";

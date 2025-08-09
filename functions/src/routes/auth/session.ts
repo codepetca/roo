@@ -20,7 +20,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
       res.status(401).json({
         error: "Unauthorized",
         message: "No valid authorization token provided"
@@ -28,7 +28,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(" ")[1];
     const auth = getAuth();
     
     // Verify the token
@@ -52,7 +52,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
       uid: decodedToken.uid,
       email: decodedToken.email,
       displayName: profile?.displayName || decodedToken.name,
-      role: profile?.role || decodedToken.role || 'student',
+      role: profile?.role || decodedToken.role || "student",
       emailVerified: decodedToken.email_verified,
       photoURL: profile?.photoURL || decodedToken.picture
     });
@@ -66,7 +66,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
   } catch (error: any) {
     logger.error("Get current user error", { error: error.message, stack: error.stack });
     
-    if (error.code === 'auth/id-token-expired') {
+    if (error.code === "auth/id-token-expired") {
       res.status(401).json({
         error: "Token expired",
         message: "Your session has expired. Please log in again."
@@ -74,7 +74,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
       return;
     }
 
-    if (error.code === 'auth/id-token-revoked') {
+    if (error.code === "auth/id-token-revoked") {
       res.status(401).json({
         error: "Token revoked",
         message: "Your session has been revoked. Please log in again."
@@ -82,7 +82,7 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
       return;
     }
 
-    if (error.code === 'auth/invalid-id-token') {
+    if (error.code === "auth/invalid-id-token") {
       res.status(401).json({
         error: "Invalid token",
         message: "Invalid authentication token provided."

@@ -26,7 +26,7 @@ export const sheetAssignmentSchema = z.object({
   
   // Column F: Max Points
   maxPoints: z.union([z.string(), z.number()]).transform(val => {
-    if (typeof val === 'number') return val;
+    if (typeof val === "number") return val;
     const num = parseInt(val);
     return isNaN(num) ? undefined : num;
   }).optional(),
@@ -76,7 +76,7 @@ export const sheetSubmissionSchema = z.object({
   
   // Column K: Max Points
   maxPoints: z.union([z.string(), z.number()]).transform(val => {
-    if (typeof val === 'number') return val;
+    if (typeof val === "number") return val;
     const num = parseInt(val);
     return isNaN(num) ? 100 : num;
   }),
@@ -95,7 +95,7 @@ export const sheetSubmissionSchema = z.object({
   
   // Column P: Is Quiz
   isQuiz: z.union([z.string(), z.boolean()]).transform(val => {
-    if (typeof val === 'boolean') return val;
+    if (typeof val === "boolean") return val;
     return val === "TRUE" || val === "true";
   }),
   

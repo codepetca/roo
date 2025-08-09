@@ -24,7 +24,8 @@
       "Bash(jq:*)",
       "Bash(python3 scripts/anonymize-snapshot.py:*)",
       "Bash(curl:*)",
-      "Bash(firebase functions:list:*)"
+      "Bash(firebase functions:list:*)",
+      "Bash(firebase deploy:*)"
     ],
     "deny": []
   }

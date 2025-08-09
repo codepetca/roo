@@ -240,7 +240,7 @@ export async function getUserFromRequest(req: Request): Promise<{ uid: string; e
       uid: decodedToken.uid,
       email: decodedToken.email || "",
       role,
-      displayName: decodedToken.name || decodedToken.email?.split('@')[0]
+      displayName: decodedToken.name || decodedToken.email?.split("@")[0]
     };
   } catch (error) {
     console.error("Failed to verify Firebase token:", error);

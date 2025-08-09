@@ -9,14 +9,8 @@ import { z } from 'zod';
  * for clean transformation and data management.
  */
 
-// Helper for date/timestamp handling
-const dateTimeSchema = z.union([
-  z.string().datetime(),
-  z.date()
-]).transform(val => {
-  if (typeof val === 'string') return new Date(val);
-  return val;
-});
+// Helper for date/timestamp handling - expects ISO strings from API
+const dateTimeSchema = z.string().datetime().transform(val => new Date(val));
 
 // Base entity schema with common fields
 const baseEntitySchema = z.object({
@@ -288,6 +282,32 @@ export interface AssignmentWithStats extends Assignment {
 /**
  * Dashboard aggregation types
  */
+
+// Recent activity schema with proper union types
+export const recentActivitySchema = z.object({
+  type: z.enum(['submission', 'grade', 'assignment']),
+  timestamp: dateTimeSchema,
+  details: z.record(z.unknown())
+});
+
+// Teacher dashboard stats schema
+export const teacherDashboardStatsSchema = z.object({
+  totalStudents: z.number(),
+  totalAssignments: z.number(),
+  ungradedSubmissions: z.number(),
+  averageGrade: z.number().optional()
+});
+
+// Complete teacher dashboard schema
+export const teacherDashboardSchema = z.object({
+  teacher: teacherSchema,
+  classrooms: z.array(classroomSchema.extend({
+    assignments: z.array(assignmentSchema)
+  })),
+  recentActivity: z.array(recentActivitySchema),
+  stats: teacherDashboardStatsSchema
+});
+
 export interface TeacherDashboard {
   teacher: Teacher;
   classrooms: ClassroomWithAssignments[];

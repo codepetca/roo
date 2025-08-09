@@ -8,14 +8,14 @@
  * This fixes the ERR_INVALID_THIS error that can occur with some googleapis versions
  */
 export function ensureURLSearchParamsCompatibility(): void {
-  if (typeof globalThis !== 'undefined' && !globalThis.URLSearchParams) {
+  if (typeof globalThis !== "undefined" && !globalThis.URLSearchParams) {
     // Import Node.js URLSearchParams if not available globally
-    const { URLSearchParams } = require('url');
+    const { URLSearchParams } = require("url");
     globalThis.URLSearchParams = URLSearchParams;
   }
   
-  if (typeof global !== 'undefined' && !global.URLSearchParams) {
-    const { URLSearchParams } = require('url');
+  if (typeof global !== "undefined" && !global.URLSearchParams) {
+    const { URLSearchParams } = require("url");
     global.URLSearchParams = URLSearchParams;
   }
 }

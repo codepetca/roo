@@ -30,6 +30,8 @@ import {
 
 // Import new core schemas - using TypeScript source files to avoid CommonJS issues
 import {
+	teacherSchema,
+	teacherDashboardSchema,
 	classroomSchema,
 	assignmentSchema,
 	submissionSchema,
@@ -51,6 +53,7 @@ import {
 	classroomSnapshotSchema,
 	type ClassroomSnapshot
 } from '@shared/schemas/classroom-snapshot';
+
 
 /**
  * Type-safe API methods with runtime validation
@@ -622,36 +625,8 @@ export const api = {
 		);
 	},
 
-	// Teacher dashboard endpoints
+	// Teacher dashboard endpoints  
 	async getTeacherDashboard(): Promise<TeacherDashboard> {
-		const teacherDashboardSchema = z.object({
-			teacher: z.object({
-				id: z.string(),
-				email: z.string(),
-				name: z.string(),
-				role: z.literal('teacher'),
-				classroomIds: z.array(z.string()),
-				totalStudents: z.number(),
-				totalClassrooms: z.number(),
-				createdAt: z.date(),
-				updatedAt: z.date()
-			}),
-			classrooms: z.array(classroomSchema.extend({
-				assignments: z.array(assignmentSchema)
-			})),
-			recentActivity: z.array(z.object({
-				type: z.string(),
-				timestamp: z.date(),
-				details: z.record(z.unknown())
-			})),
-			stats: z.object({
-				totalStudents: z.number(),
-				totalAssignments: z.number(),
-				ungradedSubmissions: z.number(),
-				averageGrade: z.number().optional()
-			})
-		});
-
 		return typedApiRequest('/teacher/dashboard', {}, teacherDashboardSchema);
 	},
 
