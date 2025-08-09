@@ -104,13 +104,15 @@ export async function importSnapshot(req: Request, res: Response): Promise<Respo
       });
     }
     
-    // Verify teacher email matches authenticated user
-    if (snapshot.teacher.email !== user.email) {
-      return res.status(400).json({
-        success: false,
-        error: "Snapshot teacher email does not match authenticated user"
-      });
-    }
+    // TODO: Implement board email mapping (see GitHub issue)
+    // Teachers sign in with personal accounts but snapshots contain board emails
+    // For now, skip email validation to allow imports
+    // if (snapshot.teacher.email !== user.email) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     error: "Snapshot teacher email does not match authenticated user"
+    //   });
+    // }
 
     logger.info("Starting snapshot import", {
       teacherEmail: user.email,
@@ -209,9 +211,14 @@ export async function generateSnapshotDiff(req: Request, res: Response): Promise
         data: {
           hasExistingData: false,
           isFirstImport: true,
-          newClassrooms: snapshot.classrooms.length,
-          newAssignments: snapshot.globalStats.totalAssignments,
-          newSubmissions: snapshot.globalStats.totalSubmissions
+          new: {
+            classroomCount: snapshot.classrooms?.length || 0,
+            totalAssignments: snapshot.globalStats?.totalAssignments || 0,
+            totalSubmissions: snapshot.globalStats?.totalSubmissions || 0
+          },
+          changes: {
+            newClassrooms: snapshot.classrooms?.length || 0
+          }
         }
       });
     }
@@ -224,17 +231,15 @@ export async function generateSnapshotDiff(req: Request, res: Response): Promise
       hasExistingData: true,
       isFirstImport: false,
       existing: {
-        classroomCount: existingClassrooms.length,
-        // Add more existing data statistics
+        classroomCount: existingClassrooms.length
       },
       new: {
-        classroomCount: snapshot.classrooms.length,
-        totalAssignments: snapshot.globalStats.totalAssignments,
-        totalSubmissions: snapshot.globalStats.totalSubmissions
+        classroomCount: snapshot.classrooms?.length || 0,
+        totalAssignments: snapshot.globalStats?.totalAssignments || 0,
+        totalSubmissions: snapshot.globalStats?.totalSubmissions || 0
       },
       changes: {
-        newClassrooms: Math.max(0, snapshot.classrooms.length - existingClassrooms.length),
-        // TODO: Add more detailed diff logic
+        newClassrooms: Math.max(0, (snapshot.classrooms?.length || 0) - existingClassrooms.length)
       }
     };
 

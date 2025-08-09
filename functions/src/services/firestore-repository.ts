@@ -22,6 +22,51 @@ import * as admin from 'firebase-admin';
  * Designed to be compatible with future Firebase DataConnect migration.
  */
 
+/**
+ * Remove undefined values from an object to prepare it for Firestore
+ * Firestore doesn't accept undefined values, so we need to clean them
+ */
+export function cleanForFirestore<T extends Record<string, any>>(obj: T): T {
+  const cleaned = {} as T;
+  
+  for (const key in obj) {
+    const value = obj[key];
+    
+    if (value === undefined) {
+      // Skip undefined values
+      continue;
+    } else if (
+      value !== null && 
+      typeof value === 'object' && 
+      !Array.isArray(value) && 
+      !isTimestampOrDate(value)
+    ) {
+      // Recursively clean nested objects (but not Dates or Firestore Timestamps)
+      cleaned[key] = cleanForFirestore(value);
+    } else if (Array.isArray(value)) {
+      // Clean arrays (remove undefined elements)
+      cleaned[key] = value.filter(item => item !== undefined).map(item => 
+        (item !== null && typeof item === 'object' && !isTimestampOrDate(item)) 
+          ? cleanForFirestore(item) 
+          : item
+      ) as any;
+    } else {
+      // Keep all other values (including null, which Firestore accepts)
+      cleaned[key] = value;
+    }
+  }
+  
+  return cleaned;
+}
+
+/**
+ * Check if a value is a Date or Firestore Timestamp
+ */
+function isTimestampOrDate(value: any): boolean {
+  return value instanceof Date || 
+         (value && typeof value.toDate === 'function' && typeof value.seconds === 'number');
+}
+
 export class FirestoreRepository {
   // Collection names
   private readonly collections = {
@@ -50,11 +95,11 @@ export class FirestoreRepository {
       updatedAt: new Date()
     };
 
-    await teacherRef.set({
+    await teacherRef.set(cleanForFirestore({
       ...teacher,
       createdAt: getCurrentTimestamp(),
       updatedAt: getCurrentTimestamp()
-    });
+    }));
 
     return teacher;
   }
@@ -73,10 +118,10 @@ export class FirestoreRepository {
 
   async updateTeacher(id: string, updates: Partial<Teacher>): Promise<void> {
     const teacherRef = db.collection(this.collections.teachers).doc(id);
-    await teacherRef.update({
+    await teacherRef.update(cleanForFirestore({
       ...updates,
       updatedAt: getCurrentTimestamp()
-    });
+    }));
   }
 
   // ============================================
@@ -98,11 +143,11 @@ export class FirestoreRepository {
       updatedAt: new Date()
     };
 
-    await classroomRef.set({
+    await classroomRef.set(cleanForFirestore({
       ...classroom,
       createdAt: getCurrentTimestamp(),
       updatedAt: getCurrentTimestamp()
-    });
+    }));
 
     return classroom;
   }
@@ -129,10 +174,10 @@ export class FirestoreRepository {
 
   async updateClassroom(id: string, updates: Partial<Classroom>): Promise<void> {
     const classroomRef = db.collection(this.collections.classrooms).doc(id);
-    await classroomRef.update({
+    await classroomRef.update(cleanForFirestore({
       ...updates,
       updatedAt: getCurrentTimestamp()
-    });
+    }));
   }
 
   // ============================================
@@ -153,11 +198,11 @@ export class FirestoreRepository {
       updatedAt: new Date()
     };
 
-    await assignmentRef.set({
+    await assignmentRef.set(cleanForFirestore({
       ...assignment,
       createdAt: getCurrentTimestamp(),
       updatedAt: getCurrentTimestamp()
-    });
+    }));
 
     return assignment;
   }
@@ -184,10 +229,10 @@ export class FirestoreRepository {
 
   async updateAssignment(id: string, updates: Partial<Assignment>): Promise<void> {
     const assignmentRef = db.collection(this.collections.assignments).doc(id);
-    await assignmentRef.update({
+    await assignmentRef.update(cleanForFirestore({
       ...updates,
       updatedAt: getCurrentTimestamp()
-    });
+    }));
   }
 
   // ============================================
@@ -207,11 +252,11 @@ export class FirestoreRepository {
       updatedAt: new Date()
     };
 
-    await submissionRef.set({
+    await submissionRef.set(cleanForFirestore({
       ...submission,
       createdAt: getCurrentTimestamp(),
       updatedAt: getCurrentTimestamp()
-    });
+    }));
 
     return submission;
   }
@@ -260,10 +305,10 @@ export class FirestoreRepository {
 
   async updateSubmission(id: string, updates: Partial<Submission>): Promise<void> {
     const submissionRef = db.collection(this.collections.submissions).doc(id);
-    await submissionRef.update({
+    await submissionRef.update(cleanForFirestore({
       ...updates,
       updatedAt: getCurrentTimestamp()
-    });
+    }));
   }
 
   async createSubmissionVersion(
@@ -273,10 +318,10 @@ export class FirestoreRepository {
     return await db.runTransaction(async (transaction) => {
       // Mark existing as not latest
       const existingRef = db.collection(this.collections.submissions).doc(existingSubmission.id);
-      transaction.update(existingRef, {
+      transaction.update(existingRef, cleanForFirestore({
         isLatest: false,
         updatedAt: getCurrentTimestamp()
-      });
+      }));
 
       // Create new version
       const newVersion = existingSubmission.version + 1;
@@ -294,11 +339,11 @@ export class FirestoreRepository {
         updatedAt: new Date()
       };
 
-      transaction.set(newRef, {
+      transaction.set(newRef, cleanForFirestore({
         ...newSubmission,
         createdAt: getCurrentTimestamp(),
         updatedAt: getCurrentTimestamp()
-      });
+      }));
 
       return newSubmission;
     });
@@ -322,11 +367,11 @@ export class FirestoreRepository {
       updatedAt: new Date()
     };
 
-    await gradeRef.set({
+    await gradeRef.set(cleanForFirestore({
       ...grade,
       createdAt: getCurrentTimestamp(),
       updatedAt: getCurrentTimestamp()
-    });
+    }));
 
     return grade;
   }
@@ -354,10 +399,10 @@ export class FirestoreRepository {
 
   async updateGrade(id: string, updates: Partial<Grade>): Promise<void> {
     const gradeRef = db.collection(this.collections.grades).doc(id);
-    await gradeRef.update({
+    await gradeRef.update(cleanForFirestore({
       ...updates,
       updatedAt: getCurrentTimestamp()
-    });
+    }));
   }
 
   // ============================================
@@ -367,11 +412,11 @@ export class FirestoreRepository {
   async createEnrollment(enrollment: StudentEnrollment): Promise<StudentEnrollment> {
     const enrollmentRef = db.collection(this.collections.enrollments).doc(enrollment.id);
     
-    await enrollmentRef.set({
+    await enrollmentRef.set(cleanForFirestore({
       ...enrollment,
       createdAt: getCurrentTimestamp(),
       updatedAt: getCurrentTimestamp()
-    });
+    }));
 
     return enrollment;
   }
@@ -408,10 +453,10 @@ export class FirestoreRepository {
 
   async updateEnrollment(id: string, updates: Partial<StudentEnrollment>): Promise<void> {
     const enrollmentRef = db.collection(this.collections.enrollments).doc(id);
-    await enrollmentRef.update({
+    await enrollmentRef.update(cleanForFirestore({
       ...updates,
       updatedAt: getCurrentTimestamp()
-    });
+    }));
   }
 
   async archiveEnrollment(id: string): Promise<void> {
@@ -430,11 +475,11 @@ export class FirestoreRepository {
     
     for (const item of items) {
       const docRef = db.collection(collectionName).doc(item.id);
-      batch.set(docRef, {
+      batch.set(docRef, cleanForFirestore({
         ...item,
         createdAt: getCurrentTimestamp(),
         updatedAt: getCurrentTimestamp()
-      });
+      }));
     }
 
     await batch.commit();
@@ -448,10 +493,10 @@ export class FirestoreRepository {
     
     for (const update of updates) {
       const docRef = db.collection(collectionName).doc(update.id);
-      batch.update(docRef, {
+      batch.update(docRef, cleanForFirestore({
         ...update.data,
         updatedAt: getCurrentTimestamp()
-      });
+      }));
     }
 
     await batch.commit();

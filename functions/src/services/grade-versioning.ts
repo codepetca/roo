@@ -5,6 +5,7 @@ import {
 } from '@shared/schemas/core';
 import { StableIdGenerator, calculatePercentage } from '@shared/schemas/transformers';
 import { db, getCurrentTimestamp } from '../config/firebase';
+import { cleanForFirestore } from './firestore-repository';
 import * as admin from 'firebase-admin';
 
 /**
@@ -127,18 +128,18 @@ export class GradeVersioningService {
 
       // Mark existing grade as not latest
       const existingRef = db.collection(this.gradesCollection).doc(existingGrade.id);
-      batch.update(existingRef, {
+      batch.update(existingRef, cleanForFirestore({
         isLatest: false,
         updatedAt: getCurrentTimestamp()
-      });
+      }));
 
       // Archive existing grade to history
       const historyRef = db.collection(this.gradeHistoryCollection).doc(existingGrade.id);
-      batch.set(historyRef, {
+      batch.set(historyRef, cleanForFirestore({
         ...existingGrade,
         versionReason: 'Superseded by new version',
         archivedAt: getCurrentTimestamp()
-      });
+      }));
     }
 
     // Create new grade
@@ -156,21 +157,21 @@ export class GradeVersioningService {
       updatedAt: new Date()
     };
 
-    batch.set(gradeRef, {
+    batch.set(gradeRef, cleanForFirestore({
       ...newGrade,
       createdAt: getCurrentTimestamp(),
       updatedAt: getCurrentTimestamp(),
       versionReason: reason,
       previousGradeId
-    });
+    }));
 
     // Update submission with grade reference
     const submissionRef = db.collection('submissions').doc(submission.id);
-    batch.update(submissionRef, {
+    batch.update(submissionRef, cleanForFirestore({
       gradeId: gradeId,
       status: 'graded',
       updatedAt: getCurrentTimestamp()
-    });
+    }));
 
     await batch.commit();
     return newGrade;
