@@ -37,6 +37,7 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
     logger.info("Loading teacher dashboard", { teacherId: user.uid });
 
     // Get or create user profile
+    logger.info("Dashboard step 1: Getting user profile", { uid: user.uid });
     let userData = await repository.getUserById(user.uid);
     if (!userData) {
       // Create user profile if it doesn't exist
@@ -52,8 +53,12 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
         createdAt: getCurrentTimestamp(),
         updatedAt: getCurrentTimestamp()
       };
+      logger.info("Dashboard step 2: Creating user profile", { userDoc });
       await db.collection("users").doc(user.uid).set(userDoc);
       userData = { ...userDoc, id: user.uid };
+      logger.info("Dashboard step 3: User profile created", { userData });
+    } else {
+      logger.info("Dashboard step 2: User profile found", { userData });
     }
 
     // Get school email from teacherData if not in main user object
@@ -80,7 +85,9 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
     }
 
     // Get teacher's classrooms with assignments
+    logger.info("Dashboard step 4: Getting classrooms", { teacherEmail: userData.email });
     const classrooms = await repository.getClassroomsByTeacher(userData.email);
+    logger.info("Dashboard step 5: Classrooms retrieved", { classroomCount: classrooms.length, classrooms: classrooms.map(c => ({ id: c.id, name: c.name })) });
     const classroomsWithAssignments: ClassroomWithAssignments[] = [];
     
     // Calculate global statistics

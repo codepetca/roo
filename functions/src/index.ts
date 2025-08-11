@@ -37,7 +37,7 @@ import { validateSnapshot, importSnapshot, getImportHistory, generateSnapshotDif
 import { getUserFromRequest } from "./middleware/validation";
 import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
-import { getUserProfile, checkUserProfileExists } from "./routes/users";
+import { getUserProfile, checkUserProfileExists, updateSchoolEmail } from "./routes/users";
 import { sendPasscode, verifyPasscode, resetStudentAuth, deleteUser, setupTeacherProfile } from "./routes/auth";
 import { debugSheetsPermissions } from "./routes/debug";
 import { getServiceAccountInfo, testSheetAccess } from "./routes/webhook-debug";
@@ -306,6 +306,9 @@ export const api = onRequest(
       }
       if (method === "GET" && path === "/users/profile/exists") {
         await checkUserProfileExists(request, response); return;
+      }
+      if (method === "PATCH" && path === "/users/profile/school-email") {
+        await updateSchoolEmail(request, response); return;
       }
 
       // Webhook routes  

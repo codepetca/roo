@@ -5,7 +5,8 @@
 
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
-import { handleRouteError, sendApiResponse, validateData } from "../middleware/validation";
+import { z } from "zod";
+import { handleRouteError, sendApiResponse, validateData, getUserFromRequest } from "../middleware/validation";
 import { userDomainSchema } from "../schemas/domain";
 // NOTE: userDomainToDto removed - user DTO transformations no longer needed
 import { db, getCurrentTimestamp } from "../config/firebase";
@@ -128,5 +129,63 @@ export async function checkUserProfileExists(req: Request, res: Response) {
       true,
       "Authentication failed or profile not found"
     );
+  }
+}
+
+/**
+ * Update user's school email
+ * Location: functions/src/routes/users.ts:134
+ * Route: PATCH /users/profile/school-email
+ */
+export async function updateSchoolEmail(req: Request, res: Response) {
+  try {
+    // Validate request body
+    const { schoolEmail } = validateData(z.object({
+      schoolEmail: z.string().email().min(1, "School email is required")
+    }), req.body);
+
+    // Get authenticated user
+    const user = await getUserFromRequest(req);
+    if (!user) {
+      return sendApiResponse(
+        res,
+        { error: "Authentication required" },
+        false,
+        "User authentication failed"
+      );
+    }
+
+    // Check if user profile exists
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    if (!userDoc.exists) {
+      return sendApiResponse(
+        res,
+        { error: "User profile not found" },
+        false,
+        "User profile must be created first"
+      );
+    }
+
+    // Update school email
+    await db.collection("users").doc(user.uid).update({
+      schoolEmail,
+      updatedAt: getCurrentTimestamp()
+    });
+
+    logger.info("School email updated", { 
+      uid: user.uid,
+      email: user.email,
+      schoolEmail
+    });
+
+    sendApiResponse(
+      res,
+      { success: true, schoolEmail },
+      true,
+      "School email updated successfully"
+    );
+
+  } catch (error) {
+    handleRouteError(error, req, res);
   }
 }

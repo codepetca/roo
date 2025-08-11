@@ -224,7 +224,26 @@ export async function getUserFromRequest(req: Request): Promise<{ uid: string; e
         const userDoc = await db.collection("users").doc(decodedToken.uid).get();
         if (userDoc.exists) {
           const userData = userDoc.data();
-          role = userData?.role || "student";
+          const firestoreRole = userData?.role || "student";
+          
+          console.info("Found existing user profile", {
+            uid: decodedToken.uid,
+            email: decodedToken.email,
+            firestoreRole,
+            userDataKeys: Object.keys(userData || {})
+          });
+          
+          // For teacher@test.com, override incorrect role if it exists
+          if (decodedToken.email === "teacher@test.com" && firestoreRole !== "teacher") {
+            console.warn("Correcting role for teacher@test.com from", firestoreRole, "to teacher");
+            role = "teacher";
+            
+            // Update the profile with correct role
+            await db.collection("users").doc(decodedToken.uid).update({ role: "teacher" });
+            console.info("Updated user profile with correct teacher role");
+          } else {
+            role = firestoreRole;
+          }
         } else {
           // User profile doesn't exist - infer role from email and let endpoints handle profile creation
           console.warn("User profile not found for UID:", decodedToken.uid, "- inferring role from email");

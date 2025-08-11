@@ -140,15 +140,20 @@ export class SnapshotProcessor {
    * Process teacher entity
    */
   private async processTeacher(teacherInput: any, email: string): Promise<void> {
+    // Skip teacher creation - users are now created through authentication flow
+    // Just update existing teacher data if found
     const existingTeacher = await this.repository.getTeacherByEmail(email);
     
-    if (!existingTeacher) {
-      await this.repository.createTeacher(teacherInput);
-    } else {
+    if (existingTeacher) {
       await this.repository.updateTeacher(existingTeacher.id, {
         ...teacherInput,
         totalClassrooms: teacherInput.classroomIds.length
       });
+      logger.info("Updated existing teacher profile", { teacherEmail: email });
+    } else {
+      logger.info("Teacher profile not found, skipping teacher processing", { teacherEmail: email });
+      // Teacher profile should already exist from authentication flow
+      // If it doesn't exist, it will be handled by other endpoints
     }
   }
 

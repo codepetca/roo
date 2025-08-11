@@ -400,6 +400,25 @@ export const api = {
 		return result.data;
 	},
 
+	async updateSchoolEmail(schoolEmail: string): Promise<{
+		success: boolean;
+		schoolEmail: string;
+		message: string;
+	}> {
+		return typedApiRequest(
+			'/users/profile/school-email',
+			{
+				method: 'PATCH',
+				body: JSON.stringify({ schoolEmail })
+			},
+			z.object({
+				success: z.boolean(),
+				schoolEmail: z.string(),
+				message: z.string()
+			})
+		);
+	},
+
 	async sendPasscode(data: { email: string }): Promise<{
 		email: string;
 		sent: boolean;

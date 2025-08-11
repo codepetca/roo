@@ -227,6 +227,13 @@ export class FirestoreRepository {
     // Prefer schoolEmail if available, otherwise use personal email
     const teacherEmail = user?.schoolEmail || userEmail;
     
+    console.log("FirestoreRepository: getClassroomsByTeacher debug", {
+      userEmail,
+      user: user ? { id: user.id, email: user.email, schoolEmail: user.schoolEmail } : null,
+      teacherEmail,
+      queryField: "teacherId"
+    });
+    
     // Query classrooms by the appropriate email
     const snapshot = await db.collection(this.collections.classrooms)
       .where("teacherId", "==", teacherEmail)
@@ -236,6 +243,12 @@ export class FirestoreRepository {
     const classrooms = snapshot.docs.map(doc => {
       const classroom = { ...doc.data(), id: doc.id } as Classroom;
       return serializeTimestamps(classroom);
+    });
+
+    console.log("FirestoreRepository: getClassroomsByTeacher results", {
+      teacherEmail,
+      queryResultCount: classrooms.length,
+      classroomIds: classrooms.map(c => ({ id: c.id, name: c.name, teacherId: c.teacherId }))
     });
 
     return classrooms;
