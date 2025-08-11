@@ -8,11 +8,8 @@
  * @refactoring Split into: signup.ts + session.ts + passcode.ts
  */
 
-// User registration and profile management
-export {
-  signup,
-  createOrUpdateProfile
-} from "./signup";
+// NOTE: User registration now handled by Firebase Auth SDK + createProfileForExistingUser callable function
+// signup.ts deleted - functionality replaced with unified callable function
 
 // Session and user information
 export {
@@ -30,3 +27,8 @@ export {
 export {
   deleteUser
 } from "./delete";
+
+// Teacher profile setup (for testing and onboarding)
+export {
+  setupTeacherProfile
+} from "./setup-teacher-profile";

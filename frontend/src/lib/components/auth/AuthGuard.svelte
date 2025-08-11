@@ -7,13 +7,15 @@ Location: frontend/src/lib/components/auth/AuthGuard.svelte
 	import { page } from '$app/stores';
 	import { auth } from '$lib/stores/auth.svelte';
 	import { LoadingSpinner } from '$lib/components/ui';
+	import type { Snippet } from 'svelte';
 
 	// Props
 	interface Props {
 		requiredRole?: 'teacher' | 'student';
+		children?: Snippet;
 	}
 
-	let { requiredRole }: Props = $props();
+	let { requiredRole, children }: Props = $props();
 
 	// Reactive state
 	let loading = $state(true);
@@ -65,7 +67,7 @@ Location: frontend/src/lib/components/auth/AuthGuard.svelte
 	</div>
 {:else if auth.isAuthenticated() && (!requiredRole || auth.user?.role === requiredRole)}
 	<!-- Render protected content -->
-	<slot />
+	{@render children?.()}
 {:else}
 	<!-- Fallback - should not normally be reached due to redirects -->
 	<div class="flex min-h-screen items-center justify-center bg-gray-50">

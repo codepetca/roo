@@ -1,9 +1,15 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-	import { httpsCallable } from 'firebase/functions';
-	import { firebaseAuth, firebaseFunctions } from '$lib/firebase';
+	import { firebaseAuth } from '$lib/firebase';
+	import { api } from '$lib/api';
 	import { Button, Alert, LoadingSpinner } from '$lib/components/ui';
+
+	interface Props {
+		userRole?: 'teacher' | 'student';
+	}
+
+	let { userRole = 'student' }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		success: {
@@ -16,7 +22,8 @@
 	let password = '';
 	let confirmPassword = '';
 	let displayName = '';
-	let role: 'teacher' | 'student' = 'student';
+	let schoolEmail = '';
+	let role: 'teacher' | 'student' = userRole;
 	let loading = false;
 	let error = '';
 
@@ -28,6 +35,11 @@
 
 		if (password.length < 6) {
 			error = 'Password must be at least 6 characters';
+			return;
+		}
+
+		if (role === 'teacher' && !schoolEmail.trim()) {
+			error = 'School email is required for teachers';
 			return;
 		}
 
@@ -46,12 +58,16 @@
 
 			// Create user profile with the specified role using callable function
 			try {
-				const createProfile = httpsCallable(firebaseFunctions, 'createProfileForExistingUser');
-				await createProfile({ uid: user.uid, role: role });
+				await api.createProfile({
+					uid: user.uid,
+					role: role,
+					schoolEmail: role === 'teacher' ? schoolEmail.trim() : undefined,
+					displayName: displayName || undefined
+				});
 				console.log('User profile created with role:', role);
 			} catch (roleError) {
 				console.warn('Failed to set user role, but account was created successfully:', roleError);
-				// Don't fail the whole signup for this - the Auth trigger will create a basic profile
+				// Don't fail the whole signup for this
 			}
 
 			// Dispatch success event
@@ -102,57 +118,59 @@
 	{/if}
 
 	<form on:submit|preventDefault={handleSubmit} class="space-y-4">
-		<!-- Role Selection -->
-		<div>
-			<label class="mb-3 block text-sm font-medium text-gray-700"> I am a: </label>
-			<div class="grid grid-cols-2 gap-3">
-				<label class="relative">
-					<input
-						type="radio"
-						bind:group={role}
-						value="teacher"
-						name="role"
-						class="sr-only"
-						disabled={loading}
-					/>
-					<div
-						class="flex cursor-pointer items-center rounded-lg border-2 p-4 transition-colors"
-						class:border-blue-500={role === 'teacher'}
-						class:bg-blue-50={role === 'teacher'}
-						class:border-gray-300={role !== 'teacher'}
-						class:hover:border-gray-400={role !== 'teacher' && !loading}
-					>
-						<div class="flex-1 text-center">
-							<div class="text-lg font-medium text-gray-900">Teacher</div>
-							<div class="text-sm text-gray-500">Create and grade assignments</div>
+		<!-- Role Selection (only if userRole prop is not set) -->
+		{#if !userRole || userRole === undefined}
+			<div>
+				<label class="mb-3 block text-sm font-medium text-gray-700"> I am a: </label>
+				<div class="grid grid-cols-2 gap-3">
+					<label class="relative">
+						<input
+							type="radio"
+							bind:group={role}
+							value="teacher"
+							name="role"
+							class="sr-only"
+							disabled={loading}
+						/>
+						<div
+							class="flex cursor-pointer items-center rounded-lg border-2 p-4 transition-colors"
+							class:border-blue-500={role === 'teacher'}
+							class:bg-blue-50={role === 'teacher'}
+							class:border-gray-300={role !== 'teacher'}
+							class:hover:border-gray-400={role !== 'teacher' && !loading}
+						>
+							<div class="flex-1 text-center">
+								<div class="text-lg font-medium text-gray-900">Teacher</div>
+								<div class="text-sm text-gray-500">Create and grade assignments</div>
+							</div>
 						</div>
-					</div>
-				</label>
+					</label>
 
-				<label class="relative">
-					<input
-						type="radio"
-						bind:group={role}
-						value="student"
-						name="role"
-						class="sr-only"
-						disabled={loading}
-					/>
-					<div
-						class="flex cursor-pointer items-center rounded-lg border-2 p-4 transition-colors"
-						class:border-blue-500={role === 'student'}
-						class:bg-blue-50={role === 'student'}
-						class:border-gray-300={role !== 'student'}
-						class:hover:border-gray-400={role !== 'student' && !loading}
-					>
-						<div class="flex-1 text-center">
-							<div class="text-lg font-medium text-gray-900">Student</div>
-							<div class="text-sm text-gray-500">Submit assignments for grading</div>
+					<label class="relative">
+						<input
+							type="radio"
+							bind:group={role}
+							value="student"
+							name="role"
+							class="sr-only"
+							disabled={loading}
+						/>
+						<div
+							class="flex cursor-pointer items-center rounded-lg border-2 p-4 transition-colors"
+							class:border-blue-500={role === 'student'}
+							class:bg-blue-50={role === 'student'}
+							class:border-gray-300={role !== 'student'}
+							class:hover:border-gray-400={role !== 'student' && !loading}
+						>
+							<div class="flex-1 text-center">
+								<div class="text-lg font-medium text-gray-900">Student</div>
+								<div class="text-sm text-gray-500">Submit assignments for grading</div>
+							</div>
 						</div>
-					</div>
-				</label>
+					</label>
+				</div>
 			</div>
-		</div>
+		{/if}
 
 		<!-- Email -->
 		<div>
@@ -184,6 +202,25 @@
 				placeholder="How should we address you?"
 			/>
 		</div>
+
+		<!-- School Email (Teachers only) -->
+		{#if role === 'teacher'}
+			<div>
+				<label for="signup-schoolEmail" class="block text-sm font-medium text-gray-700">
+					School Email <span class="text-red-500">*</span>
+				</label>
+				<input
+					id="signup-schoolEmail"
+					type="email"
+					bind:value={schoolEmail}
+					required
+					disabled={loading}
+					class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none disabled:opacity-50"
+					placeholder="your.name@school.edu"
+				/>
+				<p class="mt-1 text-sm text-gray-500">Your official school/institution email address</p>
+			</div>
+		{/if}
 
 		<!-- Password -->
 		<div>

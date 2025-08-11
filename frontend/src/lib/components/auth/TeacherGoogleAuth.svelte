@@ -22,8 +22,7 @@
 
 			// Import Firebase auth functions
 			const { signInWithGoogle } = await import('$lib/firebase');
-			const { httpsCallable } = await import('firebase/functions');
-			const { firebaseFunctions } = await import('$lib/firebase');
+			const { api } = await import('$lib/api');
 
 			// Sign in with Google and get access token
 			const { user, accessToken } = await signInWithGoogle();
@@ -41,12 +40,11 @@
 			// Create teacher profile with role (essential for sidebar to show)
 			try {
 				console.log('Creating teacher profile with role...');
-				const createProfile = httpsCallable(firebaseFunctions, 'createProfileForExistingUser');
-				const profileResult = await createProfile({
+				const profileResult = await api.createProfile({
 					uid: user.uid,
 					role: 'teacher'
 				});
-				console.log('Teacher profile created:', profileResult.data);
+				console.log('Teacher profile created:', profileResult);
 
 				// Force token refresh to get updated custom claims
 				console.log('Forcing token refresh to get updated role...');

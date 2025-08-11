@@ -11,6 +11,8 @@ import { Request } from "express";
 import { auth } from "firebase-functions/v1";
 import { getFirestore } from "firebase-admin/firestore";
 import { initializeApp, getApps } from "firebase-admin/app";
+import { userDomainSchema } from "./schemas/domain";
+import { getCurrentTimestamp } from "./config/firebase";
 
 // Extended request interface with params
 interface RequestWithParams extends Request {
@@ -35,8 +37,8 @@ import { validateSnapshot, importSnapshot, getImportHistory, generateSnapshotDif
 import { getUserFromRequest } from "./middleware/validation";
 import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
-import { createUserProfile, getUserProfile, updateUserProfile, checkUserProfileExists } from "./routes/users";
-import { sendPasscode, verifyPasscode, resetStudentAuth, signup, deleteUser } from "./routes/auth";
+import { getUserProfile, checkUserProfileExists } from "./routes/users";
+import { sendPasscode, verifyPasscode, resetStudentAuth, deleteUser, setupTeacherProfile } from "./routes/auth";
 import { debugSheetsPermissions } from "./routes/debug";
 import { getServiceAccountInfo, testSheetAccess } from "./routes/webhook-debug";
 
@@ -279,9 +281,6 @@ export const api = onRequest(
 
       // Auth routes
       // Note: Profile creation now handled by 'createProfileForExistingUser' callable function
-      if (method === "POST" && path === "/auth/signup") {
-        await signup(request, response); return;
-      }
       if (method === "DELETE" && path.startsWith("/auth/user/")) {
         const pathParts = path.split("/");
         const uid = pathParts[pathParts.length - 1];
@@ -297,16 +296,13 @@ export const api = onRequest(
       if (method === "POST" && path === "/auth/reset-student") {
         await resetStudentAuth(request, response); return;
       }
-
-      // User profile routes
-      if (method === "POST" && path === "/users/profile") {
-        await createUserProfile(request, response); return;
+      if (method === "POST" && path === "/auth/setup-teacher-profile") {
+        await setupTeacherProfile(request, response); return;
       }
+
+      // User profile routes (create/update now handled by callable function)
       if (method === "GET" && path === "/users/profile") {
         await getUserProfile(request, response); return;
-      }
-      if (method === "PUT" && path === "/users/profile") {
-        await updateUserProfile(request, response); return;
       }
       if (method === "GET" && path === "/users/profile/exists") {
         await checkUserProfileExists(request, response); return;
@@ -344,103 +340,19 @@ export const api = onRequest(
   }
 );
 
-/**
- * Firebase Auth trigger - Creates user profile when a new user is created
- * Location: functions/src/index.ts:235
- */
+// NOTE: Removed onUserCreated auth trigger to avoid conflicts with createProfileForExistingUser
+// All user profile creation is now handled through the callable function for consistency
 
 /**
- * Automatically create user profile when a new user is created in Firebase Auth
- */
-export const onUserCreated = auth.user().onCreate(async (user) => {
-  logger.info("New user created in Firebase Auth", {
-    uid: user.uid,
-    email: user.email,
-    customClaims: user.customClaims
-  });
-
-  const db = getFirestore();
-
-  try {
-    // Wait a short time to allow frontend to create profile with correct role
-    await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
-    
-    // Check if user profile already exists (may have been created by frontend)
-    const profileDoc = await db.collection("users").doc(user.uid).get();
-    if (profileDoc.exists) {
-      logger.info("User profile already exists (created by frontend)", { uid: user.uid });
-      return;
-    }
-
-    // If no profile exists after waiting, create with default role
-    // This handles edge cases where frontend fails to create profile
-    const role = user.customClaims?.role || "student";
-
-    // Create user profile
-    const profileData = {
-      uid: user.uid,
-      email: user.email || "",
-      displayName: user.displayName || user.email?.split("@")[0] || "User",
-      role: role,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      emailVerified: user.emailVerified || false,
-      photoURL: user.photoURL || null,
-      phoneNumber: user.phoneNumber || null,
-      disabled: user.disabled || false,
-      metadata: {
-        creationTime: user.metadata.creationTime,
-        lastSignInTime: user.metadata.lastSignInTime || null
-      }
-    };
-
-    // Add role-specific fields
-    if (role === "teacher") {
-      Object.assign(profileData, {
-        teacherData: {
-          configuredSheets: false,
-          sheetId: null,
-          lastSync: null,
-          classrooms: []
-        }
-      });
-    } else if (role === "student") {
-      Object.assign(profileData, {
-        studentData: {
-          enrolledClasses: [],
-          submittedAssignments: []
-        }
-      });
-    }
-
-    await db.collection("users").doc(user.uid).set(profileData);
-    
-    logger.info("User profile created successfully", {
-      uid: user.uid,
-      email: user.email,
-      role: role,
-      calledBy: "onUserCreated (after 2s delay)"
-    });
-
-  } catch (error) {
-    logger.error("Failed to create user profile", {
-      uid: user.uid,
-      error: error instanceof Error ? error.message : "Unknown error"
-    });
-    throw error;
-  }
-});
-
-/**
- * Callable function to create profile for existing auth users
- * Can be called manually to fix users created before the trigger was added
+ * Callable function to create profile for existing auth users using proper domain schema
+ * Supports schoolEmail field for teachers and proper validation
  */
 export const createProfileForExistingUser = onCall(
   { cors: true },
   async (request) => {
-    const { uid, role } = request.data;
+    const { uid, role, schoolEmail, displayName } = request.data;
     
-    logger.info("createProfileForExistingUser called", { uid, role });
+    logger.info("createProfileForExistingUser called", { uid, role, schoolEmail });
     
     if (!uid) {
       throw new Error("User ID is required");
@@ -468,55 +380,43 @@ export const createProfileForExistingUser = onCall(
       const adminAuth = getAuth();
       const user = await adminAuth.getUser(uid);
 
-      // Create profile
-      const profileData = {
-        uid: user.uid,
+      // Create user profile using domain schema
+      const now = getCurrentTimestamp();
+      const userDomain = {
+        id: user.uid,
         email: user.email || "",
-        displayName: user.displayName || user.email?.split("@")[0] || "User",
+        displayName: displayName || user.displayName || user.email?.split("@")[0] || "User",
         role: role || user.customClaims?.role || "student",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        emailVerified: user.emailVerified || false,
-        photoURL: user.photoURL || null,
-        phoneNumber: user.phoneNumber || null,
-        disabled: user.disabled || false,
-        metadata: {
-          creationTime: user.metadata.creationTime,
-          lastSignInTime: user.metadata.lastSignInTime || null
-        }
+        schoolEmail: schoolEmail || undefined, // Optional school email for teachers
+        classroomIds: [],
+        totalClassrooms: 0,
+        totalStudents: 0,
+        isActive: true,
+        lastLogin: now,
+        createdAt: now,
+        updatedAt: now
       };
 
-      // Add role-specific fields
-      if (profileData.role === "teacher") {
-        Object.assign(profileData, {
-          teacherData: {
-            configuredSheets: false,
-            sheetId: null,
-            lastSync: null,
-            classrooms: []
-          }
-        });
-      } else if (profileData.role === "student") {
-        Object.assign(profileData, {
-          studentData: {
-            enrolledClasses: [],
-            submittedAssignments: []
-          }
-        });
-      }
-
-      await db.collection("users").doc(user.uid).set(profileData);
+      // Validate with domain schema
+      const validatedUser = userDomainSchema.parse(userDomain);
+      
+      // Save to Firestore
+      await db.collection("users").doc(user.uid).set(validatedUser);
+      
+      // Set custom claims in Firebase Auth for role-based access
+      await adminAuth.setCustomUserClaims(user.uid, { role: validatedUser.role });
       
       logger.info("User profile created successfully", { 
         uid: user.uid, 
-        role: profileData.role,
+        role: validatedUser.role,
+        schoolEmail: validatedUser.schoolEmail,
         calledBy: "createProfileForExistingUser"
       });
       
       return { 
         success: true, 
         message: "User profile created successfully",
-        profile: profileData
+        profile: validatedUser
       };
 
     } catch (error) {

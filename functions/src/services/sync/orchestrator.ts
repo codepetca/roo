@@ -12,7 +12,7 @@ import { OverallSyncResult } from "./types";
 import { extractClassroomsAndStudents } from "./data-extractor";
 import { syncStudent } from "./student-sync";
 import { syncClassroom } from "./classroom-sync";
-import { updateStudentClassroomAssociations } from "./association-sync";
+import { updateStudentClassroomAssociations, updateTeacherClassroomAssociations } from "./association-sync";
 
 /**
  * Main sync function - orchestrates the entire sync process
@@ -85,7 +85,16 @@ export async function syncClassroomsFromSheets(teacherId: string, spreadsheetId:
       }
     }
 
-    // Step 5: Update student-classroom associations
+    // Step 5: Update teacher-classroom associations
+    try {
+      await updateTeacherClassroomAssociations(teacherId, classroomIdsByCourseCode);
+    } catch (error) {
+      const errorMsg = `Failed to update teacher-classroom associations: ${error instanceof Error ? error.message : String(error)}`;
+      result.errors.push(errorMsg);
+      logger.error(errorMsg);
+    }
+
+    // Step 6: Update student-classroom associations
     try {
       await updateStudentClassroomAssociations(classroomIdsByCourseCode);
     } catch (error) {

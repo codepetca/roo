@@ -3,7 +3,14 @@
  * Location: frontend/src/lib/stores/auth.svelte.ts
  */
 
-import { signInWithEmailAndPassword, signOut, onAuthStateChanged, type User } from 'firebase/auth';
+import {
+	signInWithEmailAndPassword,
+	createUserWithEmailAndPassword,
+	updateProfile,
+	signOut,
+	onAuthStateChanged,
+	type User
+} from 'firebase/auth';
 import { firebaseAuth } from '../firebase';
 import { goto } from '$app/navigation';
 import { browser } from '$app/environment';
@@ -21,6 +28,7 @@ interface AuthUser {
 let user = $state<AuthUser | null>(null);
 let loading = $state(true);
 let error = $state<string | null>(null);
+let initialized = false;
 
 /**
  * Set auth token in cookies for server-side verification
@@ -85,29 +93,46 @@ async function getUserProfile(firebaseUser: User): Promise<AuthUser | null> {
  * Initialize auth state listener
  */
 function initializeAuth() {
-	if (!browser) return;
-
-	onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
-		loading = true;
+	if (!browser || initialized) return;
+	
+	initialized = true;
+	console.log('Initializing auth state listener...');
+	
+	// Set up the auth state listener
+	const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
+		console.log('Auth state changed:', firebaseUser ? 'User logged in' : 'User logged out');
 		error = null;
 
 		try {
 			if (firebaseUser) {
+				loading = true;
 				// Get user profile from Firestore (includes role)
 				user = await getUserProfile(firebaseUser);
 				await setAuthCookie(firebaseUser);
+				loading = false;
 			} else {
 				user = null;
 				await setAuthCookie(null);
+				loading = false;
 			}
 		} catch (err) {
 			console.error('Auth state change error:', err);
 			error = err instanceof Error ? err.message : 'Authentication error';
 			user = null;
-		} finally {
 			loading = false;
 		}
 	});
+	
+	// Ensure we get an initial state callback
+	// In some cases, onAuthStateChanged might not fire immediately
+	setTimeout(() => {
+		if (loading && !firebaseAuth.currentUser) {
+			console.log('No user after timeout, setting loading to false');
+			loading = false;
+		}
+	}, 1000);
+	
+	return unsubscribe;
 }
 
 /**
@@ -134,6 +159,84 @@ async function signIn(email: string, password: string): Promise<void> {
 	} catch (err: unknown) {
 		console.error('Sign in error:', err);
 		error = (err as Error)?.message || 'Failed to sign in';
+		throw err;
+	} finally {
+		loading = false;
+	}
+}
+
+/**
+ * Create account with email and password
+ */
+async function createAccount(data: {
+	email: string;
+	password: string;
+	displayName?: string;
+	role: 'teacher' | 'student';
+	schoolEmail?: string;
+}): Promise<AuthUser> {
+	error = null;
+	loading = true;
+
+	try {
+		// Create user with Firebase Auth
+		const userCredential = await createUserWithEmailAndPassword(
+			firebaseAuth,
+			data.email,
+			data.password
+		);
+		const firebaseUser = userCredential.user;
+
+		// Update display name if provided
+		if (data.displayName) {
+			await updateProfile(firebaseUser, { displayName: data.displayName });
+		}
+
+		// Create user profile in Firestore using our API
+		const token = await firebaseUser.getIdToken();
+		const response = await fetch(`${API_BASE_URL}/api/functions/createProfileForExistingUser`, {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${token}`,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				uid: firebaseUser.uid,
+				role: data.role,
+				schoolEmail: data.schoolEmail,
+				displayName: data.displayName
+			})
+		});
+
+		if (!response.ok) {
+			const errorData = await response.json().catch(() => ({}));
+			throw new Error(errorData.message || 'Failed to create user profile');
+		}
+
+		// Set auth cookie
+		await setAuthCookie(firebaseUser);
+
+		// Get the complete user profile
+		const newUser = await getUserProfile(firebaseUser);
+		if (!newUser) {
+			throw new Error('Failed to retrieve created user profile');
+		}
+
+		user = newUser;
+		return newUser;
+	} catch (err: unknown) {
+		console.error('Account creation error:', err);
+		const authError = err as { code?: string; message?: string };
+
+		if (authError.code === 'auth/email-already-in-use') {
+			error = 'An account with this email already exists';
+		} else if (authError.code === 'auth/invalid-email') {
+			error = 'Please enter a valid email address';
+		} else if (authError.code === 'auth/weak-password') {
+			error = 'Password is too weak. Please choose a stronger password';
+		} else {
+			error = authError.message || 'Failed to create account';
+		}
 		throw err;
 	} finally {
 		loading = false;
@@ -197,6 +300,7 @@ export const auth = {
 
 	// Actions
 	signIn,
+	createAccount,
 	logOut,
 	isTeacher,
 	isAuthenticated

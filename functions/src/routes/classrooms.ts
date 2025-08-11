@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
 import { FirestoreRepository } from "../services/firestore-repository";
+import { db } from "../config/firebase";
 import { SnapshotProcessor } from "../services/snapshot-processor";
 import { getUserFromRequest } from "../middleware/validation";
 import { 
@@ -36,7 +37,7 @@ export async function getTeacherClassrooms(req: Request, res: Response): Promise
     }
 
     // Get classrooms using new repository
-    const classrooms = await repository.getClassroomsByTeacher(user.uid);
+    const classrooms = await repository.getClassroomsByTeacher(user.email!);
     
     if (classrooms.length === 0) {
       return res.status(200).json({ 
@@ -108,11 +109,19 @@ export async function getClassroomAssignments(req: Request, res: Response): Prom
     }
 
     // Check access permissions
-    if (user.role === "teacher" && classroom.teacherId !== user.uid) {
-      return res.status(403).json({ 
-        success: false, 
-        error: "Access denied to this classroom" 
-      });
+    if (user.role === "teacher") {
+      // Get user's school email
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      const userData = userDoc.data();
+      const schoolEmail = userData?.schoolEmail || user.email;
+      
+      // Check if classroom belongs to this teacher
+      if (classroom.teacherId !== user.email && classroom.teacherId !== schoolEmail) {
+        return res.status(403).json({ 
+          success: false, 
+          error: "Access denied to this classroom" 
+        });
+      }
     }
 
     if (user.role === "student") {
@@ -205,11 +214,19 @@ export async function getClassroomDetails(req: Request, res: Response): Promise<
     }
 
     // Check access permissions
-    if (user.role === "teacher" && classroom.teacherId !== user.uid) {
-      return res.status(403).json({ 
-        success: false, 
-        error: "Access denied to this classroom" 
-      });
+    if (user.role === "teacher") {
+      // Get user's school email
+      const userDoc = await db.collection("users").doc(user.uid).get();
+      const userData = userDoc.data();
+      const schoolEmail = userData?.schoolEmail || user.email;
+      
+      // Check if classroom belongs to this teacher
+      if (classroom.teacherId !== user.email && classroom.teacherId !== schoolEmail) {
+        return res.status(403).json({ 
+          success: false, 
+          error: "Access denied to this classroom" 
+        });
+      }
     }
 
     // Get student enrollments
@@ -332,7 +349,7 @@ export async function getUngradedSubmissions(req: Request, res: Response): Promi
     }
 
     // Get all classrooms for this teacher
-    const classrooms = await repository.getClassroomsByTeacher(user.uid);
+    const classrooms = await repository.getClassroomsByTeacher(user.email!);
     const classroomIds = classrooms.map(c => c.id);
 
     // Get ungraded submissions across all classrooms
@@ -398,7 +415,13 @@ export async function updateClassroomCounts(req: Request, res: Response): Promis
       });
     }
 
-    if (classroom.teacherId !== user.uid) {
+    // Get user's school email
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    const userData = userDoc.data();
+    const schoolEmail = userData?.schoolEmail || user.email;
+    
+    // Check if classroom belongs to this teacher
+    if (classroom.teacherId !== user.email && classroom.teacherId !== schoolEmail) {
       return res.status(403).json({ 
         success: false, 
         error: "Access denied to this classroom" 

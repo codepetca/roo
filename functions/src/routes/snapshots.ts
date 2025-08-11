@@ -5,6 +5,7 @@ import { FirestoreRepository } from "../services/firestore-repository";
 import { getUserFromRequest } from "../middleware/validation";
 import { classroomSnapshotSchema } from "@shared/schemas/classroom-snapshot";
 import { z } from "zod";
+import { db } from "../config/firebase";
 
 /**
  * Snapshot Import API Routes
@@ -24,7 +25,25 @@ export async function validateSnapshot(req: Request, res: Response): Promise<Res
   try {
     // Get authenticated user
     const user = await getUserFromRequest(req);
+    
+    // Enhanced debugging for authentication issues
+    logger.info("Snapshot validation authentication debug", {
+      user: user ? {
+        uid: user.uid,
+        email: user.email,
+        role: user.role,
+        displayName: user.displayName
+      } : null,
+      authHeader: req.headers.authorization ? "present" : "missing",
+      authHeaderStart: req.headers.authorization ? req.headers.authorization.substring(0, 20) + "..." : "N/A"
+    });
+    
     if (!user || user.role !== "teacher") {
+      logger.warn("Snapshot validation authorization failed", {
+        user: user ? { uid: user.uid, email: user.email, role: user.role } : null,
+        reason: !user ? "getUserFromRequest returned null" : `user role is ${user.role}, not teacher`
+      });
+      
       return res.status(403).json({ 
         success: false, 
         error: "Only teachers can validate snapshots" 
@@ -104,15 +123,24 @@ export async function importSnapshot(req: Request, res: Response): Promise<Respo
       });
     }
     
-    // TODO: Implement board email mapping (see GitHub issue)
-    // Teachers sign in with personal accounts but snapshots contain board emails
-    // For now, skip email validation to allow imports
-    // if (snapshot.teacher.email !== user.email) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     error: "Snapshot teacher email does not match authenticated user"
-    //   });
-    // }
+    // Validate teacher email matches user's school email
+    const userDoc = await db.collection("users").doc(user.uid).get();
+    const userData = userDoc.data();
+    const schoolEmail = userData?.schoolEmail || userData?.teacherData?.boardAccountEmail;
+    
+    if (!schoolEmail) {
+      return res.status(400).json({
+        success: false,
+        error: "Please set your school email in your profile before importing snapshots"
+      });
+    }
+    
+    if (snapshot.teacher.email !== schoolEmail) {
+      return res.status(400).json({
+        success: false,
+        error: `Snapshot teacher email (${snapshot.teacher.email}) doesn't match your school email (${schoolEmail})`
+      });
+    }
 
     logger.info("Starting snapshot import", {
       teacherEmail: user.email,
@@ -202,9 +230,9 @@ export async function generateSnapshotDiff(req: Request, res: Response): Promise
       });
     }
     
-    // Get existing teacher data
-    const teacher = await repository.getTeacherByEmail(user.email!);
-    if (!teacher) {
+    // Get existing user data
+    const userData = await repository.getUserById(user.uid);
+    if (!userData) {
       // No existing data - everything is new
       return res.status(200).json({
         success: true,
@@ -224,7 +252,7 @@ export async function generateSnapshotDiff(req: Request, res: Response): Promise
     }
 
     // Get existing classrooms for comparison
-    const existingClassrooms = await repository.getClassroomsByTeacher(teacher.id);
+    const existingClassrooms = await repository.getClassroomsByTeacher(user.email!);
     
     // Simple diff calculation
     const diff = {

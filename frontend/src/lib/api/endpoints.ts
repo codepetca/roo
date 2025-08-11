@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod';
-import { typedApiRequest } from './client';
+import { typedApiRequest, callFunction } from './client';
 import {
 	// Legacy schemas (keeping for backward compatibility)
 	answerKeyResponseSchema,
@@ -30,7 +30,7 @@ import {
 
 // Import new core schemas - using TypeScript source files to avoid CommonJS issues
 import {
-	teacherSchema,
+	dashboardUserSchema,
 	teacherDashboardSchema,
 	classroomSchema,
 	assignmentSchema,
@@ -339,7 +339,7 @@ export const api = {
 	},
 
 	// Teacher onboarding
-	async createTeacherSheet(data: { boardAccountEmail: string; teacherName: string }): Promise<{
+	async createTeacherSheet(data: { boardAccountEmail: string; teacherName: string }): Promise<{ // boardAccountEmail is legacy field name for backward compatibility
 		success: boolean;
 		sheetId: string;
 		message: string;
@@ -384,32 +384,20 @@ export const api = {
 	},
 
 	// Authentication endpoints
-	async signup(data: {
-		email: string;
-		password: string;
-		displayName: string;
-		role: string;
-	}): Promise<{
+	// NOTE: User signup now handled by Firebase Auth SDK + createProfileForExistingUser callable function
+	
+	async createProfile(data: {
 		uid: string;
-		email: string;
-		role: string;
-		firebaseToken: string;
-		isNewUser: boolean;
+		role: 'teacher' | 'student';
+		schoolEmail?: string;
+		displayName?: string;
+	}): Promise<{
+		success: boolean;
+		message: string;
+		profile: any;
 	}> {
-		return typedApiRequest(
-			'/auth/signup',
-			{
-				method: 'POST',
-				body: JSON.stringify(data)
-			},
-			z.object({
-				uid: z.string(),
-				email: z.string(),
-				role: z.string(),
-				firebaseToken: z.string(),
-				isNewUser: z.boolean()
-			})
-		);
+		const result = await callFunction('createProfileForExistingUser', data);
+		return result.data;
 	},
 
 	async sendPasscode(data: { email: string }): Promise<{

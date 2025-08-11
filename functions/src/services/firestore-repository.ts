@@ -1,11 +1,9 @@
 import {
-  Teacher,
   Classroom,
   Assignment,
   Submission,
   Grade,
   StudentEnrollment,
-  TeacherInput,
   ClassroomInput,
   AssignmentInput,
   SubmissionInput,
@@ -123,7 +121,7 @@ function serializeTimestamps<T extends Record<string, any>>(doc: T): T {
 export class FirestoreRepository {
   // Collection names
   private readonly collections = {
-    teachers: "teachers",
+    users: "users",
     classrooms: "classrooms",
     assignments: "assignments",
     submissions: "submissions",
@@ -132,51 +130,54 @@ export class FirestoreRepository {
   };
 
   // ============================================
-  // Teacher Operations
+  // User Operations (replacing Teacher operations)
   // ============================================
 
-  async createTeacher(input: TeacherInput): Promise<Teacher> {
-    const teacherId = `teacher_${input.email.replace("@", "_at_").replace(".", "_")}`;
-    const teacherRef = db.collection(this.collections.teachers).doc(teacherId);
-    
-    const teacher: Teacher = {
-      ...input,
-      id: teacherId,
-      totalStudents: 0,
-      totalClassrooms: 0,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+  async getUserByEmail(email: string): Promise<any | null> {
+    const snapshot = await db.collection(this.collections.users)
+      .where("email", "==", email)
+      .limit(1)
+      .get();
 
-    await teacherRef.set(cleanForFirestore({
-      ...teacher,
-      createdAt: getCurrentTimestamp(),
-      updatedAt: getCurrentTimestamp()
-    }));
-
-    // Return serialized version for consistency
-    return serializeTimestamps(teacher);
-  }
-
-  async getTeacherByEmail(email: string): Promise<Teacher | null> {
-    const teacherId = `teacher_${email.replace("@", "_at_").replace(".", "_")}`;
-    const teacherRef = db.collection(this.collections.teachers).doc(teacherId);
-    const snapshot = await teacherRef.get();
-
-    if (!snapshot.exists) {
+    if (snapshot.empty) {
       return null;
     }
 
-    const teacher = { ...snapshot.data(), id: snapshot.id } as Teacher;
-    return serializeTimestamps(teacher);
+    const doc = snapshot.docs[0];
+    return { ...doc.data(), id: doc.id };
   }
 
-  async updateTeacher(id: string, updates: Partial<Teacher>): Promise<void> {
-    const teacherRef = db.collection(this.collections.teachers).doc(id);
-    await teacherRef.update(cleanForFirestore({
+  async getUserById(userId: string): Promise<any | null> {
+    const doc = await db.collection(this.collections.users).doc(userId).get();
+    
+    if (!doc.exists) {
+      return null;
+    }
+
+    return { ...doc.data(), id: doc.id };
+  }
+
+  async updateUser(userId: string, updates: Record<string, any>): Promise<void> {
+    await db.collection(this.collections.users).doc(userId).update({
       ...updates,
       updatedAt: getCurrentTimestamp()
-    }));
+    });
+  }
+
+  // Deprecated teacher methods - redirecting to users collection
+  async createTeacher(input: any): Promise<any> {
+    // Teachers are now created through user registration
+    throw new Error("createTeacher is deprecated. Use user registration flow instead.");
+  }
+
+  async getTeacherByEmail(email: string): Promise<any | null> {
+    // Redirect to getUserByEmail
+    return this.getUserByEmail(email);
+  }
+
+  async updateTeacher(id: string, updates: any): Promise<void> {
+    // Redirect to updateUser
+    return this.updateUser(id, updates);
   }
 
   // ============================================
@@ -219,16 +220,25 @@ export class FirestoreRepository {
     return serializeTimestamps(classroom);
   }
 
-  async getClassroomsByTeacher(teacherId: string): Promise<Classroom[]> {
+  async getClassroomsByTeacher(userEmail: string): Promise<Classroom[]> {
+    // Get user to check for schoolEmail
+    const user = await this.getUserByEmail(userEmail);
+    
+    // Prefer schoolEmail if available, otherwise use personal email
+    const teacherEmail = user?.schoolEmail || userEmail;
+    
+    // Query classrooms by the appropriate email
     const snapshot = await db.collection(this.collections.classrooms)
-      .where("teacherId", "==", teacherId)
+      .where("teacherId", "==", teacherEmail)
       .orderBy("updatedAt", "desc")
       .get();
 
-    return snapshot.docs.map(doc => {
+    const classrooms = snapshot.docs.map(doc => {
       const classroom = { ...doc.data(), id: doc.id } as Classroom;
       return serializeTimestamps(classroom);
     });
+
+    return classrooms;
   }
 
   async updateClassroom(id: string, updates: Partial<Classroom>): Promise<void> {

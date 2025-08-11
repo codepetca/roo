@@ -18,8 +18,7 @@ import type {
   SubmissionResponse,
   GradeResponse,
   SerializedTimestamp,
-  ClassroomResponse,
-  UserProfileResponse
+  ClassroomResponse
 } from "./dto";
 
 /**
@@ -320,19 +319,5 @@ export function parseAnswerKeyRow(row: string[]): Partial<SheetAnswerKey> {
 // User Domain/DTO Transformers
 // ============================================
 
-/**
- * Transform user domain object to DTO response
- */
-export function userDomainToDto(user: UserDomain): UserProfileResponse {
-  return {
-    id: user.id,
-    email: user.email,
-    displayName: user.displayName,
-    role: user.role,
-    classroomIds: user.classroomIds,
-    isActive: user.isActive,
-    lastLogin: user.lastLogin ? serializeTimestamp(user.lastLogin) : undefined,
-    createdAt: serializeTimestamp(user.createdAt),
-    updatedAt: serializeTimestamp(user.updatedAt)
-  };
-}
+// NOTE: userDomainToDto function removed - UserProfileResponse DTO no longer exists
+// User profiles now handled directly through callable function with domain objects

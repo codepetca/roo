@@ -10,7 +10,7 @@
 	let { children }: { children?: Snippet } = $props();
 
 	// Get current page title
-	let pageTitle = $derived(() => {
+	let pageTitle = $derived.by(() => {
 		const path = $page.url.pathname;
 		if (path.endsWith('/teacher') || path.endsWith('/student')) {
 			return 'Overview';
@@ -23,7 +23,7 @@
 	});
 
 	// Navigation items
-	let navItems = $derived(() => {
+	let navItems = $derived.by(() => {
 		const userRole = auth.user?.role;
 
 		if (userRole === 'teacher') {

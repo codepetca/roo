@@ -7,7 +7,7 @@ import {
   calculatePercentage
 } from './transformers';
 import { ClassroomSnapshot } from './classroom-snapshot';
-import { Classroom, Assignment, Submission, Grade, StudentEnrollment } from './core';
+import { Classroom, Assignment, Submission, Grade, StudentEnrollment, DashboardUser, DashboardUserInput } from './core';
 
 /**
  * Tests for transformation pipeline and stable ID generation

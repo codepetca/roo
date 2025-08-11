@@ -5,8 +5,10 @@ import { getUserFromRequest } from "../middleware/validation";
 import { 
   TeacherDashboard,
   ClassroomWithAssignments,
-  AssignmentWithStats
+  AssignmentWithStats,
+  DashboardUser
 } from "@shared/schemas/core";
+import { db, getCurrentTimestamp } from "../config/firebase";
 
 /**
  * Teacher Dashboard API Routes
@@ -34,20 +36,51 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
 
     logger.info("Loading teacher dashboard", { teacherId: user.uid });
 
-    // Get or create teacher profile
-    let teacher = await repository.getTeacherByEmail(user.email!);
-    if (!teacher) {
-      // Create teacher profile if it doesn't exist
-      teacher = await repository.createTeacher({
+    // Get or create user profile
+    let userData = await repository.getUserById(user.uid);
+    if (!userData) {
+      // Create user profile if it doesn't exist
+      const userDoc = {
         email: user.email!,
-        name: user.displayName || user.email!.split("@")[0],
+        displayName: user.displayName || user.email!.split("@")[0],
         role: "teacher",
-        classroomIds: []
+        schoolEmail: undefined, // Will be set during onboarding
+        classroomIds: [],
+        totalClassrooms: 0,
+        totalStudents: 0,
+        isActive: true,
+        createdAt: getCurrentTimestamp(),
+        updatedAt: getCurrentTimestamp()
+      };
+      await db.collection("users").doc(user.uid).set(userDoc);
+      userData = { ...userDoc, id: user.uid };
+    }
+
+    // Get school email from teacherData if not in main user object
+    if (!userData.schoolEmail && userData.teacherData?.boardAccountEmail) {
+      userData.schoolEmail = userData.teacherData.boardAccountEmail;
+      // Update user with school email
+      await repository.updateUser(user.uid, {
+        schoolEmail: userData.teacherData.boardAccountEmail
       });
     }
 
+    // Create dashboard user object
+    const dashboardUser: DashboardUser = {
+      id: user.uid,
+      email: userData.email,
+      name: userData.displayName || userData.email.split("@")[0],
+      role: userData.role || "teacher",
+      schoolEmail: userData.schoolEmail,
+      classroomIds: userData.classroomIds || [],
+      totalStudents: userData.totalStudents || 0,
+      totalClassrooms: userData.totalClassrooms || 0,
+      createdAt: userData.createdAt || new Date(),
+      updatedAt: userData.updatedAt || new Date()
+    }
+
     // Get teacher's classrooms with assignments
-    const classrooms = await repository.getClassroomsByTeacher(teacher.id);
+    const classrooms = await repository.getClassroomsByTeacher(userData.email);
     const classroomsWithAssignments: ClassroomWithAssignments[] = [];
     
     // Calculate global statistics
@@ -117,7 +150,7 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
       : undefined;
 
     const dashboardData: TeacherDashboard = {
-      teacher,
+      teacher: dashboardUser,
       classrooms: classroomsWithAssignments,
       recentActivity: recentActivity.slice(0, 10), // Latest 10 activities
       stats: {
@@ -139,12 +172,12 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
     logger.info("Dashboard response structure debug", {
       teacherId: user.uid,
       teacher: {
-        id: teacher.id,
-        email: teacher.email,
-        name: teacher.name,
-        role: teacher.role,
-        createdAt: teacher.createdAt,
-        updatedAt: teacher.updatedAt
+        id: dashboardUser.id,
+        email: dashboardUser.email,
+        name: dashboardUser.name,
+        role: dashboardUser.role,
+        createdAt: dashboardUser.createdAt,
+        updatedAt: dashboardUser.updatedAt
       },
       classroomsCount: classroomsWithAssignments.length,
       recentActivityCount: recentActivity.length,
@@ -195,9 +228,9 @@ export async function getTeacherClassroomsBasic(req: Request, res: Response): Pr
       });
     }
 
-    // Get teacher profile
-    const teacher = await repository.getTeacherByEmail(user.email!);
-    if (!teacher) {
+    // Get user profile
+    const userData = await repository.getUserById(user.uid);
+    if (!userData) {
       return res.status(200).json({ 
         success: true, 
         data: [] 
@@ -205,7 +238,7 @@ export async function getTeacherClassroomsBasic(req: Request, res: Response): Pr
     }
 
     // Get classrooms
-    const classrooms = await repository.getClassroomsByTeacher(teacher.id);
+    const classrooms = await repository.getClassroomsByTeacher(userData.email);
     
     return res.status(200).json({
       success: true,

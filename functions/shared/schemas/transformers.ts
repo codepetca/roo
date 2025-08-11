@@ -6,13 +6,13 @@ import {
   SubmissionSnapshot 
 } from './classroom-snapshot';
 import {
-  Teacher,
+  DashboardUser,
   Classroom,
   Assignment,
   Submission,
   Grade,
   StudentEnrollment,
-  TeacherInput,
+  DashboardUserInput,
   ClassroomInput,
   AssignmentInput,
   SubmissionInput,
@@ -61,7 +61,7 @@ export class StableIdGenerator {
  * Transform a ClassroomSnapshot into normalized core entities
  */
 export function snapshotToCore(snapshot: ClassroomSnapshot): {
-  teacher: TeacherInput;
+  teacher: DashboardUserInput;
   classrooms: ClassroomInput[];
   assignments: AssignmentInput[];
   submissions: SubmissionInput[];
@@ -121,13 +121,26 @@ export function snapshotToCore(snapshot: ClassroomSnapshot): {
 function transformTeacher(
   teacherProfile: ClassroomSnapshot['teacher'],
   classrooms: ClassroomWithData[]
-): TeacherInput {
+): DashboardUserInput {
   const classroomIds = classrooms.map(c => StableIdGenerator.classroom(c.id));
+  
+  // Extract school email from classroom data (courseGroupEmail or teacherGroupEmail)
+  let schoolEmail: string | undefined;
+  for (const classroom of classrooms) {
+    if (classroom.courseGroupEmail) {
+      schoolEmail = classroom.courseGroupEmail;
+      break;
+    } else if (classroom.teacherGroupEmail) {
+      schoolEmail = classroom.teacherGroupEmail;
+      break;
+    }
+  }
   
   return {
     email: teacherProfile.email,
     name: teacherProfile.name,
     role: 'teacher' as const,
+    schoolEmail,
     classroomIds
   };
 }

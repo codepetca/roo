@@ -214,7 +214,10 @@ export const userDomainSchema = baseDocumentSchema.extend({
   email: z.string().email(),
   displayName: z.string().min(1),
   role: userRoleSchema,
+  schoolEmail: z.string().email().optional(), // School/board email for teachers
   classroomIds: z.array(z.string()).default([]),
+  totalClassrooms: z.number().int().min(0).default(0), // Cached count for teachers
+  totalStudents: z.number().int().min(0).default(0), // Cached count for teachers
   isActive: z.boolean().default(true),
   lastLogin: firebaseTimestampSchema.optional()
 });

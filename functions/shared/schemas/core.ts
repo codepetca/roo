@@ -20,12 +20,16 @@ const baseEntitySchema = z.object({
 });
 
 /**
- * Teacher Schema - Normalized teacher profile
+ * User Schema - For teacher dashboard (replaces Teacher schema)
+ * This is a simplified user type for the dashboard response
  */
-export const teacherSchema = baseEntitySchema.extend({
+export const dashboardUserSchema = baseEntitySchema.extend({
   email: z.string().email(),
   name: z.string().min(1),
-  role: z.literal('teacher'),
+  role: z.enum(['teacher', 'student', 'admin']),
+  
+  // School board email for classroom ownership (different from sign-in email)
+  schoolEmail: z.string().email().optional(),
   
   // Denormalized references for quick access
   classroomIds: z.array(z.string()).default([]),
@@ -229,7 +233,7 @@ export const studentEnrollmentSchema = baseEntitySchema.extend({
 /**
  * Export TypeScript types from Zod schemas
  */
-export type Teacher = z.infer<typeof teacherSchema>;
+export type DashboardUser = z.infer<typeof dashboardUserSchema>;
 export type Classroom = z.infer<typeof classroomSchema>;
 export type Assignment = z.infer<typeof assignmentSchema>;
 export type Submission = z.infer<typeof submissionSchema>;
@@ -239,7 +243,7 @@ export type StudentEnrollment = z.infer<typeof studentEnrollmentSchema>;
 /**
  * Input types for creation (without auto-generated fields)
  */
-export type TeacherInput = Omit<Teacher, 
+export type DashboardUserInput = Omit<DashboardUser, 
   'id' | 'createdAt' | 'updatedAt' | 'totalStudents' | 'totalClassrooms'
 >;
 
@@ -300,7 +304,7 @@ export const teacherDashboardStatsSchema = z.object({
 
 // Complete teacher dashboard schema
 export const teacherDashboardSchema = z.object({
-  teacher: teacherSchema,
+  teacher: dashboardUserSchema,
   classrooms: z.array(classroomSchema.extend({
     assignments: z.array(assignmentSchema)
   })),
@@ -309,7 +313,7 @@ export const teacherDashboardSchema = z.object({
 });
 
 export interface TeacherDashboard {
-  teacher: Teacher;
+  teacher: DashboardUser;
   classrooms: ClassroomWithAssignments[];
   recentActivity: Array<{
     type: 'submission' | 'grade' | 'assignment';

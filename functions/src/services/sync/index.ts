@@ -21,14 +21,14 @@ export type {
 import { extractClassroomsAndStudents } from "./data-extractor";
 import { syncStudent } from "./student-sync";
 import { syncClassroom } from "./classroom-sync";
-import { updateStudentClassroomAssociations } from "./association-sync";
+import { updateStudentClassroomAssociations, updateTeacherClassroomAssociations } from "./association-sync";
 import { syncClassroomsFromSheets } from "./orchestrator";
 
 // Re-export for public API
 export { extractClassroomsAndStudents } from "./data-extractor";
 export { syncStudent } from "./student-sync";
 export { syncClassroom } from "./classroom-sync";
-export { updateStudentClassroomAssociations } from "./association-sync";
+export { updateStudentClassroomAssociations, updateTeacherClassroomAssociations } from "./association-sync";
 export { syncClassroomsFromSheets } from "./orchestrator";
 
 // Backward compatibility - ClassroomSyncService class wrapper
@@ -47,6 +47,10 @@ export class ClassroomSyncService {
   
   async updateStudentClassroomAssociations(...args: Parameters<typeof updateStudentClassroomAssociations>) {
     return updateStudentClassroomAssociations(...args);
+  }
+  
+  async updateTeacherClassroomAssociations(...args: Parameters<typeof updateTeacherClassroomAssociations>) {
+    return updateTeacherClassroomAssociations(...args);
   }
   
   async syncClassroomsFromSheets(...args: Parameters<typeof syncClassroomsFromSheets>) {

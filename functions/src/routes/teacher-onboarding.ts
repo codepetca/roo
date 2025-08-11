@@ -13,12 +13,12 @@ import { db } from "../config/firebase";
 
 // Validation schemas
 const createTeacherSheetSchema = z.object({
-  boardAccountEmail: z.string().email(),
+  boardAccountEmail: z.string().email(), // Legacy field name for backward compatibility
   sheetTitle: z.string().min(1).optional(),
 });
 
 const createTeacherSheetOAuthSchema = z.object({
-  boardAccountEmail: z.string().email(),
+  boardAccountEmail: z.string().email(), // Legacy field name for backward compatibility
   sheetTitle: z.string().min(1).optional(),
   googleAccessToken: z.string().min(1),
 });
@@ -117,7 +117,8 @@ export async function createTeacherSheetOAuth(req: Request, res: Response) {
       "teacherData.googleAccessToken": validatedData.googleAccessToken,
       "teacherData.configuredSheets": true,
       "teacherData.sheetId": sheetResult.spreadsheetId,
-      "teacherData.boardAccountEmail": validatedData.boardAccountEmail,
+      "teacherData.boardAccountEmail": validatedData.boardAccountEmail, // Legacy field
+      "schoolEmail": validatedData.boardAccountEmail, // New normalized field
       "teacherData.lastSync": new Date(),
       updatedAt: new Date(),
     });
@@ -337,7 +338,7 @@ export async function checkTeacherOnboardingStatus(req: Request, res: Response):
     const teacherData = userData?.teacherData || {};
     
     const hasSheetConfigured = !!teacherData.configuredSheets && !!teacherData.sheetId;
-    const boardAccountEmail = teacherData.boardAccountEmail || "";
+    const boardAccountEmail = teacherData.boardAccountEmail || userData?.schoolEmail || "";
     
     // Also check the global config to ensure consistency
     const existingConfig = await getTeacherSheetsConfig();

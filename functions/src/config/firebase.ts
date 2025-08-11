@@ -10,8 +10,16 @@ if (isEmulator()) {
   }
 }
 
-// Get instances using the default app (initialized in index.ts)
-export const db = getFirestore();
+// Lazy-load Firestore instance to avoid initialization issues
+let _db: admin.firestore.Firestore | null = null;
+export const db = new Proxy({} as admin.firestore.Firestore, {
+  get(target, prop) {
+    if (!_db) {
+      _db = getFirestore();
+    }
+    return Reflect.get(_db, prop);
+  }
+});
 export const FieldValue = admin.firestore.FieldValue;
 
 // Service Account Configuration

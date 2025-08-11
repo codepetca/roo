@@ -33,6 +33,7 @@ export class MockApiHandler {
         email: 'teacher@test.com',
         name: 'Test Teacher',
         role: 'teacher',
+        schoolEmail: 'teacher@school.edu', // Add school email field
         classroomIds: ['classroom-1', 'classroom-2'],
         totalStudents: 50,
         totalClassrooms: 2,

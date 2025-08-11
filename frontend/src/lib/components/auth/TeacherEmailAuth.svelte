@@ -1,0 +1,291 @@
+<script lang="ts">
+	import { createEventDispatcher } from 'svelte';
+	import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+	import { firebaseAuth } from '$lib/firebase';
+	import { api } from '$lib/api';
+	import { Button, Alert, LoadingSpinner } from '$lib/components/ui';
+
+	const dispatch = createEventDispatcher<{
+		success: {
+			user: { uid: string; email: string | null; displayName: string | null; role: string };
+		};
+		cancel: void;
+	}>();
+
+	// Form state
+	let mode: 'login' | 'signup' = 'login';
+	let email = '';
+	let password = '';
+	let confirmPassword = '';
+	let displayName = '';
+	let schoolEmail = '';
+	let loading = false;
+	let error = '';
+
+	// Fill demo credentials for testing
+	function fillDemoCredentials() {
+		email = 'teacher@test.com';
+		password = 'test123';
+		if (mode === 'signup') {
+			displayName = 'Test Teacher';
+			schoolEmail = 'teacher@school.edu';
+		}
+	}
+
+	async function handleSubmit() {
+		if (mode === 'signup' && password !== confirmPassword) {
+			error = 'Passwords do not match';
+			return;
+		}
+
+		if (password.length < 6) {
+			error = 'Password must be at least 6 characters';
+			return;
+		}
+
+		if (mode === 'signup' && !schoolEmail.trim()) {
+			error = 'School email is required for teachers';
+			return;
+		}
+
+		loading = true;
+		error = '';
+
+		try {
+			let userCredential;
+
+			if (mode === 'signup') {
+				// Create new account
+				userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
+
+				// Update display name if provided
+				if (displayName) {
+					const { updateProfile } = await import('firebase/auth');
+					await updateProfile(userCredential.user, { displayName });
+				}
+
+				// Create teacher profile with school email
+				await api.createProfile({
+					uid: userCredential.user.uid,
+					role: 'teacher',
+					schoolEmail: schoolEmail.trim(),
+					displayName: displayName || undefined
+				});
+			} else {
+				// Sign in existing account
+				userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+			}
+
+			// Dispatch success event
+			dispatch('success', {
+				user: {
+					uid: userCredential.user.uid,
+					email: userCredential.user.email,
+					displayName: userCredential.user.displayName || displayName,
+					role: 'teacher'
+				}
+			});
+		} catch (err) {
+			console.error('Teacher auth error:', err);
+
+			// Handle specific Firebase Auth errors
+			const authError = err as { code?: string; message?: string };
+			if (authError.code === 'auth/email-already-in-use') {
+				error = 'An account with this email already exists. Try signing in instead.';
+			} else if (authError.code === 'auth/user-not-found') {
+				error = 'No account found with this email. Try creating an account instead.';
+			} else if (authError.code === 'auth/wrong-password') {
+				error = 'Incorrect password';
+			} else if (authError.code === 'auth/invalid-email') {
+				error = 'Please enter a valid email address';
+			} else if (authError.code === 'auth/weak-password') {
+				error = 'Password is too weak. Please choose a stronger password';
+			} else {
+				error = authError.message || 'Authentication failed';
+			}
+		} finally {
+			loading = false;
+		}
+	}
+
+	function handleCancel() {
+		dispatch('cancel');
+	}
+
+	function toggleMode() {
+		mode = mode === 'login' ? 'signup' : 'login';
+		error = '';
+		// Clear form but keep email
+		password = '';
+		confirmPassword = '';
+		displayName = '';
+		schoolEmail = '';
+	}
+</script>
+
+<div class="space-y-6" data-testid="teacher-email-auth-form">
+	<div>
+		<h2 class="text-center text-2xl font-bold text-gray-900" data-testid="teacher-email-form-title">
+			{mode === 'login' ? 'Teacher Sign In' : 'Create Teacher Account'}
+		</h2>
+		<p class="mt-2 text-center text-sm text-gray-600" data-testid="teacher-email-form-subtitle">
+			{mode === 'login'
+				? 'Sign in with your email and password'
+				: 'Create a new teacher account with school email'}
+		</p>
+	</div>
+
+	{#if error}
+		<Alert variant="error" data-testid="auth-error-message">
+			{#snippet children()}
+				{error}
+			{/snippet}
+		</Alert>
+	{/if}
+
+	<form on:submit|preventDefault={handleSubmit} class="space-y-4" data-testid="teacher-email-form">
+		<!-- Email -->
+		<div>
+			<label for="email" class="mb-1 block text-sm font-medium text-gray-700">
+				Email Address
+			</label>
+			<input
+				id="email"
+				type="email"
+				bind:value={email}
+				data-testid="email-input"
+				class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+				placeholder="teacher@school.com"
+				required
+				disabled={loading}
+			/>
+		</div>
+
+		{#if mode === 'signup'}
+			<!-- Display Name (Signup only) -->
+			<div>
+				<label for="displayName" class="mb-1 block text-sm font-medium text-gray-700">
+					Display Name
+				</label>
+				<input
+					id="displayName"
+					type="text"
+					bind:value={displayName}
+					data-testid="display-name-input"
+					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+					placeholder="Your full name"
+					disabled={loading}
+				/>
+			</div>
+
+			<!-- School Email (Signup only) -->
+			<div>
+				<label for="schoolEmail" class="mb-1 block text-sm font-medium text-gray-700">
+					School Email <span class="text-red-500">*</span>
+				</label>
+				<input
+					id="schoolEmail"
+					type="email"
+					bind:value={schoolEmail}
+					data-testid="school-email-input"
+					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+					placeholder="your.name@school.edu"
+					required
+					disabled={loading}
+				/>
+				<p class="mt-1 text-xs text-gray-500">
+					This should be your official school/institution email address
+				</p>
+			</div>
+		{/if}
+
+		<!-- Password -->
+		<div>
+			<label for="password" class="mb-1 block text-sm font-medium text-gray-700"> Password </label>
+			<input
+				id="password"
+				type="password"
+				bind:value={password}
+				data-testid="password-input"
+				class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+				placeholder="Enter your password"
+				required
+				disabled={loading}
+			/>
+		</div>
+
+		{#if mode === 'signup'}
+			<!-- Confirm Password (Signup only) -->
+			<div>
+				<label for="confirmPassword" class="mb-1 block text-sm font-medium text-gray-700">
+					Confirm Password
+				</label>
+				<input
+					id="confirmPassword"
+					type="password"
+					bind:value={confirmPassword}
+					data-testid="confirm-password-input"
+					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
+					placeholder="Confirm your password"
+					required
+					disabled={loading}
+				/>
+			</div>
+		{/if}
+
+		<!-- Submit Button -->
+		<Button 
+			type="submit" 
+			disabled={loading || !email.trim() || !password.trim()} 
+			class="w-full"
+			data-testid="submit-auth-button"
+		>
+			{#if loading}
+				<LoadingSpinner size="sm" />
+				{mode === 'login' ? 'Signing In...' : 'Creating Account...'}
+			{:else}
+				{mode === 'login' ? 'Sign In' : 'Create Account'}
+			{/if}
+		</Button>
+	</form>
+
+	<!-- Toggle between login/signup -->
+	<div class="text-center">
+		<button
+			type="button"
+			on:click={toggleMode}
+			data-testid="toggle-auth-mode-button"
+			class="text-sm text-blue-600 transition-colors hover:text-blue-500 focus:underline focus:outline-none"
+			disabled={loading}
+		>
+			{mode === 'login' ? "Don't have an account? Create one" : 'Already have an account? Sign in'}
+		</button>
+	</div>
+
+	<!-- Demo credentials -->
+	<div class="border-t border-gray-200 pt-4" data-testid="demo-credentials-section">
+		<p class="mb-2 text-center text-sm text-gray-600">For Testing:</p>
+		<button
+			type="button"
+			on:click={fillDemoCredentials}
+			data-testid="fill-demo-credentials-button"
+			class="w-full rounded-md bg-blue-100 px-3 py-2 text-sm text-blue-700 transition-colors hover:bg-blue-200"
+			disabled={loading}
+		>
+			Fill Demo Teacher Credentials
+		</button>
+	</div>
+
+	<!-- Cancel Button -->
+	<div class="text-center">
+		<button
+			type="button"
+			on:click={handleCancel}
+			data-testid="back-to-options-button"
+			class="text-sm text-gray-500 hover:text-gray-700 focus:underline focus:outline-none"
+			disabled={loading}
+		>
+			Back to options
+		</button>
+	</div>
+</div>

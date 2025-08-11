@@ -1,8 +1,8 @@
 /**
- * Association Sync - Update student-classroom associations in Firestore
+ * Association Sync - Update student-classroom and teacher-classroom associations in Firestore
  * @module functions/src/services/sync/association-sync
- * @size ~60 lines (extracted from 474-line classroom-sync.ts)
- * @exports updateStudentClassroomAssociations
+ * @size ~120 lines (extracted from 474-line classroom-sync.ts)
+ * @exports updateStudentClassroomAssociations, updateTeacherClassroomAssociations
  * @dependencies firebase-admin/firestore, firebase-functions, ../config/firebase, ../schemas/domain
  * @patterns Database operations, batch updates, association management
  */
@@ -65,6 +65,86 @@ export async function updateStudentClassroomAssociations(classroomIdsByCourseCod
     }
   } catch (error) {
     logger.error("Error in updateStudentClassroomAssociations", error);
+    throw error;
+  }
+}
+
+/**
+ * Update teacher classroom associations based on current classroom ownership
+ * @param teacherId - ID of the teacher to update
+ * @param classroomIdsByCourseCode - Map of course codes to classroom IDs
+ */
+export async function updateTeacherClassroomAssociations(
+  teacherId: string, 
+  classroomIdsByCourseCode: Map<string, string>
+): Promise<void> {
+  try {
+    logger.info("Updating teacher-classroom associations", { teacherId });
+
+    // Get all classrooms owned by this teacher
+    const teacherClassroomsSnapshot = await db
+      .collection("classrooms")
+      .where("teacherId", "==", teacherId)
+      .get();
+
+    const classroomIds: string[] = [];
+    let totalStudents = 0;
+
+    // Collect classroom IDs and count total students
+    for (const classroomDoc of teacherClassroomsSnapshot.docs) {
+      classroomIds.push(classroomDoc.id);
+      
+      const classroomData = classroomDoc.data() as ClassroomDomain;
+      totalStudents += (classroomData.studentIds || []).length;
+    }
+
+    // Get the teacher document
+    const teacherRef = db.collection("users").doc(teacherId);
+    const teacherSnapshot = await teacherRef.get();
+
+    if (teacherSnapshot.exists) {
+      const teacherData = teacherSnapshot.data() as UserDomain;
+      
+      // Check if update is needed
+      const existingClassroomIds = teacherData.classroomIds || [];
+      const sortedExisting = [...existingClassroomIds].sort();
+      const sortedNew = [...classroomIds].sort();
+
+      const needsUpdate = 
+        JSON.stringify(sortedExisting) !== JSON.stringify(sortedNew) ||
+        ((teacherData as any).totalClassrooms || 0) !== classroomIds.length ||
+        ((teacherData as any).totalStudents || 0) !== totalStudents;
+
+      if (needsUpdate) {
+        await teacherRef.update({
+          classroomIds: classroomIds,
+          totalClassrooms: classroomIds.length,
+          totalStudents: totalStudents,
+          updatedAt: getCurrentTimestamp(),
+        });
+
+        logger.info("Updated teacher classroom associations", {
+          teacherId,
+          email: teacherData.email,
+          classroomCount: classroomIds.length,
+          studentCount: totalStudents,
+          classroomIds: classroomIds
+        });
+      } else {
+        logger.info("Teacher classroom associations already up to date", {
+          teacherId,
+          classroomCount: classroomIds.length,
+          studentCount: totalStudents
+        });
+      }
+    } else {
+      logger.warn("Teacher document not found", { teacherId });
+    }
+  } catch (error) {
+    logger.error("Error updating teacher classroom associations", {
+      teacherId,
+      error: error instanceof Error ? error.message : String(error),
+    });
     throw error;
   }
 }

@@ -5,7 +5,7 @@
 	import { auth } from '$lib/stores';
 
 	// State using Svelte 5 runes
-	let boardAccountEmail = $state('');
+	let schoolEmail = $state('');
 	let loading = $state(false);
 	let error = $state<string | null>(null);
 	let success = $state<string | null>(null);
@@ -13,10 +13,17 @@
 	let useOAuth = $state(true); // Default to OAuth approach
 
 	// Initialize board account email with logged-in user's email
+	// Also detect if we have Google OAuth tokens available
 	$effect(() => {
-		if (auth.user?.email && !boardAccountEmail) {
-			boardAccountEmail = auth.user.email;
+		if (auth.user?.email && !schoolEmail) {
+			schoolEmail = auth.user.email;
 		}
+
+		// Auto-detect if we should use OAuth based on available tokens
+		// Teachers who signed in with email/password won't have Google tokens
+		const hasGoogleToken =
+			typeof sessionStorage !== 'undefined' && sessionStorage.getItem('google_access_token');
+		useOAuth = !!hasGoogleToken;
 	});
 
 	// Results from sheet creation
@@ -25,7 +32,7 @@
 		sheetId: string;
 		message: string;
 		appScriptCode: string;
-		boardAccountEmail?: string;
+		schoolEmail?: string;
 		alreadyConfigured?: boolean;
 		method?: string;
 		teacherEmail?: string;
@@ -34,8 +41,8 @@
 	} | null>(null);
 
 	async function createSheet() {
-		if (!boardAccountEmail?.trim()) {
-			error = 'Please enter your board account email';
+		if (!schoolEmail?.trim()) {
+			error = 'Please enter your school account email';
 			return;
 		}
 
@@ -56,21 +63,40 @@
 				}
 
 				result = await api.createTeacherSheetOAuth({
-					teacherName: auth.user?.displayName || auth.user?.email || boardAccountEmail,
+					teacherName: auth.user?.displayName || auth.user?.email || schoolEmail,
 					accessToken: googleAccessToken
 				});
 			} else {
 				// Fall back to service account approach
 				result = await api.createTeacherSheet({
-					boardAccountEmail,
-					teacherName: auth.user?.displayName || auth.user?.email || boardAccountEmail
+					boardAccountEmail: schoolEmail, // API still expects boardAccountEmail for backward compatibility
+					teacherName: auth.user?.displayName || auth.user?.email || schoolEmail
 				});
 			}
 
 			onboardingResult = result;
+
+			// After successful sheet creation, update user profile with schoolEmail if needed
+			// (Teachers who authenticated with email/password already have schoolEmail set)
+			if (auth.user?.uid && schoolEmail) {
+				try {
+					await api.createProfile({
+						uid: auth.user.uid,
+						role: 'teacher',
+						schoolEmail: schoolEmail,
+						displayName: auth.user.displayName || undefined
+					});
+					console.log('User profile updated with school email:', schoolEmail);
+				} catch (profileError) {
+					console.warn('Failed to update user profile with school email:', profileError);
+					// Don't fail the onboarding if profile update fails
+					// This is expected for email/password teachers who already have schoolEmail set
+				}
+			}
+
 			currentStep = 'complete';
 
-			if (result.alreadyConfigured) {
+			if ((result as any).alreadyConfigured) {
 				success = 'Board account already has a Google Sheet configured!';
 			} else {
 				success = useOAuth
@@ -93,7 +119,7 @@
 
 	function resetOnboarding() {
 		currentStep = 'input';
-		boardAccountEmail = auth.user?.email || '';
+		schoolEmail = auth.user?.email || '';
 		onboardingResult = null;
 		error = null;
 		success = null;
@@ -170,19 +196,19 @@
 
 					<div class="grid grid-cols-1 gap-6">
 						<div>
-							<label for="boardAccountEmail" class="mb-2 block text-sm font-medium text-gray-700">
-								Board Account Email *
+							<label for="schoolEmail" class="mb-2 block text-sm font-medium text-gray-700">
+								School Email *
 							</label>
 							<input
-								id="boardAccountEmail"
+								id="schoolEmail"
 								type="email"
-								bind:value={boardAccountEmail}
+								bind:value={schoolEmail}
 								required
 								class="w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none"
 								placeholder="your.board@schooldistrict.edu"
 							/>
 							<div class="mt-2 text-xs text-gray-600">
-								{#if auth.user?.email && boardAccountEmail === auth.user.email}
+								{#if auth.user?.email && schoolEmail === auth.user.email}
 									<span class="text-green-600">✓ Using your login email ({auth.user.email})</span>
 								{:else if auth.user?.email}
 									<span class="text-amber-600"
@@ -196,16 +222,16 @@
 						</div>
 					</div>
 
-					{#if auth.user?.email && boardAccountEmail && boardAccountEmail !== auth.user.email}
+					{#if auth.user?.email && schoolEmail && schoolEmail !== auth.user.email}
 						<div class="rounded-md border border-amber-200 bg-amber-50 p-4">
 							<h4 class="mb-2 text-sm font-medium text-amber-900">⚠ Different Email Detected</h4>
 							<p class="mb-2 text-sm text-amber-800">
 								You're logged in as <strong>{auth.user.email}</strong> but specified
-								<strong>{boardAccountEmail}</strong> as your board account.
+								<strong>{schoolEmail}</strong> as your school account.
 							</p>
 							<p class="text-xs text-amber-700">
-								Make sure <strong>{boardAccountEmail}</strong> is the correct institutional account that
-								will run the AppScript.
+								Make sure <strong>{schoolEmail}</strong> is the correct institutional account that will
+								run the AppScript.
 							</p>
 						</div>
 					{/if}
@@ -217,7 +243,7 @@
 								<li>• We'll create a new Google Sheet in your personal Google Drive</li>
 								<li>
 									• The sheet will be shared with <strong
-										>{boardAccountEmail || 'your board account'}</strong
+										>{schoolEmail || 'your school account'}</strong
 									>
 								</li>
 								<li>• You'll get custom AppScript code for that board account</li>
@@ -229,7 +255,7 @@
 								<li>• We'll create a new Google Sheet in our system</li>
 								<li>
 									• The sheet will be shared with <strong
-										>{boardAccountEmail || 'your board account'}</strong
+										>{schoolEmail || 'your school account'}</strong
 									>
 								</li>
 								<li>• You'll get custom AppScript code for that account</li>
@@ -290,14 +316,14 @@
 						<div>
 							<h4 class="text-sm font-medium text-gray-900">Sheet Details:</h4>
 							<p class="text-sm text-gray-600">Title: _roo_data</p>
-							{#if onboardingResult.method === 'oauth' && onboardingResult.teacherEmail}
+							{#if onboardingResult?.method === 'oauth' && onboardingResult?.teacherEmail}
 								<p class="text-sm text-gray-600">
 									Owner: {onboardingResult.teacherEmail} (your personal Drive)
 								</p>
 							{/if}
 							<div class="mt-2 flex items-center space-x-2">
 								<a
-									href={onboardingResult.spreadsheetUrl}
+									href={onboardingResult?.spreadsheetUrl}
 									target="_blank"
 									class="text-sm text-blue-600 hover:text-blue-800"
 								>
@@ -308,7 +334,7 @@
 										Ready
 									{/snippet}
 								</Badge>
-								{#if onboardingResult.method === 'oauth'}
+								{#if onboardingResult?.method === 'oauth'}
 									<Badge variant="info" size="sm">
 										{#snippet children()}
 											OAuth
@@ -323,7 +349,7 @@
 					<div>
 						<h4 class="mb-3 text-sm font-medium text-gray-900">Next Steps:</h4>
 						<ol class="space-y-3">
-							{#each onboardingResult.nextSteps as step, index (index)}
+							{#each onboardingResult?.nextSteps || [] as step, index (index)}
 								<li class="flex items-start space-x-3">
 									<span
 										class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100 text-xs font-medium text-blue-600"

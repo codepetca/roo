@@ -112,7 +112,11 @@ export class SnapshotProcessor {
       logger.info("Processing grades from submissions");
       await this.processGrades(snapshot, result);
 
-      // Step 9: Update denormalized counts
+      // Step 9: Finalize teacher associations
+      logger.info("Finalizing teacher associations");
+      await this.finalizeTeacherAssociations(snapshot.teacher.email);
+
+      // Step 10: Update denormalized counts
       logger.info("Updating denormalized counts");
       await this.updateCounts(transformed.classrooms);
 
@@ -425,6 +429,70 @@ export class SnapshotProcessor {
           });
         }
       }
+    }
+  }
+
+  /**
+   * Finalize teacher associations after all classrooms have been created
+   * Updates the teacher's classroomIds array and counts with actual created classroom data
+   */
+  private async finalizeTeacherAssociations(teacherEmail: string): Promise<void> {
+    try {
+      logger.info("Starting teacher association finalization", { teacherEmail });
+
+      // Get the teacher record
+      const teacher = await this.repository.getTeacherByEmail(teacherEmail);
+      if (!teacher) {
+        logger.warn("Teacher not found during finalization", { teacherEmail });
+        return;
+      }
+
+      // Get all classrooms owned by this teacher
+      const classrooms = await this.repository.getClassroomsByTeacher(teacher.email);
+      
+      // Extract classroom IDs and calculate total students
+      const classroomIds = classrooms.map(c => c.id);
+      const totalStudents = classrooms.reduce((sum, classroom) => 
+        sum + (classroom.studentCount || 0), 0
+      );
+
+      // Check if update is needed
+      const existingClassroomIds = teacher.classroomIds || [];
+      const sortedExisting = [...existingClassroomIds].sort();
+      const sortedNew = [...classroomIds].sort();
+
+      const needsUpdate = 
+        JSON.stringify(sortedExisting) !== JSON.stringify(sortedNew) ||
+        teacher.totalClassrooms !== classroomIds.length ||
+        teacher.totalStudents !== totalStudents;
+
+      if (needsUpdate) {
+        await this.repository.updateTeacher(teacher.id, {
+          classroomIds,
+          totalClassrooms: classroomIds.length,
+          totalStudents
+        });
+
+        logger.info("Teacher associations finalized", {
+          teacherEmail,
+          teacherId: teacher.id,
+          classroomCount: classroomIds.length,
+          totalStudents,
+          classroomIds
+        });
+      } else {
+        logger.info("Teacher associations already up to date", {
+          teacherEmail,
+          classroomCount: classroomIds.length,
+          totalStudents
+        });
+      }
+    } catch (error) {
+      logger.error("Error finalizing teacher associations", {
+        teacherEmail,
+        error: error instanceof Error ? error.message : "Unknown error"
+      });
+      // Don't throw - this shouldn't fail the entire import
     }
   }
 
