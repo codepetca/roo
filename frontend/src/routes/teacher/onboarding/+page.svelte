@@ -15,7 +15,11 @@
 	// Initialize board account email with logged-in user's email
 	// Also detect if we have Google OAuth tokens available
 	$effect(() => {
-		if (auth.user?.email && !schoolEmail) {
+		// If user already has school email, pre-fill it
+		if (auth.user?.schoolEmail && !schoolEmail) {
+			schoolEmail = auth.user.schoolEmail;
+		} else if (auth.user?.email && !schoolEmail) {
+			// Otherwise use their login email as a starting point
 			schoolEmail = auth.user.email;
 		}
 
@@ -39,6 +43,41 @@
 		spreadsheetUrl?: string;
 		nextSteps?: string[];
 	} | null>(null);
+
+	// Simple function to just save school email without creating sheet
+	async function saveSchoolEmail() {
+		if (!schoolEmail?.trim()) {
+			error = 'Please enter your school account email';
+			return;
+		}
+
+		try {
+			loading = true;
+			error = null;
+
+			const result = await api.updateSchoolEmail(schoolEmail);
+			
+			if (result.success) {
+				success = 'School email updated successfully!';
+				// Refresh user data in auth store
+				if (auth.user) {
+					auth.user.schoolEmail = schoolEmail;
+				}
+				
+				// Redirect to dashboard after success
+				setTimeout(() => {
+					window.location.href = '/dashboard/teacher';
+				}, 2000);
+			} else {
+				error = 'Failed to update school email';
+			}
+		} catch (err: unknown) {
+			console.error('Failed to update school email:', err);
+			error = err instanceof Error ? err.message : 'Failed to update school email';
+		} finally {
+			loading = false;
+		}
+	}
 
 	async function createSheet() {
 		if (!schoolEmail?.trim()) {
@@ -128,8 +167,8 @@
 
 <div class="space-y-6">
 	<PageHeader
-		title="Sheet Setup"
-		description="Create a Google Sheet for your account to sync assignment data"
+		title={!auth.user?.schoolEmail ? "Complete Your Profile" : "Sheet Setup"}
+		description={!auth.user?.schoolEmail ? "Please set your school email to access all teacher features" : "Create a Google Sheet for your account to sync assignment data"}
 	/>
 
 	<!-- Progress indicator -->
@@ -264,7 +303,17 @@
 						{/if}
 					</div>
 
-					<div class="flex justify-end">
+					<div class="flex justify-between">
+						<Button variant="secondary" onclick={saveSchoolEmail} {loading}>
+							{#snippet children()}
+								{#if loading}
+									Saving...
+								{:else}
+									Save Email & Skip Setup
+								{/if}
+							{/snippet}
+						</Button>
+						
 						<Button variant="primary" onclick={createSheet} {loading}>
 							{#snippet children()}
 								{#if loading}

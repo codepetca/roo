@@ -403,7 +403,6 @@ export const api = {
 	async updateSchoolEmail(schoolEmail: string): Promise<{
 		success: boolean;
 		schoolEmail: string;
-		message: string;
 	}> {
 		return typedApiRequest(
 			'/users/profile/school-email',
@@ -413,8 +412,7 @@ export const api = {
 			},
 			z.object({
 				success: z.boolean(),
-				schoolEmail: z.string(),
-				message: z.string()
+				schoolEmail: z.string()
 			})
 		);
 	},

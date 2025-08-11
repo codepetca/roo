@@ -22,6 +22,7 @@ interface AuthUser {
 	email: string | null;
 	displayName: string | null;
 	role: 'teacher' | 'student';
+	schoolEmail?: string | null;
 }
 
 // Global auth state using Svelte 5 runes
@@ -77,7 +78,8 @@ async function getUserProfile(firebaseUser: User): Promise<AuthUser | null> {
 				uid: firebaseUser.uid,
 				email: firebaseUser.email,
 				displayName: firebaseUser.displayName,
-				role: data.data.role
+				role: data.data.role,
+				schoolEmail: data.data.schoolEmail || null
 			};
 		}
 
@@ -154,8 +156,14 @@ async function signIn(email: string, password: string): Promise<void> {
 			return;
 		}
 
-		// Redirect to dashboard
-		await goto('/dashboard');
+		// Check if teacher needs to set school email
+		if (user.role === 'teacher' && !user.schoolEmail) {
+			console.log('Teacher needs to set school email, redirecting to onboarding...');
+			await goto('/teacher/onboarding');
+		} else {
+			// Redirect to dashboard
+			await goto('/dashboard');
+		}
 	} catch (err: unknown) {
 		console.error('Sign in error:', err);
 		error = (err as Error)?.message || 'Failed to sign in';
