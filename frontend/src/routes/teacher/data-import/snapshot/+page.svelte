@@ -1,49 +1,67 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { snapshotStore } from '$lib/stores';
+	import { appState } from '$lib/stores';
+	import { api } from '$lib/api';
 	import { Card, Button, Alert, Badge } from '$lib/components/ui';
 	import { PageHeader } from '$lib/components/dashboard';
 	import ClassroomSnapshotUploader from '$lib/components/snapshot/ClassroomSnapshotUploader.svelte';
 	import SnapshotPreview from '$lib/components/snapshot/SnapshotPreview.svelte';
 	import SnapshotDiffViewer from '$lib/components/snapshot/SnapshotDiffViewer.svelte';
+	import type { ClassroomSnapshot } from '@shared/schemas/classroom-snapshot';
 
-	// Local UI state
+	// Local state for snapshot import
 	let currentStep = $state<'upload' | 'preview' | 'import' | 'complete'>('upload');
 	let importResult = $state<any>(null);
+	let currentSnapshot = $state<ClassroomSnapshot | null>(null);
+	let diffData = $state<any>(null);
+	let importing = $state(false);
+	let error = $state<string | null>(null);
+	let uploader: ClassroomSnapshotUploader;
 
 	// Handle file upload completion
-	function handleFileValidated() {
-		if (snapshotStore.currentSnapshot) {
-			currentStep = 'preview';
-			// Generate diff if we have a previous snapshot
-			snapshotStore.generateDiff();
+	async function handleFileValidated(snapshot: ClassroomSnapshot) {
+		currentSnapshot = snapshot;
+		currentStep = 'preview';
+		
+		// Generate diff if we have existing data
+		try {
+			diffData = await api.generateSnapshotDiff(snapshot);
+		} catch (err) {
+			console.error('Failed to generate diff:', err);
+			// Non-critical error, continue without diff
 		}
 	}
 
 	// Handle import confirmation
 	async function confirmImport() {
+		if (!currentSnapshot) return;
+		
 		currentStep = 'import';
+		importing = true;
+		error = null;
 
 		try {
-			importResult = await snapshotStore.importSnapshot();
-
-			if (importResult.success) {
-				currentStep = 'complete';
-			} else {
-				// Stay on preview step and show error
-				currentStep = 'preview';
-			}
-		} catch (error) {
-			console.error('Import failed:', error);
+			importResult = await api.importSnapshot(currentSnapshot);
+			currentStep = 'complete';
+			
+			// Refresh the dashboard data after successful import
+			await appState.loadDashboard();
+		} catch (err) {
+			console.error('Import failed:', err);
+			error = err instanceof Error ? err.message : 'Import failed';
 			currentStep = 'preview';
+		} finally {
+			importing = false;
 		}
 	}
 
 	// Reset the import process
 	function startOver() {
-		snapshotStore.clearImport();
+		currentSnapshot = null;
+		diffData = null;
 		importResult = null;
+		error = null;
 		currentStep = 'upload';
 	}
 
@@ -55,6 +73,11 @@
 	// Go back to data import options
 	function goBack() {
 		goto('/teacher/data-import');
+	}
+
+	// Clear error
+	function clearError() {
+		error = null;
 	}
 
 	// Clean up on unmount
@@ -99,27 +122,11 @@
 						? 'bg-green-600 text-white'
 						: 'bg-gray-300 text-gray-600'}"
 			>
-				{#if currentStep === 'preview' || currentStep === 'import' || currentStep === 'complete'}
-					<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-						<path
-							fill-rule="evenodd"
-							d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				{:else}
-					1
-				{/if}
+				1
 			</div>
-			<span
-				class="ml-2 text-sm font-medium {currentStep === 'upload'
-					? 'text-blue-600'
-					: 'text-gray-500'}"
-			>
-				Upload & Validate
-			</span>
+			<span class="ml-2 text-sm font-medium text-gray-900">Upload</span>
 		</div>
-		<div class="h-0.5 w-16 bg-gray-300"></div>
+		<div class="h-px w-8 bg-gray-300"></div>
 		<div class="flex items-center">
 			<div
 				class="flex h-8 w-8 items-center justify-center rounded-full {currentStep === 'preview'
@@ -128,176 +135,162 @@
 						? 'bg-green-600 text-white'
 						: 'bg-gray-300 text-gray-600'}"
 			>
-				{#if currentStep === 'import' || currentStep === 'complete'}
-					<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-						<path
-							fill-rule="evenodd"
-							d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				{:else}
-					2
-				{/if}
+				2
 			</div>
-			<span
-				class="ml-2 text-sm font-medium {currentStep === 'preview'
-					? 'text-blue-600'
-					: 'text-gray-500'}"
-			>
-				Preview & Confirm
-			</span>
+			<span class="ml-2 text-sm font-medium text-gray-900">Preview</span>
 		</div>
-		<div class="h-0.5 w-16 bg-gray-300"></div>
+		<div class="h-px w-8 bg-gray-300"></div>
+		<div class="flex items-center">
+			<div
+				class="flex h-8 w-8 items-center justify-center rounded-full {currentStep === 'import'
+					? 'bg-blue-600 text-white'
+					: currentStep === 'complete'
+						? 'bg-green-600 text-white'
+						: 'bg-gray-300 text-gray-600'}"
+			>
+				3
+			</div>
+			<span class="ml-2 text-sm font-medium text-gray-900">Import</span>
+		</div>
+		<div class="h-px w-8 bg-gray-300"></div>
 		<div class="flex items-center">
 			<div
 				class="flex h-8 w-8 items-center justify-center rounded-full {currentStep === 'complete'
 					? 'bg-green-600 text-white'
-					: currentStep === 'import'
-						? 'bg-blue-600 text-white'
-						: 'bg-gray-300 text-gray-600'}"
+					: 'bg-gray-300 text-gray-600'}"
 			>
-				{#if currentStep === 'complete'}
-					<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-						<path
-							fill-rule="evenodd"
-							d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				{:else}
-					3
-				{/if}
+				4
 			</div>
-			<span
-				class="ml-2 text-sm font-medium {currentStep === 'complete'
-					? 'text-green-600'
-					: currentStep === 'import'
-						? 'text-blue-600'
-						: 'text-gray-500'}"
-			>
-				Import Complete
-			</span>
+			<span class="ml-2 text-sm font-medium text-gray-900">Complete</span>
 		</div>
 	</div>
 
-	<!-- Error Display -->
-	{#if snapshotStore.error}
-		<Alert variant="error" title="Import Error" dismissible onDismiss={snapshotStore.clearError} data-testid="validation-error">
-			{#snippet children()}
-				{snapshotStore.error}
-			{/snippet}
-		</Alert>
-	{/if}
-
 	<!-- Step Content -->
 	{#if currentStep === 'upload'}
-		<!-- Step 1: Upload & Validate -->
-		<ClassroomSnapshotUploader onValidated={handleFileValidated} />
+		<ClassroomSnapshotUploader bind:this={uploader} onValidated={handleFileValidated} />
 	{:else if currentStep === 'preview'}
-		<!-- Step 2: Preview & Confirm -->
-		<div class="space-y-6" data-testid="snapshot-preview">
-			<!-- Snapshot Overview -->
-			<SnapshotPreview snapshot={snapshotStore.currentSnapshot} />
+		<!-- Preview Step -->
+		{#if error}
+			<Alert variant="error" title="Import Error" dismissible onDismiss={clearError} data-testid="validation-error">
+				{#snippet children()}
+					{error}
+				{/snippet}
+			</Alert>
+		{/if}
 
-			<!-- Diff Viewer (if available) -->
-			{#if snapshotStore.showDiff && snapshotStore.diffData}
-				<SnapshotDiffViewer diffData={snapshotStore.diffData} data-testid="diff-viewer" />
-			{/if}
-
-			<!-- Actions -->
-			<div class="flex justify-between">
-				<Button variant="secondary" onclick={startOver} data-testid="start-over-btn">
-					{#snippet children()}
-						<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M10 19l-7-7m0 0l7-7m-7 7h18"
-							/>
-						</svg>
-						Choose Different File
-					{/snippet}
-				</Button>
-
-				<Button variant="primary" onclick={confirmImport} loading={snapshotStore.importing} data-testid="confirm-import-btn">
-					{#snippet children()}
-						{#if snapshotStore.importing}
-							Importing Snapshot...
-						{:else}
-							<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M5 13l4 4L19 7"
-								/>
-							</svg>
-							Confirm Import
-						{/if}
-					{/snippet}
-				</Button>
-			</div>
-		</div>
-	{:else if currentStep === 'import'}
-		<!-- Step 3: Importing -->
 		<Card>
 			{#snippet children()}
-				<div class="space-y-4 text-center" data-testid="import-progress">
+				<div class="p-6">
+					<h3 class="mb-4 text-lg font-semibold text-gray-900">Review Import Data</h3>
+					<p class="mb-6 text-sm text-gray-600">
+						Please review the data below before confirming the import. This will update your existing classroom data.
+					</p>
+
+					{#if currentSnapshot}
+						<SnapshotPreview snapshot={currentSnapshot} />
+					{/if}
+
+					{#if diffData}
+						<SnapshotDiffViewer {diffData} data-testid="diff-viewer" />
+					{/if}
+
+					<!-- Actions -->
+					<div class="mt-6 flex items-center justify-between">
+						<Button variant="secondary" onclick={startOver} data-testid="change-file-btn">
+							{#snippet children()}
+								<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+									/>
+								</svg>
+								Choose Different File
+							{/snippet}
+						</Button>
+						<Button variant="primary" onclick={confirmImport} loading={importing} data-testid="confirm-import-btn">
+							{#snippet children()}
+								{#if importing}
+									Importing...
+								{:else}
+									<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+										/>
+									</svg>
+									Confirm Import
+								{/if}
+							{/snippet}
+						</Button>
+					</div>
+				</div>
+			{/snippet}
+		</Card>
+	{:else if currentStep === 'import'}
+		<!-- Import In Progress -->
+		<Card>
+			{#snippet children()}
+				<div class="p-12 text-center">
 					<div
-						class="mx-auto h-16 w-16 animate-spin rounded-full border-4 border-blue-600 border-r-transparent"
-						data-testid="importing-spinner"
+						class="mx-auto inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"
 					></div>
-					<h3 class="text-lg font-semibold text-gray-900">Importing Snapshot...</h3>
-					<p class="text-sm text-gray-600" data-testid="import-status">Please wait while we process your classroom data.</p>
+					<h3 class="mt-4 text-lg font-semibold text-gray-900">Importing Data...</h3>
+					<p class="mt-2 text-sm text-gray-600">
+						This may take a few moments depending on the size of your data.
+					</p>
 				</div>
 			{/snippet}
 		</Card>
 	{:else if currentStep === 'complete'}
-		<!-- Step 4: Complete -->
+		<!-- Import Complete -->
 		<Card>
 			{#snippet children()}
-				<div class="space-y-6 text-center" data-testid="import-success">
-					<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-						<svg
-							class="h-8 w-8 text-green-600"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M5 13l4 4L19 7"
-							/>
-						</svg>
-					</div>
-
-					<div>
-						<h3 class="text-lg font-semibold text-gray-900">Snapshot Imported Successfully!</h3>
-						<p class="mt-2 text-sm text-gray-600" data-testid="import-summary">
-							Your classroom data has been imported and is ready to use.
-						</p>
-					</div>
+				<div class="p-12 text-center" data-testid="import-complete">
+					<svg
+						class="mx-auto h-16 w-16 text-green-600"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					</svg>
+					<h3 class="mt-4 text-lg font-semibold text-gray-900">Import Successful!</h3>
+					<p class="mt-2 text-sm text-gray-600">Your classroom data has been successfully imported.</p>
 
 					{#if importResult}
-						<div class="rounded-lg bg-green-50 p-4 text-left" data-testid="import-stats">
-							<h4 class="font-medium text-green-900">Import Summary</h4>
-							<div class="mt-2 text-sm text-green-800">
-								<p>{importResult.message}</p>
-								{#if importResult.snapshotId}
-									<p class="mt-1 font-mono text-xs">ID: {importResult.snapshotId}</p>
+						<div class="mt-6 rounded-lg bg-gray-50 p-4 text-left">
+							<h4 class="font-medium text-gray-900">Import Summary</h4>
+							<div class="mt-2 space-y-1 text-sm text-gray-600">
+								{#if importResult.stats}
+									<p>• {importResult.stats.classroomsCreated} classrooms created</p>
+									<p>• {importResult.stats.assignmentsCreated} assignments created</p>
+									<p>• {importResult.stats.submissionsCreated} submissions created</p>
+									{#if importResult.stats.gradesPreserved > 0}
+										<p>• {importResult.stats.gradesPreserved} grades preserved</p>
+									{/if}
+								{/if}
+								{#if importResult.processingTime}
+									<p class="mt-2 text-xs text-gray-500">
+										Processing time: {(importResult.processingTime / 1000).toFixed(2)}s
+									</p>
 								{/if}
 							</div>
 						</div>
 					{/if}
 
-					<div class="flex justify-center space-x-4">
-						<Button variant="secondary" onclick={startOver}>
+					<div class="mt-8 flex items-center justify-center space-x-4">
+						<Button variant="secondary" onclick={startOver} data-testid="import-another-btn">
 							{#snippet children()}
-								Import Another
+								Import Another File
 							{/snippet}
 						</Button>
 						<Button variant="primary" onclick={goToDashboard} data-testid="go-to-dashboard-btn">

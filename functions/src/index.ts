@@ -325,6 +325,16 @@ export const api = onRequest(
       if (method === "GET" && path === "/webhooks/debug/test-sheet") {
         await testSheetAccess(request, response); return;
       }
+      
+      // Debug routes for testing Firestore data
+      if (method === "GET" && path === "/debug/firestore") {
+        const { debugFirestore } = await import("./routes/debug-firestore");
+        await debugFirestore(request, response); return;
+      }
+      if (method === "GET" && path === "/debug/validate") {
+        const { debugValidation } = await import("./routes/debug-firestore");
+        await debugValidation(request, response); return;
+      }
 
       // Default 404
       response.status(404).json({

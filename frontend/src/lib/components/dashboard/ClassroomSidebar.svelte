@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { classroomStore } from '$lib/stores';
+	import { appState } from '$lib/stores';
 	import { Badge, Button } from '$lib/components/ui';
 
 	// Props
@@ -14,19 +14,19 @@
 
 	// Sync with centralized store
 	$effect(() => {
-		if (selectedClassroomId !== classroomStore.selectedClassroomId) {
-			selectedClassroomId = classroomStore.selectedClassroomId;
+		if (selectedClassroomId !== appState.selectedClassroomId) {
+			selectedClassroomId = appState.selectedClassroomId;
 		}
 	});
 
 	// Handle classroom selection
 	async function handleClassroomSelect(classroomId: string) {
-		await classroomStore.selectClassroom(classroomId);
+		await appState.selectClassroom(classroomId);
 		onClassroomSelect?.(classroomId);
 	}
 
 	onMount(() => {
-		classroomStore.loadClassrooms();
+		appState.loadDashboard();
 	});
 </script>
 
@@ -38,7 +38,7 @@
 	</div>
 
 	<!-- Loading State -->
-	{#if classroomStore.loading}
+	{#if appState.loading}
 		<div class="flex flex-1 items-center justify-center">
 			<div class="text-center">
 				<div
@@ -47,7 +47,7 @@
 				<p class="mt-2 text-sm text-gray-600">Loading classes...</p>
 			</div>
 		</div>
-	{:else if classroomStore.error}
+	{:else if appState.error}
 		<!-- Error State -->
 		<div class="flex flex-1 items-center justify-center p-4">
 			<div class="text-center">
@@ -64,15 +64,15 @@
 						d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z"
 					/>
 				</svg>
-				<p class="mt-2 text-sm text-red-600">{classroomStore.error}</p>
-				<Button variant="secondary" size="sm" onclick={classroomStore.loadClassrooms} class="mt-2">
+				<p class="mt-2 text-sm text-red-600">{appState.error}</p>
+				<Button variant="secondary" size="sm" onclick={appState.loadDashboard} class="mt-2">
 					{#snippet children()}
 						Try Again
 					{/snippet}
 				</Button>
 			</div>
 		</div>
-	{:else if !classroomStore.hasClassrooms}
+	{:else if !appState.hasData}
 		<!-- Empty State -->
 		<div class="flex flex-1 items-center justify-center p-4">
 			<div class="space-y-4 text-center">
@@ -116,10 +116,10 @@
 		<!-- Classroom List -->
 		<div class="flex-1 overflow-y-auto">
 			<div class="space-y-1 p-2">
-				{#each classroomStore.classrooms as classroom (classroom.id)}
+				{#each appState.classrooms as classroom (classroom.id)}
 					<button
 						onclick={() => handleClassroomSelect(classroom.id)}
-						class="w-full rounded-lg p-3 text-left transition-colors {classroomStore.selectedClassroomId ===
+						class="w-full rounded-lg p-3 text-left transition-colors {appState.selectedClassroomId ===
 						classroom.id
 							? 'border border-blue-200 bg-blue-50'
 							: 'hover:bg-gray-50'}"
@@ -129,7 +129,7 @@
 								<h3 class="truncate font-medium text-gray-900">{classroom.name}</h3>
 								<p class="truncate text-sm text-gray-600">{classroom.courseCode}</p>
 							</div>
-							{#if classroomStore.selectedClassroomId === classroom.id}
+							{#if appState.selectedClassroomId === classroom.id}
 								<svg
 									class="h-5 w-5 flex-shrink-0 text-blue-600"
 									fill="currentColor"
@@ -169,7 +169,7 @@
 
 	<!-- Footer -->
 	<div class="border-t border-gray-200 p-4">
-		<Button variant="secondary" size="sm" onclick={classroomStore.loadClassrooms} class="w-full">
+		<Button variant="secondary" size="sm" onclick={appState.refresh} class="w-full">
 			{#snippet children()}
 				<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path

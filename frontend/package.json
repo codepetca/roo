@@ -50,6 +50,6 @@
 		"firebase": "^12.0.0",
 		"firebase-admin": "^13.4.0",
 		"jsondiffpatch": "^0.7.3",
-		"zod": "^4.0.10"
+		"zod": "^3.25.76"
 	}
 }

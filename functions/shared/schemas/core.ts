@@ -72,9 +72,10 @@ export const classroomSchema = baseEntitySchema.extend({
  */
 export const assignmentSchema = baseEntitySchema.extend({
   classroomId: z.string(),
-  title: z.string().min(1),
-  description: z.string().default(''),
-  type: z.enum(['coding', 'quiz', 'written', 'form']),
+  title: z.string().min(1).optional(),
+  name: z.string().min(1).optional(), // Google Classroom uses 'name' instead of 'title'
+  description: z.string().optional(),
+  type: z.enum(['coding', 'quiz', 'written', 'form']).optional(),
   
   // Timing
   dueDate: dateTimeSchema.optional(),

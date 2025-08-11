@@ -1,9 +1,17 @@
 <script lang="ts">
-	import { snapshotStore } from '$lib/stores';
+	import { api } from '$lib/api';
 	import { Card, Button, Badge } from '$lib/components/ui';
+	import type { ClassroomSnapshot } from '@shared/schemas/classroom-snapshot';
 
 	// Props
-	let { onValidated }: { onValidated?: () => void } = $props();
+	let { onValidated }: { onValidated?: (snapshot: ClassroomSnapshot) => void } = $props();
+
+	// Local state for snapshot management
+	let importFile = $state<File | null>(null);
+	let currentSnapshot = $state<ClassroomSnapshot | null>(null);
+	let validating = $state(false);
+	let error = $state<string | null>(null);
+	let validationStats = $state<any>(null);
 
 	// File input reference
 	let fileInput: HTMLInputElement;
@@ -18,18 +26,48 @@
 
 		// Validate file type
 		if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
-			snapshotStore.clearError();
+			error = 'Please select a valid JSON file';
 			return;
 		}
 
-		// Set the file in the store
-		snapshotStore.setImportFile(file);
+		// Set the file
+		importFile = file;
+		error = null;
 
 		// Validate the file
-		const isValid = await snapshotStore.validateImportFile();
+		await validateImportFile();
+	}
 
-		if (isValid) {
-			onValidated?.();
+	// Validate the imported file
+	async function validateImportFile() {
+		if (!importFile) return false;
+
+		validating = true;
+		error = null;
+
+		try {
+			// Read file content
+			const content = await importFile.text();
+			const snapshot = JSON.parse(content) as ClassroomSnapshot;
+
+			// Validate via API
+			const result = await api.validateSnapshot(snapshot);
+
+			if (result.isValid) {
+				currentSnapshot = snapshot;
+				validationStats = result.stats;
+				onValidated?.(snapshot);
+				return true;
+			} else {
+				error = 'Snapshot validation failed';
+				return false;
+			}
+		} catch (err) {
+			console.error('Validation error:', err);
+			error = err instanceof Error ? err.message : 'Failed to validate snapshot';
+			return false;
+		} finally {
+			validating = false;
 		}
 	}
 
@@ -63,8 +101,8 @@
 
 	function handleDrop(event: DragEvent) {
 		event.preventDefault();
-		dragCounter = 0;
 		isDragging = false;
+		dragCounter = 0;
 
 		const files = event.dataTransfer?.files;
 		if (files && files.length > 0) {
@@ -72,108 +110,88 @@
 		}
 	}
 
-	// Open file dialog
-	function openFileDialog() {
-		fileInput?.click();
-	}
-
-	// Handle keyboard events for accessibility
-	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Enter' || event.key === ' ') {
-			event.preventDefault();
-			openFileDialog();
-		}
-	}
-
 	// Clear the current file
 	function clearFile() {
-		snapshotStore.clearImport();
+		importFile = null;
+		currentSnapshot = null;
+		validationStats = null;
+		error = null;
 		if (fileInput) {
 			fileInput.value = '';
 		}
+	}
+
+	// Get the current snapshot for import
+	export function getSnapshot(): ClassroomSnapshot | null {
+		return currentSnapshot;
 	}
 </script>
 
 <Card>
 	{#snippet children()}
-		<div class="space-y-6">
-			<div>
-				<h3 class="text-lg font-semibold text-gray-900">Upload Classroom Snapshot</h3>
-				<p class="mt-1 text-sm text-gray-600">
-					Select a JSON file containing your classroom snapshot data
-				</p>
-			</div>
+		<div class="p-6">
+			<h3 class="mb-4 text-lg font-semibold text-gray-900">Import Classroom Snapshot</h3>
 
-			<!-- Hidden file input -->
-			<input
-				bind:this={fileInput}
-				type="file"
-				accept=".json,application/json"
-				class="hidden"
-				onchange={handleFileInputChange}
-			/>
-
-			<!-- Drop zone -->
+			<!-- File Upload Area -->
 			<div
-				role="button"
-				tabindex="0"
-				class="rounded-lg border-2 border-dashed p-8 text-center transition-colors {isDragging
-					? 'border-blue-400 bg-blue-50'
-					: snapshotStore.importFile
-						? 'border-green-300 bg-green-50'
-						: 'border-gray-300 bg-gray-50 hover:border-gray-400'}"
 				ondragenter={handleDragEnter}
 				ondragleave={handleDragLeave}
 				ondragover={handleDragOver}
 				ondrop={handleDrop}
-				onclick={openFileDialog}
-				onkeydown={handleKeyDown}
-				data-testid="file-drop-zone"
+				class="rounded-lg border-2 border-dashed p-8 text-center transition-colors {isDragging
+					? 'border-blue-400 bg-blue-50'
+					: importFile
+						? 'border-green-300 bg-green-50'
+						: 'border-gray-300 bg-gray-50 hover:border-gray-400'}"
 			>
+				<input
+					bind:this={fileInput}
+					type="file"
+					accept=".json,application/json"
+					onchange={handleFileInputChange}
+					class="hidden"
+					data-testid="file-input"
+				/>
+
 				{#if isDragging}
 					<div class="absolute inset-0 rounded-lg bg-blue-100 bg-opacity-75" data-testid="drag-overlay"></div>
 				{/if}
-				{#if snapshotStore.validating}
+				{#if validating}
 					<!-- Validating state -->
 					<div class="space-y-4">
 						<div
-							class="mx-auto h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-r-transparent"
-							data-testid="validating-spinner"
+							class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"
 						></div>
 						<div>
-							<h4 class="font-medium text-gray-900">Validating File...</h4>
-							<p class="text-sm text-gray-600">Checking format and structure</p>
+							<h4 class="font-medium text-gray-900">Validating Snapshot...</h4>
+							<p class="text-sm text-gray-600">Checking data structure and integrity</p>
 						</div>
 					</div>
-				{:else if snapshotStore.importFile && snapshotStore.currentSnapshot}
+				{:else if importFile && currentSnapshot}
 					<!-- File validated successfully -->
 					<div class="space-y-4" data-testid="validation-success">
-						<div
-							class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100"
+						<svg
+							class="mx-auto h-12 w-12 text-green-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
 						>
-							<svg
-								class="h-6 w-6 text-green-600"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M5 13l4 4L19 7"
-								/>
-							</svg>
-						</div>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
+						</svg>
 						<div>
 							<h4 class="font-medium text-green-900">File Validated Successfully</h4>
-							<p class="text-sm text-green-700">{snapshotStore.importFile.name}</p>
+							<p class="text-sm text-green-700">{importFile.name}</p>
 							<div class="mt-2 flex items-center justify-center space-x-4 text-xs text-green-600">
-								<span>{Math.round(snapshotStore.importFile.size / 1024)} KB</span>
+								<span>{Math.round(importFile.size / 1024)} KB</span>
 								<span>•</span>
-								<span>{snapshotStore.currentSnapshot.classrooms.length} classrooms</span>
+								<span>{currentSnapshot.classrooms.length} classrooms</span>
 								<span>•</span>
-								<span>{snapshotStore.currentSnapshot.globalStats.totalStudents} students</span>
+								<span>{currentSnapshot.globalStats.totalStudents} students</span>
 							</div>
 						</div>
 						<Button variant="secondary" size="sm" onclick={clearFile}>
@@ -182,32 +200,30 @@
 							{/snippet}
 						</Button>
 					</div>
-				{:else if snapshotStore.importFile && snapshotStore.error}
+				{:else if importFile && error}
 					<!-- File validation failed -->
 					<div class="space-y-4">
-						<div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
-							<svg
-								class="h-6 w-6 text-red-600"
-								fill="none"
-								viewBox="0 0 24 24"
-								stroke="currentColor"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
-						</div>
+						<svg
+							class="mx-auto h-12 w-12 text-red-600"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z"
+							/>
+						</svg>
 						<div>
 							<h4 class="font-medium text-red-900">Validation Failed</h4>
-							<p class="text-sm text-red-700">{snapshotStore.importFile.name}</p>
-							<p class="mt-1 text-sm text-red-600">{snapshotStore.error}</p>
+							<p class="text-sm text-red-700">{importFile.name}</p>
+							<p class="mt-1 text-sm text-red-600">{error}</p>
 						</div>
 						<Button variant="secondary" size="sm" onclick={clearFile}>
 							{#snippet children()}
-								Try Again
+								Try Another File
 							{/snippet}
 						</Button>
 					</div>
@@ -215,106 +231,42 @@
 					<!-- Default upload state -->
 					<div class="space-y-4">
 						<svg
-							class="mx-auto h-12 w-12 {isDragging ? 'text-blue-600' : 'text-gray-400'}"
-							stroke="currentColor"
+							class="mx-auto h-12 w-12 text-gray-400"
 							fill="none"
-							viewBox="0 0 48 48"
-							aria-hidden="true"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
 						>
 							<path
-								d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-								stroke-width="2"
 								stroke-linecap="round"
 								stroke-linejoin="round"
+								stroke-width="2"
+								d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
 							/>
 						</svg>
 						<div>
-							<h4 class="font-medium text-gray-900">
-								{isDragging ? 'Drop your file here' : 'Upload JSON Snapshot'}
-							</h4>
-							<p class="text-sm text-gray-600">
-								{isDragging ? 'Release to upload' : 'Drag and drop or click to select a JSON file'}
-							</p>
+							<h4 class="font-medium text-gray-900">Drop your snapshot file here</h4>
+							<p class="text-sm text-gray-600">or click to browse</p>
+							<p class="mt-2 text-xs text-gray-500">Accepts JSON files exported from Google Sheets</p>
 						</div>
-						<Button variant="primary" onclick={openFileDialog}>
+						<Button
+							variant="primary"
+							size="sm"
+							onclick={() => fileInput?.click()}
+							data-testid="browse-button"
+						>
 							{#snippet children()}
-								<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-									/>
-								</svg>
-								Select File
+								Browse Files
 							{/snippet}
 						</Button>
 					</div>
 				{/if}
 			</div>
 
-			<!-- File requirements -->
-			<div class="rounded-lg bg-gray-50 p-4">
-				<h4 class="mb-2 font-medium text-gray-900">File Requirements</h4>
-				<ul class="space-y-1 text-sm text-gray-600">
-					<li class="flex items-start space-x-2">
-						<svg
-							class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-						<span>JSON format (.json file extension)</span>
-					</li>
-					<li class="flex items-start space-x-2">
-						<svg
-							class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-						<span>Valid classroom snapshot schema structure</span>
-					</li>
-					<li class="flex items-start space-x-2">
-						<svg
-							class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-						<span>Maximum file size: 10MB</span>
-					</li>
-					<li class="flex items-start space-x-2">
-						<svg
-							class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500"
-							fill="currentColor"
-							viewBox="0 0 20 20"
-						>
-							<path
-								fill-rule="evenodd"
-								d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-						<span>Contains teacher, classrooms, assignments, and student data</span>
-					</li>
-				</ul>
-			</div>
+			{#if error}
+				<div class="mt-4 rounded-md bg-red-50 p-3">
+					<p class="text-sm text-red-800">{error}</p>
+				</div>
+			{/if}
 		</div>
 	{/snippet}
 </Card>

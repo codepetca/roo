@@ -12,6 +12,10 @@ test('capture dashboard screenshot for analysis', async ({ page }) => {
   await page.goto('/dashboard/teacher');
   await page.waitForTimeout(3000);
   
+  // Wait longer for API calls to complete and check store state
+  console.log('Waiting 10 seconds for API calls to complete...');
+  await page.waitForTimeout(10000);
+  
   // Take full page screenshot
   await page.screenshot({ 
     path: 'dashboard-current-state.png',

@@ -115,11 +115,32 @@ export async function typedApiRequest<T>(
 		throw new Error('No data in API response');
 	}
 
+	// Add detailed logging for debugging validation issues
+	console.debug('Raw API response data:', JSON.stringify(rawResponse.data, null, 2));
+	console.debug('Validating against schema:', schema._def);
+
 	const validation = safeValidateApiResponse(schema, rawResponse.data);
 
 	if (!validation.success) {
-		console.error('API response validation failed:', validation.error);
-		throw new Error(`API response validation failed: ${validation.error}`);
+		console.error('🚨 API RESPONSE VALIDATION FAILED 🚨');
+		console.error('Endpoint:', endpoint);
+		console.error('Method:', options.method || 'GET');
+		console.error('Schema expected:', schema._def);
+		console.error('Response data:', JSON.stringify(rawResponse.data, null, 2));
+		console.error('Validation errors:', validation.error);
+		console.error('Detailed error format:', JSON.stringify(validation.error, null, 2));
+		
+		// Create more descriptive error message
+		const errorDetails = validation.error.issues ? validation.error.issues.map(issue => 
+			`Path: ${issue.path.join('.')}, Expected: ${issue.expected}, Received: ${issue.received}, Message: ${issue.message}`
+		).join('; ') : validation.error;
+		
+		// Also log to browser alert for E2E tests
+		if (typeof window !== 'undefined') {
+			window.console.warn('VALIDATION FAILED - CHECK CONSOLE FOR DETAILS');
+		}
+		
+		throw new Error(`API response validation failed: ${errorDetails}`);
 	}
 
 	return validation.data as T;

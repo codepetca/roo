@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { teacherDashboardStore } from '$lib/stores';
+	import { appState } from '$lib/stores';
 	import { Button, Alert, Card } from '$lib/components/ui';
 	import {
 		PageHeader,
@@ -11,7 +10,7 @@
 
 	// Handle classroom selection
 	function handleClassroomSelect(classroomId: string) {
-		teacherDashboardStore.selectClassroom(classroomId);
+		appState.selectClassroom(classroomId);
 	}
 
 	// Handle assignment view
@@ -24,10 +23,20 @@
 		goto('/teacher/data-import');
 	}
 
+	// Clean reactive bindings using $derived with direct property access
+	let loading = $derived(appState.loading);
+	let error = $derived(appState.error);
+	let hasData = $derived(appState.hasData);
+	let teacher = $derived(appState.teacher);
+	let classrooms = $derived(appState.classrooms);
+	let dashboardStats = $derived(appState.dashboardStats);
+	let recentActivity = $derived(appState.recentActivity);
+
 	// Load dashboard data on mount
-	onMount(async () => {
-		console.log('🚀 Teacher dashboard mounted');
-		await teacherDashboardStore.loadDashboard();
+	$effect(() => {
+		console.log('🔄 Dashboard component mounted, loading data...');
+		// Load immediately on mount
+		appState.loadDashboard();
 	});
 </script>
 
@@ -38,7 +47,12 @@
 				Import Data
 			{/snippet}
 		</Button>
-		<Button variant="primary" onclick={teacherDashboardStore.refresh} loading={teacherDashboardStore.loading}>
+		<Button variant="outline" onclick={appState.loadTestData}>
+			{#snippet children()}
+				Load Test Data
+			{/snippet}
+		</Button>
+		<Button variant="primary" onclick={appState.refresh} loading={loading}>
 			{#snippet children()}
 				Refresh
 			{/snippet}
@@ -47,6 +61,7 @@
 {/snippet}
 
 <div class="space-y-6">
+	
 	<!-- Page Header -->
 	<PageHeader
 		title="Teacher Dashboard"
@@ -54,18 +69,19 @@
 		{actions}
 	/>
 
+
 	<!-- Error State -->
-	{#if teacherDashboardStore.error}
+	{#if error}
 		<Alert
 			variant="error"
 			title="Error loading dashboard"
 			dismissible
-			onDismiss={teacherDashboardStore.clearError}
+			onDismiss={appState.clearError}
 		>
 			{#snippet children()}
-				{teacherDashboardStore.error}
+				{error}
 				<div class="mt-3">
-					<Button variant="secondary" size="sm" onclick={teacherDashboardStore.refresh}>
+					<Button variant="secondary" size="sm" onclick={appState.refresh}>
 						{#snippet children()}
 							Try Again
 						{/snippet}
@@ -75,10 +91,15 @@
 		</Alert>
 	{/if}
 
-	<!-- Loading State -->
-	{#if teacherDashboardStore.loading}
+	<!-- TEMP DEBUG: Force show data section for testing -->
+	<div class="mb-4 p-2 bg-yellow-100 text-xs">
+		🐛 Store State: loading={loading}, hasData={hasData}, classrooms={classrooms.length}
+	</div>
+	
+	<!-- Content based on store data only -->
+	{#if loading && !hasData}
 		<LoadingSkeleton type="card" rows={3} />
-	{:else if !teacherDashboardStore.dashboardData}
+	{:else if !hasData}
 		<!-- No data state -->
 		<Card>
 			{#snippet children()}
@@ -96,6 +117,7 @@
 							d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
 						/>
 					</svg>
+					
 					<h3 class="mt-2 text-sm font-medium text-gray-900">No Data Available</h3>
 					<p class="mt-1 text-sm text-gray-500">
 						Import your classroom data to get started with the dashboard.
@@ -111,8 +133,7 @@
 			{/snippet}
 		</Card>
 	{:else}
-		<!-- Dashboard with data -->
-		{@const stats = teacherDashboardStore.quickStats}
+		<!-- Dashboard with data - pure store reactivity -->
 		
 		<!-- Quick Stats -->
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-4">
@@ -135,7 +156,7 @@
 					</div>
 					<div class="ml-4">
 						<p class="text-sm font-medium text-gray-600">Total Assignments</p>
-						<p class="text-2xl font-semibold text-gray-900">{stats?.totalAssignments || 0}</p>
+						<p class="text-2xl font-semibold text-gray-900">{dashboardStats?.totalAssignments || 0}</p>
 					</div>
 				</div>
 			</div>
@@ -159,7 +180,7 @@
 					</div>
 					<div class="ml-4">
 						<p class="text-sm font-medium text-gray-600">Total Students</p>
-						<p class="text-2xl font-semibold text-gray-900">{stats?.totalStudents || 0}</p>
+						<p class="text-2xl font-semibold text-gray-900">{dashboardStats?.totalStudents || 0}</p>
 					</div>
 				</div>
 			</div>
@@ -183,7 +204,7 @@
 					</div>
 					<div class="ml-4">
 						<p class="text-sm font-medium text-gray-600">Pending Review</p>
-						<p class="text-2xl font-semibold text-gray-900">{stats?.ungradedSubmissions || 0}</p>
+						<p class="text-2xl font-semibold text-gray-900">{dashboardStats?.ungradedSubmissions || 0}</p>
 					</div>
 				</div>
 			</div>
@@ -208,7 +229,7 @@
 					<div class="ml-4">
 						<p class="text-sm font-medium text-gray-600">Average Grade</p>
 						<p class="text-2xl font-semibold text-gray-900">
-							{stats?.averageGrade ? `${stats.averageGrade.toFixed(1)}%` : 'N/A'}
+							{dashboardStats?.averageGrade ? `${dashboardStats.averageGrade.toFixed(1)}%` : 'N/A'}
 						</p>
 					</div>
 				</div>
@@ -222,7 +243,7 @@
 				<p class="text-sm text-gray-600">Manage assignments and track progress across your classes</p>
 			</div>
 			<div class="p-6">
-				{#if teacherDashboardStore.classrooms.length === 0}
+				{#if classrooms.length === 0}
 					<div class="py-12 text-center">
 						<svg
 							class="mx-auto h-12 w-12 text-gray-400"
@@ -251,7 +272,7 @@
 					</div>
 				{:else}
 					<div class="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-						{#each teacherDashboardStore.classrooms as classroom (classroom.id)}
+						{#each classrooms as classroom (classroom.id)}
 							<div class="rounded-lg border border-gray-200 p-6 hover:border-gray-300 transition-colors cursor-pointer"
 								 onclick={() => handleClassroomSelect(classroom.id)}>
 								<div class="flex items-start justify-between">
@@ -302,11 +323,11 @@
 				<p class="text-sm text-gray-600">Latest submissions and grades across all your classes</p>
 			</div>
 			<div class="p-6">
-				{#if teacherDashboardStore.recentActivity.length === 0}
+				{#if recentActivity.length === 0}
 					<p class="text-sm text-gray-500 text-center py-8">No recent activity</p>
 				{:else}
 					<div class="space-y-4">
-						{#each teacherDashboardStore.recentActivity.slice(0, 10) as activity (activity.timestamp)}
+						{#each recentActivity.slice(0, 10) as activity, index (index)}
 							<div class="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
 								{#if activity.type === 'submission'}
 									<div class="flex-shrink-0">

@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod';
-import { typedApiRequest, callFunction } from './client';
+import { typedApiRequest, callFunction, apiRequest } from './client';
 import {
 	// Legacy schemas (keeping for backward compatibility)
 	answerKeyResponseSchema,
@@ -634,7 +634,16 @@ export const api = {
 
 	// Teacher dashboard endpoints  
 	async getTeacherDashboard(): Promise<TeacherDashboard> {
-		return typedApiRequest('/teacher/dashboard', {}, teacherDashboardSchema);
+		console.log('🔍 Calling getTeacherDashboard API...');
+		
+		try {
+			const result = await typedApiRequest('/teacher/dashboard', {}, teacherDashboardSchema);
+			console.log('✅ getTeacherDashboard succeeded:', result);
+			return result;
+		} catch (error) {
+			console.error('❌ getTeacherDashboard failed:', error);
+			throw error;
+		}
 	},
 
 	async getTeacherClassroomsBasic(): Promise<Classroom[]> {

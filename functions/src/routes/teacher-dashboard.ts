@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { logger } from "firebase-functions";
-import { FirestoreRepository } from "../services/firestore-repository";
+import { FirestoreRepository, serializeTimestamps } from "../services/firestore-repository";
 import { getUserFromRequest } from "../middleware/validation";
 import { 
   TeacherDashboard,
@@ -70,8 +70,8 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
       });
     }
 
-    // Create dashboard user object
-    const dashboardUser: DashboardUser = {
+    // Create dashboard user object with serialized timestamps
+    const dashboardUser: DashboardUser = serializeTimestamps({
       id: user.uid,
       email: userData.email,
       name: userData.displayName || userData.email.split("@")[0],
@@ -82,7 +82,7 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
       totalClassrooms: userData.totalClassrooms || 0,
       createdAt: userData.createdAt || new Date(),
       updatedAt: userData.updatedAt || new Date()
-    }
+    });
 
     // Get teacher's classrooms with assignments
     logger.info("Dashboard step 4: Getting classrooms", { teacherEmail: userData.email });
@@ -115,11 +115,19 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
       
       // Transform to dashboard activity format
       recentClassroomActivity.forEach(item => {
+        // Helper to convert Firestore Timestamp to Date
+        const convertTimestamp = (timestamp: any): Date => {
+          if (timestamp instanceof Date) return timestamp;
+          if (timestamp && typeof timestamp.toDate === 'function') return timestamp.toDate();
+          if (timestamp && timestamp._seconds !== undefined) return new Date(timestamp._seconds * 1000);
+          return new Date();
+        };
+
         if ("submittedAt" in item) {
           // It's a submission
           recentActivity.push({
             type: "submission",
-            timestamp: item.submittedAt,
+            timestamp: convertTimestamp(item.submittedAt),
             details: {
               classroomId: item.classroomId,
               classroomName: classroom.name,
@@ -131,7 +139,7 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
           // It's a grade
           recentActivity.push({
             type: "grade",
-            timestamp: item.gradedAt,
+            timestamp: convertTimestamp(item.gradedAt),
             details: {
               classroomId: item.classroomId,
               classroomName: classroom.name,
@@ -205,9 +213,12 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
       } : null
     });
 
+    // Serialize all timestamps to ISO strings before sending to frontend
+    const serializedData = serializeTimestamps(dashboardData);
+    
     return res.status(200).json({
       success: true,
-      data: dashboardData
+      data: serializedData
     });
 
   } catch (error) {

@@ -69,7 +69,7 @@ function isTimestampOrDate(value: any): boolean {
  * Serialize Firestore timestamps to ISO strings for API responses
  * This ensures consistent timestamp format across Admin SDK (backend) and Web SDK (frontend)
  */
-function serializeTimestamps<T extends Record<string, any>>(doc: T): T {
+export function serializeTimestamps<T extends Record<string, any>>(doc: T): T {
   if (!doc || typeof doc !== 'object') {
     return doc;
   }
@@ -687,7 +687,27 @@ export class FirestoreRepository {
       const bTime = "submittedAt" in b 
         ? (b as Submission).submittedAt 
         : (b as Grade).gradedAt;
-      return bTime.getTime() - aTime.getTime();
+      
+      // Convert to Date objects handling both Date and Firestore Timestamp types
+      const getDateFromTimestamp = (timestamp: any): Date => {
+        if (timestamp instanceof Date) {
+          return timestamp;
+        }
+        if (timestamp && typeof timestamp.toDate === 'function') {
+          return timestamp.toDate();
+        }
+        if (timestamp && timestamp._seconds !== undefined) {
+          // Handle raw Firestore timestamp format
+          return new Date(timestamp._seconds * 1000);
+        }
+        // Fallback to current time if timestamp is invalid
+        return new Date();
+      };
+      
+      const aDate = getDateFromTimestamp(aTime);
+      const bDate = getDateFromTimestamp(bTime);
+      
+      return bDate.getTime() - aDate.getTime();
     });
 
     return combined.slice(0, limitCount);

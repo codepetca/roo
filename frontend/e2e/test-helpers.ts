@@ -22,7 +22,7 @@ export const TEST_TEACHER_PROFILE = {
   email: 'teacher@test.com',
   password: 'test123',
   displayName: 'Test Teacher',
-  schoolEmail: 'teacher@school.edu'
+  schoolEmail: 'test.codepet@gmail.com'
 };
 
 /**
@@ -302,6 +302,109 @@ export async function createTestAccountIfNeeded(page: Page): Promise<boolean> {
 }
 
 /**
+ * Update school email for authenticated user
+ * This ensures the user profile matches the imported classroom data
+ */
+export async function updateSchoolEmailForTestUser(page: Page): Promise<boolean> {
+  try {
+    console.log('Updating school email for test user...');
+    
+    // Wait for Firebase to be available
+    await page.waitForTimeout(3000);
+    
+    const response = await page.evaluate(async () => {
+      try {
+        // Wait for Firebase modules to load
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Try different ways to access Firebase auth
+        let user = null;
+        
+        // Method 1: Check for Firebase auth in window
+        if ((window as any).firebaseAuth?.currentUser) {
+          user = (window as any).firebaseAuth.currentUser;
+          console.log('Found user via window.firebaseAuth');
+        }
+        
+        // Method 2: Check for Firebase compat auth
+        else if ((window as any).firebase?.auth()?.currentUser) {
+          user = (window as any).firebase.auth().currentUser;
+          console.log('Found user via window.firebase.auth()');
+        }
+        
+        // Method 3: Try to access via module import (if available)
+        else if (typeof (window as any).getAuth === 'function') {
+          const auth = (window as any).getAuth();
+          user = auth.currentUser;
+          console.log('Found user via getAuth()');
+        }
+        
+        // Method 4: Look for auth in global scope
+        else {
+          const authKeys = Object.keys(window).filter(key => key.toLowerCase().includes('auth'));
+          console.log('Available auth-related keys:', authKeys);
+          
+          for (const key of authKeys) {
+            const authObj = (window as any)[key];
+            if (authObj && authObj.currentUser) {
+              user = authObj.currentUser;
+              console.log(`Found user via window.${key}`);
+              break;
+            }
+          }
+        }
+        
+        if (!user) {
+          const availableKeys = Object.keys(window).filter(k => k.toLowerCase().includes('fire') || k.toLowerCase().includes('auth'));
+          throw new Error(`No authenticated user found. Available Firebase keys: ${availableKeys.join(', ')}`);
+        }
+        
+        const token = await user.getIdToken(true);
+        console.log('Got auth token, calling school email update...');
+        
+        // Call the school email update endpoint
+        const response = await fetch('https://us-central1-roo-app-3d24e.cloudfunctions.net/api/users/profile/school-email', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            schoolEmail: 'test.codepet@gmail.com'
+          })
+        });
+        
+        const result = await response.json();
+        
+        return {
+          ok: response.ok,
+          status: response.status,
+          data: result
+        };
+      } catch (error) {
+        console.error('Error updating school email:', error);
+        return {
+          ok: false,
+          status: 500,
+          error: error.message
+        };
+      }
+    });
+    
+    if (response.ok) {
+      console.log('✅ School email updated successfully:', response.data);
+      return true;
+    } else {
+      console.log(`❌ Failed to update school email: ${response.status} - ${JSON.stringify(response.data || response.error)}`);
+      return false;
+    }
+  } catch (error) {
+    console.log('❌ Error updating school email:', error.message);
+    return false;
+  }
+}
+
+/**
  * Core authentication helper
  * Handles the complete teacher sign-in flow
  */
@@ -379,6 +482,15 @@ export async function signInAsTeacher(page: Page) {
     // Final redirect wait
     await page.waitForURL(/\/dashboard/, { timeout: 10000 });
     console.log('✓ Sign-in successful');
+    
+    // Update school email to match imported classroom data
+    console.log('Setting school email for data consistency...');
+    const schoolEmailUpdated = await updateSchoolEmailForTestUser(page);
+    if (schoolEmailUpdated) {
+      console.log('✓ School email set to test.codepet@gmail.com');
+    } else {
+      console.log('⚠️ School email update failed - dashboard may show empty state');
+    }
     
   } catch (error) {
     console.log('❌ Sign-in failed:', error.message);
@@ -542,10 +654,41 @@ export const PageElements = {
 export async function waitForPageReady(page: Page) {
   // Wait for common loading indicators to disappear
   await page.waitForFunction(() => {
-    const loadingElements = document.querySelectorAll('[data-testid*="loading"], .animate-spin, text*="loading", text*="Loading"');
-    return loadingElements.length === 0;
-  }, { timeout: 10000 }).catch(() => {
-    // Continue if no loading indicators found
+    // Check for animation-based loading indicators
+    const animationLoaders = document.querySelectorAll('.animate-spin, .animate-pulse');
+    
+    // Check for text-based loading indicators (case-insensitive)
+    const textLoaders = Array.from(document.querySelectorAll('*')).filter(el => {
+      const text = el.textContent?.trim().toLowerCase();
+      return text && (
+        text.includes('loading') ||
+        text.includes('checking authentication') ||
+        text.includes('redirecting') ||
+        text.includes('fetching') ||
+        text.includes('processing')
+      );
+    });
+    
+    // Check for disabled loading buttons (buttons with loading spinners)
+    const loadingButtons = document.querySelectorAll('button[disabled] svg.animate-spin');
+    
+    // Check for data-testid loading indicators
+    const testIdLoaders = document.querySelectorAll('[data-testid*="loading"]');
+    
+    const totalLoaders = animationLoaders.length + textLoaders.length + loadingButtons.length + testIdLoaders.length;
+    
+    console.log('Loading indicators found:', {
+      animations: animationLoaders.length,
+      textBased: textLoaders.length,
+      buttonLoaders: loadingButtons.length,
+      testIds: testIdLoaders.length,
+      total: totalLoaders
+    });
+    
+    return totalLoaders === 0;
+  }, { timeout: 15000 }).catch((error) => {
+    console.warn('waitForPageReady timeout - continuing anyway:', error.message);
+    // Continue if no loading indicators found or timeout occurs
   });
 }
 
