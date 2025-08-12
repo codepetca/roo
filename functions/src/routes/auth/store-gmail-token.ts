@@ -1,74 +1,82 @@
 /**
- * Store Gmail Access Token API Endpoint
+ * Store Gmail OAuth Token Route
  * Location: functions/src/routes/auth/store-gmail-token.ts
- * 
- * Stores the Google OAuth access token for Gmail sending
- * Called after successful Google sign-in to enable email features
  */
 
-import { Request, Response } from "express";
-import { logger } from "firebase-functions";
-import { z } from "zod";
-import { getUserFromRequest, handleRouteError } from "../../middleware/validation";
-import { db } from "../../config/firebase";
-import * as admin from "firebase-admin";
+import { Request, Response } from 'express';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
+import { z } from 'zod';
 
-const storeGmailTokenSchema = z.object({
+const storeTokenSchema = z.object({
   accessToken: z.string().min(1),
-  expiresAt: z.number().optional() // Unix timestamp
+  expiresAt: z.number().optional()
 });
 
-/**
- * Store Gmail access token for authenticated teacher
- * POST /api/auth/store-gmail-token
- */
-export async function storeGmailToken(req: Request, res: Response): Promise<Response> {
+export async function storeGmailToken(req: Request, res: Response) {
   try {
-    logger.info("Storing Gmail access token", { method: req.method });
-    
-    // Validate request body
-    const validatedInput = storeGmailTokenSchema.parse(req.body);
-    
-    // Get authenticated user
-    const user = await getUserFromRequest(req);
-    
-    if (!user || user.role !== 'teacher') {
-      return res.status(403).json({ 
-        success: false, 
-        error: "Only teachers can store Gmail tokens" 
+    // Require authentication
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Authentication required to store Gmail token'
       });
     }
+
+    const token = authHeader.split('Bearer ')[1];
+    const auth = getAuth();
     
-    // Update user profile with Gmail access token
-    const updateData: any = {
-      gmailAccessToken: validatedInput.accessToken,
-      gmailTokenUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
-    
-    // Store expiration if provided
-    if (validatedInput.expiresAt) {
-      updateData.gmailTokenExpiresAt = new Date(validatedInput.expiresAt * 1000);
+    let decodedToken;
+    try {
+      decodedToken = await auth.verifyIdToken(token);
+    } catch (error) {
+      return res.status(401).json({
+        error: 'Unauthorized',
+        message: 'Invalid authentication token'
+      });
     }
+
+    // Validate request body
+    const validation = storeTokenSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({
+        error: 'Validation error',
+        details: validation.error.issues
+      });
+    }
+
+    const { accessToken, expiresAt } = validation.data;
+
+    // Store Gmail token in user profile
+    const db = getFirestore();
+    const userRef = db.collection('users').doc(decodedToken.uid);
     
-    // Update Firestore document
-    await db.collection("users").doc(user.uid).update(updateData);
-    
-    logger.info("Gmail access token stored successfully", {
-      userId: user.uid,
-      email: user.email,
-      hasExpiration: !!validatedInput.expiresAt
-    });
-    
+    const updateData: any = {
+      gmailAccessToken: accessToken,
+      gmailTokenUpdatedAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (expiresAt) {
+      updateData.gmailTokenExpiresAt = new Date(expiresAt);
+    }
+
+    await userRef.update(updateData);
+
+    console.log(`Gmail token stored for user: ${decodedToken.email}`);
+
     return res.status(200).json({
       success: true,
-      data: {
-        message: "Gmail access token stored successfully",
-        emailSendingEnabled: true
-      }
+      message: 'Gmail access token stored successfully',
+      emailSendingEnabled: true
     });
-    
+
   } catch (error) {
-    return handleRouteError(error, req, res);
+    console.error('Store Gmail token error:', error);
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: 'Failed to store Gmail token'
+    });
   }
 }

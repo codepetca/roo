@@ -329,7 +329,7 @@ export const api = onRequest(
         await testSheetAccess(request, response); return;
       }
       
-      // Debug routes for testing Firestore data (temporarily disabled)
+      // Debug routes temporarily disabled
       // if (method === "GET" && path === "/debug/firestore") {
       //   const { debugFirestore } = await import("./routes/debug-firestore");
       //   await debugFirestore(request, response); return;

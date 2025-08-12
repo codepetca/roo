@@ -79,7 +79,7 @@ describe("Source Schema Validation", () => {
       expect(parsed.id).toBe("assignment-1");
       expect(parsed.courseId).toBe("course-101");
       expect(parsed.title).toBe("Test Assignment");
-      expect(parsed.maxPoints).toBe("100"); // Raw parser returns string
+      expect(parsed.maxPoints).toBe(100); // Parser converts to number
       expect(parsed.submissionType).toBe("forms");
     });
   });
@@ -118,7 +118,7 @@ describe("Source Schema Validation", () => {
         "2024-01-01", "file-1", "TRUE", "form-1"
       ]);
 
-      expect(dataWithTrueString.isQuiz).toBe("TRUE"); // Raw parser returns string
+      expect(dataWithTrueString.isQuiz).toBe(true); // Parser converts to boolean
 
       const dataWithFalseString = parseSubmissionRow([
         "sub-1", "Assignment", "course-1", "John", "Doe", "john@test.com",
@@ -126,7 +126,7 @@ describe("Source Schema Validation", () => {
         "2024-01-01", "file-1", "false", "form-1"
       ]);
 
-      expect(dataWithFalseString.isQuiz).toBe("false"); // Raw parser returns string
+      expect(dataWithFalseString.isQuiz).toBe(false); // Parser converts to boolean
     });
   });
 
@@ -154,8 +154,8 @@ describe("Source Schema Validation", () => {
       const row = ["form-1", "Quiz", "course-1", "1", "Question?", "mc", "10", "Answer", "Explanation", "strict"];
       const parsed = parseAnswerKeyRow(row);
       
-      expect(parsed.questionNumber).toBe("1"); // Raw parser returns string
-      expect(parsed.points).toBe("10"); // Raw parser returns string
+      expect(parsed.questionNumber).toBe(1); // Parser converts to number
+      expect(parsed.points).toBe(10); // Parser converts to number
       expect(parsed.gradingStrictness).toBe("strict");
     });
   });
@@ -444,7 +444,7 @@ describe("Schema Edge Cases", () => {
     const parsed = parseAssignmentRow(row);
     
     expect(parsed.id).toBe("");
-    expect(parsed.maxPoints).toBe(""); // Raw parser returns empty string
+    expect(parsed.maxPoints).toBe(100); // Empty string falls back to default 100
   });
 
   it("should handle invalid number strings", () => {

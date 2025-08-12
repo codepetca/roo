@@ -356,8 +356,9 @@ describe('API Client', () => {
 				isLatest: true,
 				submissionVersionGraded: 1,
 				postedToClassroom: false,
-				createdAt: '2022-01-20T12:00:00.000Z',
-				updatedAt: '2022-01-20T12:00:00.000Z'
+				submissionVersionGraded: 1,
+				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
+				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
 			}
 		];
 

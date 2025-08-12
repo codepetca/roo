@@ -391,21 +391,33 @@ describe("SheetsService", () => {
 
 describe.skip("createSheetsService", () => {
   it("should create service instance with proper authentication", async () => {
+    // Mock sheets API instance
+    const mockSheetsInstance = mockSheetsApi();
+    
+    // Mock auth client with getAccessToken method
+    const mockAuthClient = {
+      credentials: { access_token: "test-token" },
+      getAccessToken: vi.fn().mockResolvedValue({
+        token: "test-access-token",
+        res: {}
+      })
+    };
+
     // Mock the google.auth.GoogleAuth constructor and its methods
     const mockGoogleAuth = {
-      getClient: vi.fn().mockResolvedValue({
-        credentials: { access_token: "test-token" }
-      })
+      getClient: vi.fn().mockResolvedValue(mockAuthClient)
     };
 
     const { google } = await import("googleapis");
     (google.auth.GoogleAuth as any).mockImplementation(() => mockGoogleAuth);
+    (google.sheets as any).mockImplementation(() => mockSheetsInstance);
 
-    const service = await createSheetsService();
+    const service = await createSheetsService("test-spreadsheet-id");
     
     expect(service).toBeInstanceOf(SheetsService);
     expect(mockGoogleAuth.getClient).toHaveBeenCalled();
-  });
+    expect(mockAuthClient.getAccessToken).toHaveBeenCalled();
+  }, 10000); // Increase timeout
 
   it("should handle authentication errors", async () => {
     const { google } = await import("googleapis");
@@ -413,6 +425,6 @@ describe.skip("createSheetsService", () => {
       throw new Error("Authentication failed");
     });
 
-    await expect(createSheetsService()).rejects.toThrow("Authentication failed");
-  });
+    await expect(createSheetsService("test-spreadsheet-id")).rejects.toThrow("Authentication failed");
+  }, 10000); // Increase timeout
 });

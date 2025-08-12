@@ -119,7 +119,8 @@ export const sheetAnswerKeySchema = z.object({
   courseId: z.string().min(1),
   
   // Column D: Question Number
-  questionNumber: z.string().transform(val => {
+  questionNumber: z.union([z.string(), z.number()]).transform(val => {
+    if (typeof val === "number") return val;
     const num = parseInt(val);
     return isNaN(num) ? 0 : num;
   }),
@@ -131,7 +132,8 @@ export const sheetAnswerKeySchema = z.object({
   questionType: z.string().default(""),
   
   // Column G: Points
-  points: z.string().transform(val => {
+  points: z.union([z.string(), z.number()]).transform(val => {
+    if (typeof val === "number") return val;
     const num = parseInt(val);
     return isNaN(num) ? 0 : num;
   }),

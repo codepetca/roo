@@ -272,7 +272,7 @@ export function parseAssignmentRow(row: string[]): Partial<SheetAssignment> {
     title: row[2] || "",
     description: row[3] || "",
     dueDate: row[4] || "",
-    maxPoints: parseInt(row[5] || "100", 10),
+    maxPoints: parseInt(row[5] || "100"),
     submissionType: (row[6] as "forms" | "files" | "mixed") || "mixed",
     createdDate: row[7] || ""
   };
@@ -290,12 +290,12 @@ export function parseSubmissionRow(row: string[]): Partial<SheetSubmission> {
     submissionDate: row[7] || "",
     currentGrade: row[8] || undefined,
     gradingStatus: (row[9] as "pending" | "graded" | "reviewed") || "pending",
-    maxPoints: parseInt(row[10] || "100", 10),
+    maxPoints: parseInt(row[10] || "100"),
     sourceSheetName: row[11] || "",
     assignmentDescription: row[12] || "",
     lastProcessed: row[13] || "",
     sourceFileId: row[14] || "",
-    isQuiz: (row[15] || "false") === "true",
+    isQuiz: row[15] === "true" || row[15] === "TRUE",
     formId: row[16] || ""
   };
 }
@@ -305,10 +305,10 @@ export function parseAnswerKeyRow(row: string[]): Partial<SheetAnswerKey> {
     formId: row[0] || "",
     assignmentTitle: row[1] || "",
     courseId: row[2] || "",
-    questionNumber: parseInt(row[3] || "0", 10),
+    questionNumber: parseInt(row[3] || "0"),
     questionText: row[4] || "",
     questionType: row[5] || "",
-    points: parseInt(row[6] || "0", 10),
+    points: parseInt(row[6] || "0"),
     correctAnswer: row[7] || "",
     answerExplanation: row[8] || "",
     gradingStrictness: (row[9] as "strict" | "standard" | "generous") || "generous"

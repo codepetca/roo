@@ -8,6 +8,34 @@ import { ClassroomSyncService, type ExtractedClassroom, type ExtractedStudent } 
 import { type SheetSubmission } from "../schemas/source";
 import { db, getCurrentTimestamp } from "../../config/firebase";
 
+// Mock firebase-admin to prevent Vite resolution issues
+vi.mock("firebase-admin/firestore", () => ({
+  getFirestore: vi.fn(() => ({
+    collection: vi.fn(() => ({
+      doc: vi.fn(() => ({
+        get: vi.fn(),
+        set: vi.fn(),
+        update: vi.fn()
+      })),
+      where: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: vi.fn(() => ({
+            get: vi.fn()
+          }))
+        })),
+        limit: vi.fn(() => ({
+          get: vi.fn()
+        })),
+        get: vi.fn()
+      })),
+      add: vi.fn()
+    }))
+  })),
+  FieldValue: {
+    serverTimestamp: vi.fn(() => ({ _seconds: Date.now() / 1000, _nanoseconds: 0 }))
+  }
+}));
+
 // Mock Firebase dependencies using the same pattern as other tests
 vi.mock("../../config/firebase", () => ({
   db: {

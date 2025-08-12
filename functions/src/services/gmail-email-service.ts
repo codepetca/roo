@@ -1,33 +1,25 @@
 /**
- * Gmail Email Service - Send emails via teacher's personal Gmail account
- * @module functions/src/services/gmail-email-service
- * @description Uses teacher's Gmail OAuth token to send passcodes and invitations
- * @dependencies googleapis, firebase-admin/firestore
+ * Gmail Email Service for Sending Student Communications
+ * Location: functions/src/services/gmail-email-service.ts
  */
 
 import { google, gmail_v1 } from 'googleapis';
 import { getFirestore } from 'firebase-admin/firestore';
-import { logger } from 'firebase-functions';
-
-export interface EmailRequest {
-  to: string;
-  subject: string;
-  htmlContent: string;
-  textContent?: string;
-}
 
 export class GmailEmailService {
   private gmail: gmail_v1.Gmail;
 
   constructor(private accessToken: string) {
     const auth = new google.auth.OAuth2();
-    auth.setCredentials({ access_token: this.accessToken });
-    
+    auth.setCredentials({
+      access_token: accessToken
+    });
+
     this.gmail = google.gmail({ version: 'v1', auth });
   }
 
   /**
-   * Send passcode email to student via teacher's Gmail
+   * Send passcode email to student
    */
   async sendPasscodeEmail(
     teacherEmail: string,
@@ -35,42 +27,28 @@ export class GmailEmailService {
     passcode: string,
     teacherName: string
   ): Promise<void> {
-    const subject = 'Your Roo Login Code';
-    const htmlContent = this.createPasscodeEmailHTML(passcode, teacherName, teacherEmail);
-    
-    const message = this.createEmailMessage(
-      teacherEmail,
-      studentEmail,
-      subject,
-      htmlContent
-    );
-    
     try {
-      const result = await this.gmail.users.messages.send({
+      const subject = 'Your Roo Login Code';
+      const htmlBody = this.createPasscodeEmailHTML(passcode, teacherName, teacherEmail);
+      
+      const message = this.createEmailMessage(teacherEmail, studentEmail, subject, htmlBody);
+
+      await this.gmail.users.messages.send({
         userId: 'me',
-        requestBody: { raw: message }
+        requestBody: {
+          raw: message
+        }
       });
-      
-      logger.info('Passcode email sent successfully', {
-        teacherEmail,
-        studentEmail,
-        messageId: result.data.id,
-        passcode: '***hidden***' // Don't log actual passcode
-      });
-      
+
+      console.log(`Passcode email sent: ${teacherEmail} -> ${studentEmail}`);
     } catch (error: any) {
-      logger.error('Failed to send passcode email', {
-        teacherEmail,
-        studentEmail,
-        error: error.message,
-        errorCode: error.code
-      });
+      console.error('Gmail send error:', error);
       throw new Error(`Failed to send email: ${error.message}`);
     }
   }
 
   /**
-   * Send invitation email to student via teacher's Gmail
+   * Send classroom invitation email to student
    */
   async sendInvitationEmail(
     teacherEmail: string,
@@ -79,136 +57,75 @@ export class GmailEmailService {
     classroomName: string,
     teacherName: string
   ): Promise<void> {
-    const subject = `You're invited to join ${classroomName} on Roo`;
-    const htmlContent = this.createInvitationEmailHTML(
-      invitationToken, 
-      classroomName, 
-      teacherName, 
-      teacherEmail
-    );
-    
-    const message = this.createEmailMessage(
-      teacherEmail,
-      studentEmail,
-      subject,
-      htmlContent
-    );
-    
     try {
-      const result = await this.gmail.users.messages.send({
+      const subject = `Welcome to ${classroomName} on Roo!`;
+      const htmlBody = this.createInvitationEmailHTML(invitationToken, classroomName, teacherName, teacherEmail);
+      
+      const message = this.createEmailMessage(teacherEmail, studentEmail, subject, htmlBody);
+
+      await this.gmail.users.messages.send({
         userId: 'me',
-        requestBody: { raw: message }
+        requestBody: {
+          raw: message
+        }
       });
-      
-      logger.info('Invitation email sent successfully', {
-        teacherEmail,
-        studentEmail,
-        classroomName,
-        messageId: result.data.id
-      });
-      
+
+      console.log(`Invitation email sent: ${teacherEmail} -> ${studentEmail}`);
     } catch (error: any) {
-      logger.error('Failed to send invitation email', {
-        teacherEmail,
-        studentEmail,
-        classroomName,
-        error: error.message,
-        errorCode: error.code
-      });
+      console.error('Gmail invitation send error:', error);
       throw new Error(`Failed to send invitation: ${error.message}`);
     }
   }
 
   /**
-   * Create Gmail message format
+   * Create HTML email template for passcode
    */
-  private createEmailMessage(
-    from: string,
-    to: string,
-    subject: string,
-    html: string
-  ): string {
-    const email = [
-      `From: ${from}`,
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      'Content-Type: text/html; charset=utf-8',
-      'MIME-Version: 1.0',
-      '',
-      html
-    ].join('\n');
-    
-    return Buffer.from(email).toString('base64url');
-  }
-
-  /**
-   * Create HTML template for passcode email
-   */
-  private createPasscodeEmailHTML(
-    passcode: string, 
-    teacherName: string, 
-    teacherEmail: string
-  ): string {
+  private createPasscodeEmailHTML(passcode: string, teacherName: string, teacherEmail: string): string {
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Your Roo Login Code</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
+          .content { padding: 30px; }
+          .passcode { background: #f1f5f9; border: 2px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center; }
+          .passcode-number { font-size: 36px; font-weight: bold; color: #1e293b; letter-spacing: 4px; margin: 10px 0; }
+          .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #64748b; font-size: 14px; }
+          .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 15px 0; }
+          .warning { background: #fef3cd; border: 1px solid #fbbf24; border-radius: 6px; padding: 15px; margin: 15px 0; color: #92400e; }
+        </style>
       </head>
-      <body style="margin: 0; padding: 20px; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-          
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); color: white; padding: 30px 20px; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: 700;">Roo</h1>
-            <p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">Your Login Code</p>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Your Roo Login Code</h1>
           </div>
-          
-          <!-- Content -->
-          <div style="padding: 30px 20px;">
-            <p style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">Hi there!</p>
-            <p style="margin: 0 0 25px 0; font-size: 16px; color: #374151; line-height: 1.5;">
-              <strong>${teacherName}</strong> has invited you to view your grades on Roo.
+          <div class="content">
+            <p>Hi there!</p>
+            <p><strong>${teacherName}</strong> has invited you to view your grades on Roo.</p>
+            
+            <div class="passcode">
+              <p style="margin: 0; font-weight: 600; color: #475569;">Your login code is:</p>
+              <div class="passcode-number">${passcode}</div>
+            </div>
+
+            <div class="warning">
+              ⏰ This code expires in 10 minutes
+            </div>
+
+            <p>Use this code to sign in and access your assignments and grades.</p>
+            
+            <p style="margin-top: 30px;">
+              <strong>From:</strong> ${teacherEmail}<br>
+              <strong>Subject:</strong> Access Your Grades
             </p>
-            
-            <!-- Passcode Box -->
-            <div style="background: #f3f4f6; border-radius: 12px; padding: 25px; text-align: center; margin: 25px 0; border: 2px dashed #d1d5db;">
-              <div style="font-size: 36px; font-weight: 800; color: #2563eb; letter-spacing: 6px; font-family: 'Courier New', monospace;">
-                ${passcode}
-              </div>
-              <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 14px; font-weight: 500;">
-                ⏰ This code expires in 10 minutes
-              </p>
-            </div>
-            
-            <!-- Instructions -->
-            <div style="background: #eff6ff; border-radius: 8px; padding: 20px; margin: 20px 0;">
-              <h3 style="margin: 0 0 10px 0; color: #1e40af; font-size: 16px;">How to use your code:</h3>
-              <ol style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px; line-height: 1.6;">
-                <li>Visit the Roo login page</li>
-                <li>Enter your email address</li>
-                <li>Enter the 6-digit code above</li>
-                <li>Access your grades and feedback</li>
-              </ol>
-            </div>
-            
-            <!-- Login Button -->
-            <div style="text-align: center; margin: 30px 0 20px 0;">
-              <a href="${process.env.FRONTEND_BASE_URL || 'https://your-app-url.com'}/students/login" 
-                 style="display: inline-block; background: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                Access Your Grades
-              </a>
-            </div>
           </div>
-          
-          <!-- Footer -->
-          <div style="background: #f9fafb; padding: 20px; border-top: 1px solid #e5e7eb;">
-            <p style="margin: 0; color: #6b7280; font-size: 12px; line-height: 1.4;">
-              📧 This email was sent by <strong>${teacherName}</strong> (${teacherEmail}) through Roo.<br>
-              If you didn't expect this email, please contact your teacher directly.
-            </p>
+          <div class="footer">
+            <p>This email was sent from your teacher's Gmail account via Roo.</p>
+            <p>If you have questions, reply to this email to contact ${teacherName}.</p>
           </div>
         </div>
       </body>
@@ -217,113 +134,112 @@ export class GmailEmailService {
   }
 
   /**
-   * Create HTML template for invitation email
+   * Create HTML email template for classroom invitation
    */
   private createInvitationEmailHTML(
-    invitationToken: string,
-    classroomName: string,
+    invitationToken: string, 
+    classroomName: string, 
     teacherName: string,
     teacherEmail: string
   ): string {
-    const registrationUrl = `${process.env.FRONTEND_BASE_URL || 'https://your-app-url.com'}/students/join/${invitationToken}`;
+    const inviteUrl = `https://roo-app.web.app/invite/${invitationToken}`;
     
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Join ${classroomName} on Roo</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0; padding: 20px; background: #f8f9fa; }
+          .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; }
+          .content { padding: 30px; }
+          .button { display: inline-block; background: #10b981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 20px 0; font-weight: 600; }
+          .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #64748b; font-size: 14px; }
+          .warning { background: #fef3cd; border: 1px solid #fbbf24; border-radius: 6px; padding: 15px; margin: 15px 0; color: #92400e; }
+        </style>
       </head>
-      <body style="margin: 0; padding: 20px; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-        <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-          
-          <!-- Header -->
-          <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); color: white; padding: 30px 20px; text-align: center;">
-            <h1 style="margin: 0; font-size: 28px; font-weight: 700;">📚 Welcome to Roo!</h1>
-            <p style="margin: 8px 0 0 0; font-size: 16px; opacity: 0.9;">You're Invited</p>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Welcome to Roo!</h1>
           </div>
-          
-          <!-- Content -->
-          <div style="padding: 30px 20px;">
-            <p style="margin: 0 0 20px 0; font-size: 16px; color: #374151;">Hi there!</p>
-            <p style="margin: 0 0 25px 0; font-size: 16px; color: #374151; line-height: 1.5;">
-              <strong>${teacherName}</strong> has invited you to join <strong>${classroomName}</strong> on Roo 
-              to view your assignments, grades, and feedback.
+          <div class="content">
+            <p>Hi there!</p>
+            <p><strong>${teacherName}</strong> has invited you to join <strong>${classroomName}</strong> on Roo.</p>
+            
+            <p>Click the button below to accept your invitation and access your assignments:</p>
+            
+            <p style="text-align: center;">
+              <a href="${inviteUrl}" class="button">Join ${classroomName}</a>
             </p>
-            
-            <!-- Classroom Info -->
-            <div style="background: #f0fdf4; border-radius: 8px; padding: 20px; margin: 25px 0; border-left: 4px solid #10b981;">
-              <h3 style="margin: 0 0 10px 0; color: #059669; font-size: 18px;">🎓 ${classroomName}</h3>
-              <p style="margin: 0; color: #374151; font-size: 14px;">
-                Teacher: ${teacherName}<br>
-                Platform: Roo Grading System
-              </p>
+
+            <div class="warning">
+              ⏰ This invitation expires in 7 days
             </div>
+
+            <p>Once you join, you'll be able to:</p>
+            <ul>
+              <li>View your assignment grades and feedback</li>
+              <li>Submit assignments and quizzes</li>
+              <li>Track your progress throughout the course</li>
+            </ul>
             
-            <!-- Benefits -->
-            <div style="margin: 25px 0;">
-              <h3 style="margin: 0 0 15px 0; color: #374151; font-size: 16px;">What you'll get:</h3>
-              <ul style="margin: 0; padding-left: 20px; color: #374151; font-size: 14px; line-height: 1.6;">
-                <li>📊 View your grades and scores</li>
-                <li>🤖 Detailed AI feedback on your work</li>
-                <li>📈 Track your progress over time</li>
-                <li>💬 Ask questions about your grades</li>
-              </ul>
-            </div>
-            
-            <!-- Join Button -->
-            <div style="text-align: center; margin: 30px 0 20px 0;">
-              <a href="${registrationUrl}" 
-                 style="display: inline-block; background: #059669; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                Join ${classroomName}
-              </a>
-            </div>
-            
-            <p style="margin: 15px 0 0 0; color: #6b7280; font-size: 12px; text-align: center;">
-              This invitation expires in 7 days
+            <p style="margin-top: 30px;">
+              <strong>From:</strong> ${teacherEmail}<br>
+              <strong>Teacher:</strong> ${teacherName}<br>
+              <strong>Classroom:</strong> ${classroomName}
             </p>
           </div>
-          
-          <!-- Footer -->
-          <div style="background: #f9fafb; padding: 20px; border-top: 1px solid #e5e7eb;">
-            <p style="margin: 0; color: #6b7280; font-size: 12px; line-height: 1.4;">
-              📧 This invitation was sent by <strong>${teacherName}</strong> (${teacherEmail}) through Roo.<br>
-              If you have questions, please contact your teacher directly.
-            </p>
+          <div class="footer">
+            <p>This invitation was sent from your teacher's Gmail account via Roo.</p>
+            <p>If you have questions, reply to this email to contact ${teacherName}.</p>
           </div>
         </div>
       </body>
       </html>
     `;
+  }
+
+  /**
+   * Create base64url encoded email message for Gmail API
+   */
+  private createEmailMessage(from: string, to: string, subject: string, html: string): string {
+    const message = [
+      `From: ${from}`,
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      '',
+      html
+    ].join('\n');
+
+    return Buffer.from(message).toString('base64url');
   }
 }
 
 /**
- * Factory function to create Gmail service for a specific teacher
+ * Create Gmail service instance for a teacher
  */
 export async function createGmailServiceForTeacher(teacherId: string): Promise<GmailEmailService> {
   const db = getFirestore();
-  
-  // Get teacher's stored access token
   const teacherDoc = await db.collection('users').doc(teacherId).get();
   
   if (!teacherDoc.exists) {
     throw new Error(`Teacher not found: ${teacherId}`);
   }
-  
-  const teacher = teacherDoc.data()!;
-  const accessToken = teacher.gmailAccessToken;
-  
-  if (!accessToken) {
+
+  const teacherData = teacherDoc.data();
+  if (!teacherData?.gmailAccessToken) {
     throw new Error('Teacher Gmail permission not granted. Please sign in again to grant email sending permission.');
   }
-  
-  return new GmailEmailService(accessToken);
+
+  return new GmailEmailService(teacherData.gmailAccessToken);
 }
 
 /**
- * Send student passcode via teacher's Gmail
+ * Send passcode to student via teacher's Gmail
  */
 export async function sendStudentPasscode(
   teacherId: string,
@@ -331,93 +247,19 @@ export async function sendStudentPasscode(
   passcode: string
 ): Promise<void> {
   const db = getFirestore();
-  
-  // Get teacher info
   const teacherDoc = await db.collection('users').doc(teacherId).get();
+  
   if (!teacherDoc.exists) {
     throw new Error('Teacher not found');
   }
-  
-  const teacher = teacherDoc.data()!;
-  const teacherName = teacher.displayName || teacher.email?.split('@')[0] || 'Your Teacher';
-  
-  // Create Gmail service and send email
+
+  const teacherData = teacherDoc.data()!;
   const gmailService = await createGmailServiceForTeacher(teacherId);
+  
   await gmailService.sendPasscodeEmail(
-    teacher.email,
+    teacherData.email,
     studentEmail,
     passcode,
-    teacherName
+    teacherData.displayName || 'Your Teacher'
   );
-  
-  logger.info('Student passcode sent successfully', {
-    teacherId,
-    teacherEmail: teacher.email,
-    studentEmail,
-    teacherName
-  });
-}
-
-/**
- * Send bulk student invitations via teacher's Gmail
- */
-export async function sendStudentInvitations(
-  teacherId: string,
-  invitations: Array<{
-    studentEmail: string;
-    invitationToken: string;
-    classroomName: string;
-  }>
-): Promise<{ sent: number; failed: number; errors: string[] }> {
-  const db = getFirestore();
-  
-  // Get teacher info
-  const teacherDoc = await db.collection('users').doc(teacherId).get();
-  if (!teacherDoc.exists) {
-    throw new Error('Teacher not found');
-  }
-  
-  const teacher = teacherDoc.data()!;
-  const teacherName = teacher.displayName || teacher.email?.split('@')[0] || 'Your Teacher';
-  
-  // Create Gmail service
-  const gmailService = await createGmailServiceForTeacher(teacherId);
-  
-  let sent = 0;
-  let failed = 0;
-  const errors: string[] = [];
-  
-  // Send invitations with delay to avoid rate limiting
-  for (const invitation of invitations) {
-    try {
-      await gmailService.sendInvitationEmail(
-        teacher.email,
-        invitation.studentEmail,
-        invitation.invitationToken,
-        invitation.classroomName,
-        teacherName
-      );
-      sent++;
-      
-      // Small delay between emails to be respectful to Gmail API
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-    } catch (error: any) {
-      failed++;
-      errors.push(`Failed to send to ${invitation.studentEmail}: ${error.message}`);
-      logger.error('Failed to send invitation', {
-        studentEmail: invitation.studentEmail,
-        error: error.message
-      });
-    }
-  }
-  
-  logger.info('Bulk invitations completed', {
-    teacherId,
-    total: invitations.length,
-    sent,
-    failed
-  });
-  
-  return { sent, failed, errors };
 }
