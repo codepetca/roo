@@ -93,8 +93,10 @@ const mockGrades: Grade[] = [
 		submissionId: 'submission-1',
 		assignmentId: 'assignment-1',
 		studentId: 'student-1',
+		classroomId: 'classroom-1',
 		score: 85,
 		maxScore: 100,
+		percentage: 85,
 		feedback: 'Good work!',
 		gradingDetails: {
 			criteria: [
@@ -108,6 +110,10 @@ const mockGrades: Grade[] = [
 		},
 		gradedBy: 'ai',
 		gradedAt: '2022-01-20T12:00:00.000Z',
+		gradingMethod: 'points',
+		version: 1,
+		isLatest: true,
+		submissionVersionGraded: 1,
 		postedToClassroom: false,
 		createdAt: '2022-01-20T12:00:00.000Z',
 		updatedAt: '2022-01-20T12:00:00.000Z'

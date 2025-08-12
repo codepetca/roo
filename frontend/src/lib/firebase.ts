@@ -106,6 +106,7 @@ export const firebaseFunctions = firebase.functions;
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');
 googleProvider.addScope('https://www.googleapis.com/auth/drive');
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.send'); // For sending emails via teacher's Gmail
 googleProvider.addScope('email');
 googleProvider.addScope('profile');
 

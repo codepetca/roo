@@ -37,6 +37,16 @@
 			// This token will be needed for creating sheets and accessing Drive
 			sessionStorage.setItem('google_access_token', accessToken);
 
+			// Store Gmail access token in backend for email sending
+			try {
+				console.log('Storing Gmail access token for email sending...');
+				await api.storeGmailToken({ accessToken });
+				console.log('Gmail access token stored successfully');
+			} catch (gmailError) {
+				console.warn('Failed to store Gmail token, but auth succeeded:', gmailError);
+				// Don't fail the whole auth process for this
+			}
+
 			// Create teacher profile with role (essential for sidebar to show)
 			try {
 				console.log('Creating teacher profile with role...');

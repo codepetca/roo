@@ -13,10 +13,12 @@ import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { z } from "zod";
 import * as crypto from "crypto";
+import { sendStudentPasscode } from "../../services/gmail-email-service";
 
 // Validation schemas
 const sendPasscodeSchema = z.object({
-  email: z.string().email("Invalid email address")
+  email: z.string().email("Invalid email address"),
+  teacherId: z.string().optional() // Optional - will be extracted from auth token if not provided
 });
 
 const verifyPasscodeSchema = z.object({
@@ -31,6 +33,7 @@ const resetStudentAuthSchema = z.object({
 /**
  * Generate and send login passcode to student email
  * POST /api/auth/send-passcode
+ * Requires teacher authentication - passcode is sent from teacher's Gmail account
  */
 export async function sendPasscode(req: Request, res: Response): Promise<void> {
   try {
@@ -44,8 +47,43 @@ export async function sendPasscode(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { email } = validationResult.data;
+    const { email, teacherId } = validationResult.data;
     const db = getFirestore();
+    const auth = getAuth();
+
+    // Get teacher from authentication token
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      res.status(401).json({
+        error: "Unauthorized",
+        message: "Teacher authentication required to send passcodes"
+      });
+      return;
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decodedToken = await auth.verifyIdToken(token);
+    
+    // Get teacher profile to verify role and get Gmail access
+    const teacherDoc = await db.collection("users").doc(decodedToken.uid).get();
+    if (!teacherDoc.exists || teacherDoc.data()?.role !== "teacher") {
+      res.status(403).json({
+        error: "Forbidden",
+        message: "Only teachers can send student passcodes"
+      });
+      return;
+    }
+
+    const teacherData = teacherDoc.data()!;
+    
+    // Check if teacher has Gmail access token
+    if (!teacherData.gmailAccessToken) {
+      res.status(400).json({
+        error: "Gmail access required",
+        message: "Please sign in with Google to enable email sending"
+      });
+      return;
+    }
 
     // Generate 6-digit passcode
     const passcode = crypto.randomInt(100000, 999999).toString();
@@ -58,33 +96,61 @@ export async function sendPasscode(req: Request, res: Response): Promise<void> {
       expiresAt,
       createdAt: new Date(),
       used: false,
-      attempts: 0
+      attempts: 0,
+      teacherId: decodedToken.uid, // Track which teacher sent the passcode
+      teacherEmail: teacherData.email
     });
 
-    // TODO: Send email with passcode
-    // For now, we'll just log it (in production, integrate with email service)
-    logger.info("Passcode generated for student", {
-      email,
-      passcode, // Remove this in production!
-      expiresAt
-    });
+    // Send passcode via teacher's Gmail
+    try {
+      await sendStudentPasscode(decodedToken.uid, email, passcode);
+      
+      logger.info("Passcode sent via Gmail successfully", { 
+        studentEmail: email,
+        teacherId: decodedToken.uid,
+        teacherEmail: teacherData.email
+      });
 
-    // In development/testing, return the passcode in response
-    // Remove this in production and only send via email
-    const isDevelopment = process.env.NODE_ENV === "development";
-    
-    res.status(200).json({
-      success: true,
-      email: email,
-      sent: true,
-      message: "Passcode sent to your email address",
-      ...(isDevelopment && { passcode }) // Only include in development
-    });
+      // In development/testing, return the passcode in response for easy testing
+      const isDevelopment = process.env.NODE_ENV === "development";
+      
+      res.status(200).json({
+        success: true,
+        email: email,
+        sent: true,
+        message: `Passcode sent to ${email} from your Gmail account`,
+        sentFrom: teacherData.email,
+        ...(isDevelopment && { passcode }) // Only include in development
+      });
 
-    logger.info("Passcode sent successfully", { email });
+    } catch (emailError: any) {
+      logger.error("Failed to send passcode email", {
+        error: emailError.message,
+        studentEmail: email,
+        teacherId: decodedToken.uid,
+        teacherEmail: teacherData.email
+      });
+
+      // Delete the passcode since it wasn't sent
+      await db.collection("passcodes").doc(email).delete();
+
+      res.status(500).json({
+        error: "Email sending failed",
+        message: "Failed to send passcode email. Please check your Gmail permissions and try again."
+      });
+    }
 
   } catch (error: any) {
     logger.error("Send passcode error", { error: error.message, stack: error.stack });
+    
+    if (error.code === "auth/id-token-expired" || error.code === "auth/invalid-id-token") {
+      res.status(401).json({
+        error: "Unauthorized",
+        message: "Invalid or expired authentication token"
+      });
+      return;
+    }
+
     res.status(500).json({
       error: "Failed to send passcode",
       message: error.message || "An error occurred while sending the passcode"

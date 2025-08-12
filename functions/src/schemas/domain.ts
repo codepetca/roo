@@ -219,7 +219,11 @@ export const userDomainSchema = baseDocumentSchema.extend({
   totalClassrooms: z.number().int().min(0).default(0), // Cached count for teachers
   totalStudents: z.number().int().min(0).default(0), // Cached count for teachers
   isActive: z.boolean().default(true),
-  lastLogin: firebaseTimestampSchema.optional()
+  lastLogin: firebaseTimestampSchema.optional(),
+  // Gmail integration fields
+  gmailAccessToken: z.string().optional(), // OAuth access token for Gmail sending
+  gmailTokenExpiresAt: z.date().optional(), // Token expiration timestamp
+  gmailTokenUpdatedAt: firebaseTimestampSchema.optional() // When token was last updated
 });
 
 export type UserDomain = z.infer<typeof userDomainSchema>;

@@ -38,7 +38,7 @@ import { getUserFromRequest } from "./middleware/validation";
 import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { getUserProfile, checkUserProfileExists, updateSchoolEmail } from "./routes/users";
-import { sendPasscode, verifyPasscode, resetStudentAuth, deleteUser, setupTeacherProfile } from "./routes/auth";
+import { sendPasscode, verifyPasscode, resetStudentAuth, deleteUser, setupTeacherProfile, storeGmailToken } from "./routes/auth";
 import { debugSheetsPermissions } from "./routes/debug";
 import { getServiceAccountInfo, testSheetAccess } from "./routes/webhook-debug";
 
@@ -299,6 +299,9 @@ export const api = onRequest(
       if (method === "POST" && path === "/auth/setup-teacher-profile") {
         await setupTeacherProfile(request, response); return;
       }
+      if (method === "POST" && path === "/auth/store-gmail-token") {
+        await storeGmailToken(request, response); return;
+      }
 
       // User profile routes (create/update now handled by callable function)
       if (method === "GET" && path === "/users/profile") {
@@ -326,15 +329,15 @@ export const api = onRequest(
         await testSheetAccess(request, response); return;
       }
       
-      // Debug routes for testing Firestore data
-      if (method === "GET" && path === "/debug/firestore") {
-        const { debugFirestore } = await import("./routes/debug-firestore");
-        await debugFirestore(request, response); return;
-      }
-      if (method === "GET" && path === "/debug/validate") {
-        const { debugValidation } = await import("./routes/debug-firestore");
-        await debugValidation(request, response); return;
-      }
+      // Debug routes for testing Firestore data (temporarily disabled)
+      // if (method === "GET" && path === "/debug/firestore") {
+      //   const { debugFirestore } = await import("./routes/debug-firestore");
+      //   await debugFirestore(request, response); return;
+      // }
+      // if (method === "GET" && path === "/debug/validate") {
+      //   const { debugValidation } = await import("./routes/debug-firestore");
+      //   await debugValidation(request, response); return;
+      // }
 
       // Default 404
       response.status(404).json({

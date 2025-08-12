@@ -27,17 +27,24 @@ vi.mock('$env/static/public', () => ({
 	PUBLIC_FIREBASE_APP_ID: '1:123456789:web:abcdef'
 }));
 
-// Mock Firebase functions
+// Mock Firebase functions with authenticated user
+const mockUser = {
+	uid: 'test-user-123',
+	email: 'test.teacher@gmail.com',
+	displayName: 'Test Teacher',
+	getIdToken: vi.fn().mockResolvedValue('mock-id-token-12345')
+};
+
 vi.mock('./firebase', () => ({
 	firebaseAuth: {
-		currentUser: null
+		currentUser: mockUser
 	},
 	firebaseFunctions: {},
 	googleProvider: {},
 	signInWithGoogle: vi.fn(),
 	signOut: vi.fn(),
 	onAuthStateChange: vi.fn(),
-	getCurrentUserToken: vi.fn()
+	getCurrentUserToken: vi.fn().mockResolvedValue('mock-id-token-12345')
 }));
 
 vi.mock('firebase/functions', () => ({
@@ -327,8 +334,10 @@ describe('API Client', () => {
 				submissionId: 'submission-1',
 				assignmentId: 'assignment-1',
 				studentId: 'student-1',
+				classroomId: 'classroom-1',
 				score: 85,
 				maxScore: 100,
+				percentage: 85,
 				feedback: 'Good work!',
 				gradingDetails: {
 					criteria: [
@@ -341,10 +350,14 @@ describe('API Client', () => {
 					]
 				},
 				gradedBy: 'ai',
-				gradedAt: { _seconds: 1642694400, _nanoseconds: 0 },
+				gradedAt: '2022-01-20T12:00:00.000Z',
+				gradingMethod: 'points',
+				version: 1,
+				isLatest: true,
+				submissionVersionGraded: 1,
 				postedToClassroom: false,
-				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
-				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+				createdAt: '2022-01-20T12:00:00.000Z',
+				updatedAt: '2022-01-20T12:00:00.000Z'
 			}
 		];
 

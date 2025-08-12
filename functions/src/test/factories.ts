@@ -72,10 +72,10 @@ export const sheetFactories = {
     formId: "quiz-form-1",
     assignmentTitle: "Quiz 1",
     courseId: "course-101",
-    questionNumber: 1,
+    questionNumber: "1",
     questionText: "What is the capital of France?",
     questionType: "multiple-choice",
-    points: 10,
+    points: "10",
     correctAnswer: "Paris",
     answerExplanation: "Paris is the capital and largest city of France.",
     gradingStrictness: "standard",
@@ -86,10 +86,10 @@ export const sheetFactories = {
     return Array.from({ length: questionCount }, (_, index) => 
       sheetFactories.answerKey({
         formId,
-        questionNumber: index + 1,
+        questionNumber: `${index + 1}`,
         questionText: `Question ${index + 1}?`,
         correctAnswer: `Answer ${index + 1}`,
-        points: 10
+        points: "10"
       })
     );
   }

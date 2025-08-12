@@ -3,21 +3,17 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render } from '@vitest/browser/context';
-
-// Mock UI components
-vi.mock('$lib/components/ui', () => ({
-	Card: vi.fn(({ children }) => `<div class="card">${children?.() || ''}</div>`),
-	Badge: vi.fn(({ children }) => `<span class="badge">${children?.() || ''}</span>`)
-}));
+import { render } from 'vitest-browser-svelte';
+import TestComponent from '../TestComponent.svelte';
 
 describe('Simple Component Test', () => {
 	it('should render without errors', async () => {
-		// Simple inline component to test rendering
-		const TestComponent = () => `<div>Hello Test</div>`;
+		const screen = render(TestComponent, { props: { message: 'Hello Test' } });
+		expect(screen).toBeDefined();
 
-		const result = render(TestComponent);
-		expect(result).toBeDefined();
+		// Check if the content is rendered
+		const element = screen.getByText('Hello Test');
+		expect(element).toBeInTheDocument();
 	});
 
 	it('should handle basic mocking', () => {
