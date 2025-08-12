@@ -2,10 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { appState } from '$lib/stores';
 	import { Button, Alert, Card } from '$lib/components/ui';
-	import {
-		PageHeader,
-		LoadingSkeleton
-	} from '$lib/components/dashboard';
+	import { PageHeader, LoadingSkeleton } from '$lib/components/dashboard';
 	import StudentResetManager from '$lib/components/auth/StudentResetManager.svelte';
 
 	// Handle classroom selection
@@ -52,7 +49,7 @@
 				Load Test Data
 			{/snippet}
 		</Button>
-		<Button variant="primary" onclick={appState.refresh} loading={loading}>
+		<Button variant="primary" onclick={appState.refresh} {loading}>
 			{#snippet children()}
 				Refresh
 			{/snippet}
@@ -61,14 +58,12 @@
 {/snippet}
 
 <div class="space-y-6">
-	
 	<!-- Page Header -->
 	<PageHeader
 		title="Teacher Dashboard"
 		description="Manage assignments, review submissions, and track student progress with AI-powered grading."
 		{actions}
 	/>
-
 
 	<!-- Error State -->
 	{#if error}
@@ -92,10 +87,10 @@
 	{/if}
 
 	<!-- TEMP DEBUG: Force show data section for testing -->
-	<div class="mb-4 p-2 bg-yellow-100 text-xs">
+	<div class="mb-4 bg-yellow-100 p-2 text-xs">
 		🐛 Store State: loading={loading}, hasData={hasData}, classrooms={classrooms.length}
 	</div>
-	
+
 	<!-- Content based on store data only -->
 	{#if loading && !hasData}
 		<LoadingSkeleton type="card" rows={3} />
@@ -117,7 +112,7 @@
 							d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
 						/>
 					</svg>
-					
+
 					<h3 class="mt-2 text-sm font-medium text-gray-900">No Data Available</h3>
 					<p class="mt-1 text-sm text-gray-500">
 						Import your classroom data to get started with the dashboard.
@@ -134,7 +129,7 @@
 		</Card>
 	{:else}
 		<!-- Dashboard with data - pure store reactivity -->
-		
+
 		<!-- Quick Stats -->
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-4">
 			<div class="rounded-lg border border-gray-200 bg-white p-6">
@@ -156,7 +151,9 @@
 					</div>
 					<div class="ml-4">
 						<p class="text-sm font-medium text-gray-600">Total Assignments</p>
-						<p class="text-2xl font-semibold text-gray-900">{dashboardStats?.totalAssignments || 0}</p>
+						<p class="text-2xl font-semibold text-gray-900">
+							{dashboardStats?.totalAssignments || 0}
+						</p>
 					</div>
 				</div>
 			</div>
@@ -204,7 +201,9 @@
 					</div>
 					<div class="ml-4">
 						<p class="text-sm font-medium text-gray-600">Pending Review</p>
-						<p class="text-2xl font-semibold text-gray-900">{dashboardStats?.ungradedSubmissions || 0}</p>
+						<p class="text-2xl font-semibold text-gray-900">
+							{dashboardStats?.ungradedSubmissions || 0}
+						</p>
 					</div>
 				</div>
 			</div>
@@ -240,7 +239,9 @@
 		<div class="rounded-lg border border-gray-200 bg-white">
 			<div class="border-b border-gray-200 px-6 py-4">
 				<h3 class="text-lg font-semibold text-gray-900">Your Classrooms</h3>
-				<p class="text-sm text-gray-600">Manage assignments and track progress across your classes</p>
+				<p class="text-sm text-gray-600">
+					Manage assignments and track progress across your classes
+				</p>
 			</div>
 			<div class="p-6">
 				{#if classrooms.length === 0}
@@ -273,8 +274,10 @@
 				{:else}
 					<div class="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
 						{#each classrooms as classroom (classroom.id)}
-							<div class="rounded-lg border border-gray-200 p-6 hover:border-gray-300 transition-colors cursor-pointer"
-								 onclick={() => handleClassroomSelect(classroom.id)}>
+							<div
+								class="cursor-pointer rounded-lg border border-gray-200 p-6 transition-colors hover:border-gray-300"
+								onclick={() => handleClassroomSelect(classroom.id)}
+							>
 								<div class="flex items-start justify-between">
 									<div class="flex-1">
 										<h4 class="text-lg font-semibold text-gray-900">{classroom.name}</h4>
@@ -284,17 +287,21 @@
 									</div>
 									<div class="ml-4 flex-shrink-0">
 										{#if classroom.ungradedSubmissions > 0}
-											<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+											<span
+												class="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800"
+											>
 												{classroom.ungradedSubmissions} pending
 											</span>
 										{:else}
-											<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+											<span
+												class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
+											>
 												Up to date
 											</span>
 										{/if}
 									</div>
 								</div>
-								
+
 								<div class="mt-4 grid grid-cols-3 gap-4 text-center">
 									<div>
 										<p class="text-2xl font-semibold text-gray-900">{classroom.studentCount}</p>
@@ -305,7 +312,9 @@
 										<p class="text-xs text-gray-600">Assignments</p>
 									</div>
 									<div>
-										<p class="text-2xl font-semibold text-gray-900">{classroom.activeSubmissions}</p>
+										<p class="text-2xl font-semibold text-gray-900">
+											{classroom.activeSubmissions}
+										</p>
 										<p class="text-xs text-gray-600">Submissions</p>
 									</div>
 								</div>
@@ -324,19 +333,21 @@
 			</div>
 			<div class="p-6">
 				{#if recentActivity.length === 0}
-					<p class="text-sm text-gray-500 text-center py-8">No recent activity</p>
+					<p class="py-8 text-center text-sm text-gray-500">No recent activity</p>
 				{:else}
 					<div class="space-y-4">
 						{#each recentActivity.slice(0, 10) as activity, index (index)}
-							<div class="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
+							<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3">
 								{#if activity.type === 'submission'}
 									<div class="flex-shrink-0">
 										<svg class="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-											<path d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z"/>
-											<path d="M6 8h8M6 10h4"/>
+											<path
+												d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z"
+											/>
+											<path d="M6 8h8M6 10h4" />
 										</svg>
 									</div>
-									<div class="flex-1 min-w-0">
+									<div class="min-w-0 flex-1">
 										<p class="text-sm font-medium text-gray-900">
 											New submission from {activity.details.studentName}
 										</p>
@@ -347,10 +358,10 @@
 								{:else if activity.type === 'grade'}
 									<div class="flex-shrink-0">
 										<svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-											<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+											<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 										</svg>
 									</div>
-									<div class="flex-1 min-w-0">
+									<div class="min-w-0 flex-1">
 										<p class="text-sm font-medium text-gray-900">
 											Assignment graded: {activity.details.score}/{activity.details.maxScore}
 										</p>

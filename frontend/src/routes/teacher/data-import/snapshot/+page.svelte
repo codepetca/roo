@@ -23,7 +23,7 @@
 	async function handleFileValidated(snapshot: ClassroomSnapshot) {
 		currentSnapshot = snapshot;
 		currentStep = 'preview';
-		
+
 		// Generate diff if we have existing data
 		try {
 			diffData = await api.generateSnapshotDiff(snapshot);
@@ -36,7 +36,7 @@
 	// Handle import confirmation
 	async function confirmImport() {
 		if (!currentSnapshot) return;
-		
+
 		currentStep = 'import';
 		importing = true;
 		error = null;
@@ -44,7 +44,7 @@
 		try {
 			importResult = await api.importSnapshot(currentSnapshot);
 			currentStep = 'complete';
-			
+
 			// Refresh the dashboard data after successful import
 			await appState.loadDashboard();
 		} catch (err) {
@@ -171,7 +171,13 @@
 	{:else if currentStep === 'preview'}
 		<!-- Preview Step -->
 		{#if error}
-			<Alert variant="error" title="Import Error" dismissible onDismiss={clearError} data-testid="validation-error">
+			<Alert
+				variant="error"
+				title="Import Error"
+				dismissible
+				onDismiss={clearError}
+				data-testid="validation-error"
+			>
 				{#snippet children()}
 					{error}
 				{/snippet}
@@ -183,7 +189,8 @@
 				<div class="p-6">
 					<h3 class="mb-4 text-lg font-semibold text-gray-900">Review Import Data</h3>
 					<p class="mb-6 text-sm text-gray-600">
-						Please review the data below before confirming the import. This will update your existing classroom data.
+						Please review the data below before confirming the import. This will update your
+						existing classroom data.
 					</p>
 
 					{#if currentSnapshot}
@@ -209,7 +216,12 @@
 								Choose Different File
 							{/snippet}
 						</Button>
-						<Button variant="primary" onclick={confirmImport} loading={importing} data-testid="confirm-import-btn">
+						<Button
+							variant="primary"
+							onclick={confirmImport}
+							loading={importing}
+							data-testid="confirm-import-btn"
+						>
 							{#snippet children()}
 								{#if importing}
 									Importing...
@@ -264,7 +276,9 @@
 						/>
 					</svg>
 					<h3 class="mt-4 text-lg font-semibold text-gray-900">Import Successful!</h3>
-					<p class="mt-2 text-sm text-gray-600">Your classroom data has been successfully imported.</p>
+					<p class="mt-2 text-sm text-gray-600">
+						Your classroom data has been successfully imported.
+					</p>
 
 					{#if importResult}
 						<div class="mt-6 rounded-lg bg-gray-50 p-4 text-left">

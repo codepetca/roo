@@ -104,7 +104,7 @@ describe('API Client', () => {
 				classroomId: 'classroom-1',
 				title: 'Test Assignment',
 				description: 'A test assignment',
-				dueDate: { _seconds: 1642694400, _nanoseconds: 0 },
+				dueDate: '2022-01-20T12:00:00.000Z',
 				maxPoints: 100,
 				gradingRubric: {
 					enabled: true,
@@ -113,15 +113,15 @@ describe('API Client', () => {
 				},
 				isQuiz: false,
 				formId: undefined,
-				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
-				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+				createdAt: '2022-01-20T12:00:00.000Z',
+				updatedAt: '2022-01-20T12:00:00.000Z'
 			},
 			{
 				id: 'quiz-1',
 				classroomId: 'classroom-1',
 				title: 'Test Quiz',
 				description: 'A test quiz',
-				dueDate: { _seconds: 1642694400, _nanoseconds: 0 },
+				dueDate: '2022-01-20T12:00:00.000Z',
 				maxPoints: 50,
 				gradingRubric: {
 					enabled: true,
@@ -129,8 +129,8 @@ describe('API Client', () => {
 				},
 				isQuiz: true,
 				formId: 'form-123',
-				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
-				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+				createdAt: '2022-01-20T12:00:00.000Z',
+				updatedAt: '2022-01-20T12:00:00.000Z'
 			}
 		];
 
@@ -206,15 +206,17 @@ describe('API Client', () => {
 			{
 				id: 'submission-1',
 				assignmentId: 'assignment-1',
+				classroomId: 'classroom-1',
 				studentId: 'student-1',
 				studentEmail: 'student@test.com',
 				studentName: 'Test Student',
-				submittedAt: { _seconds: 1642694400, _nanoseconds: 0 },
+				submittedAt: '2022-01-20T12:00:00.000Z',
 				documentUrl: 'https://example.com/doc',
-				status: 'pending',
+				status: 'submitted',
 				content: 'Student submission content',
-				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
-				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+				grade: null,
+				createdAt: '2022-01-20T12:00:00.000Z',
+				updatedAt: '2022-01-20T12:00:00.000Z'
 			}
 		];
 

@@ -234,9 +234,9 @@
 		{/if}
 
 		<!-- Submit Button -->
-		<Button 
-			type="submit" 
-			disabled={loading || !email.trim() || !password.trim()} 
+		<Button
+			type="submit"
+			disabled={loading || !email.trim() || !password.trim()}
 			class="w-full"
 			data-testid="submit-auth-button"
 		>

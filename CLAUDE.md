@@ -119,6 +119,9 @@ For evolving patterns, detailed architecture, and implementation guides, see:
 - `docs/development/current-architecture.md` - Living system design
 - `docs/development/coding-patterns.md` - Detailed implementation patterns
 - `docs/development/ai-collaboration-guide.md` - How to work with Claude Code effectively
+- `docs/development/dataconnect-architecture.md` - DataConnect-ready schema architecture
+- `docs/firebase.md` - Firebase development patterns and best practices
+- `docs/svelte5.md` - Svelte 5 runes patterns and mandatory practices
 
 ## 🔬 **MANDATORY TDD DEVELOPMENT WORKFLOW**
 

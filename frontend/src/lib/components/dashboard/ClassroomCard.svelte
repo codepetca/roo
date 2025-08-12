@@ -1,9 +1,12 @@
 <script lang="ts">
 	import type { Classroom } from '@shared/schemas/core';
 	import { Card, Badge } from '$lib/components/ui';
-	
-	let { classroom, onclick }: { 
-		classroom: Classroom; 
+
+	let {
+		classroom,
+		onclick
+	}: {
+		classroom: Classroom;
 		onclick?: (classroomId: string) => void;
 	} = $props();
 
@@ -16,11 +19,13 @@
 
 <Card>
 	{#snippet children()}
-		<div class="p-6 hover:bg-gray-50 transition-colors cursor-pointer" 
-			 onclick={handleClick}
-			 role="button"
-			 tabindex="0"
-			 onkeydown={(e) => e.key === 'Enter' && handleClick()}>
+		<div
+			class="cursor-pointer p-6 transition-colors hover:bg-gray-50"
+			onclick={handleClick}
+			role="button"
+			tabindex="0"
+			onkeydown={(e) => e.key === 'Enter' && handleClick()}
+		>
 			<div class="flex items-start justify-between">
 				<div class="flex-1">
 					<h4 class="text-lg font-semibold text-gray-900">{classroom.name}</h4>
@@ -28,7 +33,7 @@
 						<p class="text-sm text-gray-600">{classroom.section}</p>
 					{/if}
 					{#if classroom.description}
-						<p class="text-sm text-gray-500 mt-1 line-clamp-2">{classroom.description}</p>
+						<p class="mt-1 line-clamp-2 text-sm text-gray-500">{classroom.description}</p>
 					{/if}
 				</div>
 				<div class="ml-4 flex-shrink-0">
@@ -47,7 +52,7 @@
 					{/if}
 				</div>
 			</div>
-			
+
 			<div class="mt-4 grid grid-cols-3 gap-4 text-center">
 				<div>
 					<p class="text-2xl font-semibold text-gray-900">{classroom.studentCount}</p>

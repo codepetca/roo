@@ -40,32 +40,28 @@ let dashboardStats = $state<{
 	averageGrade: number;
 } | null>(null);
 
-let recentActivity = $state<Array<{
-	type: string;
-	timestamp: string;
-	details: any;
-}>>([]);
+let recentActivity = $state<
+	Array<{
+		type: string;
+		timestamp: string;
+		details: any;
+	}>
+>([]);
 
 // Classroom detail state
 let classroomStats = $state<any>(null);
 let classroomAssignments = $state<AssignmentWithStats[]>([]);
 
 // Derived values - computed from state
-let selectedClassroom = $derived(
-	classrooms.find(c => c.id === selectedClassroomId) || null
-);
+let selectedClassroom = $derived(classrooms.find((c) => c.id === selectedClassroomId) || null);
 
-let selectedAssignment = $derived(
-	assignments.find(a => a.id === selectedAssignmentId) || null
-);
+let selectedAssignment = $derived(assignments.find((a) => a.id === selectedAssignmentId) || null);
 
-let hasData = $derived(
-	classrooms.length > 0 || assignments.length > 0
-);
+let hasData = $derived(classrooms.length > 0 || assignments.length > 0);
 
 let ungradedCount = $derived(() => {
 	if (selectedClassroomId) {
-		const classroom = classrooms.find(c => c.id === selectedClassroomId);
+		const classroom = classrooms.find((c) => c.id === selectedClassroomId);
 		return classroom?.ungradedSubmissions || 0;
 	}
 	return dashboardStats?.ungradedSubmissions || 0;
@@ -78,30 +74,29 @@ async function loadDashboard(): Promise<void> {
 	try {
 		loading = true;
 		error = null;
-		
+
 		console.log('🔍 Loading dashboard data...');
-		
+
 		// Load dashboard data from API
 		const result = await api.getTeacherDashboard();
 		console.log('📦 Dashboard data received:', result);
-		
+
 		// Update state directly - mutations trigger reactivity
 		currentUser = result.teacher;
 		teacher = result.teacher;
 		classrooms = result.classrooms;
 		dashboardStats = result.stats;
 		recentActivity = result.recentActivity;
-		
+
 		console.log('✅ Dashboard loaded:', {
 			classroomCount: classrooms.length,
 			totalStudents: dashboardStats?.totalStudents || 0,
 			totalAssignments: dashboardStats?.totalAssignments || 0
 		});
-		
 	} catch (err: unknown) {
 		console.error('❌ Failed to load dashboard:', err);
 		error = err instanceof Error ? err.message : 'Failed to load dashboard data';
-		
+
 		// Clear data on error
 		currentUser = null;
 		teacher = null;
@@ -118,10 +113,10 @@ async function loadDashboard(): Promise<void> {
  */
 function loadTestData(): void {
 	console.log('🧪 Loading test data...');
-	
+
 	loading = false;
 	error = null;
-	
+
 	// Set test teacher
 	teacher = {
 		id: 'test-teacher-id',
@@ -135,9 +130,9 @@ function loadTestData(): void {
 		createdAt: new Date().toISOString(),
 		updatedAt: new Date().toISOString()
 	};
-	
+
 	currentUser = teacher;
-	
+
 	// Set test classrooms
 	classrooms = [
 		{
@@ -149,8 +144,8 @@ function loadTestData(): void {
 			enrollmentCode: 'ABC123',
 			alternateLink: 'https://test.com',
 			courseState: 'ACTIVE',
-			studentIds: Array.from({length: 25}, (_, i) => `student-${i+1}`),
-			assignmentIds: Array.from({length: 8}, (_, i) => `assignment-${i+1}`),
+			studentIds: Array.from({ length: 25 }, (_, i) => `student-${i + 1}`),
+			assignmentIds: Array.from({ length: 8 }, (_, i) => `assignment-${i + 1}`),
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
 			ungradedSubmissions: 5,
@@ -168,8 +163,8 @@ function loadTestData(): void {
 			enrollmentCode: 'DEF456',
 			alternateLink: 'https://test.com',
 			courseState: 'ACTIVE',
-			studentIds: Array.from({length: 20}, (_, i) => `student-${i+26}`),
-			assignmentIds: Array.from({length: 6}, (_, i) => `assignment-${i+9}`),
+			studentIds: Array.from({ length: 20 }, (_, i) => `student-${i + 26}`),
+			assignmentIds: Array.from({ length: 6 }, (_, i) => `assignment-${i + 9}`),
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString(),
 			ungradedSubmissions: 3,
@@ -179,7 +174,7 @@ function loadTestData(): void {
 			assignments: []
 		}
 	];
-	
+
 	// Set test stats
 	dashboardStats = {
 		totalStudents: 45,
@@ -187,7 +182,7 @@ function loadTestData(): void {
 		ungradedSubmissions: 8,
 		averageGrade: 87.5
 	};
-	
+
 	// Set test recent activity with unique timestamps
 	const now = new Date();
 	recentActivity = [
@@ -212,7 +207,7 @@ function loadTestData(): void {
 			}
 		}
 	];
-	
+
 	console.log('✅ Test data loaded');
 }
 
@@ -222,22 +217,21 @@ function loadTestData(): void {
 async function selectClassroom(classroomId: string): Promise<void> {
 	try {
 		selectedClassroomId = classroomId;
-		
+
 		// Load detailed classroom stats and assignments
 		const [stats, assignments] = await Promise.all([
 			api.getClassroomStats(classroomId),
 			api.getClassroomAssignmentsWithStats(classroomId)
 		]);
-		
+
 		classroomStats = stats.statistics;
 		classroomAssignments = assignments;
-		
+
 		console.log('Classroom selected:', {
 			classroomId,
 			studentCount: stats.statistics.studentCount,
 			assignmentCount: assignments.length
 		});
-		
 	} catch (err: unknown) {
 		console.error('Failed to load classroom details:', err);
 		error = err instanceof Error ? err.message : 'Failed to load classroom details';
@@ -259,7 +253,7 @@ function clearSelection(): void {
  */
 async function refresh(): Promise<void> {
 	await loadDashboard();
-	
+
 	// Reload selected classroom if there is one
 	if (selectedClassroomId) {
 		await selectClassroom(selectedClassroomId);
@@ -279,34 +273,72 @@ function clearError(): void {
  */
 export const appState = {
 	// Core entities - direct property access for reactivity
-	get user() { return currentUser; },
-	get teacher() { return teacher; },
-	get classrooms() { return classrooms; },
-	get assignments() { return assignments; },
-	get submissions() { return submissions; },
-	get grades() { return grades; },
-	get studentEnrollments() { return studentEnrollments; },
-	
+	get user() {
+		return currentUser;
+	},
+	get teacher() {
+		return teacher;
+	},
+	get classrooms() {
+		return classrooms;
+	},
+	get assignments() {
+		return assignments;
+	},
+	get submissions() {
+		return submissions;
+	},
+	get grades() {
+		return grades;
+	},
+	get studentEnrollments() {
+		return studentEnrollments;
+	},
+
 	// UI state
-	get loading() { return loading; },
-	get error() { return error; },
-	get selectedClassroomId() { return selectedClassroomId; },
-	get selectedAssignmentId() { return selectedAssignmentId; },
-	
+	get loading() {
+		return loading;
+	},
+	get error() {
+		return error;
+	},
+	get selectedClassroomId() {
+		return selectedClassroomId;
+	},
+	get selectedAssignmentId() {
+		return selectedAssignmentId;
+	},
+
 	// Dashboard specific
-	get dashboardStats() { return dashboardStats; },
-	get recentActivity() { return recentActivity; },
-	
+	get dashboardStats() {
+		return dashboardStats;
+	},
+	get recentActivity() {
+		return recentActivity;
+	},
+
 	// Classroom details
-	get classroomStats() { return classroomStats; },
-	get classroomAssignments() { return classroomAssignments; },
-	
+	get classroomStats() {
+		return classroomStats;
+	},
+	get classroomAssignments() {
+		return classroomAssignments;
+	},
+
 	// Derived values
-	get selectedClassroom() { return selectedClassroom; },
-	get selectedAssignment() { return selectedAssignment; },
-	get hasData() { return hasData; },
-	get ungradedCount() { return ungradedCount(); },
-	
+	get selectedClassroom() {
+		return selectedClassroom;
+	},
+	get selectedAssignment() {
+		return selectedAssignment;
+	},
+	get hasData() {
+		return hasData;
+	},
+	get ungradedCount() {
+		return ungradedCount();
+	},
+
 	// Actions - methods that mutate state
 	loadDashboard,
 	loadTestData,

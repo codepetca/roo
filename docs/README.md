@@ -13,7 +13,13 @@ Welcome to the Roo Auto-Grading System documentation. This directory contains al
 - [`development/current-architecture.md`](development/current-architecture.md) - **Living system design** (updated as system evolves)
 - [`development/coding-patterns.md`](development/coding-patterns.md) - **Implementation patterns** and best practices
 - [`development/ai-collaboration-guide.md`](development/ai-collaboration-guide.md) - **How to work with Claude Code** effectively
+- [`development/dataconnect-architecture.md`](development/dataconnect-architecture.md) - **DataConnect-ready schema architecture**
 - [`development/detailed-roadmap.md`](development/detailed-roadmap.md) - Detailed development plan and phases
+- [`development/dual-email-system-issue.md`](development/dual-email-system-issue.md) - Dual email system implementation notes
+
+### 📋 **Technical Guides**
+- [`firebase.md`](firebase.md) - **Firebase development patterns** and best practices
+- [`svelte5.md`](svelte5.md) - **Svelte 5 runes patterns** and mandatory practices
 
 ### 🚀 **Deployment**
 - [`deployment/emulator-guide.md`](deployment/emulator-guide.md) - Firebase emulator setup and usage

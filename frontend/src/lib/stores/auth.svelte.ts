@@ -96,10 +96,10 @@ async function getUserProfile(firebaseUser: User): Promise<AuthUser | null> {
  */
 function initializeAuth() {
 	if (!browser || initialized) return;
-	
+
 	initialized = true;
 	console.log('Initializing auth state listener...');
-	
+
 	// Set up the auth state listener
 	const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
 		console.log('Auth state changed:', firebaseUser ? 'User logged in' : 'User logged out');
@@ -124,7 +124,7 @@ function initializeAuth() {
 			loading = false;
 		}
 	});
-	
+
 	// Ensure we get an initial state callback
 	// In some cases, onAuthStateChanged might not fire immediately
 	setTimeout(() => {
@@ -133,7 +133,7 @@ function initializeAuth() {
 			loading = false;
 		}
 	}, 1000);
-	
+
 	return unsubscribe;
 }
 

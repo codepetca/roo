@@ -33,7 +33,7 @@ export async function createTestUser(user: TestUser): Promise<AuthResponse> {
 		const response = await fetch(`${API_BASE_URL}/auth/signup`, {
 			method: 'POST',
 			headers: {
-				'Content-Type': 'application/json',
+				'Content-Type': 'application/json'
 			},
 			body: JSON.stringify({
 				email: user.email,
@@ -66,7 +66,7 @@ export async function deleteTestUser(uid: string): Promise<void> {
 		const response = await fetch(`${API_BASE_URL}/auth/user/${uid}`, {
 			method: 'DELETE',
 			headers: {
-				'Content-Type': 'application/json',
+				'Content-Type': 'application/json'
 			}
 		});
 
@@ -108,7 +108,9 @@ export async function signInViaUI(page: Page, user: TestUser): Promise<void> {
 		await emailInput.fill(user.email);
 
 		// Click continue/next
-		const continueButton = page.locator('button[type="submit"]').or(page.locator('button:has-text("Continue")'));
+		const continueButton = page
+			.locator('button[type="submit"]')
+			.or(page.locator('button:has-text("Continue")'));
 		await continueButton.click();
 
 		// Wait for passcode or password input
@@ -118,7 +120,9 @@ export async function signInViaUI(page: Page, user: TestUser): Promise<void> {
 		const passwordInput = page.locator('input[type="password"]');
 		if (await passwordInput.isVisible({ timeout: 2000 })) {
 			await passwordInput.fill(user.password);
-			const submitButton = page.locator('button[type="submit"]').or(page.locator('button:has-text("Sign In")'));
+			const submitButton = page
+				.locator('button[type="submit"]')
+				.or(page.locator('button:has-text("Sign In")'));
 			await submitButton.click();
 		}
 	} else {
@@ -155,7 +159,10 @@ export async function setAuthToken(page: Page, token: string): Promise<void> {
 /**
  * Sign in programmatically by setting auth token
  */
-export async function signInProgrammatically(page: Page, authResponse: AuthResponse): Promise<void> {
+export async function signInProgrammatically(
+	page: Page,
+	authResponse: AuthResponse
+): Promise<void> {
 	// Set the Firebase token in storage
 	await page.evaluate((token) => {
 		// Store the token where the app expects it
@@ -167,7 +174,7 @@ export async function signInProgrammatically(page: Page, authResponse: AuthRespo
 
 	// Navigate to dashboard
 	await page.goto('/dashboard/teacher');
-	
+
 	// Wait for dashboard to load
 	await page.waitForTimeout(2000);
 }
@@ -210,10 +217,11 @@ export async function waitForAuth(page: Page): Promise<void> {
 	await page.waitForFunction(
 		() => {
 			// Check if Firebase is loaded
-			return typeof window !== 'undefined' && 
-			       window.localStorage && 
-			       (window.localStorage.getItem('firebase_token') || 
-			        window.localStorage.getItem('auth_token'));
+			return (
+				typeof window !== 'undefined' &&
+				window.localStorage &&
+				(window.localStorage.getItem('firebase_token') || window.localStorage.getItem('auth_token'))
+			);
 		},
 		{ timeout: 10000 }
 	);

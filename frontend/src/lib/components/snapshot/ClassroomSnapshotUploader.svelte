@@ -154,7 +154,10 @@
 				/>
 
 				{#if isDragging}
-					<div class="absolute inset-0 rounded-lg bg-blue-100 bg-opacity-75" data-testid="drag-overlay"></div>
+					<div
+						class="bg-opacity-75 absolute inset-0 rounded-lg bg-blue-100"
+						data-testid="drag-overlay"
+					></div>
 				{/if}
 				{#if validating}
 					<!-- Validating state -->
@@ -246,7 +249,9 @@
 						<div>
 							<h4 class="font-medium text-gray-900">Drop your snapshot file here</h4>
 							<p class="text-sm text-gray-600">or click to browse</p>
-							<p class="mt-2 text-xs text-gray-500">Accepts JSON files exported from Google Sheets</p>
+							<p class="mt-2 text-xs text-gray-500">
+								Accepts JSON files exported from Google Sheets
+							</p>
 						</div>
 						<Button
 							variant="primary"

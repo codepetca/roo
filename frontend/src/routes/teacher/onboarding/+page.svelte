@@ -56,14 +56,14 @@
 			error = null;
 
 			const result = await api.updateSchoolEmail(schoolEmail);
-			
+
 			if (result.success) {
 				success = 'School email updated successfully!';
 				// Refresh user data in auth store
 				if (auth.user) {
 					auth.user.schoolEmail = schoolEmail;
 				}
-				
+
 				// Redirect to dashboard after success
 				setTimeout(() => {
 					window.location.href = '/dashboard/teacher';
@@ -167,8 +167,10 @@
 
 <div class="space-y-6">
 	<PageHeader
-		title={!auth.user?.schoolEmail ? "Complete Your Profile" : "Sheet Setup"}
-		description={!auth.user?.schoolEmail ? "Please set your school email to access all teacher features" : "Create a Google Sheet for your account to sync assignment data"}
+		title={!auth.user?.schoolEmail ? 'Complete Your Profile' : 'Sheet Setup'}
+		description={!auth.user?.schoolEmail
+			? 'Please set your school email to access all teacher features'
+			: 'Create a Google Sheet for your account to sync assignment data'}
 	/>
 
 	<!-- Progress indicator -->
@@ -313,7 +315,7 @@
 								{/if}
 							{/snippet}
 						</Button>
-						
+
 						<Button variant="primary" onclick={createSheet} {loading}>
 							{#snippet children()}
 								{#if loading}

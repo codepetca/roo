@@ -151,7 +151,9 @@
 			<!-- Role Selection -->
 			<div class="space-y-6" data-testid="role-selection">
 				<div class="text-center">
-					<h3 class="mb-4 text-lg font-medium text-gray-900" data-testid="role-selection-title">How would you like to sign in?</h3>
+					<h3 class="mb-4 text-lg font-medium text-gray-900" data-testid="role-selection-title">
+						How would you like to sign in?
+					</h3>
 				</div>
 
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -224,7 +226,9 @@
 			<!-- Teacher Authentication Method Selection -->
 			<div class="space-y-6" data-testid="teacher-auth-selection">
 				<div class="flex items-center justify-between">
-					<h3 class="text-lg font-medium text-gray-900" data-testid="teacher-signin-title">Teacher Sign In</h3>
+					<h3 class="text-lg font-medium text-gray-900" data-testid="teacher-signin-title">
+						Teacher Sign In
+					</h3>
 					<button
 						type="button"
 						onclick={backToSelect}
@@ -236,7 +240,9 @@
 				</div>
 
 				<div class="text-center">
-					<p class="mb-4 text-sm text-gray-600" data-testid="auth-method-prompt">Choose your preferred sign-in method:</p>
+					<p class="mb-4 text-sm text-gray-600" data-testid="auth-method-prompt">
+						Choose your preferred sign-in method:
+					</p>
 				</div>
 
 				<div class="space-y-3">
@@ -339,7 +345,9 @@
 			<!-- Teacher Email/Password Login -->
 			<div class="space-y-6" data-testid="teacher-email-auth">
 				<div class="flex items-center justify-between">
-					<h3 class="text-lg font-medium text-gray-900" data-testid="teacher-email-signin-title">Teacher Email Sign In</h3>
+					<h3 class="text-lg font-medium text-gray-900" data-testid="teacher-email-signin-title">
+						Teacher Email Sign In
+					</h3>
 					<button
 						type="button"
 						onclick={() => (authMode = 'teacher-select')}

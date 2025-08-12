@@ -27,7 +27,7 @@ const mockAssignments: Assignment[] = [
 		classroomId: 'classroom-1',
 		title: 'Math Quiz 1',
 		description: 'Basic arithmetic',
-		dueDate: { _seconds: 1642694400, _nanoseconds: 0 },
+		dueDate: '2022-01-20T12:00:00.000Z',
 		maxPoints: 100,
 		gradingRubric: {
 			enabled: true,
@@ -35,15 +35,15 @@ const mockAssignments: Assignment[] = [
 		},
 		isQuiz: true,
 		formId: 'form-123',
-		createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
-		updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+		createdAt: '2022-01-20T12:00:00.000Z',
+		updatedAt: '2022-01-20T12:00:00.000Z'
 	},
 	{
 		id: 'assignment-2',
 		classroomId: 'classroom-1',
 		title: 'Essay Assignment',
 		description: 'Write about your favorite book',
-		dueDate: { _seconds: 1642694400, _nanoseconds: 0 },
+		dueDate: '2022-01-20T12:00:00.000Z',
 		maxPoints: 50,
 		gradingRubric: {
 			enabled: true,
@@ -51,8 +51,8 @@ const mockAssignments: Assignment[] = [
 			promptTemplate: 'Grade this essay'
 		},
 		isQuiz: false,
-		createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
-		updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+		createdAt: '2022-01-20T12:00:00.000Z',
+		updatedAt: '2022-01-20T12:00:00.000Z'
 	}
 ];
 
@@ -60,28 +60,30 @@ const mockSubmissions: Submission[] = [
 	{
 		id: 'submission-1',
 		assignmentId: 'assignment-1',
+		classroomId: 'classroom-1',
 		studentId: 'student-1',
 		studentEmail: 'student1@test.com',
 		studentName: 'John Doe',
-		submittedAt: { _seconds: 1642694400, _nanoseconds: 0 },
+		submittedAt: '2022-01-20T12:00:00.000Z',
 		documentUrl: 'https://example.com/doc1',
-		status: 'pending',
+		status: 'submitted',
 		content: 'Student submission 1',
-		createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
-		updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+		createdAt: '2022-01-20T12:00:00.000Z',
+		updatedAt: '2022-01-20T12:00:00.000Z'
 	},
 	{
 		id: 'submission-2',
 		assignmentId: 'assignment-2',
+		classroomId: 'classroom-1',
 		studentId: 'student-2',
 		studentEmail: 'student2@test.com',
 		studentName: 'Jane Smith',
-		submittedAt: { _seconds: 1642694400, _nanoseconds: 0 },
+		submittedAt: '2022-01-20T12:00:00.000Z',
 		documentUrl: 'https://example.com/doc2',
-		status: 'grading',
+		status: 'graded',
 		content: 'Student submission 2',
-		createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
-		updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+		createdAt: '2022-01-20T12:00:00.000Z',
+		updatedAt: '2022-01-20T12:00:00.000Z'
 	}
 ];
 
@@ -105,10 +107,10 @@ const mockGrades: Grade[] = [
 			]
 		},
 		gradedBy: 'ai',
-		gradedAt: { _seconds: 1642694400, _nanoseconds: 0 },
+		gradedAt: '2022-01-20T12:00:00.000Z',
 		postedToClassroom: false,
-		createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
-		updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+		createdAt: '2022-01-20T12:00:00.000Z',
+		updatedAt: '2022-01-20T12:00:00.000Z'
 	}
 ];
 
@@ -215,7 +217,7 @@ describe('Dashboard Integration Tests', () => {
 					stats: {
 						totalSubmissions: submissions.length,
 						gradedSubmissions: grades.length,
-						pendingSubmissions: submissions.filter((s) => s.status === 'pending').length
+						pendingSubmissions: submissions.filter((s) => s.status === 'submitted').length
 					}
 				};
 			};
@@ -347,7 +349,7 @@ describe('Dashboard Integration Tests', () => {
 		});
 
 		it('should handle batch grading operations', async () => {
-			const submissionsToGrade = mockSubmissions.filter((s) => s.status === 'pending');
+			const submissionsToGrade = mockSubmissions.filter((s) => s.status === 'submitted');
 
 			const batchGrade = async (submissions: Submission[]) => {
 				const results = [];
@@ -380,7 +382,7 @@ describe('Dashboard Integration Tests', () => {
 
 			const results = await batchGrade(submissionsToGrade);
 
-			expect(results).toHaveLength(1); // Only one pending quiz submission
+			expect(results).toHaveLength(1); // Only one submitted quiz submission
 			expect(mockApi.gradeQuiz).toHaveBeenCalledTimes(1);
 		});
 	});
@@ -390,15 +392,16 @@ describe('Dashboard Integration Tests', () => {
 			const newSubmission: Submission = {
 				id: 'submission-3',
 				assignmentId: 'assignment-1',
+				classroomId: 'classroom-1',
 				studentId: 'student-3',
 				studentEmail: 'student3@test.com',
 				studentName: 'Bob Johnson',
-				submittedAt: { _seconds: Date.now() / 1000, _nanoseconds: 0 },
+				submittedAt: new Date().toISOString(),
 				documentUrl: 'https://example.com/doc3',
-				status: 'pending',
+				status: 'submitted',
 				content: 'New student submission',
-				createdAt: { _seconds: Date.now() / 1000, _nanoseconds: 0 },
-				updatedAt: { _seconds: Date.now() / 1000, _nanoseconds: 0 }
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString()
 			};
 
 			// Simulate polling for new submissions

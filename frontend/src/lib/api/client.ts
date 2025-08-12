@@ -62,7 +62,11 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 	}
 
 	const fullUrl = `${API_BASE_URL}/api${endpoint}`;
-	console.debug('API Request:', { method: options.method || 'GET', url: fullUrl, hasAuth: !!token });
+	console.debug('API Request:', {
+		method: options.method || 'GET',
+		url: fullUrl,
+		hasAuth: !!token
+	});
 
 	const response = await fetch(fullUrl, {
 		...options,
@@ -72,17 +76,19 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 	if (!response.ok) {
 		// Enhanced error reporting with HTTP details
 		const url = `${API_BASE_URL}/api${endpoint}`;
-		
+
 		try {
 			const errorData = await response.json();
 			const errorMessage =
 				errorData.message || errorData.error || response.statusText || 'Unknown error';
-			
+
 			// Include HTTP status and URL in error for debugging
 			throw new Error(`${response.status} ${errorMessage} (${options.method || 'GET'} ${url})`);
 		} catch (parseError) {
 			// If we can't parse the error response, include full context
-			throw new Error(`${response.status} ${response.statusText || 'Network Error'} (${options.method || 'GET'} ${url})`);
+			throw new Error(
+				`${response.status} ${response.statusText || 'Network Error'} (${options.method || 'GET'} ${url})`
+			);
 		}
 	}
 
@@ -129,17 +135,22 @@ export async function typedApiRequest<T>(
 		console.error('Response data:', JSON.stringify(rawResponse.data, null, 2));
 		console.error('Validation errors:', validation.error);
 		console.error('Detailed error format:', JSON.stringify(validation.error, null, 2));
-		
+
 		// Create more descriptive error message
-		const errorDetails = validation.error.issues ? validation.error.issues.map(issue => 
-			`Path: ${issue.path.join('.')}, Expected: ${issue.expected}, Received: ${issue.received}, Message: ${issue.message}`
-		).join('; ') : validation.error;
-		
+		const errorDetails = validation.error.issues
+			? validation.error.issues
+					.map(
+						(issue) =>
+							`Path: ${issue.path.join('.')}, Expected: ${issue.expected}, Received: ${issue.received}, Message: ${issue.message}`
+					)
+					.join('; ')
+			: validation.error;
+
 		// Also log to browser alert for E2E tests
 		if (typeof window !== 'undefined') {
 			window.console.warn('VALIDATION FAILED - CHECK CONSOLE FOR DETAILS');
 		}
-		
+
 		throw new Error(`API response validation failed: ${errorDetails}`);
 	}
 

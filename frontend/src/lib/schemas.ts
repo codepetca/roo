@@ -344,11 +344,13 @@ export function safeValidateApiResponse<T>(
 	} catch (error) {
 		if (error instanceof z.ZodError) {
 			// Enhanced error reporting with field paths and expected vs actual values
-			const detailedErrors = error.issues.map(issue => {
-				const path = issue.path.length > 0 ? issue.path.join('.') : 'root';
-				return `Field "${path}": ${issue.message}`;
-			}).join('; ');
-			
+			const detailedErrors = error.issues
+				.map((issue) => {
+					const path = issue.path.length > 0 ? issue.path.join('.') : 'root';
+					return `Field "${path}": ${issue.message}`;
+				})
+				.join('; ');
+
 			// Log the raw data and schema for debugging
 			console.error('API Response Validation Failed:', {
 				errors: error.issues,
@@ -356,7 +358,7 @@ export function safeValidateApiResponse<T>(
 				schemaName: schema.constructor.name,
 				detailedErrors
 			});
-			
+
 			return {
 				success: false,
 				error: `Validation failed: ${detailedErrors}`

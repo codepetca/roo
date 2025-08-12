@@ -54,7 +54,6 @@ import {
 	type ClassroomSnapshot
 } from '@shared/schemas/classroom-snapshot';
 
-
 /**
  * Type-safe API methods with runtime validation
  * All methods use Zod schemas for response validation
@@ -339,7 +338,8 @@ export const api = {
 	},
 
 	// Teacher onboarding
-	async createTeacherSheet(data: { boardAccountEmail: string; teacherName: string }): Promise<{ // boardAccountEmail is legacy field name for backward compatibility
+	async createTeacherSheet(data: { boardAccountEmail: string; teacherName: string }): Promise<{
+		// boardAccountEmail is legacy field name for backward compatibility
 		success: boolean;
 		sheetId: string;
 		message: string;
@@ -385,7 +385,7 @@ export const api = {
 
 	// Authentication endpoints
 	// NOTE: User signup now handled by Firebase Auth SDK + createProfileForExistingUser callable function
-	
+
 	async createProfile(data: {
 		uid: string;
 		role: 'teacher' | 'student';
@@ -469,7 +469,6 @@ export const api = {
 		);
 	},
 
-
 	// Snapshot import endpoints
 	async validateSnapshot(snapshot: ClassroomSnapshot): Promise<{
 		isValid: boolean;
@@ -508,13 +507,15 @@ export const api = {
 				}),
 				metadata: z.any(),
 				preview: z.object({
-					classrooms: z.array(z.object({
-						id: z.string(),
-						name: z.string(),
-						studentCount: z.number(),
-						assignmentCount: z.number(),
-						ungradedSubmissions: z.number()
-					}))
+					classrooms: z.array(
+						z.object({
+							id: z.string(),
+							name: z.string(),
+							studentCount: z.number(),
+							assignmentCount: z.number(),
+							ungradedSubmissions: z.number()
+						})
+					)
 				})
 			})
 		);
@@ -565,29 +566,33 @@ export const api = {
 		);
 	},
 
-	async getImportHistory(): Promise<Array<{
-		id: string;
-		timestamp: Date;
-		status: string;
-		stats: {
-			classroomsCreated: number;
-			assignmentsCreated: number;
-			submissionsCreated: number;
-		};
-	}>> {
+	async getImportHistory(): Promise<
+		Array<{
+			id: string;
+			timestamp: Date;
+			status: string;
+			stats: {
+				classroomsCreated: number;
+				assignmentsCreated: number;
+				submissionsCreated: number;
+			};
+		}>
+	> {
 		return typedApiRequest(
 			'/snapshots/history',
 			{},
-			z.array(z.object({
-				id: z.string(),
-				timestamp: z.date(),
-				status: z.string(),
-				stats: z.object({
-					classroomsCreated: z.number(),
-					assignmentsCreated: z.number(),
-					submissionsCreated: z.number()
+			z.array(
+				z.object({
+					id: z.string(),
+					timestamp: z.date(),
+					status: z.string(),
+					stats: z.object({
+						classroomsCreated: z.number(),
+						assignmentsCreated: z.number(),
+						submissionsCreated: z.number()
+					})
 				})
-			}))
+			)
 		);
 	},
 
@@ -615,25 +620,29 @@ export const api = {
 			z.object({
 				hasExistingData: z.boolean(),
 				isFirstImport: z.boolean(),
-				existing: z.object({
-					classroomCount: z.number()
-				}).optional(),
+				existing: z
+					.object({
+						classroomCount: z.number()
+					})
+					.optional(),
 				new: z.object({
 					classroomCount: z.number(),
 					totalAssignments: z.number(),
 					totalSubmissions: z.number()
 				}),
-				changes: z.object({
-					newClassrooms: z.number()
-				}).optional()
+				changes: z
+					.object({
+						newClassrooms: z.number()
+					})
+					.optional()
 			})
 		);
 	},
 
-	// Teacher dashboard endpoints  
+	// Teacher dashboard endpoints
 	async getTeacherDashboard(): Promise<TeacherDashboard> {
 		console.log('🔍 Calling getTeacherDashboard API...');
-		
+
 		try {
 			const result = await typedApiRequest('/teacher/dashboard', {}, teacherDashboardSchema);
 			console.log('✅ getTeacherDashboard succeeded:', result);
