@@ -191,7 +191,17 @@ export class GeminiService {
         .replace("{studentAnswer}", studentAnswer)
         .replace("{correctAnswer}", question.correctAnswer)
         .replace("{maxPoints}", question.points.toString())
-        .replace("Be fair but encouraging", "Use GENEROUS grading - focus on understanding over perfect syntax");
+        .replace("Be fair but encouraging", "GENEROUS GRADING MODE: Focus on understanding and logic over syntax");
+    }
+
+    // Use strict grading when explicitly specified
+    if (question.gradingStrictness === "strict") {
+      return GRADING_PROMPTS.quizQuestion
+        .replace("{questionText}", question.questionText)
+        .replace("{studentAnswer}", studentAnswer)
+        .replace("{correctAnswer}", question.correctAnswer)
+        .replace("{maxPoints}", question.points.toString())
+        .replace("Be fair but encouraging", "STRICT GRADING MODE: Accuracy and precision are important");
     }
 
     return GRADING_PROMPTS.quizQuestion

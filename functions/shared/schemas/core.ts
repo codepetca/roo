@@ -10,7 +10,13 @@ import { z } from 'zod';
  */
 
 // Helper for date/timestamp handling - expects ISO strings from API
-const dateTimeSchema = z.string().datetime().transform(val => new Date(val));
+const dateTimeSchema = z.union([
+  z.string().datetime().transform(val => new Date(val)),
+  z.object({
+    _seconds: z.number(),
+    _nanoseconds: z.number()
+  }).transform(val => new Date(val._seconds * 1000 + val._nanoseconds / 1000000))
+]).transform(val => val instanceof Date ? val : val);
 
 // Base entity schema with common fields
 const baseEntitySchema = z.object({

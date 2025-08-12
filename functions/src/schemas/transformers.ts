@@ -295,7 +295,7 @@ export function parseSubmissionRow(row: string[]): Partial<SheetSubmission> {
     assignmentDescription: row[12] || "",
     lastProcessed: row[13] || "",
     sourceFileId: row[14] || "",
-    isQuiz: row[15] === "true",
+    isQuiz: row[15] === "true" || row[15] === "TRUE",
     formId: row[16] || ""
   };
 }

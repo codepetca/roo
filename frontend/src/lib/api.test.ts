@@ -327,8 +327,10 @@ describe('API Client', () => {
 				submissionId: 'submission-1',
 				assignmentId: 'assignment-1',
 				studentId: 'student-1',
+				classroomId: 'classroom-1',
 				score: 85,
 				maxScore: 100,
+				percentage: 85,
 				feedback: 'Good work!',
 				gradingDetails: {
 					criteria: [
@@ -343,6 +345,7 @@ describe('API Client', () => {
 				gradedBy: 'ai',
 				gradedAt: { _seconds: 1642694400, _nanoseconds: 0 },
 				postedToClassroom: false,
+				submissionVersionGraded: 1,
 				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
 				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
 			}

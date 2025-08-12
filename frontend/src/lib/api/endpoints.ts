@@ -469,6 +469,25 @@ export const api = {
 		);
 	},
 
+	async storeGmailToken(data: { accessToken: string; expiresAt?: number }): Promise<{
+		success: boolean;
+		message: string;
+		emailSendingEnabled: boolean;
+	}> {
+		return typedApiRequest(
+			'/auth/store-gmail-token',
+			{
+				method: 'POST',
+				body: JSON.stringify(data)
+			},
+			z.object({
+				success: z.boolean(),
+				message: z.string(),
+				emailSendingEnabled: z.boolean()
+			})
+		);
+	},
+
 	// Snapshot import endpoints
 	async validateSnapshot(snapshot: ClassroomSnapshot): Promise<{
 		isValid: boolean;

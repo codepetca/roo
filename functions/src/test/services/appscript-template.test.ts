@@ -4,7 +4,9 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { APPSCRIPT_TEMPLATE } from '../../services/appscript-template';
+
+// Use CommonJS require since ES module import is not working in this test context
+const { APPSCRIPT_TEMPLATE } = require('../../integration/appscript-code.ts');
 
 describe('AppScript Template', () => {
   it('should export a valid template string', () => {
