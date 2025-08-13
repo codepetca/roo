@@ -31,7 +31,7 @@ const sendPasscodeSchema = z.object({
 
 const verifyPasscodeSchema = z.object({
   email: z.string().email("Invalid email address"),
-  passcode: z.string().min(6, "Passcode must be 6 digits").max(6, "Passcode must be 6 digits"),
+  passcode: z.string().min(5, "Passcode must be 5-6 characters").max(6, "Passcode must be 5-6 characters"),
 });
 
 const resetStudentAuthSchema = z.object({
@@ -206,32 +206,51 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
     const db = getFirestore();
     const auth = getAuth();
 
-    // Get passcode document
-    const passcodeDoc = await db.collection("passcodes").doc(email).get();
-
+    // Get passcode document - try document with email as ID first (new system)
+    let passcodeDoc = await db.collection("passcodes").doc(email).get();
+    let passcodeData: any = null;
+    let isPermanentPasscode = false;
+    
     if (!passcodeDoc.exists) {
-      res.status(400).json({
-        success: false,
-        error: "Invalid passcode",
-        message: "No passcode found for this email address",
-      });
-      return;
+      // Try querying by email field (could be multiple documents)
+      const passcodeQuery = await db.collection("passcodes")
+        .where("email", "==", email)
+        .orderBy("createdAt", "desc")
+        .limit(1)
+        .get();
+      
+      if (!passcodeQuery.empty) {
+        passcodeDoc = passcodeQuery.docs[0];
+        passcodeData = passcodeDoc.data()!;
+      } else {
+        res.status(400).json({
+          success: false,
+          error: "Invalid passcode",
+          message: "No passcode found for this email address",
+        });
+        return;
+      }
+    } else {
+      passcodeData = passcodeDoc.data()!;
     }
 
-    const passcodeData = passcodeDoc.data()!;
+    // Determine if this is a permanent passcode (5 chars, no expiration)
+    isPermanentPasscode = passcode.length === 5 || passcodeData.expiresAt === null;
 
-    // Check if passcode is expired
-    if (new Date() > passcodeData.expiresAt.toDate()) {
-      res.status(400).json({
-        success: false,
-        error: "Passcode expired",
-        message: "The passcode has expired. Please request a new one.",
-      });
-      return;
+    // For temporary passcodes (6-digit), check expiration
+    if (!isPermanentPasscode && passcodeData.expiresAt) {
+      if (new Date() > passcodeData.expiresAt.toDate()) {
+        res.status(400).json({
+          success: false,
+          error: "Passcode expired",
+          message: "The passcode has expired. Please request a new one.",
+        });
+        return;
+      }
     }
 
-    // Check if passcode has been used
-    if (passcodeData.used) {
+    // For temporary passcodes, check if already used
+    if (!isPermanentPasscode && passcodeData.used) {
       res.status(400).json({
         success: false,
         error: "Passcode already used",
@@ -240,25 +259,28 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Check attempt limit
-    if (passcodeData.attempts >= 3) {
+    // Check attempt limit (applies to both types)
+    const maxAttempts = isPermanentPasscode ? 10 : 3; // More attempts for permanent codes
+    if (passcodeData.attempts && passcodeData.attempts >= maxAttempts) {
       res.status(400).json({
         success: false,
         error: "Too many attempts",
-        message: "Too many failed attempts. Please request a new passcode.",
+        message: `Too many failed attempts. Please ${isPermanentPasscode ? 'wait before trying again' : 'request a new passcode'}.`,
       });
       return;
     }
 
-    // Verify passcode
-    if (passcodeData.passcode !== passcode) {
+    // Verify passcode (case-insensitive for 5-char codes)
+    const passcodeMatch = isPermanentPasscode 
+      ? passcodeData.passcode.toUpperCase() === passcode.toUpperCase()
+      : passcodeData.passcode === passcode;
+
+    if (!passcodeMatch) {
       // Increment attempts
-      await db
-        .collection("passcodes")
-        .doc(email)
-        .update({
-          attempts: passcodeData.attempts + 1,
-        });
+      await db.collection("passcodes").doc(passcodeDoc.id).update({
+        attempts: (passcodeData.attempts || 0) + 1,
+        lastAttemptAt: new Date()
+      });
 
       res.status(400).json({
         success: false,
@@ -268,11 +290,18 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Mark passcode as used
-    await db.collection("passcodes").doc(email).update({
-      used: true,
-      usedAt: new Date(),
-    });
+    // For temporary passcodes, mark as used. For permanent ones, just update last used time
+    if (isPermanentPasscode) {
+      await db.collection("passcodes").doc(passcodeDoc.id).update({
+        lastUsedAt: new Date(),
+        attempts: 0 // Reset attempts on successful login
+      });
+    } else {
+      await db.collection("passcodes").doc(passcodeDoc.id).update({
+        used: true,
+        usedAt: new Date(),
+      });
+    }
 
     // Check if user already exists
     let userRecord;

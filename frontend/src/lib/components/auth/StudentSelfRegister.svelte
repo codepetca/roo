@@ -1,4 +1,11 @@
 <script lang="ts">
+	/**
+	 * Student Self-Registration Component
+	 * Location: frontend/src/lib/components/auth/StudentSelfRegister.svelte
+	 * 
+	 * Allows students to self-register and request their own passcode
+	 * Uses the new /auth/student-request-passcode endpoint (admin-only passcode generation)
+	 */
 	import { createEventDispatcher } from 'svelte';
 	import { signInWithCustomToken } from 'firebase/auth';
 	import { firebaseAuth } from '$lib/firebase';
@@ -12,23 +19,15 @@
 	let loading = $state(false);
 	let error = $state('');
 	let success = $state('');
-	let passcodeRequested = $state(false);
+	let registrationStep: 'email' | 'passcode' | 'completed' = $state('email');
 
-	// Enhanced debugging for Svelte 5
-	$effect(() => {
-		console.log('🔵 StudentPasscodeAuth - State Change:', {
-			email: email,
-			passcode: passcode,
-			loading: loading,
-			passcodeRequested: passcodeRequested,
-			error: error,
-			success: success
-		});
-	});
+	// Form validation
+	let requestEnabled = $derived(email && email.includes('@') && !loading);
+	let verifyEnabled = $derived(passcode.length === 5 && !loading); // 5-char alphanumeric
 
 	async function handleRequestPasscode() {
 		if (!email || !email.includes('@')) {
-			error = 'Please enter a valid email address';
+			error = 'Please enter a valid school email address';
 			return;
 		}
 
@@ -37,31 +36,27 @@
 		success = '';
 
 		try {
-			console.log('Requesting passcode for student:', email);
+			console.log('Student requesting self-registration passcode:', email);
 
-			await api.studentRequestPasscode({ email });
+			// Call the new student-request-passcode endpoint
+			const result = await api.studentRequestPasscode({ 
+				email: email.trim().toLowerCase()
+			});
 
-			success = `Login code sent to ${email}. Check your email and enter the 5-character code below.`;
-			passcodeRequested = true;
+			success = `Registration request sent! A passcode has been generated for ${email}. Check your email for login instructions.`;
+			registrationStep = 'passcode';
 
-			console.log('Passcode request successful');
+			console.log('Student self-registration passcode request successful');
 
 		} catch (err: any) {
-			console.error('Passcode request error:', err);
+			console.error('Student self-registration error:', err);
 			
-			// Handle specific HTTP status codes
-			if (err.status === 404) {
-				// Student not enrolled in any classrooms
-				error = err.response?.error || 'Email not found in any classroom rosters. Please contact your teacher to be added to a class first.';
-			} else if (err.status === 400) {
-				// Invalid email or missing data
-				error = err.response?.error || 'Please check your email address and try again.';
-			} else if (err.message?.includes('Teacher authentication required')) {
-				error = 'A teacher must send you the login code. Please ask your teacher to send you a login code.';
-			} else if (err.message?.includes('Gmail access required')) {
-				error = 'Your teacher needs to sign in with Google to send login codes. Please ask your teacher to sign in first.';
+			if (err.message?.includes('already enrolled')) {
+				error = 'You are already enrolled in classes. Please use the regular student login instead.';
+			} else if (err.message?.includes('not found in classrooms')) {
+				error = 'Your email was not found in any classroom rosters. Please contact your teacher to be added to a class first.';
 			} else {
-				error = err.response?.error || err.message || 'Failed to send login code. Please ask your teacher to send you a login code.';
+				error = err.message || 'Failed to process registration request. Please try again or contact your teacher.';
 			}
 		} finally {
 			loading = false;
@@ -70,7 +65,7 @@
 
 	async function handleVerifyPasscode() {
 		if (!passcode || passcode.length !== 5) {
-			error = 'Please enter the 5-character login code';
+			error = 'Please enter the 5-character passcode';
 			return;
 		}
 
@@ -78,16 +73,22 @@
 		error = '';
 
 		try {
-			console.log('Verifying passcode for:', email);
+			console.log('Verifying student self-registration passcode:', email);
 
-			const result = await api.verifyPasscode({ email, passcode });
+			const result = await api.verifyPasscode({ 
+				email: email.trim().toLowerCase(), 
+				passcode: passcode.trim().toUpperCase()
+			});
 
 			if (result.valid && result.firebaseToken) {
 				// Sign in with custom token
 				const userCredential = await signInWithCustomToken(firebaseAuth, result.firebaseToken);
 				const user = userCredential.user;
 
-				console.log('Student authentication successful:', result.userProfile);
+				console.log('Student self-registration successful:', result.userProfile);
+				
+				registrationStep = 'completed';
+				success = 'Registration completed successfully! Welcome to your classes.';
 
 				// Dispatch success event
 				dispatch('success', {
@@ -107,13 +108,11 @@
 			console.error('Passcode verification error:', err);
 			
 			if (err.message?.includes('Invalid passcode')) {
-				error = 'Incorrect login code. Please check the code and try again.';
-			} else if (err.message?.includes('expired')) {
-				error = 'Login code has expired. Please request a new code from your teacher.';
-			} else if (err.message?.includes('already used')) {
-				error = 'This login code has already been used. Please request a new code from your teacher.';
+				error = 'Incorrect passcode. Please check the code and try again.';
+			} else if (err.message?.includes('not found')) {
+				error = 'Passcode not found. Please request a new registration code.';
 			} else {
-				error = err.message || 'Failed to verify login code';
+				error = err.message || 'Failed to verify passcode. Please try again.';
 			}
 		} finally {
 			loading = false;
@@ -125,7 +124,13 @@
 		passcode = '';
 		error = '';
 		success = '';
-		passcodeRequested = false;
+		registrationStep = 'email';
+	}
+
+	function goBackToEmail() {
+		registrationStep = 'email';
+		error = '';
+		passcode = '';
 	}
 </script>
 
@@ -143,7 +148,7 @@
 					</svg>
 				</div>
 				<div class="ml-3">
-					<h3 class="text-sm font-medium text-red-800">Authentication Error</h3>
+					<h3 class="text-sm font-medium text-red-800">Registration Error</h3>
 					<div class="mt-2 text-sm text-red-700">
 						<p>{error}</p>
 					</div>
@@ -174,13 +179,13 @@
 		</div>
 	{/if}
 
-	{#if !passcodeRequested}
-		<!-- Step 1: Request Passcode -->
+	{#if registrationStep === 'email'}
+		<!-- Step 1: Enter Email for Registration -->
 		<div class="space-y-4">
 			<div class="text-center">
-				<h3 class="text-lg font-medium text-gray-900 mb-2">Student Login</h3>
+				<h3 class="text-lg font-medium text-gray-900 mb-2">Student Registration</h3>
 				<p class="text-sm text-gray-600">
-					Enter your school email address to request a login code from your teacher.
+					Enter your school email address to register for your classes. You must already be enrolled by your teacher.
 				</p>
 			</div>
 
@@ -197,11 +202,11 @@
 					class="w-full"
 				/>
 				<p class="mt-1 text-xs text-gray-500">
-					Your teacher will send a login code to this email address
+					Use the same email address your teacher used to enroll you in class
 				</p>
 			</div>
 
-			<Button onclick={handleRequestPasscode} disabled={loading || !email} class="w-full">
+			<Button onclick={handleRequestPasscode} disabled={!requestEnabled} class="w-full">
 				{#if loading}
 					<svg
 						class="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
@@ -216,25 +221,26 @@
 							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 						></path>
 					</svg>
-					Requesting Login Code...
+					Processing Registration...
 				{:else}
-					Request Login Code
+					Register for Classes
 				{/if}
 			</Button>
 
 			<div class="text-center">
 				<p class="text-xs text-gray-500">
-					Note: Your teacher must be signed in to send you a login code
+					Already have a passcode? Continue below after clicking "Register"
 				</p>
 			</div>
 		</div>
-	{:else}
+
+	{:else if registrationStep === 'passcode'}
 		<!-- Step 2: Enter Passcode -->
 		<div class="space-y-4">
 			<div class="text-center">
-				<h3 class="text-lg font-medium text-gray-900 mb-2">Enter Login Code</h3>
+				<h3 class="text-lg font-medium text-gray-900 mb-2">Enter Your Passcode</h3>
 				<p class="text-sm text-gray-600">
-					Check your email for a 5-character login code from your teacher.
+					A 5-character passcode has been generated for your account. Enter it below to complete registration.
 				</p>
 			</div>
 
@@ -249,7 +255,7 @@
 
 			<div>
 				<label for="passcode" class="mb-2 block text-sm font-medium text-gray-700">
-					5-Character Login Code
+					5-Character Passcode
 				</label>
 				<Input
 					id="passcode"
@@ -258,14 +264,15 @@
 					placeholder="ABC12"
 					disabled={loading}
 					maxlength="5"
-					class="w-full text-center text-lg tracking-wider font-mono"
+					class="w-full text-center text-lg tracking-wider font-mono uppercase"
+					style="text-transform: uppercase;"
 				/>
 				<p class="mt-1 text-xs text-gray-500">
-					Enter the 5-character code from your email
+					Your permanent 5-character login passcode (letters and numbers)
 				</p>
 			</div>
 
-			<Button onclick={handleVerifyPasscode} disabled={loading || passcode.length !== 5} class="w-full">
+			<Button onclick={handleVerifyPasscode} disabled={!verifyEnabled} class="w-full">
 				{#if loading}
 					<svg
 						class="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
@@ -280,20 +287,20 @@
 							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 						></path>
 					</svg>
-					Verifying Code...
+					Completing Registration...
 				{:else}
-					Sign In
+					Complete Registration
 				{/if}
 			</Button>
 
 			<div class="flex justify-between text-sm">
 				<button
 					type="button"
-					onclick={resetForm}
+					onclick={goBackToEmail}
 					disabled={loading}
 					class="text-blue-600 hover:text-blue-500 focus:underline focus:outline-none"
 				>
-					Use different email
+					← Different email
 				</button>
 				<button
 					type="button"
@@ -301,9 +308,49 @@
 					disabled={loading}
 					class="text-blue-600 hover:text-blue-500 focus:underline focus:outline-none"
 				>
-					Resend code
+					Request new code
 				</button>
 			</div>
+		</div>
+
+	{:else if registrationStep === 'completed'}
+		<!-- Step 3: Registration Complete -->
+		<div class="space-y-4 text-center">
+			<div class="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+				<svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+				</svg>
+			</div>
+			
+			<h3 class="text-lg font-medium text-gray-900">Registration Complete!</h3>
+			<p class="text-sm text-gray-600">
+				You are now registered and logged into your classes. Your passcode will remain the same for future logins.
+			</p>
+
+			<div class="bg-blue-50 border border-blue-200 rounded-md p-3 text-left">
+				<h4 class="text-sm font-medium text-blue-900 mb-1">Remember:</h4>
+				<ul class="text-xs text-blue-800 space-y-1">
+					<li>• Your passcode is: <strong class="font-mono">{passcode}</strong></li>
+					<li>• This passcode will never expire</li>
+					<li>• Use it to log in anytime with your email</li>
+					<li>• Only admins can generate new passcodes (not teachers)</li>
+				</ul>
+			</div>
+		</div>
+	{/if}
+
+	{#if registrationStep !== 'completed'}
+		<div class="mt-6 text-center border-t pt-4">
+			<p class="text-xs text-gray-500 mb-2">
+				Need help? Contact your teacher or administrator.
+			</p>
+			<button
+				type="button"
+				onclick={resetForm}
+				class="text-xs text-gray-400 hover:text-gray-600 focus:underline focus:outline-none"
+			>
+				Start over
+			</button>
 		</div>
 	{/if}
 </div>

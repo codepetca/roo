@@ -3,6 +3,7 @@
 	import TeacherGoogleAuth from '$lib/components/auth/TeacherGoogleAuth.svelte';
 	import TeacherEmailAuth from '$lib/components/auth/TeacherEmailAuth.svelte';
 	import StudentPasscodeAuth from '$lib/components/auth/StudentPasscodeAuth.svelte';
+	import StudentSelfRegister from '$lib/components/auth/StudentSelfRegister.svelte';
 	import { Alert } from '$lib/components/ui';
 
 	let authMode:
@@ -11,6 +12,7 @@
 		| 'teacher-google'
 		| 'teacher-email'
 		| 'student-login'
+		| 'student-self-register'
 		| 'teacher-signup'
 		| 'student-signup' = 'select';
 	let signupSuccess = false;
@@ -38,6 +40,10 @@
 
 	function showStudentSignup() {
 		authMode = 'student-signup';
+	}
+
+	function showStudentSelfRegister() {
+		authMode = 'student-self-register';
 	}
 
 	function backToSelect() {
@@ -119,6 +125,18 @@
 		// Import auth store to trigger refresh
 		const { auth } = await import('$lib/stores/auth.svelte');
 		// Note: refresh method may not exist in new auth structure
+
+		// Import goto for navigation
+		const { goto } = await import('$app/navigation');
+
+		// Navigate to student dashboard
+		await goto('/dashboard/student');
+	}
+
+	async function handleStudentSelfRegisterSuccess(event: CustomEvent) {
+		const { user, isNewUser } = event.detail;
+
+		console.log('Student self-registration successful', { user, isNewUser });
 
 		// Import goto for navigation
 		const { goto } = await import('$app/navigation');
@@ -378,9 +396,32 @@
 				<StudentPasscodeAuth on:success={handleStudentAuthSuccess} />
 				<div class="text-center">
 					<p class="text-sm text-gray-600">
-						Don't have a login code? Ask your teacher to send you one.
+						Don't have a login code?
+						<button
+							type="button"
+							class="font-medium text-blue-600 transition-colors hover:text-blue-500 focus:underline focus:outline-none"
+							onclick={showStudentSelfRegister}
+						>
+							Get your own passcode
+						</button>
+						or ask your teacher to send you one.
 					</p>
 				</div>
+			</div>
+		{:else if authMode === 'student-self-register'}
+			<!-- Student Self-Registration -->
+			<div class="space-y-6">
+				<div class="flex items-center justify-between">
+					<h3 class="text-lg font-medium text-gray-900">Student Self-Registration</h3>
+					<button
+						type="button"
+						onclick={backToSelect}
+						class="text-sm text-gray-500 hover:text-gray-700 focus:underline focus:outline-none"
+					>
+						Back
+					</button>
+				</div>
+				<StudentSelfRegister on:success={handleStudentSelfRegisterSuccess} />
 			</div>
 		{:else if authMode === 'teacher-signup'}
 			<!-- Teacher Signup -->

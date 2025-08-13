@@ -507,6 +507,22 @@ export const api = {
 		);
 	},
 
+	// Student self-registration endpoint
+	async studentRequestPasscode(data: { email: string }): Promise<{ success: boolean; message: string; passcode: string }> {
+		return typedApiRequest(
+			'/auth/student-request-passcode',
+			{
+				method: 'POST',
+				body: JSON.stringify(data)
+			},
+			z.object({
+				success: z.boolean(),
+				message: z.string(),
+				passcode: z.string()
+			})
+		);
+	},
+
 	// Snapshot import endpoints
 	async validateSnapshot(snapshot: ClassroomSnapshot): Promise<{
 		isValid: boolean;
@@ -753,5 +769,6 @@ export const api = {
 			},
 			resetStudentAuthResponseSchema
 		);
-	}
+	},
+
 };

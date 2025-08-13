@@ -379,6 +379,229 @@ export class BrevoEmailService {
       </html>
     `;
   }
+
+  /**
+   * Send student registration passcode email
+   * For permanent 5-character passcodes from student self-registration
+   */
+  async sendStudentRegistrationEmail(params: {
+    to: string;
+    studentName: string;
+    passcode: string;
+    isNewPasscode: boolean;
+  }): Promise<void> {
+    try {
+      const { to, studentName, passcode, isNewPasscode } = params;
+      
+      const emailData: any = {
+        to: [{ email: to }],
+        sender: { 
+          email: 'dev.codepet@gmail.com', // Your verified Brevo sender
+          name: 'Roo Auto-Grading System'
+        },
+        subject: isNewPasscode ? 'Welcome to Roo - Your Permanent Login Passcode' : 'Your Roo Login Passcode',
+        htmlContent: this.createStudentRegistrationEmailHTML(studentName, passcode, isNewPasscode)
+      };
+
+      const result = await this.brevoApi.sendTransacEmail(emailData);
+      
+      logger.info('Student registration passcode email sent successfully', {
+        to,
+        messageId: result.response.messageId,
+        isNewPasscode
+      });
+
+    } catch (error: any) {
+      logger.error('Brevo student registration email send error:', error);
+      throw new Error(`Failed to send student registration email via Brevo: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create HTML for student registration passcode email
+   */
+  private createStudentRegistrationEmailHTML(studentName: string, passcode: string, isNewPasscode: boolean): string {
+    const title = isNewPasscode ? 'Welcome to Roo!' : 'Your Roo Login Passcode';
+    const welcomeMessage = isNewPasscode 
+      ? 'Welcome to Roo! Your registration is complete and you now have a permanent login passcode.'
+      : 'Here is your permanent login passcode for Roo.';
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${title}</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f8f9fa; 
+            line-height: 1.6;
+          }
+          .container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: white; 
+            border-radius: 8px; 
+            overflow: hidden; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
+          }
+          .header { 
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+            color: white; 
+            padding: 30px; 
+            text-align: center; 
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 600;
+          }
+          .content { 
+            padding: 30px; 
+          }
+          .passcode-box { 
+            background: #f0fdf4; 
+            border: 2px solid #bbf7d0; 
+            border-radius: 12px; 
+            padding: 25px; 
+            margin: 25px 0; 
+            text-align: center; 
+          }
+          .passcode-label {
+            font-size: 14px;
+            color: #065f46;
+            margin: 0 0 15px 0;
+            font-weight: 600;
+          }
+          .passcode-number { 
+            font-size: 48px; 
+            font-weight: bold; 
+            color: #047857; 
+            letter-spacing: 12px; 
+            margin: 10px 0; 
+            font-family: 'Courier New', monospace;
+          }
+          .permanent-notice { 
+            background: #dbeafe; 
+            border-left: 4px solid #3b82f6; 
+            border-radius: 6px; 
+            padding: 15px; 
+            margin: 20px 0; 
+            color: #1e40af; 
+          }
+          .footer { 
+            background: #f8f9fa; 
+            padding: 25px; 
+            text-align: center; 
+            color: #64748b; 
+            font-size: 14px; 
+          }
+          .login-url {
+            display: inline-block;
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-weight: 600;
+          }
+          .instructions {
+            background: #f0fdf4;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+          }
+          .step {
+            display: flex;
+            align-items: flex-start;
+            margin: 10px 0;
+          }
+          .step-number {
+            background: #10b981;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            margin-right: 12px;
+            flex-shrink: 0;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🎓 ${title}</h1>
+          </div>
+          
+          <div class="content">
+            <p>Hi ${studentName}!</p>
+            <p>${welcomeMessage}</p>
+            
+            <div class="passcode-box">
+              <p class="passcode-label">Your permanent 5-character passcode:</p>
+              <div class="passcode-number">${passcode}</div>
+            </div>
+
+            <div class="permanent-notice">
+              🔒 <strong>This passcode never expires!</strong><br>
+              Keep it safe - you'll use this same code every time you log into Roo.<br>
+              Only administrators can generate new passcodes (not your teacher).
+            </div>
+
+            <div class="instructions">
+              <h3 style="margin-top: 0; color: #047857;">How to log into Roo:</h3>
+              
+              <div class="step">
+                <span class="step-number">1</span>
+                <span>Go to the Roo student login page</span>
+              </div>
+              
+              <div class="step">
+                <span class="step-number">2</span>
+                <span>Enter your email address</span>
+              </div>
+              
+              <div class="step">
+                <span class="step-number">3</span>
+                <span>Enter your permanent passcode: <strong>${passcode}</strong></span>
+              </div>
+              
+              <div class="step">
+                <span class="step-number">4</span>
+                <span>Click "Sign In" to access your classes</span>
+              </div>
+            </div>
+
+            <div style="text-align: center;">
+              <a href="https://roo-app.web.app/login" class="login-url">
+                Open Roo Student Login
+              </a>
+            </div>
+          </div>
+          
+          <div class="footer">
+            <p><strong>This email was sent from Roo's secure registration system.</strong></p>
+            <p>You are now registered for all classes where your teacher has enrolled you.</p>
+            <p style="font-size: 12px; margin-top: 20px;">
+              If you have questions about your classes or assignments, contact your teacher.<br>
+              For technical support, contact your school's IT department.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
 }
 
 /**

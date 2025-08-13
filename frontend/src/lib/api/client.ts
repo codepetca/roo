@@ -15,7 +15,7 @@ import {
 	PUBLIC_FIREBASE_PROJECT_ID
 } from '$env/static/public';
 import { z } from 'zod';
-import { safeValidateApiResponse, type ApiResponse } from '../schemas';
+import { safeValidateApiResponse } from '../schemas';
 
 /**
  * Base URL for direct HTTP calls
@@ -73,30 +73,38 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 		headers
 	});
 
-	if (!response.ok) {
-		// Enhanced error reporting with HTTP details
-		const url = `${API_BASE_URL}/api${endpoint}`;
-
-		try {
-			const errorData = await response.json();
-			const errorMessage =
-				errorData.message || errorData.error || response.statusText || 'Unknown error';
-
-			// Include HTTP status and URL in error for debugging
-			throw new Error(`${response.status} ${errorMessage} (${options.method || 'GET'} ${url})`);
-		} catch (parseError) {
-			// If we can't parse the error response, include full context
+	// Always parse JSON response first
+	let data;
+	try {
+		data = await response.json();
+	} catch (parseError) {
+		// If JSON parsing fails, it's likely a real network error or invalid response
+		if (!response.ok) {
+			const url = `${API_BASE_URL}/api${endpoint}`;
 			throw new Error(
 				`${response.status} ${response.statusText || 'Network Error'} (${options.method || 'GET'} ${url})`
 			);
 		}
+		throw parseError;
 	}
 
-	return response.json();
+	// For non-200 responses, throw an error that includes both status and parsed response
+	if (!response.ok) {
+		const url = `${API_BASE_URL}/api${endpoint}`;
+		const errorMessage = data.message || data.error || response.statusText || 'Unknown error';
+		
+		// Create error with status info but also attach the parsed response
+		const error = new Error(`${response.status} ${errorMessage} (${options.method || 'GET'} ${url})`);
+		(error as any).status = response.status;
+		(error as any).response = data;
+		throw error;
+	}
+	
+	return data;
 }
 
 /**
- * Type-safe API request with runtime validation
+ * Type-safe API request with runtime validation (no wrapper format)
  * @param endpoint - API endpoint path
  * @param options - Fetch options
  * @param schema - Zod schema for response validation
@@ -106,44 +114,28 @@ export async function typedApiRequest<T>(
 	options: RequestInit,
 	schema: z.ZodType<T>
 ): Promise<T> {
-	const rawResponse = await apiRequest<ApiResponse<T>>(endpoint, options);
+	const rawResponse = await apiRequest<T>(endpoint, options);
 
-	// Handle wrapped API response format
-	if (!rawResponse.success) {
-		throw new Error(rawResponse.error || 'API request failed');
-	}
-
-	// Enhanced debugging for response structure issues
+	// Enhanced debugging for response structure
 	console.log('🔍 Raw response from backend:', {
 		endpoint,
 		method: options.method || 'GET',
-		status: rawResponse.status,
-		hasData: !!rawResponse.data,
-		dataType: typeof rawResponse.data,
+		dataType: typeof rawResponse,
 		rawResponse: JSON.stringify(rawResponse, null, 2)
 	});
 
-	if (!rawResponse.data) {
-		console.error('❌ No data in response. Full response:', JSON.stringify(rawResponse, null, 2));
-		// Handle empty data responses (e.g., for arrays that should default to empty)
-		if (schema instanceof z.ZodArray) {
-			return [] as unknown as T;
-		}
-		throw new Error('No data in API response');
-	}
-
 	// Add detailed logging for debugging validation issues
-	console.debug('Raw API response data:', JSON.stringify(rawResponse.data, null, 2));
+	console.debug('Raw API response data:', JSON.stringify(rawResponse, null, 2));
 	console.debug('Validating against schema:', schema._def);
 
-	const validation = safeValidateApiResponse(schema, rawResponse.data);
+	const validation = safeValidateApiResponse(schema, rawResponse);
 
 	if (!validation.success) {
 		console.error('🚨 API RESPONSE VALIDATION FAILED 🚨');
 		console.error('Endpoint:', endpoint);
 		console.error('Method:', options.method || 'GET');
 		console.error('Schema expected:', schema._def);
-		console.error('Response data:', JSON.stringify(rawResponse.data, null, 2));
+		console.error('Response data:', JSON.stringify(rawResponse, null, 2));
 		console.error('Validation errors:', validation.error);
 		console.error('Detailed error format:', JSON.stringify(validation.error, null, 2));
 

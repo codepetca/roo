@@ -2,6 +2,11 @@ import * as admin from "firebase-admin";
 import { getFirestore } from "firebase-admin/firestore";
 import { getFirestoreSettings, logEmulatorStatus, isEmulator, getAuthEmulatorUrl } from "../utils/emulator";
 
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  admin.initializeApp();
+}
+
 // Configure Auth emulator BEFORE using Firebase Admin
 if (isEmulator()) {
   const authEmulatorUrl = getAuthEmulatorUrl();
@@ -28,9 +33,9 @@ export const SERVICE_ACCOUNT_EMAIL = "firebase-adminsdk-fbsvc@roo-app-3d24e.iam.
 // Export timestamp helper that handles emulator vs production
 export function getCurrentTimestamp(): admin.firestore.Timestamp | admin.firestore.FieldValue {
   if (isEmulator()) {
-    return admin.firestore.Timestamp.now();
+    return admin.firestore.Timestamp.fromDate(new Date());
   }
-  return FieldValue.serverTimestamp();
+  return admin.firestore.FieldValue.serverTimestamp();
 }
 
 // Document sanitization functions

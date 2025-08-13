@@ -39,6 +39,7 @@ import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getC
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { getUserProfile, checkUserProfileExists, updateSchoolEmail } from "./routes/users";
 import { sendPasscode, verifyPasscode, resetStudentAuth, deleteUser, setupTeacherProfile, storeGmailToken, storePasscode, sendPasscodeFirebase, generateAndSendPasscode } from "./routes/auth";
+import { studentRequestPasscode } from "./routes/auth/student-request-passcode";
 import { debugSheetsPermissions } from "./routes/debug";
 import { getServiceAccountInfo, testSheetAccess } from "./routes/webhook-debug";
 
@@ -295,6 +296,9 @@ export const api = onRequest(
       }
       if (method === "POST" && path === "/auth/verify-passcode") {
         await verifyPasscode(request, response); return;
+      }
+      if (method === "POST" && path === "/auth/student-request-passcode") {
+        await studentRequestPasscode(request, response); return;
       }
       if (method === "POST" && path === "/auth/reset-student") {
         await resetStudentAuth(request, response); return;
