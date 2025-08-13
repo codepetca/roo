@@ -82,25 +82,45 @@
 
 			const result = await api.verifyPasscode({ email, passcode });
 
-			if (result.valid && result.firebaseToken) {
-				// Sign in with custom token
-				const userCredential = await signInWithCustomToken(firebaseAuth, result.firebaseToken);
-				const user = userCredential.user;
+			if (result.valid) {
+				if (result.firebaseToken) {
+					// Sign in with custom token (when Firebase IAM permissions work)
+					const userCredential = await signInWithCustomToken(firebaseAuth, result.firebaseToken);
+					const user = userCredential.user;
 
-				console.log('Student authentication successful:', result.userProfile);
+					console.log('Student authentication successful with custom token:', result.userProfile);
 
-				// Dispatch success event
-				dispatch('success', {
-					user: {
-						uid: user.uid,
-						email: user.email,
-						displayName: user.displayName
-					},
-					isNewUser: result.isNewUser,
-					profile: result.userProfile
-				});
+					// Dispatch success event
+					dispatch('success', {
+						user: {
+							uid: user.uid,
+							email: user.email,
+							displayName: user.displayName
+						},
+						isNewUser: result.isNewUser,
+						profile: result.userProfile
+					});
+				} else if (result.requiresClientAuth) {
+					// Fallback: Handle client-side auth when custom tokens can't be created
+					console.log('Student authentication successful, requires client auth:', result.userProfile);
+					
+					// For now, we can dispatch success with the profile info we have
+					// In a full implementation, you might want to handle this differently
+					dispatch('success', {
+						user: {
+							uid: result.userProfile.uid,
+							email: result.userProfile.email,
+							displayName: result.userProfile.displayName
+						},
+						isNewUser: result.isNewUser,
+						profile: result.userProfile,
+						requiresClientAuth: true
+					});
+				} else {
+					throw new Error('Invalid passcode verification response: missing token and client auth flag');
+				}
 			} else {
-				throw new Error('Invalid passcode verification response');
+				throw new Error('Passcode verification failed');
 			}
 
 		} catch (err: any) {

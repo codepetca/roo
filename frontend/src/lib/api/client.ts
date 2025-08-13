@@ -124,11 +124,20 @@ export async function typedApiRequest<T>(
 		rawResponse: JSON.stringify(rawResponse, null, 2)
 	});
 
+	// Extract data from API response wrapper if present
+	// Handle both wrapped ({ success: true, data: {...} }) and direct responses
+	let dataToValidate = rawResponse;
+	if (rawResponse && typeof rawResponse === 'object' && 'success' in rawResponse && 'data' in rawResponse) {
+		// API response wrapper format
+		console.debug('🔧 Detected API wrapper format, extracting data field');
+		dataToValidate = (rawResponse as any).data;
+	}
+
 	// Add detailed logging for debugging validation issues
-	console.debug('Raw API response data:', JSON.stringify(rawResponse, null, 2));
+	console.debug('Data to validate:', JSON.stringify(dataToValidate, null, 2));
 	console.debug('Validating against schema:', schema._def);
 
-	const validation = safeValidateApiResponse(schema, rawResponse);
+	const validation = safeValidateApiResponse(schema, dataToValidate);
 
 	if (!validation.success) {
 		console.error('🚨 API RESPONSE VALIDATION FAILED 🚨');

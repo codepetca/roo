@@ -25,7 +25,8 @@ export type SendPasscodeResponse = z.infer<typeof sendPasscodeResponseSchema>;
 export const verifyPasscodeResponseSchema = z.object({
   email: z.string().email(),
   valid: z.boolean(),
-  firebaseToken: z.string(),
+  firebaseToken: z.string().optional(), // Optional when requiresClientAuth is true
+  requiresClientAuth: z.boolean().optional(), // When true, client should handle auth without token
   isNewUser: z.boolean(),
   userProfile: z.object({
     uid: z.string(),

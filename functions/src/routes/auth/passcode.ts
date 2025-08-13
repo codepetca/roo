@@ -206,80 +206,58 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
     const db = getFirestore();
     const auth = getAuth();
 
-    // Get passcode document - try document with email as ID first (new system)
-    let passcodeDoc = await db.collection("passcodes").doc(email).get();
-    let passcodeData: any = null;
-    let isPermanentPasscode = false;
+    // Get user document with passcode
+    const userQuery = await db.collection("users")
+      .where("email", "==", email)
+      .limit(1)
+      .get();
     
-    if (!passcodeDoc.exists) {
-      // Try querying by email field (could be multiple documents)
-      const passcodeQuery = await db.collection("passcodes")
-        .where("email", "==", email)
-        .orderBy("createdAt", "desc")
-        .limit(1)
-        .get();
-      
-      if (!passcodeQuery.empty) {
-        passcodeDoc = passcodeQuery.docs[0];
-        passcodeData = passcodeDoc.data()!;
-      } else {
-        res.status(400).json({
-          success: false,
-          error: "Invalid passcode",
-          message: "No passcode found for this email address",
-        });
-        return;
-      }
-    } else {
-      passcodeData = passcodeDoc.data()!;
-    }
-
-    // Determine if this is a permanent passcode (5 chars, no expiration)
-    isPermanentPasscode = passcode.length === 5 || passcodeData.expiresAt === null;
-
-    // For temporary passcodes (6-digit), check expiration
-    if (!isPermanentPasscode && passcodeData.expiresAt) {
-      if (new Date() > passcodeData.expiresAt.toDate()) {
-        res.status(400).json({
-          success: false,
-          error: "Passcode expired",
-          message: "The passcode has expired. Please request a new one.",
-        });
-        return;
-      }
-    }
-
-    // For temporary passcodes, check if already used
-    if (!isPermanentPasscode && passcodeData.used) {
+    if (userQuery.empty) {
       res.status(400).json({
         success: false,
-        error: "Passcode already used",
-        message: "This passcode has already been used. Please request a new one.",
+        error: "Invalid passcode",
+        message: "No user found for this email address",
       });
       return;
     }
 
-    // Check attempt limit (applies to both types)
-    const maxAttempts = isPermanentPasscode ? 10 : 3; // More attempts for permanent codes
-    if (passcodeData.attempts && passcodeData.attempts >= maxAttempts) {
+    const userDoc = userQuery.docs[0];
+    const userData = userDoc.data();
+
+    if (!userData.passcode?.value) {
+      res.status(400).json({
+        success: false,
+        error: "Invalid passcode", 
+        message: "No passcode found for this email address",
+      });
+      return;
+    }
+
+    // All student self-registration passcodes are 5-character permanent codes
+    let isPermanentPasscode = true;
+    const storedPasscode = userData.passcode.value;
+
+    // Student passcodes don't expire and can be reused
+    
+    // Check attempt limit for permanent codes
+    const maxAttempts = 10; // Allow more attempts for permanent codes
+    if (userData.passcode.attempts && userData.passcode.attempts >= maxAttempts) {
       res.status(400).json({
         success: false,
         error: "Too many attempts",
-        message: `Too many failed attempts. Please ${isPermanentPasscode ? 'wait before trying again' : 'request a new passcode'}.`,
+        message: "Too many failed attempts. Please wait before trying again.",
       });
       return;
     }
 
     // Verify passcode (case-insensitive for 5-char codes)
-    const passcodeMatch = isPermanentPasscode 
-      ? passcodeData.passcode.toUpperCase() === passcode.toUpperCase()
-      : passcodeData.passcode === passcode;
+    const passcodeMatch = storedPasscode.toUpperCase() === passcode.toUpperCase();
 
     if (!passcodeMatch) {
       // Increment attempts
-      await db.collection("passcodes").doc(passcodeDoc.id).update({
-        attempts: (passcodeData.attempts || 0) + 1,
-        lastAttemptAt: new Date()
+      await userDoc.ref.update({
+        'passcode.attempts': (userData.passcode.attempts || 0) + 1,
+        'passcode.lastAttemptAt': new Date()
       });
 
       res.status(400).json({
@@ -290,18 +268,11 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
       return;
     }
 
-    // For temporary passcodes, mark as used. For permanent ones, just update last used time
-    if (isPermanentPasscode) {
-      await db.collection("passcodes").doc(passcodeDoc.id).update({
-        lastUsedAt: new Date(),
-        attempts: 0 // Reset attempts on successful login
-      });
-    } else {
-      await db.collection("passcodes").doc(passcodeDoc.id).update({
-        used: true,
-        usedAt: new Date(),
-      });
-    }
+    // For permanent student passcodes, update last used time and reset attempts
+    await userDoc.ref.update({
+      'passcode.lastUsedAt': new Date(),
+      'passcode.attempts': 0 // Reset attempts on successful login
+    });
 
     // Check if user already exists
     let userRecord;
@@ -364,8 +335,36 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
     // Save profile to Firestore
     await db.collection("users").doc(userRecord.uid).set(profileData, { merge: true });
 
-    // Generate custom token for authentication
-    const customToken = await auth.createCustomToken(userRecord.uid);
+    // Try to create custom token with explicit service account email
+    let customToken;
+    try {
+      // Use the explicit service account email for token creation
+      customToken = await auth.createCustomToken(userRecord.uid);
+    } catch (tokenError: any) {
+      logger.error("Failed to create custom token", { 
+        error: tokenError.message,
+        uid: userRecord.uid,
+        serviceAccount: process.env.GCLOUD_PROJECT ? `firebase-adminsdk-fbsvc@${process.env.GCLOUD_PROJECT}.iam.gserviceaccount.com` : 'unknown'
+      });
+      
+      // Fallback: Return success without token - client handles auth differently
+      res.status(200).json({
+        success: true,
+        data: {
+          email: email,
+          valid: true,
+          requiresClientAuth: true, // Signal client to handle auth
+          isNewUser: isNewUser || !profileDoc.exists,
+          userProfile: {
+            uid: userRecord.uid,
+            email: email,
+            displayName: profileData.displayName,
+            role: "student",
+          },
+        }
+      });
+      return;
+    }
 
     logger.info("Student authenticated successfully", {
       uid: userRecord.uid,

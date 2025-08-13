@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { logger } from 'firebase-functions';
-import { FirestoreRepository } from '../../services/firestore-repository';
 import { BrevoEmailService } from '../../services/brevo-email-service';
 import { db, getCurrentTimestamp } from '../../config/firebase';
 
@@ -13,7 +12,6 @@ import { db, getCurrentTimestamp } from '../../config/firebase';
  * Admin-only passcode generation (not dependent on teacher authentication)
  */
 
-const repository = new FirestoreRepository();
 
 /**
  * Generate a 5-character alphanumeric passcode
@@ -46,38 +44,78 @@ export async function studentRequestPasscode(req: Request, res: Response) {
 
     // Allow any student to request a passcode - no enrollment check required
 
-    // Check if student already has a passcode
-    const existingPasscodeSnapshot = await db.collection('passcodes')
+    // Check if user already exists and has a passcode
+    const existingUserSnapshot = await db.collection('users')
       .where('email', '==', studentEmail)
       .limit(1)
       .get();
 
     let passcode: string;
+    let userDoc: any = null;
+    let isNewUser = false;
     
-    if (!existingPasscodeSnapshot.empty) {
-      // Use existing passcode (never expires)
-      const existingPasscode = existingPasscodeSnapshot.docs[0].data();
-      passcode = existingPasscode.passcode;
+    if (!existingUserSnapshot.empty) {
+      // User exists, check if they have a passcode
+      userDoc = existingUserSnapshot.docs[0];
+      const userData = userDoc.data();
       
-      logger.info('Using existing passcode for student', { 
-        studentEmail, 
-        passcodeLength: passcode.length 
-      });
+      if (userData.passcode?.value) {
+        // Use existing passcode
+        passcode = userData.passcode.value;
+        
+        // Update last requested time
+        await userDoc.ref.update({
+          'passcode.lastRequestedAt': new Date()
+        });
+        
+        logger.info('Using existing passcode for student', { 
+          studentEmail, 
+          passcodeLength: passcode.length 
+        });
+      } else {
+        // User exists but no passcode, generate new one
+        passcode = generateShortPasscode();
+        
+        await userDoc.ref.update({
+          passcode: {
+            value: passcode,
+            createdAt: new Date(),
+            lastRequestedAt: new Date(),
+            attempts: 0
+          }
+        });
+
+        logger.info('Generated new passcode for existing user', { 
+          studentEmail, 
+          passcodeLength: passcode.length 
+        });
+      }
     } else {
-      // Generate new 5-character passcode
+      // New user, create user document with passcode
+      isNewUser = true;
       passcode = generateShortPasscode();
       
-      // Store passcode (never expires)
-      await db.collection('passcodes').add({
+      const userData = {
         email: studentEmail,
-        passcode,
+        name: 'Student',
+        role: 'student',
+        passcode: {
+          value: passcode,
+          createdAt: new Date(),
+          lastRequestedAt: new Date(),
+          attempts: 0
+        },
+        classroomIds: [],
+        totalStudents: 0,
+        totalClassrooms: 0,
         createdAt: new Date(),
-        expiresAt: null, // Never expires
-        used: false,
-        createdBy: 'student-self-registration'
-      });
+        updatedAt: new Date()
+      };
 
-      logger.info('Generated new passcode for student', { 
+      const newUserDoc = await db.collection('users').add(userData);
+      userDoc = newUserDoc;
+
+      logger.info('Created new user with passcode', { 
         studentEmail, 
         passcodeLength: passcode.length 
       });
@@ -99,12 +137,12 @@ export async function studentRequestPasscode(req: Request, res: Response) {
           to: studentEmail,
           studentName: 'Student',
           passcode,
-          isNewPasscode: existingPasscodeSnapshot.empty
+          isNewPasscode: isNewUser
         });
 
         logger.info('Passcode email sent successfully', { 
           studentEmail,
-          isNewPasscode: existingPasscodeSnapshot.empty
+          isNewPasscode: isNewUser
         });
       }
     } catch (emailError) {
@@ -117,39 +155,9 @@ export async function studentRequestPasscode(req: Request, res: Response) {
       logger.warn('Continuing without email - passcode was generated/retrieved successfully');
     }
 
-    // Create or update student user profile
-    try {
-      const existingUser = await repository.getUserByEmail(studentEmail);
-      
-      if (!existingUser) {
-        // Create user profile for student
-        const userData = {
-          email: studentEmail,
-          name: 'Student',
-          role: 'student',
-          classroomIds: [], // Will be populated when student is enrolled in classrooms
-          totalStudents: 0,
-          totalClassrooms: 0,
-          createdAt: new Date(),
-          updatedAt: new Date()
-        };
-
-        await db.collection('users').add(userData);
-        logger.info('Created user profile for student', { studentEmail });
-      } else {
-        logger.info('Student user profile already exists', { studentEmail });
-      }
-    } catch (userError) {
-      logger.warn('Failed to create/update user profile', { 
-        studentEmail, 
-        error: userError 
-      });
-      // Continue - this is not critical for passcode generation
-    }
-
     return res.status(200).json({
       success: true,
-      message: `Registration passcode ${existingPasscodeSnapshot.empty ? 'generated' : 'retrieved'} for ${studentEmail}`,
+      message: `Registration passcode ${isNewUser ? 'generated' : 'retrieved'} for ${studentEmail}`,
       passcode // Include passcode in response for the component
     });
 
