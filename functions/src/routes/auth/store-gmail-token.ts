@@ -19,6 +19,7 @@ export async function storeGmailToken(req: Request, res: Response) {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
+        success: false,
         error: 'Unauthorized',
         message: 'Authentication required to store Gmail token'
       });
@@ -32,6 +33,7 @@ export async function storeGmailToken(req: Request, res: Response) {
       decodedToken = await auth.verifyIdToken(token);
     } catch (error) {
       return res.status(401).json({
+        success: false,
         error: 'Unauthorized',
         message: 'Invalid authentication token'
       });
@@ -41,6 +43,7 @@ export async function storeGmailToken(req: Request, res: Response) {
     const validation = storeTokenSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({
+        success: false,
         error: 'Validation error',
         details: validation.error.issues
       });
@@ -66,15 +69,20 @@ export async function storeGmailToken(req: Request, res: Response) {
 
     console.log(`Gmail token stored for user: ${decodedToken.email}`);
 
+    // Wrap in ApiResponse format expected by frontend
     return res.status(200).json({
       success: true,
-      message: 'Gmail access token stored successfully',
-      emailSendingEnabled: true
+      data: {
+        success: true,
+        message: 'Gmail access token stored successfully',
+        emailSendingEnabled: true
+      }
     });
 
   } catch (error) {
     console.error('Store Gmail token error:', error);
     return res.status(500).json({
+      success: false,
       error: 'Internal server error',
       message: 'Failed to store Gmail token'
     });

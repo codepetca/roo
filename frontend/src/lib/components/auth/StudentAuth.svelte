@@ -488,7 +488,21 @@
 				Email: "{email}" (length: {email.length})<br>
 				Password: "{password}" (length: {password.length})<br>
 				Loading: {loading}<br>
+				UseNativeInputs: {useNativeInputs}<br>
+				NativeEmail: "{nativeEmail}" (length: {nativeEmail.length})<br>
+				NativePassword: "{nativePassword}" (length: {nativePassword.length})<br>
+				Email truthy: {!!email}<br>
+				Password truthy: {!!password}<br>
+				Button disabled condition: {loading || !email || !password}<br>
 				Button enabled: {!!(email && password && !loading)}
+				<br><br>
+				<button 
+					type="button" 
+					onclick={() => { email = 'test@example.com'; password = 'testpass123'; }}
+					class="px-2 py-1 bg-red-500 text-white text-xs rounded"
+				>
+					Force Update Values
+				</button>
 			</div>
 
 			<Button onclick={handleSignUp} disabled={loading || !email || !password} class="w-full">

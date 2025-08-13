@@ -38,13 +38,14 @@ import { getUserFromRequest } from "./middleware/validation";
 import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { getUserProfile, checkUserProfileExists, updateSchoolEmail } from "./routes/users";
-import { sendPasscode, verifyPasscode, resetStudentAuth, deleteUser, setupTeacherProfile, storeGmailToken } from "./routes/auth";
+import { sendPasscode, verifyPasscode, resetStudentAuth, deleteUser, setupTeacherProfile, storeGmailToken, storePasscode, sendPasscodeFirebase, generateAndSendPasscode } from "./routes/auth";
 import { debugSheetsPermissions } from "./routes/debug";
 import { getServiceAccountInfo, testSheetAccess } from "./routes/webhook-debug";
 
 // Define secrets and parameters  
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 const googleCredentials = defineSecret("GOOGLE_CREDENTIALS_JSON");
+const brevoApiKey = defineSecret("BREVO_API_KEY");
 
 /**
  * Main API router for Roo auto-grading system
@@ -54,7 +55,7 @@ const googleCredentials = defineSecret("GOOGLE_CREDENTIALS_JSON");
 export const api = onRequest(
   {
     cors: true,
-    secrets: [geminiApiKey, googleCredentials]
+    secrets: [geminiApiKey, googleCredentials, brevoApiKey]
   },
   async (request, response): Promise<void> => {
     // Set CORS headers manually for development
@@ -79,11 +80,13 @@ export const api = onRequest(
     try {
       request.app.locals.geminiApiKey = geminiApiKey.value();
       request.app.locals.googleCredentials = googleCredentials.value();
+      request.app.locals.brevoApiKey = brevoApiKey.value();
       logger.info("Secrets loaded successfully");
     } catch (error) {
       logger.error("Failed to load secrets", error);
       request.app.locals.geminiApiKey = null;
       request.app.locals.googleCredentials = null;
+      request.app.locals.brevoApiKey = null;
     }
 
     try {
@@ -301,6 +304,15 @@ export const api = onRequest(
       }
       if (method === "POST" && path === "/auth/store-gmail-token") {
         await storeGmailToken(request, response); return;
+      }
+      if (method === "POST" && path === "/auth/store-passcode") {
+        await storePasscode(request, response); return;
+      }
+      if (method === "POST" && path === "/auth/send-passcode-firebase") {
+        await sendPasscodeFirebase(request, response); return;
+      }
+      if (method === "POST" && path === "/auth/generate-and-send-passcode") {
+        await generateAndSendPasscode(request, response); return;
       }
 
       // User profile routes (create/update now handled by callable function)

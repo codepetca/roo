@@ -28,6 +28,18 @@ import {
 	type GradeResponse
 } from '../schemas';
 
+// Import shared auth response schemas
+import {
+	sendPasscodeResponseSchema,
+	verifyPasscodeResponseSchema,
+	resetStudentAuthResponseSchema,
+	storeGmailTokenResponseSchema,
+	type SendPasscodeResponse,
+	type VerifyPasscodeResponse,
+	type ResetStudentAuthResponse,
+	type StoreGmailTokenResponse
+} from '@shared/schemas/auth-responses';
+
 // Import new core schemas - using TypeScript source files to avoid CommonJS issues
 import {
 	dashboardUserSchema,
@@ -417,65 +429,56 @@ export const api = {
 		);
 	},
 
-	async sendPasscode(data: { email: string }): Promise<{
-		email: string;
-		sent: boolean;
-		message: string;
-	}> {
+	async sendPasscode(data: { email: string }): Promise<SendPasscodeResponse> {
 		return typedApiRequest(
 			'/auth/send-passcode',
 			{
 				method: 'POST',
 				body: JSON.stringify(data)
 			},
-			z.object({
-				email: z.string(),
-				sent: z.boolean(),
-				message: z.string()
-			})
+			sendPasscodeResponseSchema
 		);
 	},
 
-	async verifyPasscode(data: { email: string; passcode: string }): Promise<{
-		email: string;
-		valid: boolean;
-		firebaseToken: string;
-		isNewUser: boolean;
-		userProfile: {
-			uid: string;
-			email: string;
-			role: string;
-			displayName: string;
-		};
-	}> {
+	async verifyPasscode(data: { email: string; passcode: string }): Promise<VerifyPasscodeResponse> {
 		return typedApiRequest(
 			'/auth/verify-passcode',
 			{
 				method: 'POST',
 				body: JSON.stringify(data)
 			},
+			verifyPasscodeResponseSchema
+		);
+	},
+
+	async storeGmailToken(data: { accessToken: string; expiresAt?: number }): Promise<StoreGmailTokenResponse> {
+		return typedApiRequest(
+			'/auth/store-gmail-token',
+			{
+				method: 'POST',
+				body: JSON.stringify(data)
+			},
+			storeGmailTokenResponseSchema
+		);
+	},
+
+	async storePasscode(data: { email: string; passcode: string; expiresAt: string }): Promise<{ success: boolean; message: string }> {
+		return typedApiRequest(
+			'/auth/store-passcode',
+			{
+				method: 'POST',
+				body: JSON.stringify(data)
+			},
 			z.object({
-				email: z.string(),
-				valid: z.boolean(),
-				firebaseToken: z.string(),
-				isNewUser: z.boolean(),
-				userProfile: z.object({
-					uid: z.string(),
-					email: z.string(),
-					role: z.string(),
-					displayName: z.string()
-				})
+				success: z.boolean(),
+				message: z.string()
 			})
 		);
 	},
 
-	async storeGmailToken(data: { accessToken: string; expiresAt?: number }): Promise<{
-		success: boolean;
-		message: string;
-		emailSendingEnabled: boolean;
-	}> {
+	async sendPasscodeFirebase(data: { email: string; passcode: string }): Promise<{ success: boolean; message: string; email: string }> {
 		return typedApiRequest(
-			'/auth/store-gmail-token',
+			'/auth/send-passcode-firebase',
 			{
 				method: 'POST',
 				body: JSON.stringify(data)
@@ -483,7 +486,23 @@ export const api = {
 			z.object({
 				success: z.boolean(),
 				message: z.string(),
-				emailSendingEnabled: z.boolean()
+				email: z.string().email()
+			})
+		);
+	},
+
+	// New simple Brevo-based endpoint
+	async generateAndSendPasscode(data: { email: string }): Promise<{ success: boolean; message: string; sentTo: string }> {
+		return typedApiRequest(
+			'/auth/generate-and-send-passcode',
+			{
+				method: 'POST',
+				body: JSON.stringify(data)
+			},
+			z.object({
+				success: z.boolean(),
+				message: z.string(),
+				sentTo: z.string().email()
 			})
 		);
 	},
@@ -722,6 +741,17 @@ export const api = {
 					recentSubmissions: z.array(submissionSchema)
 				})
 			)
+		);
+	},
+
+	async resetStudentAuth(data: { studentEmail: string }): Promise<ResetStudentAuthResponse> {
+		return typedApiRequest(
+			'/auth/reset-student',
+			{
+				method: 'POST',
+				body: JSON.stringify(data)
+			},
+			resetStudentAuthResponseSchema
 		);
 	}
 };

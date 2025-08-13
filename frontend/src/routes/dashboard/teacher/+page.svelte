@@ -4,6 +4,7 @@
 	import { Button, Alert, Card } from '$lib/components/ui';
 	import { PageHeader, LoadingSkeleton } from '$lib/components/dashboard';
 	import StudentResetManager from '$lib/components/auth/StudentResetManager.svelte';
+	import StudentPasscodeSender from '$lib/components/auth/StudentPasscodeSender.svelte';
 
 	// Handle classroom selection
 	function handleClassroomSelect(classroomId: string) {
@@ -386,10 +387,18 @@
 		<div class="rounded-lg border border-gray-200 bg-white">
 			<div class="border-b border-gray-200 px-6 py-4">
 				<h3 class="text-lg font-semibold text-gray-900">Student Management</h3>
-				<p class="text-sm text-gray-600">Help students with login issues and account access</p>
+				<p class="text-sm text-gray-600">Send login codes and help students with access issues</p>
 			</div>
-			<div class="p-6">
-				<StudentResetManager />
+			<div class="p-6 space-y-8">
+				<!-- Send Login Codes (Primary) -->
+				<div>
+					<StudentPasscodeSender />
+				</div>
+				
+				<!-- Reset Student Access (Secondary) -->
+				<div class="pt-6 border-t border-gray-200">
+					<StudentResetManager />
+				</div>
 			</div>
 		</div>
 	{/if}

@@ -65,6 +65,7 @@ describe('Gmail Enhanced Passcode Route', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
         error: 'Unauthorized',
         message: 'Teacher authentication required to send passcodes'
       });
@@ -78,6 +79,7 @@ describe('Gmail Enhanced Passcode Route', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
         error: 'Unauthorized',
         message: 'Teacher authentication required to send passcodes'
       });
@@ -118,6 +120,7 @@ describe('Gmail Enhanced Passcode Route', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
         error: 'Unauthorized',
         message: 'Invalid or expired authentication token'
       });
@@ -146,6 +149,7 @@ describe('Gmail Enhanced Passcode Route', () => {
       expect(mockDb.doc).toHaveBeenCalledWith(mockDecodedToken.uid);
       expect(mockRes.status).toHaveBeenCalledWith(403);
       expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
         error: 'Forbidden',
         message: 'Only teachers can send student passcodes'
       });
@@ -167,6 +171,7 @@ describe('Gmail Enhanced Passcode Route', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(403);
       expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
         error: 'Forbidden',
         message: 'Only teachers can send student passcodes'
       });
@@ -188,6 +193,7 @@ describe('Gmail Enhanced Passcode Route', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
         error: 'Gmail access required',
         message: 'Please sign in with Google to enable email sending'
       });
@@ -249,11 +255,13 @@ describe('Gmail Enhanced Passcode Route', () => {
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({
         success: true,
-        email: 'student@test.com',
-        sent: true,
-        message: 'Passcode sent to student@test.com from your Gmail account',
-        sentFrom: mockTeacherData.email
-        // Note: passcode only included in development environment (see Development Environment tests)
+        data: {
+          email: 'student@test.com',
+          sent: true,
+          message: 'Passcode sent to student@test.com from your Gmail account',
+          sentFrom: mockTeacherData.email
+          // Note: passcode only included in development environment (see Development Environment tests)
+        }
       });
     });
 
@@ -265,6 +273,7 @@ describe('Gmail Enhanced Passcode Route', () => {
       expect(mockDb.delete).toHaveBeenCalled(); // Should delete passcode on failure
       expect(mockRes.status).toHaveBeenCalledWith(500);
       expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
         error: 'Email sending failed',
         message: 'Failed to send passcode email. Please check your Gmail permissions and try again.'
       });
@@ -280,6 +289,7 @@ describe('Gmail Enhanced Passcode Route', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
         error: 'Validation error',
         details: expect.any(Array)
       });
@@ -299,6 +309,7 @@ describe('Gmail Enhanced Passcode Route', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(400);
       expect(mockRes.json).toHaveBeenCalledWith({
+        success: false,
         error: 'Validation error',
         details: expect.any(Array)
       });
@@ -334,7 +345,10 @@ describe('Gmail Enhanced Passcode Route', () => {
 
       expect(mockRes.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          passcode: expect.stringMatching(/^\d{6}$/)
+          success: true,
+          data: expect.objectContaining({
+            passcode: expect.stringMatching(/^\d{6}$/)
+          })
         })
       );
 
@@ -362,8 +376,11 @@ describe('Gmail Enhanced Passcode Route', () => {
       await sendPasscode(mockReq as Request, mockRes as Response);
 
       expect(mockRes.json).toHaveBeenCalledWith(
-        expect.not.objectContaining({
-          passcode: expect.any(String)
+        expect.objectContaining({
+          success: true,
+          data: expect.not.objectContaining({
+            passcode: expect.any(String)
+          })
         })
       );
 

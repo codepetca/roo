@@ -20,6 +20,7 @@
   },
   "main": "lib/src/index.js",
   "dependencies": {
+    "@getbrevo/brevo": "^2.2.0",
     "@google/generative-ai": "^0.24.1",
     "firebase-functions": "^6.4.0",
     "googleapis": "128.0.0",

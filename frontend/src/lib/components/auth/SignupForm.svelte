@@ -18,14 +18,14 @@
 		cancel: void;
 	}>();
 
-	let email = '';
-	let password = '';
-	let confirmPassword = '';
-	let displayName = '';
-	let schoolEmail = '';
-	let role: 'teacher' | 'student' = userRole;
-	let loading = false;
-	let error = '';
+	let email = $state('');
+	let password = $state('');
+	let confirmPassword = $state('');
+	let displayName = $state('');
+	let schoolEmail = $state('');
+	let role: 'teacher' | 'student' = $state(userRole);
+	let loading = $state(false);
+	let error = $state('');
 
 	async function handleSubmit() {
 		if (password !== confirmPassword) {

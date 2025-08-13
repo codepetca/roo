@@ -113,7 +113,18 @@ export async function typedApiRequest<T>(
 		throw new Error(rawResponse.error || 'API request failed');
 	}
 
+	// Enhanced debugging for response structure issues
+	console.log('🔍 Raw response from backend:', {
+		endpoint,
+		method: options.method || 'GET',
+		status: rawResponse.status,
+		hasData: !!rawResponse.data,
+		dataType: typeof rawResponse.data,
+		rawResponse: JSON.stringify(rawResponse, null, 2)
+	});
+
 	if (!rawResponse.data) {
+		console.error('❌ No data in response. Full response:', JSON.stringify(rawResponse, null, 2));
 		// Handle empty data responses (e.g., for arrays that should default to empty)
 		if (schema instanceof z.ZodArray) {
 			return [] as unknown as T;

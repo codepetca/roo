@@ -33,7 +33,21 @@ export {
   setupTeacherProfile
 } from "./setup-teacher-profile";
 
-// Gmail token storage (for email sending)
+// Gmail token storage (for email sending) - DEPRECATED
 export {
   storeGmailToken
 } from "./store-gmail-token";
+
+// New Firebase-based passcode endpoints
+export {
+  storePasscode
+} from "./store-passcode";
+
+export {
+  sendPasscodeFirebase
+} from "./send-passcode-firebase";
+
+// New simple Brevo-based passcode endpoint
+export {
+  generateAndSendPasscode
+} from "./generate-and-send-passcode";

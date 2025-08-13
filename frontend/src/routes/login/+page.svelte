@@ -2,7 +2,7 @@
 	import SignupForm from '$lib/components/auth/SignupForm.svelte';
 	import TeacherGoogleAuth from '$lib/components/auth/TeacherGoogleAuth.svelte';
 	import TeacherEmailAuth from '$lib/components/auth/TeacherEmailAuth.svelte';
-	import StudentAuth from '$lib/components/auth/StudentAuth.svelte';
+	import StudentPasscodeAuth from '$lib/components/auth/StudentPasscodeAuth.svelte';
 	import { Alert } from '$lib/components/ui';
 
 	let authMode:
@@ -216,7 +216,7 @@
 							</div>
 							<div class="ml-4 text-left">
 								<h4 class="text-sm font-medium text-gray-900">Student</h4>
-								<p class="text-sm text-gray-500">Email and passcode</p>
+								<p class="text-sm text-gray-500">Login code from teacher</p>
 							</div>
 						</div>
 					</button>
@@ -375,17 +375,10 @@
 						Back
 					</button>
 				</div>
-				<StudentAuth on:success={handleStudentAuthSuccess} />
+				<StudentPasscodeAuth on:success={handleStudentAuthSuccess} />
 				<div class="text-center">
 					<p class="text-sm text-gray-600">
-						Need an account?
-						<button
-							type="button"
-							class="font-medium text-blue-600 transition-colors hover:text-blue-500 focus:underline focus:outline-none"
-							onclick={showStudentSignup}
-						>
-							Create student account
-						</button>
+						Don't have a login code? Ask your teacher to send you one.
 					</p>
 				</div>
 			</div>
