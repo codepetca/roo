@@ -734,4 +734,68 @@ export class FirestoreRepository {
       ungradedSubmissions: ungradedCount
     });
   }
+
+  // ============================================
+  // Student Dashboard Operations
+  // ============================================
+
+  /**
+   * Get grades for a specific student across all classrooms
+   */
+  async getGradesByStudent(studentId: string): Promise<Grade[]> {
+    const snapshot = await db.collection(this.collections.grades)
+      .where("studentId", "==", studentId)
+      .where("isLatest", "==", true)
+      .orderBy("gradedAt", "desc")
+      .get();
+
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Grade));
+  }
+
+  /**
+   * Get grades for a specific student in a specific classroom
+   */
+  async getGradesByStudentAndClassroom(studentId: string, classroomId: string): Promise<Grade[]> {
+    const snapshot = await db.collection(this.collections.grades)
+      .where("studentId", "==", studentId)
+      .where("classroomId", "==", classroomId)
+      .where("isLatest", "==", true)
+      .orderBy("gradedAt", "desc")
+      .get();
+
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Grade));
+  }
+
+  /**
+   * Get recent activity for a student across all their classrooms
+   */
+  async getStudentRecentActivity(studentId: string, limit: number = 10): Promise<Array<Submission | Grade>> {
+    // Get recent submissions
+    const submissionSnapshot = await db.collection(this.collections.submissions)
+      .where("studentId", "==", studentId)
+      .where("isLatest", "==", true)
+      .orderBy("submittedAt", "desc")
+      .limit(limit)
+      .get();
+
+    // Get recent grades  
+    const gradeSnapshot = await db.collection(this.collections.grades)
+      .where("studentId", "==", studentId)
+      .where("isLatest", "==", true)
+      .orderBy("gradedAt", "desc")
+      .limit(limit)
+      .get();
+
+    const submissions = submissionSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Submission));
+    const grades = gradeSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Grade));
+
+    // Combine and sort by timestamp
+    const combined = [
+      ...submissions.map(s => ({ ...s, timestamp: s.submittedAt, type: 'submission' as const })),
+      ...grades.map(g => ({ ...g, timestamp: g.gradedAt, type: 'grade' as const }))
+    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+     .slice(0, limit);
+
+    return combined;
+  }
 }

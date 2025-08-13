@@ -319,6 +319,34 @@ export const teacherDashboardSchema = z.object({
   stats: teacherDashboardStatsSchema
 });
 
+// Student dashboard stats schema
+export const studentDashboardStatsSchema = z.object({
+  totalAssignments: z.number(),
+  completedAssignments: z.number(),
+  averageGrade: z.number().optional()
+});
+
+// Complete student dashboard schema
+export const studentDashboardSchema = z.object({
+  studentId: z.string(),
+  classrooms: z.array(z.object({
+    classroom: classroomSchema,
+    assignments: z.array(assignmentSchema.extend({
+      hasSubmission: z.boolean().optional(),
+      isGraded: z.boolean().optional(),
+      isPending: z.boolean().optional(),
+      isReturned: z.boolean().optional(),
+      submissions: z.array(submissionSchema.extend({
+        grade: gradeSchema.optional()
+      })).optional(),
+      recentSubmissions: z.array(submissionSchema).optional()
+    })),
+    grades: z.array(gradeSchema),
+    averageGrade: z.number().optional()
+  })),
+  overallStats: studentDashboardStatsSchema
+});
+
 export interface TeacherDashboard {
   teacher: DashboardUser;
   classrooms: ClassroomWithAssignments[];

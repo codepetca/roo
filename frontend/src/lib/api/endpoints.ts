@@ -44,6 +44,7 @@ import {
 import {
 	dashboardUserSchema,
 	teacherDashboardSchema,
+	studentDashboardSchema,
 	classroomSchema,
 	assignmentSchema,
 	submissionSchema,
@@ -57,7 +58,8 @@ import {
 	type ClassroomWithAssignments,
 	type AssignmentWithStats,
 	type SubmissionWithGrade,
-	type TeacherDashboard
+	type TeacherDashboard,
+	type StudentDashboard
 } from '@shared/schemas/core';
 
 // Import snapshot schemas
@@ -757,6 +759,50 @@ export const api = {
 					recentSubmissions: z.array(submissionSchema)
 				})
 			)
+		);
+	},
+
+	// Student dashboard endpoints
+	async getStudentDashboard(): Promise<StudentDashboard> {
+		console.log('🔍 Calling getStudentDashboard API...');
+
+		try {
+			const result = await typedApiRequest('/student/dashboard', {}, studentDashboardSchema);
+			console.log('✅ getStudentDashboard succeeded:', result);
+			return result;
+		} catch (error) {
+			console.error('❌ getStudentDashboard failed:', error);
+			throw error;
+		}
+	},
+
+	async getStudentAssignments(classroomId?: string): Promise<{
+		pending: Submission[];
+		returned: Array<Submission & { grade: Grade }>;
+		allSubmissions: Submission[];
+		allGrades: Grade[];
+	}> {
+		const queryParam = classroomId ? `?classroomId=${classroomId}` : '';
+		return typedApiRequest(
+			`/student/assignments${queryParam}`,
+			{},
+			z.object({
+				pending: z.array(submissionSchema),
+				returned: z.array(submissionSchema.extend({
+					grade: gradeSchema
+				})),
+				allSubmissions: z.array(submissionSchema),
+				allGrades: z.array(gradeSchema)
+			})
+		);
+	},
+
+	async getStudentActivity(limit?: number): Promise<Array<Submission | Grade>> {
+		const queryParam = limit ? `?limit=${limit}` : '';
+		return typedApiRequest(
+			`/student/activity${queryParam}`,
+			{},
+			z.array(z.union([submissionSchema, gradeSchema]))
 		);
 	},
 

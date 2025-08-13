@@ -36,6 +36,7 @@ import { getTeacherClassrooms, getClassroomAssignments, getClassroomDetails, pro
 import { validateSnapshot, importSnapshot, getImportHistory, generateSnapshotDiff } from "./routes/snapshots";
 import { getUserFromRequest } from "./middleware/validation";
 import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getClassroomAssignmentsWithStats } from "./routes/teacher-dashboard";
+import { getStudentDashboard, getStudentAssignments, getStudentActivity } from "./routes/student-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { getUserProfile, checkUserProfileExists, updateSchoolEmail } from "./routes/users";
 import { sendPasscode, verifyPasscode, resetStudentAuth, deleteUser, setupTeacherProfile, storeGmailToken, storePasscode, sendPasscodeFirebase, generateAndSendPasscode } from "./routes/auth";
@@ -247,6 +248,17 @@ export const api = onRequest(
       }
       if (method === "GET" && path === "/teacher/classrooms") {
         await getTeacherClassroomsBasic(request, response); return;
+      }
+
+      // Student dashboard routes
+      if (method === "GET" && path === "/student/dashboard") {
+        await getStudentDashboard(request, response); return;
+      }
+      if (method === "GET" && path === "/student/assignments") {
+        await getStudentAssignments(request, response); return;
+      }
+      if (method === "GET" && path === "/student/activity") {
+        await getStudentActivity(request, response); return;
       }
 
       // Firestore Grade Management Routes

@@ -12,7 +12,7 @@
 	let loading = $state(false);
 	let error = $state('');
 	let success = $state('');
-	let passcodeRequested = $state(false);
+	let showRequestHelp = $state(false);
 
 	// Enhanced debugging for Svelte 5
 	$effect(() => {
@@ -20,7 +20,7 @@
 			email: email,
 			passcode: passcode,
 			loading: loading,
-			passcodeRequested: passcodeRequested,
+			showRequestHelp: showRequestHelp,
 			error: error,
 			success: success
 		});
@@ -41,8 +41,8 @@
 
 			await api.studentRequestPasscode({ email });
 
-			success = `Login code sent to ${email}. Check your email and enter the 5-character code below.`;
-			passcodeRequested = true;
+			success = `A new login code has been sent to ${email}. Check your email for your permanent 5-character code.`;
+			showRequestHelp = false;
 
 			console.log('Passcode request successful');
 
@@ -68,9 +68,14 @@
 		}
 	}
 
-	async function handleVerifyPasscode() {
+	async function handleSignIn() {
+		if (!email || !email.includes('@')) {
+			error = 'Please enter a valid email address';
+			return;
+		}
+
 		if (!passcode || passcode.length !== 5) {
-			error = 'Please enter the 5-character login code';
+			error = 'Please enter your 5-character login code';
 			return;
 		}
 
@@ -145,7 +150,12 @@
 		passcode = '';
 		error = '';
 		success = '';
-		passcodeRequested = false;
+		showRequestHelp = false;
+	}
+
+	function toggleRequestHelp() {
+		showRequestHelp = !showRequestHelp;
+		error = '';
 	}
 </script>
 
@@ -194,136 +204,111 @@
 		</div>
 	{/if}
 
-	{#if !passcodeRequested}
-		<!-- Step 1: Request Passcode -->
-		<div class="space-y-4">
-			<div class="text-center">
-				<h3 class="text-lg font-medium text-gray-900 mb-2">Student Login</h3>
-				<p class="text-sm text-gray-600">
-					Enter your school email address to request a login code from your teacher.
-				</p>
-			</div>
+	<!-- Main Login Form - Always Visible -->
+	<div class="space-y-4">
+		<div class="text-center">
+			<h3 class="text-lg font-medium text-gray-900 mb-2">Student Login</h3>
+			<p class="text-sm text-gray-600">
+				Enter your email and permanent login code
+			</p>
+		</div>
 
-			<div>
-				<label for="email" class="mb-2 block text-sm font-medium text-gray-700">
-					School Email Address
-				</label>
-				<Input
-					id="email"
-					type="email"
-					bind:value={email}
-					placeholder="your.name@schooldomain.edu"
-					disabled={loading}
-					class="w-full"
-				/>
-				<p class="mt-1 text-xs text-gray-500">
-					Your teacher will send a login code to this email address
-				</p>
-			</div>
+		<div>
+			<label for="email" class="mb-2 block text-sm font-medium text-gray-700">
+				School Email Address
+			</label>
+			<Input
+				id="email"
+				type="email"
+				bind:value={email}
+				placeholder="your.name@schooldomain.edu"
+				disabled={loading}
+				class="w-full"
+			/>
+			<p class="mt-1 text-xs text-gray-500">
+				The email address registered with your classroom
+			</p>
+		</div>
 
-			<Button onclick={handleRequestPasscode} disabled={loading || !email} class="w-full">
-				{#if loading}
-					<svg
-						class="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
+		<div>
+			<label for="passcode" class="mb-2 block text-sm font-medium text-gray-700">
+				5-Character Login Code
+			</label>
+			<Input
+				id="passcode"
+				type="text"
+				bind:value={passcode}
+				placeholder="ABC12"
+				disabled={loading}
+				maxlength="5"
+				class="w-full text-center text-lg tracking-wider font-mono uppercase"
+				oninput={(e) => passcode = e.currentTarget.value.toUpperCase()}
+			/>
+			<p class="mt-1 text-xs text-gray-500">
+				Your permanent login code (like a password)
+			</p>
+		</div>
+
+		<Button onclick={handleSignIn} disabled={loading || !email || passcode.length !== 5} class="w-full">
+			{#if loading}
+				<svg
+					class="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
+					xmlns="http://www.w3.org/2000/svg"
+					fill="none"
+					viewBox="0 0 24 24"
+				>
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+					></path>
+				</svg>
+				Signing In...
+			{:else}
+				Sign In
+			{/if}
+		</Button>
+
+		<!-- Help Section -->
+		<div class="border-t pt-4">
+			<div class="text-center text-sm">
+				<p class="text-gray-600 mb-2">
+					Don't have a login code or forgot it?
+				</p>
+				{#if !showRequestHelp}
+					<button
+						type="button"
+						onclick={toggleRequestHelp}
+						disabled={loading}
+						class="text-blue-600 hover:text-blue-500 font-medium focus:underline focus:outline-none"
 					>
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-						<path
-							class="opacity-75"
-							fill="currentColor"
-							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-						></path>
-					</svg>
-					Requesting Login Code...
+						Request a Login Code
+					</button>
 				{:else}
-					Request Login Code
+					<div class="space-y-3 mt-3">
+						<p class="text-xs text-gray-500">
+							Enter your email above and click below to receive your permanent login code
+						</p>
+						<Button 
+							onclick={handleRequestPasscode} 
+							disabled={loading || !email} 
+							variant="secondary"
+							class="w-full"
+						>
+							Send Login Code to Email
+						</Button>
+						<button
+							type="button"
+							onclick={toggleRequestHelp}
+							disabled={loading}
+							class="text-sm text-gray-600 hover:text-gray-800"
+						>
+							Cancel
+						</button>
+					</div>
 				{/if}
-			</Button>
-
-			<div class="text-center">
-				<p class="text-xs text-gray-500">
-					Note: Your teacher must be signed in to send you a login code
-				</p>
 			</div>
 		</div>
-	{:else}
-		<!-- Step 2: Enter Passcode -->
-		<div class="space-y-4">
-			<div class="text-center">
-				<h3 class="text-lg font-medium text-gray-900 mb-2">Enter Login Code</h3>
-				<p class="text-sm text-gray-600">
-					Check your email for a 5-character login code from your teacher.
-				</p>
-			</div>
-
-			<div>
-				<label for="email-display" class="mb-2 block text-sm font-medium text-gray-700">
-					Email Address
-				</label>
-				<div class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500">
-					{email}
-				</div>
-			</div>
-
-			<div>
-				<label for="passcode" class="mb-2 block text-sm font-medium text-gray-700">
-					5-Character Login Code
-				</label>
-				<Input
-					id="passcode"
-					type="text"
-					bind:value={passcode}
-					placeholder="ABC12"
-					disabled={loading}
-					maxlength="5"
-					class="w-full text-center text-lg tracking-wider font-mono"
-				/>
-				<p class="mt-1 text-xs text-gray-500">
-					Enter the 5-character code from your email
-				</p>
-			</div>
-
-			<Button onclick={handleVerifyPasscode} disabled={loading || passcode.length !== 5} class="w-full">
-				{#if loading}
-					<svg
-						class="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-					>
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-						<path
-							class="opacity-75"
-							fill="currentColor"
-							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-						></path>
-					</svg>
-					Verifying Code...
-				{:else}
-					Sign In
-				{/if}
-			</Button>
-
-			<div class="flex justify-between text-sm">
-				<button
-					type="button"
-					onclick={resetForm}
-					disabled={loading}
-					class="text-blue-600 hover:text-blue-500 focus:underline focus:outline-none"
-				>
-					Use different email
-				</button>
-				<button
-					type="button"
-					onclick={handleRequestPasscode}
-					disabled={loading}
-					class="text-blue-600 hover:text-blue-500 focus:underline focus:outline-none"
-				>
-					Resend code
-				</button>
-			</div>
-		</div>
-	{/if}
+	</div>
 </div>
