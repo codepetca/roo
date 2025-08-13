@@ -66,11 +66,12 @@ describe('StudentAuth Svelte 5 Reactivity', () => {
 		});
 
 		it('should toggle between input types', async () => {
-			const toggleButton = Array.from(container.querySelectorAll('button'))
-				.find(btn => btn.textContent?.trim() === 'Toggle Input Type');
-			
+			const toggleButton = Array.from(container.querySelectorAll('button')).find(
+				(btn) => btn.textContent?.trim() === 'Toggle Input Type'
+			);
+
 			expect(toggleButton).toBeTruthy();
-			
+
 			await fireEvent.click(toggleButton!);
 
 			await waitFor(() => {
@@ -83,9 +84,10 @@ describe('StudentAuth Svelte 5 Reactivity', () => {
 	describe('Phase 3: Native Input Fallback', () => {
 		it('should render custom Input components by default', () => {
 			// Switch to signup mode to see the inputs
-			const signupLink = Array.from(container.querySelectorAll('button'))
-				.find(btn => btn.textContent?.trim() === 'Create account');
-			
+			const signupLink = Array.from(container.querySelectorAll('button')).find(
+				(btn) => btn.textContent?.trim() === 'Create account'
+			);
+
 			fireEvent.click(signupLink!);
 
 			// Should show custom Input components initially
@@ -95,38 +97,44 @@ describe('StudentAuth Svelte 5 Reactivity', () => {
 
 		it('should switch to native inputs when toggled', async () => {
 			// Go to signup mode first
-			const signupLink = Array.from(container.querySelectorAll('button'))
-				.find(btn => btn.textContent?.trim() === 'Create account');
+			const signupLink = Array.from(container.querySelectorAll('button')).find(
+				(btn) => btn.textContent?.trim() === 'Create account'
+			);
 			await fireEvent.click(signupLink!);
 
 			// Toggle to native inputs
-			const toggleButton = Array.from(container.querySelectorAll('button'))
-				.find(btn => btn.textContent?.trim() === 'Toggle Input Type');
+			const toggleButton = Array.from(container.querySelectorAll('button')).find(
+				(btn) => btn.textContent?.trim() === 'Toggle Input Type'
+			);
 			await fireEvent.click(toggleButton!);
 
 			await waitFor(() => {
 				// Should show native inputs with inline event handlers
-				const nativeInputs = container.querySelectorAll('input[type="email"], input[type="password"]');
+				const nativeInputs = container.querySelectorAll(
+					'input[type="email"], input[type="password"]'
+				);
 				expect(nativeInputs.length).toBeGreaterThan(0);
 			});
 		});
 
 		it('should sync state between native and custom inputs', async () => {
 			// Go to signup mode
-			const signupLink = Array.from(container.querySelectorAll('button'))
-				.find(btn => btn.textContent?.trim() === 'Create account');
+			const signupLink = Array.from(container.querySelectorAll('button')).find(
+				(btn) => btn.textContent?.trim() === 'Create account'
+			);
 			await fireEvent.click(signupLink!);
 
 			// Enter some text in custom inputs first
 			const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
 			const passwordInput = container.querySelector('input[type="password"]') as HTMLInputElement;
-			
+
 			await fireEvent.input(emailInput, { target: { value: 'test@example.com' } });
 			await fireEvent.input(passwordInput, { target: { value: 'testpassword' } });
 
 			// Toggle to native inputs
-			const toggleButton = Array.from(container.querySelectorAll('button'))
-				.find(btn => btn.textContent?.trim() === 'Toggle Input Type');
+			const toggleButton = Array.from(container.querySelectorAll('button')).find(
+				(btn) => btn.textContent?.trim() === 'Toggle Input Type'
+			);
 			await fireEvent.click(toggleButton!);
 
 			await waitFor(() => {
@@ -141,16 +149,18 @@ describe('StudentAuth Svelte 5 Reactivity', () => {
 	describe('Phase 4: Form Functionality', () => {
 		beforeEach(async () => {
 			// Switch to signup mode for testing
-			const signupLink = Array.from(container.querySelectorAll('button'))
-				.find(btn => btn.textContent?.trim() === 'Create account');
+			const signupLink = Array.from(container.querySelectorAll('button')).find(
+				(btn) => btn.textContent?.trim() === 'Create account'
+			);
 			await fireEvent.click(signupLink!);
 		});
 
 		it('should enable create account button when email and password are filled', async () => {
 			const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
 			const passwordInput = container.querySelector('input[type="password"]') as HTMLInputElement;
-			const createButton = Array.from(container.querySelectorAll('button'))
-				.find(btn => btn.textContent?.trim() === 'Create Account') as HTMLButtonElement;
+			const createButton = Array.from(container.querySelectorAll('button')).find(
+				(btn) => btn.textContent?.trim() === 'Create Account'
+			) as HTMLButtonElement;
 
 			// Initially disabled
 			expect(createButton.disabled).toBe(true);
@@ -199,8 +209,9 @@ describe('StudentAuth Svelte 5 Reactivity', () => {
 	describe('Password Reset Flow', () => {
 		it('should switch to reset mode and accept YRDSB email', async () => {
 			// Click forgot password link
-			const forgotLink = Array.from(container.querySelectorAll('button'))
-				.find(btn => btn.textContent?.trim() === 'Forgot your password?');
+			const forgotLink = Array.from(container.querySelectorAll('button')).find(
+				(btn) => btn.textContent?.trim() === 'Forgot your password?'
+			);
 			await fireEvent.click(forgotLink!);
 
 			await waitFor(() => {
@@ -211,8 +222,9 @@ describe('StudentAuth Svelte 5 Reactivity', () => {
 			const emailInput = container.querySelector('input[type="email"]') as HTMLInputElement;
 			await fireEvent.input(emailInput, { target: { value: 'stewart.chan@gapps.yrdsb.ca' } });
 
-			const resetButton = Array.from(container.querySelectorAll('button'))
-				.find(btn => btn.textContent?.trim() === 'Send Password Reset Email') as HTMLButtonElement;
+			const resetButton = Array.from(container.querySelectorAll('button')).find(
+				(btn) => btn.textContent?.trim() === 'Send Password Reset Email'
+			) as HTMLButtonElement;
 
 			await waitFor(() => {
 				expect(resetButton.disabled).toBe(false);

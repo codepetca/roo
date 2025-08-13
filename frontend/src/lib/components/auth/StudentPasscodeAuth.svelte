@@ -45,23 +45,29 @@
 			showRequestHelp = false;
 
 			console.log('Passcode request successful');
-
 		} catch (err: any) {
 			console.error('Passcode request error:', err);
-			
+
 			// Handle specific HTTP status codes
 			if (err.status === 404) {
 				// Student not enrolled in any classrooms
-				error = err.response?.error || 'Email not found in any classroom rosters. Please contact your teacher to be added to a class first.';
+				error =
+					err.response?.error ||
+					'Email not found in any classroom rosters. Please contact your teacher to be added to a class first.';
 			} else if (err.status === 400) {
 				// Invalid email or missing data
 				error = err.response?.error || 'Please check your email address and try again.';
 			} else if (err.message?.includes('Teacher authentication required')) {
-				error = 'A teacher must send you the login code. Please ask your teacher to send you a login code.';
+				error =
+					'A teacher must send you the login code. Please ask your teacher to send you a login code.';
 			} else if (err.message?.includes('Gmail access required')) {
-				error = 'Your teacher needs to sign in with Google to send login codes. Please ask your teacher to sign in first.';
+				error =
+					'Your teacher needs to sign in with Google to send login codes. Please ask your teacher to sign in first.';
 			} else {
-				error = err.response?.error || err.message || 'Failed to send login code. Please ask your teacher to send you a login code.';
+				error =
+					err.response?.error ||
+					err.message ||
+					'Failed to send login code. Please ask your teacher to send you a login code.';
 			}
 		} finally {
 			loading = false;
@@ -107,36 +113,61 @@
 					});
 				} else if (result.requiresClientAuth) {
 					// Fallback: Handle client-side auth when custom tokens can't be created
-					console.log('Student authentication successful, requires client auth:', result.userProfile);
+					console.log(
+						'Student authentication successful, requires client auth:',
+						result.userProfile
+					);
+
+					// Clear any existing Firebase Auth user first
+					const { signOut } = await import('firebase/auth');
+					try {
+						await signOut(firebaseAuth);
+						console.log('Previous Firebase Auth user signed out');
+					} catch (err) {
+						console.log('No previous Firebase Auth user to sign out');
+					}
+
+					// Update auth store manually since we can't use Firebase custom tokens
+					const { auth } = await import('$lib/stores/auth.svelte');
 					
-					// For now, we can dispatch success with the profile info we have
-					// In a full implementation, you might want to handle this differently
+					// Create an AuthUser object for the auth store
+					const studentUser = {
+						uid: result.userProfile.uid,
+						email: result.userProfile.email,
+						displayName: result.userProfile.displayName,
+						role: 'student' as const,
+						schoolEmail: result.userProfile.schoolEmail || null
+					};
+
+					// Store user data in auth store (this is a workaround for the custom token limitation)
+					// Note: This bypasses Firebase Auth but updates our app's auth state
+					console.log('Manually updating auth store with student profile:', studentUser);
+					auth.setUser(studentUser);
+
 					dispatch('success', {
-						user: {
-							uid: result.userProfile.uid,
-							email: result.userProfile.email,
-							displayName: result.userProfile.displayName
-						},
+						user: studentUser,
 						isNewUser: result.isNewUser,
 						profile: result.userProfile,
 						requiresClientAuth: true
 					});
 				} else {
-					throw new Error('Invalid passcode verification response: missing token and client auth flag');
+					throw new Error(
+						'Invalid passcode verification response: missing token and client auth flag'
+					);
 				}
 			} else {
 				throw new Error('Passcode verification failed');
 			}
-
 		} catch (err: any) {
 			console.error('Passcode verification error:', err);
-			
+
 			if (err.message?.includes('Invalid passcode')) {
 				error = 'Incorrect login code. Please check the code and try again.';
 			} else if (err.message?.includes('expired')) {
 				error = 'Login code has expired. Please request a new code from your teacher.';
 			} else if (err.message?.includes('already used')) {
-				error = 'This login code has already been used. Please request a new code from your teacher.';
+				error =
+					'This login code has already been used. Please request a new code from your teacher.';
 			} else {
 				error = err.message || 'Failed to verify login code';
 			}
@@ -207,10 +238,8 @@
 	<!-- Main Login Form - Always Visible -->
 	<div class="space-y-4">
 		<div class="text-center">
-			<h3 class="text-lg font-medium text-gray-900 mb-2">Student Login</h3>
-			<p class="text-sm text-gray-600">
-				Enter your email and permanent login code
-			</p>
+			<h3 class="mb-2 text-lg font-medium text-gray-900">Student Login</h3>
+			<p class="text-sm text-gray-600">Enter your email and permanent login code</p>
 		</div>
 
 		<div>
@@ -225,9 +254,7 @@
 				disabled={loading}
 				class="w-full"
 			/>
-			<p class="mt-1 text-xs text-gray-500">
-				The email address registered with your classroom
-			</p>
+			<p class="mt-1 text-xs text-gray-500">The email address registered with your classroom</p>
 		</div>
 
 		<div>
@@ -241,15 +268,17 @@
 				placeholder="ABC12"
 				disabled={loading}
 				maxlength="5"
-				class="w-full text-center text-lg tracking-wider font-mono uppercase"
-				oninput={(e) => passcode = e.currentTarget.value.toUpperCase()}
+				class="w-full text-center font-mono text-lg tracking-wider uppercase"
+				oninput={(e) => (passcode = e.currentTarget.value.toUpperCase())}
 			/>
-			<p class="mt-1 text-xs text-gray-500">
-				Your permanent login code (like a password)
-			</p>
+			<p class="mt-1 text-xs text-gray-500">Your permanent login code (like a password)</p>
 		</div>
 
-		<Button onclick={handleSignIn} disabled={loading || !email || passcode.length !== 5} class="w-full">
+		<Button
+			onclick={handleSignIn}
+			disabled={loading || !email || passcode.length !== 5}
+			class="w-full"
+		>
 			{#if loading}
 				<svg
 					class="mr-3 -ml-1 h-5 w-5 animate-spin text-white"
@@ -257,7 +286,8 @@
 					fill="none"
 					viewBox="0 0 24 24"
 				>
-					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+					></circle>
 					<path
 						class="opacity-75"
 						fill="currentColor"
@@ -273,26 +303,24 @@
 		<!-- Help Section -->
 		<div class="border-t pt-4">
 			<div class="text-center text-sm">
-				<p class="text-gray-600 mb-2">
-					Don't have a login code or forgot it?
-				</p>
+				<p class="mb-2 text-gray-600">Don't have a login code or forgot it?</p>
 				{#if !showRequestHelp}
 					<button
 						type="button"
 						onclick={toggleRequestHelp}
 						disabled={loading}
-						class="text-blue-600 hover:text-blue-500 font-medium focus:underline focus:outline-none"
+						class="font-medium text-blue-600 hover:text-blue-500 focus:underline focus:outline-none"
 					>
 						Request a Login Code
 					</button>
 				{:else}
-					<div class="space-y-3 mt-3">
+					<div class="mt-3 space-y-3">
 						<p class="text-xs text-gray-500">
 							Enter your email above and click below to receive your permanent login code
 						</p>
-						<Button 
-							onclick={handleRequestPasscode} 
-							disabled={loading || !email} 
+						<Button
+							onclick={handleRequestPasscode}
+							disabled={loading || !email}
 							variant="secondary"
 							class="w-full"
 						>

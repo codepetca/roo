@@ -32,8 +32,8 @@
 			const { api } = await import('$lib/api');
 
 			// Single API call that does everything: generate, store, and send
-			const result = await api.generateAndSendPasscode({ 
-				email: studentEmail 
+			const result = await api.generateAndSendPasscode({
+				email: studentEmail
 			});
 
 			sendResult = result;
@@ -47,10 +47,9 @@
 				sent: true,
 				message: result.message
 			});
-
 		} catch (err: any) {
 			console.error('Send passcode error:', err);
-			
+
 			// Handle specific errors
 			if (err.message?.includes('Teacher authentication required')) {
 				error = 'You must be signed in as a teacher to send login codes.';
@@ -85,7 +84,8 @@
 	<div>
 		<h3 class="mb-2 text-lg font-medium text-gray-900">Send Student Login Code</h3>
 		<p class="text-sm text-gray-600">
-			Send a 6-digit login code to a student's email address. The code is sent via our secure email service.
+			Send a 6-digit login code to a student's email address. The code is sent via our secure email
+			service.
 		</p>
 	</div>
 
@@ -166,23 +166,23 @@
 			</div>
 
 			<!-- Quick test emails -->
-			<div class="rounded-lg bg-blue-50 border border-blue-200 p-4">
-				<h4 class="text-sm font-medium text-blue-900 mb-2">Quick Test</h4>
-				<p class="text-xs text-blue-700 mb-3">Click to populate with test email addresses:</p>
+			<div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+				<h4 class="mb-2 text-sm font-medium text-blue-900">Quick Test</h4>
+				<p class="mb-3 text-xs text-blue-700">Click to populate with test email addresses:</p>
 				<div class="flex flex-wrap gap-2">
 					<button
 						type="button"
-						onclick={() => studentEmail = 'stewart.chan@gapps.yrdsb.ca'}
+						onclick={() => (studentEmail = 'stewart.chan@gapps.yrdsb.ca')}
 						disabled={loading}
-						class="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs rounded border border-blue-300"
+						class="rounded border border-blue-300 bg-blue-100 px-2 py-1 text-xs text-blue-800 hover:bg-blue-200"
 					>
 						stewart.chan@gapps.yrdsb.ca
 					</button>
 					<button
 						type="button"
-						onclick={() => studentEmail = 'test.student@example.com'}
+						onclick={() => (studentEmail = 'test.student@example.com')}
 						disabled={loading}
-						class="px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 text-xs rounded border border-blue-300"
+						class="rounded border border-blue-300 bg-blue-100 px-2 py-1 text-xs text-blue-800 hover:bg-blue-200"
 					>
 						test.student@example.com
 					</button>
@@ -213,25 +213,33 @@
 				<h4 class="mb-2 text-sm font-medium text-green-900">Next Steps:</h4>
 				<ol class="space-y-1 text-sm text-green-800">
 					<li class="flex items-start">
-						<span class="mt-0.5 mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-green-200 text-xs text-green-800">
+						<span
+							class="mt-0.5 mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-green-200 text-xs text-green-800"
+						>
 							1
 						</span>
 						Student checks email for 6-digit login code
 					</li>
 					<li class="flex items-start">
-						<span class="mt-0.5 mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-green-200 text-xs text-green-800">
+						<span
+							class="mt-0.5 mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-green-200 text-xs text-green-800"
+						>
 							2
 						</span>
-						Student goes to login page and selects "Student" 
+						Student goes to login page and selects "Student"
 					</li>
 					<li class="flex items-start">
-						<span class="mt-0.5 mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-green-200 text-xs text-green-800">
+						<span
+							class="mt-0.5 mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-green-200 text-xs text-green-800"
+						>
 							3
 						</span>
 						Student enters their email and the 6-digit code
 					</li>
 					<li class="flex items-start">
-						<span class="mt-0.5 mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-green-200 text-xs text-green-800">
+						<span
+							class="mt-0.5 mr-2 flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-green-200 text-xs text-green-800"
+						>
 							4
 						</span>
 						Student is automatically signed in to their dashboard

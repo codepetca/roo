@@ -453,7 +453,10 @@ export const api = {
 		);
 	},
 
-	async storeGmailToken(data: { accessToken: string; expiresAt?: number }): Promise<StoreGmailTokenResponse> {
+	async storeGmailToken(data: {
+		accessToken: string;
+		expiresAt?: number;
+	}): Promise<StoreGmailTokenResponse> {
 		return typedApiRequest(
 			'/auth/store-gmail-token',
 			{
@@ -464,7 +467,11 @@ export const api = {
 		);
 	},
 
-	async storePasscode(data: { email: string; passcode: string; expiresAt: string }): Promise<{ success: boolean; message: string }> {
+	async storePasscode(data: {
+		email: string;
+		passcode: string;
+		expiresAt: string;
+	}): Promise<{ success: boolean; message: string }> {
 		return typedApiRequest(
 			'/auth/store-passcode',
 			{
@@ -478,7 +485,10 @@ export const api = {
 		);
 	},
 
-	async sendPasscodeFirebase(data: { email: string; passcode: string }): Promise<{ success: boolean; message: string; email: string }> {
+	async sendPasscodeFirebase(data: {
+		email: string;
+		passcode: string;
+	}): Promise<{ success: boolean; message: string; email: string }> {
 		return typedApiRequest(
 			'/auth/send-passcode-firebase',
 			{
@@ -494,7 +504,9 @@ export const api = {
 	},
 
 	// New simple Brevo-based endpoint
-	async generateAndSendPasscode(data: { email: string }): Promise<{ success: boolean; message: string; sentTo: string }> {
+	async generateAndSendPasscode(data: {
+		email: string;
+	}): Promise<{ success: boolean; message: string; sentTo: string }> {
 		return typedApiRequest(
 			'/auth/generate-and-send-passcode',
 			{
@@ -510,7 +522,9 @@ export const api = {
 	},
 
 	// Student self-registration endpoint
-	async studentRequestPasscode(data: { email: string }): Promise<{ success: boolean; message: string; passcode: string }> {
+	async studentRequestPasscode(data: {
+		email: string;
+	}): Promise<{ success: boolean; message: string; passcode: string }> {
 		return typedApiRequest(
 			'/auth/student-request-passcode',
 			{
@@ -788,9 +802,11 @@ export const api = {
 			{},
 			z.object({
 				pending: z.array(submissionSchema),
-				returned: z.array(submissionSchema.extend({
-					grade: gradeSchema
-				})),
+				returned: z.array(
+					submissionSchema.extend({
+						grade: gradeSchema
+					})
+				),
 				allSubmissions: z.array(submissionSchema),
 				allGrades: z.array(gradeSchema)
 			})
@@ -815,6 +831,5 @@ export const api = {
 			},
 			resetStudentAuthResponseSchema
 		);
-	},
-
+	}
 };

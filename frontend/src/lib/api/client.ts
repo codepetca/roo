@@ -92,14 +92,16 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 	if (!response.ok) {
 		const url = `${API_BASE_URL}/api${endpoint}`;
 		const errorMessage = data.message || data.error || response.statusText || 'Unknown error';
-		
+
 		// Create error with status info but also attach the parsed response
-		const error = new Error(`${response.status} ${errorMessage} (${options.method || 'GET'} ${url})`);
+		const error = new Error(
+			`${response.status} ${errorMessage} (${options.method || 'GET'} ${url})`
+		);
 		(error as any).status = response.status;
 		(error as any).response = data;
 		throw error;
 	}
-	
+
 	return data;
 }
 
@@ -127,7 +129,12 @@ export async function typedApiRequest<T>(
 	// Extract data from API response wrapper if present
 	// Handle both wrapped ({ success: true, data: {...} }) and direct responses
 	let dataToValidate = rawResponse;
-	if (rawResponse && typeof rawResponse === 'object' && 'success' in rawResponse && 'data' in rawResponse) {
+	if (
+		rawResponse &&
+		typeof rawResponse === 'object' &&
+		'success' in rawResponse &&
+		'data' in rawResponse
+	) {
 		// API response wrapper format
 		console.debug('🔧 Detected API wrapper format, extracting data field');
 		dataToValidate = (rawResponse as any).data;

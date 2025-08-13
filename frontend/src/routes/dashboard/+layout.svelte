@@ -100,7 +100,9 @@
 						<div class="hidden items-center space-x-2 text-sm sm:flex">
 							<span class="text-gray-600">{auth.user?.email || 'User'}</span>
 							<Badge variant={auth.user?.role === 'teacher' ? 'info' : 'default'} size="sm">
-								{auth.user?.role || 'Student'}
+								{#snippet children()}
+									{auth.user?.role || 'Student'}
+								{/snippet}
 							</Badge>
 						</div>
 						<LogoutButton size="sm" />

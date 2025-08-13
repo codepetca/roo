@@ -12,13 +12,13 @@
 
 	// Student-specific derived statistics
 	let totalGrades = $derived(myGrades.length);
-	let averageScore = $derived(() => {
-		if (myGrades.length === 0) return 0;
-		const totalPercentage = myGrades.reduce((sum, grade) => {
-			return sum + (grade.score / grade.maxScore) * 100;
-		}, 0);
-		return Math.round(totalPercentage / myGrades.length);
-	});
+	let averageScore = $derived(
+		myGrades.length === 0 ? 0 : Math.round(
+			myGrades.reduce((sum, grade) => {
+				return sum + (grade.score / grade.maxScore) * 100;
+			}, 0) / myGrades.length
+		)
+	);
 	let completedAssignments = $derived(myGrades.length);
 	let totalAssignments = $derived(assignments.length);
 
@@ -81,27 +81,58 @@
 			loading = true;
 			error = null;
 
+			console.log('🔍 Loading student dashboard data...');
+
 			// Load all assignments to see what's available
-			assignments = await api.listAssignments();
+			try {
+				assignments = await api.listAssignments();
+				console.log(`✅ Loaded ${assignments.length} assignments`);
+			} catch (assignmentError) {
+				console.warn('⚠️  Failed to load assignments, using empty array:', assignmentError);
+				// Set empty array and continue - student might not have access to any assignments
+				assignments = [];
+			}
 
 			// For now, try to load grades from all assignments
 			// TODO: Replace with student-specific API endpoints
 			let allGrades: Grade[] = [];
-			for (const assignment of assignments) {
-				try {
-					const grades = await api.getGradesByAssignment(assignment.id);
-					// Filter grades for current student (by email for now)
-					const studentGrades = grades.filter((grade) => grade.studentEmail === auth.user?.email);
-					allGrades = [...allGrades, ...studentGrades];
-				} catch (err) {
-					console.warn(`Could not load grades for assignment ${assignment.id}:`, err);
+
+			// Only try to load grades if we have assignments
+			if (assignments.length > 0) {
+				for (const assignment of assignments) {
+					try {
+						const grades = await api.getGradesByAssignment(assignment.id);
+						// Filter grades for current student (by email for now)
+						const studentGrades = grades.filter((grade) => grade.studentEmail === auth.user?.email);
+						allGrades = [...allGrades, ...studentGrades];
+					} catch (err) {
+						console.warn(`Could not load grades for assignment ${assignment.id}:`, err);
+						// Continue with other assignments even if one fails
+					}
 				}
 			}
 
 			myGrades = allGrades;
+			console.log(`✅ Loaded ${myGrades.length} grades for student`);
+
+			// If student has no assignments or grades, that's expected for new/unenrolled students
+			if (assignments.length === 0 && myGrades.length === 0) {
+				console.log('ℹ️  Student appears to have no assignments or grades - showing empty state');
+			}
 		} catch (err: unknown) {
-			console.error('Failed to load student dashboard data:', err);
-			error = (err as Error)?.message || 'Failed to load dashboard data';
+			console.error('❌ Failed to load student dashboard data:', err);
+
+			// Set fallback empty states
+			assignments = [];
+			myGrades = [];
+
+			// Only show user-facing error for unexpected failures, not validation issues
+			if (err instanceof Error && err.message.includes('validation failed')) {
+				console.warn('🔍 API validation error detected - this should be fixed on the backend');
+				error = 'Unable to load dashboard data. Please check the console for details.';
+			} else {
+				error = (err as Error)?.message || 'Failed to load dashboard data';
+			}
 		} finally {
 			loading = false;
 		}
@@ -193,7 +224,29 @@
 				</div>
 				<div class="p-6">
 					{#if recentGrades.length === 0}
-						<p class="py-4 text-center text-gray-500">No grades available</p>
+						<div class="py-8 text-center">
+							<div
+								class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100"
+							>
+								<svg
+									class="h-6 w-6 text-gray-400"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+									/>
+								</svg>
+							</div>
+							<h4 class="mb-2 text-sm font-medium text-gray-900">No grades yet</h4>
+							<p class="text-sm text-gray-500">
+								Grades will appear here once your assignments have been evaluated.
+							</p>
+						</div>
 					{:else}
 						<div class="space-y-4">
 							{#each recentGrades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
@@ -264,7 +317,30 @@
 				</div>
 				<div class="p-6">
 					{#if assignments.length === 0}
-						<p class="py-4 text-center text-gray-500">No assignments available</p>
+						<div class="py-8 text-center">
+							<div
+								class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100"
+							>
+								<svg
+									class="h-6 w-6 text-gray-400"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									/>
+								</svg>
+							</div>
+							<h4 class="mb-2 text-sm font-medium text-gray-900">No assignments yet</h4>
+							<p class="text-sm text-gray-500">
+								You don't have access to any assignments yet. Check with your teacher or wait to be
+								enrolled in a class.
+							</p>
+						</div>
 					{:else}
 						<div class="space-y-4">
 							{#each assignments.slice(0, 5) as assignment (assignment.id)}

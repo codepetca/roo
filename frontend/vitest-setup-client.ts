@@ -16,7 +16,7 @@ vi.mock('firebase/auth', () => ({
 		// Return unsubscribe function
 		return () => {};
 	}),
-	getAuth: vi.fn(() => ({ 
+	getAuth: vi.fn(() => ({
 		currentUser: null,
 		app: {}
 	})),
@@ -168,45 +168,63 @@ const setupDOM = () => {
 			const element = originalCreateElement(tagName);
 			// Add common properties that tests expect
 			Object.defineProperty(element, 'value', {
-				get() { return this.getAttribute('value') || ''; },
-				set(val) { this.setAttribute('value', val); },
+				get() {
+					return this.getAttribute('value') || '';
+				},
+				set(val) {
+					this.setAttribute('value', val);
+				},
 				configurable: true
 			});
 			Object.defineProperty(element, 'textContent', {
-				get() { return this._textContent || ''; },
-				set(val) { this._textContent = val; },
+				get() {
+					return this._textContent || '';
+				},
+				set(val) {
+					this._textContent = val;
+				},
 				configurable: true
 			});
 			Object.defineProperty(element, 'type', {
-				get() { return this.getAttribute('type') || ''; },
-				set(val) { this.setAttribute('type', val); },
+				get() {
+					return this.getAttribute('type') || '';
+				},
+				set(val) {
+					this.setAttribute('type', val);
+				},
 				configurable: true
 			});
 			Object.defineProperty(element, 'disabled', {
-				get() { return this.hasAttribute('disabled'); },
-				set(val) { 
+				get() {
+					return this.hasAttribute('disabled');
+				},
+				set(val) {
 					if (val) this.setAttribute('disabled', '');
 					else this.removeAttribute('disabled');
 				},
 				configurable: true
 			});
 			Object.defineProperty(element, 'className', {
-				get() { return this.getAttribute('class') || ''; },
-				set(val) { this.setAttribute('class', val); },
+				get() {
+					return this.getAttribute('class') || '';
+				},
+				set(val) {
+					this.setAttribute('class', val);
+				},
 				configurable: true
 			});
 			// Add classList support
 			element.classList = {
 				add: vi.fn((className) => {
-					const current = element.className.split(' ').filter(c => c);
+					const current = element.className.split(' ').filter((c) => c);
 					if (!current.includes(className)) {
 						current.push(className);
 						element.className = current.join(' ');
 					}
 				}),
 				remove: vi.fn((className) => {
-					const current = element.className.split(' ').filter(c => c);
-					element.className = current.filter(c => c !== className).join(' ');
+					const current = element.className.split(' ').filter((c) => c);
+					element.className = current.filter((c) => c !== className).join(' ');
 				}),
 				contains: vi.fn((className) => {
 					return element.className.split(' ').includes(className);

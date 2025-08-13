@@ -98,7 +98,7 @@ describe('LogoutButton Component', () => {
 		it('should handle logout function', async () => {
 			// Mock successful logout
 			mockAuth.logOut.mockResolvedValue(undefined);
-			
+
 			// Call the logout function directly to test it's working
 			await mockAuth.logOut();
 			expect(mockAuth.logOut).toHaveBeenCalledTimes(1);
@@ -108,7 +108,7 @@ describe('LogoutButton Component', () => {
 			// Mock logout error
 			const testError = new Error('Logout failed');
 			mockAuth.logOut.mockRejectedValue(testError);
-			
+
 			try {
 				await mockAuth.logOut();
 			} catch (error) {
@@ -131,7 +131,7 @@ describe('LogoutButton Component', () => {
 		it('should render all prop combinations', async () => {
 			const variants = ['button', 'link'] as const;
 			const sizes = ['sm', 'md', 'lg'] as const;
-			
+
 			for (const variant of variants) {
 				for (const size of sizes) {
 					const result = render(LogoutButton, { props: { variant, size } });

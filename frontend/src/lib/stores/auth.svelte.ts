@@ -288,6 +288,15 @@ function isAuthenticated(): boolean {
 	return user !== null;
 }
 
+/**
+ * Manually set user state (for student authentication workaround)
+ */
+function setUser(authUser: AuthUser | null): void {
+	user = authUser;
+	loading = false;
+	console.log('🔄 Auth store - User manually set:', authUser);
+}
+
 // Initialize auth when module loads
 if (browser) {
 	initializeAuth();
@@ -311,5 +320,6 @@ export const auth = {
 	createAccount,
 	logOut,
 	isTeacher,
-	isAuthenticated
+	isAuthenticated,
+	setUser
 };

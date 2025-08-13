@@ -52,7 +52,7 @@ describe('LoginForm Component', () => {
 			mockAuth.loading = false;
 			const result1 = render(LoginForm);
 			expect(result1).toBeDefined();
-			
+
 			// Test with loading = true
 			mockAuth.loading = true;
 			const result2 = render(LoginForm);
@@ -64,7 +64,7 @@ describe('LoginForm Component', () => {
 			mockAuth.error = null;
 			const result1 = render(LoginForm);
 			expect(result1).toBeDefined();
-			
+
 			// Test with error
 			mockAuth.error = 'Test error message';
 			const result2 = render(LoginForm);
@@ -84,7 +84,7 @@ describe('LoginForm Component', () => {
 		it('should handle sign in function', async () => {
 			// Mock successful sign in
 			mockAuth.signIn.mockResolvedValue(undefined);
-			
+
 			// Call the sign in function directly to test it's working
 			await mockAuth.signIn('test@example.com', 'password123');
 			expect(mockAuth.signIn).toHaveBeenCalledWith('test@example.com', 'password123');
@@ -94,7 +94,7 @@ describe('LoginForm Component', () => {
 			// Mock sign in error
 			const testError = new Error('Invalid credentials');
 			mockAuth.signIn.mockRejectedValue(testError);
-			
+
 			try {
 				await mockAuth.signIn('test@example.com', 'wrongpass');
 			} catch (error) {
@@ -110,7 +110,7 @@ describe('LoginForm Component', () => {
 			mockAuth.isAuthenticated.mockReturnValue(true);
 			const result1 = render(LoginForm);
 			expect(result1).toBeDefined();
-			
+
 			// Test unauthenticated state
 			mockAuth.user = null;
 			mockAuth.isAuthenticated.mockReturnValue(false);

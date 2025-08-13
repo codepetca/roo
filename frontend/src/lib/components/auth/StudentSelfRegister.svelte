@@ -2,7 +2,7 @@
 	/**
 	 * Student Self-Registration Component
 	 * Location: frontend/src/lib/components/auth/StudentSelfRegister.svelte
-	 * 
+	 *
 	 * Allows students to self-register and request their own passcode
 	 * Uses the new /auth/student-request-passcode endpoint (admin-only passcode generation)
 	 */
@@ -39,7 +39,7 @@
 			console.log('Student requesting self-registration passcode:', email);
 
 			// Call the new student-request-passcode endpoint
-			const result = await api.studentRequestPasscode({ 
+			const result = await api.studentRequestPasscode({
 				email: email.trim().toLowerCase()
 			});
 
@@ -47,16 +47,19 @@
 			registrationStep = 'passcode';
 
 			console.log('Student self-registration passcode request successful');
-
 		} catch (err: any) {
 			console.error('Student self-registration error:', err);
-			
+
 			if (err.message?.includes('already enrolled')) {
-				error = 'You are already enrolled in classes. Please use the regular student login instead.';
+				error =
+					'You are already enrolled in classes. Please use the regular student login instead.';
 			} else if (err.message?.includes('not found in classrooms')) {
-				error = 'Your email was not found in any classroom rosters. Please contact your teacher to be added to a class first.';
+				error =
+					'Your email was not found in any classroom rosters. Please contact your teacher to be added to a class first.';
 			} else {
-				error = err.message || 'Failed to process registration request. Please try again or contact your teacher.';
+				error =
+					err.message ||
+					'Failed to process registration request. Please try again or contact your teacher.';
 			}
 		} finally {
 			loading = false;
@@ -75,8 +78,8 @@
 		try {
 			console.log('Verifying student self-registration passcode:', email);
 
-			const result = await api.verifyPasscode({ 
-				email: email.trim().toLowerCase(), 
+			const result = await api.verifyPasscode({
+				email: email.trim().toLowerCase(),
 				passcode: passcode.trim().toUpperCase()
 			});
 
@@ -86,7 +89,7 @@
 				const user = userCredential.user;
 
 				console.log('Student self-registration successful:', result.userProfile);
-				
+
 				registrationStep = 'completed';
 				success = 'Registration completed successfully! Welcome to your classes.';
 
@@ -103,10 +106,9 @@
 			} else {
 				throw new Error('Invalid passcode verification response');
 			}
-
 		} catch (err: any) {
 			console.error('Passcode verification error:', err);
-			
+
 			if (err.message?.includes('Invalid passcode')) {
 				error = 'Incorrect passcode. Please check the code and try again.';
 			} else if (err.message?.includes('not found')) {
@@ -183,9 +185,10 @@
 		<!-- Step 1: Enter Email for Registration -->
 		<div class="space-y-4">
 			<div class="text-center">
-				<h3 class="text-lg font-medium text-gray-900 mb-2">Student Registration</h3>
+				<h3 class="mb-2 text-lg font-medium text-gray-900">Student Registration</h3>
 				<p class="text-sm text-gray-600">
-					Enter your school email address to register for your classes. You must already be enrolled by your teacher.
+					Enter your school email address to register for your classes. You must already be enrolled
+					by your teacher.
 				</p>
 			</div>
 
@@ -214,7 +217,8 @@
 						fill="none"
 						viewBox="0 0 24 24"
 					>
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
 						<path
 							class="opacity-75"
 							fill="currentColor"
@@ -233,14 +237,14 @@
 				</p>
 			</div>
 		</div>
-
 	{:else if registrationStep === 'passcode'}
 		<!-- Step 2: Enter Passcode -->
 		<div class="space-y-4">
 			<div class="text-center">
-				<h3 class="text-lg font-medium text-gray-900 mb-2">Enter Your Passcode</h3>
+				<h3 class="mb-2 text-lg font-medium text-gray-900">Enter Your Passcode</h3>
 				<p class="text-sm text-gray-600">
-					A 5-character passcode has been generated for your account. Enter it below to complete registration.
+					A 5-character passcode has been generated for your account. Enter it below to complete
+					registration.
 				</p>
 			</div>
 
@@ -248,7 +252,9 @@
 				<label for="email-display" class="mb-2 block text-sm font-medium text-gray-700">
 					Email Address
 				</label>
-				<div class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500">
+				<div
+					class="w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-500"
+				>
 					{email}
 				</div>
 			</div>
@@ -264,7 +270,7 @@
 					placeholder="ABC12"
 					disabled={loading}
 					maxlength="5"
-					class="w-full text-center text-lg tracking-wider font-mono uppercase"
+					class="w-full text-center font-mono text-lg tracking-wider uppercase"
 					style="text-transform: uppercase;"
 				/>
 				<p class="mt-1 text-xs text-gray-500">
@@ -280,7 +286,8 @@
 						fill="none"
 						viewBox="0 0 24 24"
 					>
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
 						<path
 							class="opacity-75"
 							fill="currentColor"
@@ -312,24 +319,25 @@
 				</button>
 			</div>
 		</div>
-
 	{:else if registrationStep === 'completed'}
 		<!-- Step 3: Registration Complete -->
 		<div class="space-y-4 text-center">
-			<div class="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-				<svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+			<div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+				<svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"
+					></path>
 				</svg>
 			</div>
-			
+
 			<h3 class="text-lg font-medium text-gray-900">Registration Complete!</h3>
 			<p class="text-sm text-gray-600">
-				You are now registered and logged into your classes. Your passcode will remain the same for future logins.
+				You are now registered and logged into your classes. Your passcode will remain the same for
+				future logins.
 			</p>
 
-			<div class="bg-blue-50 border border-blue-200 rounded-md p-3 text-left">
-				<h4 class="text-sm font-medium text-blue-900 mb-1">Remember:</h4>
-				<ul class="text-xs text-blue-800 space-y-1">
+			<div class="rounded-md border border-blue-200 bg-blue-50 p-3 text-left">
+				<h4 class="mb-1 text-sm font-medium text-blue-900">Remember:</h4>
+				<ul class="space-y-1 text-xs text-blue-800">
 					<li>• Your passcode is: <strong class="font-mono">{passcode}</strong></li>
 					<li>• This passcode will never expire</li>
 					<li>• Use it to log in anytime with your email</li>
@@ -340,10 +348,8 @@
 	{/if}
 
 	{#if registrationStep !== 'completed'}
-		<div class="mt-6 text-center border-t pt-4">
-			<p class="text-xs text-gray-500 mb-2">
-				Need help? Contact your teacher or administrator.
-			</p>
+		<div class="mt-6 border-t pt-4 text-center">
+			<p class="mb-2 text-xs text-gray-500">Need help? Contact your teacher or administrator.</p>
 			<button
 				type="button"
 				onclick={resetForm}

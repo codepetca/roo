@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { signInWithEmailAndPassword, sendPasswordResetEmail, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+	import {
+		signInWithEmailAndPassword,
+		sendPasswordResetEmail,
+		createUserWithEmailAndPassword,
+		updateProfile
+	} from 'firebase/auth';
 	import { firebaseAuth } from '$lib/firebase';
 	import { api } from '$lib/api';
 	import { Button, Input } from '$lib/components/ui';
@@ -38,7 +43,7 @@
 	function toggleInputType() {
 		useNativeInputs = !useNativeInputs;
 		console.log('🔄 Switching to:', useNativeInputs ? 'Native inputs' : 'Custom Input component');
-		
+
 		if (useNativeInputs) {
 			nativeEmail = email;
 			nativePassword = password;
@@ -66,9 +71,28 @@
 	// Enhanced debugging for state changes
 	$effect(() => {
 		console.log('🔴 StudentAuth - State Change Detected');
-		console.log('🔴 StudentAuth - Email:', JSON.stringify(email), 'Type:', typeof email, 'Length:', email.length);
-		console.log('🔴 StudentAuth - Password:', JSON.stringify(password), 'Type:', typeof password, 'Length:', password.length);
-		console.log('🔴 StudentAuth - DisplayName:', JSON.stringify(displayName), 'Type:', typeof displayName);
+		console.log(
+			'🔴 StudentAuth - Email:',
+			JSON.stringify(email),
+			'Type:',
+			typeof email,
+			'Length:',
+			email.length
+		);
+		console.log(
+			'🔴 StudentAuth - Password:',
+			JSON.stringify(password),
+			'Type:',
+			typeof password,
+			'Length:',
+			password.length
+		);
+		console.log(
+			'🔴 StudentAuth - DisplayName:',
+			JSON.stringify(displayName),
+			'Type:',
+			typeof displayName
+		);
 		console.log('🔴 StudentAuth - Loading:', loading, 'Type:', typeof loading);
 		console.log('🔴 StudentAuth - AuthMode:', authMode);
 		console.log('🔴 StudentAuth - Button should be enabled:', !!(email && password && !loading));
@@ -119,7 +143,7 @@
 			});
 		} catch (err: any) {
 			console.error('Sign-in error:', err);
-			
+
 			if (err.code === 'auth/user-not-found') {
 				error = 'No account found with this email. Please create an account first.';
 			} else if (err.code === 'auth/wrong-password') {
@@ -193,7 +217,7 @@
 			});
 		} catch (err: any) {
 			console.error('Sign-up error:', err);
-			
+
 			if (err.code === 'auth/email-already-in-use') {
 				error = 'An account with this email already exists. Try signing in instead.';
 			} else if (err.code === 'auth/invalid-email') {
@@ -225,10 +249,9 @@
 
 			success = `Password reset email sent to ${email}. Check your inbox and follow the link to reset your password.`;
 			console.log('Password reset email sent successfully');
-
 		} catch (err: any) {
 			console.error('Password reset error:', err);
-			
+
 			if (err.code === 'auth/user-not-found') {
 				error = 'No account found with this email address';
 			} else if (err.code === 'auth/invalid-email') {
@@ -254,9 +277,9 @@
 
 <div class="space-y-4">
 	<!-- Environment Verification Panel (DEBUG ONLY) -->
-	<div class="rounded bg-yellow-50 border border-yellow-200 p-3">
-		<h4 class="font-semibold text-yellow-800 mb-2">🧪 Svelte 5 Environment Test</h4>
-		<div class="text-sm space-y-1">
+	<div class="rounded border border-yellow-200 bg-yellow-50 p-3">
+		<h4 class="mb-2 font-semibold text-yellow-800">🧪 Svelte 5 Environment Test</h4>
+		<div class="space-y-1 text-sm">
 			<div>Test Counter: <strong>{testCounter}</strong></div>
 			<div>Test String: <strong>"{testString}"</strong></div>
 			<div>Email: <strong>"{email}"</strong> (length: {email.length})</div>
@@ -266,18 +289,18 @@
 				<div>Native Email: <strong>"{nativeEmail}"</strong></div>
 				<div>Native Password: <strong>"{nativePassword}"</strong></div>
 			{/if}
-			<div class="flex gap-2 mt-2">
-				<button 
+			<div class="mt-2 flex gap-2">
+				<button
 					type="button"
 					onclick={testReactivity}
-					class="px-3 py-1 bg-yellow-600 text-white text-xs rounded hover:bg-yellow-700"
+					class="rounded bg-yellow-600 px-3 py-1 text-xs text-white hover:bg-yellow-700"
 				>
 					Test Manual Update
 				</button>
-				<button 
+				<button
 					type="button"
 					onclick={toggleInputType}
-					class="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+					class="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700"
 				>
 					Toggle Input Type
 				</button>
@@ -368,7 +391,8 @@
 						fill="none"
 						viewBox="0 0 24 24"
 					>
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
 						<path
 							class="opacity-75"
 							fill="currentColor"
@@ -400,7 +424,6 @@
 				</button>
 			</div>
 		</div>
-
 	{:else if authMode === 'signup'}
 		<!-- Sign Up Form -->
 		<div class="space-y-4">
@@ -441,7 +464,7 @@
 						oninput={handleNativeEmailChange}
 						placeholder="your.name@schooldomain.edu"
 						disabled={loading}
-						class="w-full block rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 focus:ring-inset sm:text-sm sm:leading-6"
+						class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 focus:ring-inset sm:text-sm sm:leading-6"
 					/>
 				{:else}
 					<Input
@@ -467,7 +490,7 @@
 						oninput={handleNativePasswordChange}
 						placeholder="Choose a secure password (minimum 6 characters)"
 						disabled={loading}
-						class="w-full block rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 focus:ring-inset sm:text-sm sm:leading-6"
+						class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-gray-300 ring-inset placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 focus:ring-inset sm:text-sm sm:leading-6"
 					/>
 				{:else}
 					<Input
@@ -484,22 +507,25 @@
 
 			<!-- Debug Panel -->
 			<div class="rounded bg-gray-100 p-2 text-xs">
-				<strong>🐛 Debug:</strong><br>
-				Email: "{email}" (length: {email.length})<br>
-				Password: "{password}" (length: {password.length})<br>
-				Loading: {loading}<br>
-				UseNativeInputs: {useNativeInputs}<br>
-				NativeEmail: "{nativeEmail}" (length: {nativeEmail.length})<br>
-				NativePassword: "{nativePassword}" (length: {nativePassword.length})<br>
-				Email truthy: {!!email}<br>
-				Password truthy: {!!password}<br>
-				Button disabled condition: {loading || !email || !password}<br>
+				<strong>🐛 Debug:</strong><br />
+				Email: "{email}" (length: {email.length})<br />
+				Password: "{password}" (length: {password.length})<br />
+				Loading: {loading}<br />
+				UseNativeInputs: {useNativeInputs}<br />
+				NativeEmail: "{nativeEmail}" (length: {nativeEmail.length})<br />
+				NativePassword: "{nativePassword}" (length: {nativePassword.length})<br />
+				Email truthy: {!!email}<br />
+				Password truthy: {!!password}<br />
+				Button disabled condition: {loading || !email || !password}<br />
 				Button enabled: {!!(email && password && !loading)}
-				<br><br>
-				<button 
-					type="button" 
-					onclick={() => { email = 'test@example.com'; password = 'testpass123'; }}
-					class="px-2 py-1 bg-red-500 text-white text-xs rounded"
+				<br /><br />
+				<button
+					type="button"
+					onclick={() => {
+						email = 'test@example.com';
+						password = 'testpass123';
+					}}
+					class="rounded bg-red-500 px-2 py-1 text-xs text-white"
 				>
 					Force Update Values
 				</button>
@@ -513,7 +539,8 @@
 						fill="none"
 						viewBox="0 0 24 24"
 					>
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
 						<path
 							class="opacity-75"
 							fill="currentColor"
@@ -526,7 +553,6 @@
 				{/if}
 			</Button>
 		</div>
-
 	{:else if authMode === 'reset'}
 		<!-- Password Reset Form -->
 		<div class="space-y-4">
@@ -566,7 +592,8 @@
 						fill="none"
 						viewBox="0 0 24 24"
 					>
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
 						<path
 							class="opacity-75"
 							fill="currentColor"

@@ -69,44 +69,6 @@ describe('ClassroomSnapshotUploader Component', () => {
 		vi.clearAllMocks();
 	});
 
-<<<<<<< HEAD
-	describe('Rendering', () => {
-		it('should render the component with default upload state', async () => {
-			const screen = render(ClassroomSnapshotUploader, { props: { onValidated: mockOnValidated } });
-
-			expect(screen.getByText('Import Classroom Snapshot')).toBeInTheDocument();
-			expect(screen.getByText('Drop your snapshot file here')).toBeInTheDocument();
-			expect(screen.getByText('or click to browse')).toBeInTheDocument();
-			expect(screen.getByRole('button', { name: /browse files/i })).toBeInTheDocument();
-		});
-
-		it('should render helper text', async () => {
-			const screen = render(ClassroomSnapshotUploader, { props: { onValidated: mockOnValidated } });
-
-			expect(
-				screen.getByText('Accepts JSON files exported from Google Sheets')
-			).toBeInTheDocument();
-		});
-
-		it('should render hidden file input with correct attributes', async () => {
-			const screen = render(ClassroomSnapshotUploader, { props: { onValidated: mockOnValidated } });
-
-			const fileInput = screen.getByTestId('file-input') as HTMLInputElement;
-			expect(fileInput).toHaveAttribute('type', 'file');
-			expect(fileInput).toHaveAttribute('accept', '.json,application/json');
-			expect(fileInput).toHaveClass('hidden');
-		});
-	});
-
-	describe('File Upload States', () => {
-		it('should show validating state when validating is true', async () => {
-			// This test may not work as expected since the component uses local state
-			// rather than the mocked store. We would need to trigger validation to see this state.
-			const screen = render(ClassroomSnapshotUploader, { props: { onValidated: mockOnValidated } });
-
-			// For now, let's verify the component renders in default state
-			expect(screen.getByText('Drop your snapshot file here')).toBeInTheDocument();
-=======
 	describe('Basic Rendering', () => {
 		it('should render uploader component without errors', async () => {
 			const result = render(ClassroomSnapshotUploader);
@@ -130,7 +92,6 @@ describe('ClassroomSnapshotUploader Component', () => {
 			mockSnapshotStore.validating = true;
 			const result = render(ClassroomSnapshotUploader);
 			expect(result).toBeDefined();
->>>>>>> main
 		});
 
 		it('should render with validation error', async () => {

@@ -283,7 +283,7 @@ describe('Auth Store', () => {
 		it('should clear auth cookie on sign out', async () => {
 			// Set an initial cookie first
 			document.cookie = 'auth-token=test-token; path=/';
-			
+
 			mockSignOut.mockResolvedValue(undefined);
 
 			await auth.logOut();
@@ -398,7 +398,7 @@ describe('Auth Store', () => {
 			if (callback) {
 				await callback(null);
 			}
-			
+
 			expect(auth.isAuthenticated()).toBe(false);
 			expect(auth.isTeacher()).toBe(false);
 		});

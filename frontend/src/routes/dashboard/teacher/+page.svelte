@@ -389,14 +389,14 @@
 				<h3 class="text-lg font-semibold text-gray-900">Student Management</h3>
 				<p class="text-sm text-gray-600">Send login codes and help students with access issues</p>
 			</div>
-			<div class="p-6 space-y-8">
+			<div class="space-y-8 p-6">
 				<!-- Send Login Codes (Primary) -->
 				<div>
 					<StudentPasscodeSender />
 				</div>
-				
+
 				<!-- Reset Student Access (Secondary) -->
-				<div class="pt-6 border-t border-gray-200">
+				<div class="border-t border-gray-200 pt-6">
 					<StudentResetManager />
 				</div>
 			</div>
