@@ -82,19 +82,58 @@ This project implements **comprehensive type safety** at every layer:
 - **DO NOT run `npm run emulators`** for E2E testing
 - **Real Firebase**: All E2E tests run against staging Firebase instance
 
-### E2E Test Execution
+### Current Test Suite Statistics
+- **Test Files**: 12+ E2E test files with 95+ individual test cases
+- **Test Categories**: Core, Integration, and Architecture tests
+- **Most Reliable**: Core authentication and dashboard tests
+- **Coverage**: Complete authentication flows, data import, realtime listeners, cross-page navigation
+
+### E2E Test Execution Commands
 ```bash
 # NO EMULATORS! Test directly against staging
 cd frontend
 npm run dev              # Connects to staging Firebase
-npx playwright test      # Run E2E tests
+npm run test:e2e         # Run all E2E tests (recommended)
+npx playwright test      # Alternative direct command
+
+# Run specific test categories
+npx playwright test core-auth.test.ts        # Core authentication tests
+npx playwright test core-dashboard.test.ts   # Dashboard functionality tests
+npx playwright test complete-login-flows.test.ts  # End-to-end login flows
+
+# Debug failing tests
+npx playwright test --debug                  # Interactive debugging mode
+npx playwright test --headed                 # Run with visible browser
 ```
 
-### Mock Authentication for E2E
-- Teachers require Google OAuth in production
-- E2E tests use mock authentication to bypass OAuth
-- Mock auth injects tokens directly into browser storage
-- Test with `test.codepet@gmail.com` as default teacher
+### Standardized Test Credentials
+- **Teacher Tests**: `teacher@test.com` / `test123` (primary test account)
+- **Student Tests**: `student@test.com` / `test123` (student test account)
+- **Legacy Reference**: `test.codepet@gmail.com` (historical, still referenced in some tests)
+- **Profile Data**: Consistent test display names and school emails across test suite
+
+### Test Reliability and Categories
+
+#### Most Reliable Tests (Core)
+- **Core Authentication** (`core-auth.test.ts`): Login redirects, authentication flow
+- **Core Dashboard** (`core-dashboard.test.ts`): Data display, navigation
+- **Core Import** (`core-import.test.ts`): Classroom snapshot import functionality
+
+#### Integration Tests
+- **Complete Login Flows** (`complete-login-flows.test.ts`): End-to-end authentication
+- **Cross-page Navigation** (`cross-page-navigation.test.ts`): Multi-page workflows
+- **Data Store Tests** (`data-store.test.ts`): State management integration
+
+#### Architecture Tests
+- **Model Integration** (`model-integration.test.ts`): Data model consistency
+- **Realtime Listeners** (`realtime-listeners.test.ts`): Firebase realtime functionality
+
+### Test Development Best Practices
+- **Run Core Tests First**: Start with `core-auth.test.ts` and `core-dashboard.test.ts`
+- **Staging Environment**: All tests run against real Firebase staging instance
+- **Helper Functions**: Use `test-helpers.ts` for common operations (login, navigation, etc.)
+- **Robust Selectors**: Tests use multiple fallback selectors and safe element detection
+- **Comprehensive Logging**: Test failures include detailed error context and screenshots
 
 ## Firebase Emulator Development (Local Development Only)
 

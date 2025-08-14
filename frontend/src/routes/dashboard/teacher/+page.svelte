@@ -1,6 +1,7 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { appState } from '$lib/stores';
+	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { Button, Alert, Card } from '$lib/components/ui';
 	import { PageHeader, LoadingSkeleton } from '$lib/components/dashboard';
 	import StudentResetManager from '$lib/components/auth/StudentResetManager.svelte';
@@ -8,7 +9,9 @@
 
 	// Handle classroom selection
 	function handleClassroomSelect(classroomId: string) {
-		appState.selectClassroom(classroomId);
+		dataStore.selectClassroom(classroomId);
+		// Navigate to classroom detail view
+		goto(`/dashboard/teacher/classrooms/${classroomId}`);
 	}
 
 	// Handle assignment view
@@ -21,20 +24,19 @@
 		goto('/teacher/data-import');
 	}
 
-	// Clean reactive bindings using $derived with direct property access
-	let loading = $derived(appState.loading);
-	let error = $derived(appState.error);
-	let hasData = $derived(appState.hasData);
-	let teacher = $derived(appState.teacher);
-	let classrooms = $derived(appState.classrooms);
-	let dashboardStats = $derived(appState.dashboardStats);
-	let recentActivity = $derived(appState.recentActivity);
+	// Reactive state from data store
+	let loading = $derived(dataStore.loading);
+	let error = $derived(dataStore.error);
+	let hasData = $derived(dataStore.hasData);
+	let teacher = $derived(dataStore.currentUser);
+	let classrooms = $derived(dataStore.classrooms.all);
+	let dashboardStats = $derived(dataStore.dashboardStats);
+	let recentActivity = $derived(dataStore.recentActivity);
 
-	// Load dashboard data on mount
-	$effect(() => {
-		console.log('🔄 Dashboard component mounted, loading data...');
-		// Load immediately on mount
-		appState.loadDashboard();
+	// Initialize data store on mount
+	onMount(() => {
+		console.log('🔄 Dashboard component mounted, initializing data store...');
+		dataStore.initialize();
 	});
 </script>
 
@@ -45,12 +47,12 @@
 				Import Data
 			{/snippet}
 		</Button>
-		<Button variant="outline" onclick={appState.loadTestData}>
+		<Button variant="outline" onclick={dataStore.loadTestData}>
 			{#snippet children()}
 				Load Test Data
 			{/snippet}
 		</Button>
-		<Button variant="primary" onclick={appState.refresh} {loading}>
+		<Button variant="primary" onclick={dataStore.refresh} {loading}>
 			{#snippet children()}
 				Refresh
 			{/snippet}
@@ -66,18 +68,27 @@
 		{actions}
 	/>
 
+	<!-- Real-time Status Indicator -->
+	{#if dataStore.initialized && !loading}
+		<div class="rounded-md bg-green-50 p-2">
+			<p class="text-sm text-green-700">
+				🔄 Real-time updates active • Last updated: {dataStore.classrooms.lastUpdated?.toLocaleTimeString() || 'Never'}
+			</p>
+		</div>
+	{/if}
+
 	<!-- Error State -->
 	{#if error}
 		<Alert
 			variant="error"
 			title="Error loading dashboard"
 			dismissible
-			onDismiss={appState.clearError}
+			onDismiss={dataStore.clearError}
 		>
 			{#snippet children()}
 				{error}
 				<div class="mt-3">
-					<Button variant="secondary" size="sm" onclick={appState.refresh}>
+					<Button variant="secondary" size="sm" onclick={dataStore.refresh}>
 						{#snippet children()}
 							Try Again
 						{/snippet}
@@ -86,11 +97,6 @@
 			{/snippet}
 		</Alert>
 	{/if}
-
-	<!-- TEMP DEBUG: Force show data section for testing -->
-	<div class="mb-4 bg-yellow-100 p-2 text-xs">
-		🐛 Store State: loading={loading}, hasData={hasData}, classrooms={classrooms.length}
-	</div>
 
 	<!-- Content based on store data only -->
 	{#if loading && !hasData}
@@ -222,7 +228,7 @@
 								stroke-linecap="round"
 								stroke-linejoin="round"
 								stroke-width="2"
-								d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+								d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
 							/>
 						</svg>
 					</div>
@@ -281,25 +287,19 @@
 							>
 								<div class="flex items-start justify-between">
 									<div class="flex-1">
-										<h4 class="text-lg font-semibold text-gray-900">{classroom.name}</h4>
-										{#if classroom.section}
-											<p class="text-sm text-gray-600">{classroom.section}</p>
+										<h4 class="text-lg font-semibold text-gray-900">{classroom.displayName}</h4>
+										{#if classroom.description}
+											<p class="text-sm text-gray-600">{classroom.description}</p>
 										{/if}
 									</div>
 									<div class="ml-4 flex-shrink-0">
-										{#if classroom.ungradedSubmissions > 0}
-											<span
-												class="inline-flex items-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-800"
-											>
-												{classroom.ungradedSubmissions} pending
-											</span>
-										{:else}
-											<span
-												class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
-											>
-												Up to date
-											</span>
-										{/if}
+										<span
+											class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {classroom.statusBadge.variant === 'warning'
+												? 'bg-orange-100 text-orange-800'
+												: 'bg-green-100 text-green-800'}"
+										>
+											{classroom.statusBadge.text}
+										</span>
 									</div>
 								</div>
 

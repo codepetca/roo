@@ -1,12 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { api } from '$lib/api';
-	import type { Assignment } from '@shared/types';
+	import { dataStore } from '$lib/stores/data-store.svelte';
+	import { Button, Alert } from '$lib/components/ui';
+	import { LoadingSkeleton } from '$lib/components/dashboard';
+	import type { AssignmentModel } from '$lib/models/assignment.model';
 
-	// State using Svelte 5 runes
-	let assignments = $state<Assignment[]>([]);
-	let loading = $state(true);
-	let error = $state<string | null>(null);
+	// Reactive state from data store
+	let assignments = $derived(dataStore.assignments.all);
+	let loading = $derived(dataStore.loading);
+	let error = $derived(dataStore.error);
+
+	// Local filtering and search state
 	let searchQuery = $state('');
 	let activeFilter = $state<'all' | 'quizzes' | 'assignments'>('all');
 
@@ -16,74 +20,49 @@
 
 		// Filter by type
 		if (activeFilter === 'quizzes') {
-			filtered = filtered.filter((a) => a.isQuiz);
+			filtered = dataStore.assignments.quizzes;
 		} else if (activeFilter === 'assignments') {
-			filtered = filtered.filter((a) => !a.isQuiz);
+			filtered = dataStore.assignments.assignments;
 		}
 
-		// Filter by search query
+		// Filter by search query (client-side search)
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase().trim();
 			filtered = filtered.filter(
-				(a) => a.title.toLowerCase().includes(query) || a.description.toLowerCase().includes(query)
+				(a) => a.displayTitle.toLowerCase().includes(query) || 
+					   (a.description?.toLowerCase() || '').includes(query)
 			);
 		}
 
 		return filtered;
 	});
 
-	// Statistics for the current filter (computed but not displayed in current UI)
-	// let stats = $derived(() => {
-	//	const total = filteredAssignments.length;
-	//	const quizzes = filteredAssignments.filter((a) => a.isQuiz).length;
-	//	const regularAssignments = filteredAssignments.filter((a) => !a.isQuiz).length;
-	//
-	//	return { total, quizzes, regularAssignments };
-	// });
-
 	// Filter tabs configuration
-	const filterTabs = [
+	let filterTabs = $derived([
 		{ key: 'all' as const, label: 'All', count: assignments.length },
 		{
 			key: 'quizzes' as const,
 			label: 'Quizzes',
-			count: assignments.filter((a) => a.isQuiz).length
+			count: dataStore.assignments.quizzes.length
 		},
 		{
 			key: 'assignments' as const,
 			label: 'Assignments',
-			count: assignments.filter((a) => !a.isQuiz).length
+			count: dataStore.assignments.assignments.length
 		}
-	];
+	]);
 
-	async function loadAssignments() {
-		try {
-			loading = true;
-			error = null;
-			assignments = await api.listAssignments();
-		} catch (err) {
-			console.error('Failed to load assignments:', err);
-			error = err instanceof Error ? err.message : 'Failed to load assignments';
-		} finally {
-			loading = false;
-		}
+	// Manual refresh function
+	async function refreshAssignments() {
+		await dataStore.refresh();
 	}
 
-	function formatDate(
-		timestamp: { _seconds: number; _nanoseconds: number } | null | undefined
-	): string {
-		try {
-			if (timestamp && timestamp._seconds) {
-				return new Date(timestamp._seconds * 1000).toLocaleDateString();
-			}
-			return 'No date';
-		} catch {
-			return 'Invalid date';
-		}
-	}
-
+	// Initialize store if needed
 	onMount(() => {
-		loadAssignments();
+		if (!dataStore.initialized) {
+			console.log('🔄 Initializing data store from assignments page...');
+			dataStore.initialize();
+		}
 	});
 </script>
 
@@ -93,43 +72,73 @@
 		<div>
 			<h1 class="text-2xl font-bold text-gray-900">Assignments & Quizzes</h1>
 			<p class="mt-1 text-gray-600">
-				Manage your assignments and quizzes imported from Google Sheets
+				Manage your assignments and quizzes with real-time updates
 			</p>
 		</div>
-		<button
-			onclick={loadAssignments}
-			disabled={loading}
-			class="rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none disabled:opacity-50"
-		>
-			{#if loading}
-				<svg
-					class="mr-2 -ml-1 inline h-4 w-4 animate-spin"
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-				>
-					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
-					></circle>
-					<path
-						class="opacity-75"
-						fill="currentColor"
-						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-					></path>
-				</svg>
-				Refreshing...
-			{:else}
-				<svg class="mr-2 inline h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-					/>
-				</svg>
-				Refresh
+		<div class="flex gap-2">
+			<Button
+				variant="outline"
+				onclick={refreshAssignments}
+				disabled={loading}
+			>
+				{#if loading}
+					<svg
+						class="mr-2 -ml-1 inline h-4 w-4 animate-spin"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
+						<path
+							class="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+						></path>
+					</svg>
+					Refreshing...
+				{:else}
+					<svg class="mr-2 inline h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+						/>
+					</svg>
+					Refresh
+				{/if}
+			</Button>
+
+			<!-- Real-time Status -->
+			{#if dataStore.initialized}
+				<div class="rounded-md bg-green-50 px-3 py-2">
+					<p class="text-sm text-green-700">
+						🔄 Live updates
+					</p>
+				</div>
 			{/if}
-		</button>
+		</div>
 	</div>
+
+	<!-- Error State -->
+	{#if error}
+		<Alert
+			variant="error"
+			title="Error loading assignments"
+			dismissible
+			onDismiss={dataStore.clearError}
+		>
+			{#snippet children()}
+				{error}
+				<div class="mt-3">
+					<Button variant="secondary" size="sm" onclick={refreshAssignments}>
+						Try Again
+					</Button>
+				</div>
+			{/snippet}
+		</Alert>
+	{/if}
 
 	{#if loading && assignments.length === 0}
 		<!-- Loading State -->
@@ -142,33 +151,6 @@
 					{/each}
 				</div>
 			</div>
-		</div>
-	{:else if error}
-		<!-- Error State -->
-		<div class="rounded-lg border border-red-200 bg-red-50 p-6">
-			<div class="flex items-center">
-				<svg
-					class="mr-2 h-5 w-5 text-red-400"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
-				<h3 class="font-medium text-red-800">Error loading assignments</h3>
-			</div>
-			<p class="mt-1 text-red-700">{error}</p>
-			<button
-				onclick={loadAssignments}
-				class="mt-3 rounded-md bg-red-100 px-3 py-1 text-sm text-red-800 transition-colors hover:bg-red-200"
-			>
-				Try Again
-			</button>
 		</div>
 	{:else}
 		<!-- Filters and Search -->
@@ -215,11 +197,7 @@
 									? 'bg-blue-200 text-blue-800'
 									: 'bg-gray-200 text-gray-600'}"
 							>
-								{tab.key === 'all'
-									? assignments.length
-									: tab.key === 'quizzes'
-										? assignments.filter((a) => a.isQuiz).length
-										: assignments.filter((a) => !a.isQuiz).length}
+								{tab.count}
 							</span>
 						</button>
 					{/each}
@@ -286,14 +264,14 @@
 									<div class="min-w-0 flex-1">
 										<div class="mb-1 flex items-center space-x-2">
 											<h3 class="truncate text-lg font-semibold text-gray-900">
-												{assignment.title}
+												{assignment.displayTitle}
 											</h3>
 											<span
 												class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {assignment.isQuiz
 													? 'bg-green-100 text-green-800'
 													: 'bg-blue-100 text-blue-800'}"
 											>
-												{assignment.isQuiz ? 'Quiz' : 'Assignment'}
+												{assignment.typeLabel}
 											</span>
 										</div>
 
@@ -316,7 +294,7 @@
 														d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 													/>
 												</svg>
-												Due: {formatDate(assignment.dueDate)}
+												Due: {assignment.formatDueDate()}
 											</span>
 											<span class="flex items-center">
 												<svg
@@ -334,7 +312,25 @@
 												</svg>
 												{assignment.maxPoints} points
 											</span>
-											{#if assignment.isQuiz && assignment.formId}
+											{#if assignment.hasUngraded}
+												<span class="flex items-center text-orange-600">
+													<svg
+														class="mr-1 h-4 w-4"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke="currentColor"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+														/>
+													</svg>
+													{assignment.ungradedCount} ungraded
+												</span>
+											{/if}
+											{#if assignment.isAutoGradable()}
 												<span class="flex items-center text-green-600">
 													<svg
 														class="mr-1 h-4 w-4"

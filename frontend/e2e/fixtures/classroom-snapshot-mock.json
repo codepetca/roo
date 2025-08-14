@@ -14,10 +14,10 @@
 		"totalSubmissions": 1833
 	},
 	"teacher": {
-		"name": "Test Teacher",
+		"name": "Dev CodePet",
 		"isTeacher": true,
-		"displayName": "Test Teacher",
-		"email": "test.codepet@gmail.com"
+		"displayName": "Dev CodePet",
+		"email": "dev.codepet@gmail.com"
 	},
 	"classrooms": [
 		{
@@ -991,26 +991,26 @@
 			"creationTime": "2025-01-31T19:15:20.424Z",
 			"students": [
 				{
-					"lastName": "He",
-					"firstName": "Moses",
-					"gradedSubmissionCount": 0,
-					"displayName": "Charlie Clark",
+					"lastName": "Chan",
+					"firstName": "Stewart",
+					"gradedSubmissionCount": 7,
+					"displayName": "Stewart Chan",
 					"profile": {
 						"name": {
-							"fullName": "Moses He",
-							"familyName": "He",
-							"givenName": "Moses"
+							"fullName": "Stewart Chan",
+							"familyName": "Chan",
+							"givenName": "Stewart"
 						},
 						"photoUrl": "https://cdn.example.com/placeholder.png",
-						"emailAddress": "440030068@gapps.yrdsb.ca",
-						"id": "111100032418663696789"
+						"emailAddress": "stewart.chan@gapps.yrdsb.ca",
+						"id": "stewart-chan-user-id"
 					},
-					"submissionCount": 0,
-					"name": "Charlie Clark",
-					"id": "111100032418663696789",
-					"userId": "111100032418663696789",
+					"submissionCount": 8,
+					"name": "Stewart Chan",
+					"id": "stewart-chan",
+					"userId": "stewart-chan-user",
 					"courseId": "737123279360",
-					"email": "440030068@gapps.yrdsb.ca"
+					"email": "stewart.chan@gapps.yrdsb.ca"
 				},
 				{
 					"lastName": "Kuan",

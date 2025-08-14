@@ -33,8 +33,8 @@ async function addStudentEnrollment() {
     console.log('Starting student enrollment process...');
 
     // Student info
-    const studentEmail = 'stewart.chan@gapps.yrdsb.ca';
-    const studentName = 'Stewart Chan';
+    const studentEmail = 'stew.chan@gmail.com';
+    const studentName = 'Stew Chan';
     const teacherEmail = 'dev.codepet@gmail.com';
 
     // Get teacher's classrooms
@@ -60,7 +60,7 @@ async function addStudentEnrollment() {
         studentId: studentEmail, // Using email as student ID for now
         email: studentEmail,
         name: studentName,
-        firstName: 'Stewart',
+        firstName: 'Stew',
         lastName: 'Chan',
         displayName: studentName,
         enrolledAt: new Date(),

@@ -15,8 +15,8 @@ test.describe('Core Teacher Account Creation', () => {
 		await page.goto('/login');
 
 		// Go through the flow to signup form
-		await page.getByRole('button', { name: /teacher/i }).click();
-		await page.getByRole('button', { name: /email/i }).click();
+		await page.getByTestId('select-teacher-button').click();
+		await page.getByRole('button', { name: /email/i }).first().click();
 
 		// Switch to signup mode
 		const toggleBtn = page.getByTestId('toggle-auth-mode-button');
@@ -37,8 +37,8 @@ test.describe('Core Teacher Account Creation', () => {
 	test('should validate signup form fields', async ({ page }) => {
 		// Navigate to signup form
 		await page.goto('/login');
-		await page.getByRole('button', { name: /teacher/i }).click();
-		await page.getByRole('button', { name: /email/i }).click();
+		await page.getByTestId('select-teacher-button').click();
+		await page.getByRole('button', { name: /email/i }).first().click();
 		await page.getByTestId('toggle-auth-mode-button').click();
 
 		// Try submitting empty form
@@ -87,8 +87,8 @@ test.describe('Core Teacher Account Creation', () => {
 
 				// Try signing in with existing account
 				await page.goto('/login');
-				await page.getByRole('button', { name: /teacher/i }).click();
-				await page.getByRole('button', { name: /email/i }).click();
+				await page.getByTestId('select-teacher-button').click();
+				await page.getByRole('button', { name: /email/i }).first().click();
 
 				// Fill demo credentials or use the button
 				const demoBtn = page.getByText('Fill Demo Teacher Credentials');
@@ -118,8 +118,8 @@ test.describe('Core Teacher Account Creation', () => {
 	test('should handle existing account gracefully', async ({ page }) => {
 		// This test assumes the account might already exist from previous runs
 		await page.goto('/login');
-		await page.getByRole('button', { name: /teacher/i }).click();
-		await page.getByRole('button', { name: /email/i }).click();
+		await page.getByTestId('select-teacher-button').click();
+		await page.getByRole('button', { name: /email/i }).first().click();
 		await page.getByTestId('toggle-auth-mode-button').click();
 
 		// Fill the form with existing account details

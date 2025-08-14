@@ -1,0 +1,320 @@
+{
+	"snapshotMetadata": {
+		"fetchedAt": "2025-08-14T01:00:00.000Z",
+		"source": "google-classroom",
+		"version": "1.0.0",
+		"expiresAt": "2025-08-14T01:30:00.000Z"
+	},
+	"globalStats": {
+		"ungradedSubmissions": 2,
+		"totalStudents": 2,
+		"averageGrade": 86.67,
+		"totalClassrooms": 2,
+		"totalAssignments": 7,
+		"totalSubmissions": 8
+	},
+	"teacher": {
+		"name": "Test Teacher",
+		"isTeacher": true,
+		"displayName": "Test Teacher",
+		"email": "teacher@schoolemail.com"
+	},
+	"classrooms": [
+		{
+			"studentCount": 2,
+			"courseGroupEmail": "prog_fundamentals_test@example.com",
+			"assignments": [
+				{
+					"creationTime": "2025-01-16T10:00:00.000Z",
+					"dueDate": "2025-01-23T23:59:00.000Z",
+					"description": "Learn the basics of Karel robot programming. Move Karel through a simple maze and collect beepers.",
+					"updateTime": "2025-01-16T10:00:00.000Z",
+					"title": "Karel Robot Introduction",
+					"type": "assignment",
+					"maxScore": 100,
+					"points": 100,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/karel-intro",
+					"state": "PUBLISHED",
+					"id": "assign-karel-intro",
+					"submissionStats": {
+						"total": 2,
+						"graded": 2,
+						"submitted": 2,
+						"pending": 0
+					}
+				},
+				{
+					"creationTime": "2025-01-20T10:00:00.000Z",
+					"dueDate": "2025-01-27T23:59:00.000Z",
+					"description": "Test your understanding of variables and basic data types",
+					"updateTime": "2025-01-20T10:00:00.000Z",
+					"title": "Variables and Data Types Quiz",
+					"maxScore": 50,
+					"type": "form",
+					"points": 50,
+					"materials": {
+						"links": [],
+						"youtubeVideos": [],
+						"driveFiles": [],
+						"forms": [
+							{
+								"title": "Variables and Data Types Quiz",
+								"formUrl": "https://forms.example.com/variables-quiz",
+								"thumbnailUrl": "https://cdn.example.com/quiz-thumb.png"
+							}
+						]
+					},
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/variables-quiz",
+					"state": "PUBLISHED",
+					"id": "assign-variables-quiz",
+					"submissionStats": {
+						"total": 2,
+						"graded": 1,
+						"submitted": 2,
+						"pending": 1
+					}
+				},
+				{
+					"creationTime": "2025-02-01T10:00:00.000Z",
+					"dueDate": "2025-02-08T23:59:00.000Z",
+					"description": "Practice implementing for and while loops to solve various problems",
+					"updateTime": "2025-02-01T10:00:00.000Z",
+					"title": "Loop Practice Problems",
+					"type": "assignment",
+					"maxScore": 75,
+					"points": 75,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/loops-practice",
+					"state": "PUBLISHED",
+					"id": "assign-loops-practice",
+					"submissionStats": {
+						"total": 2,
+						"graded": 0,
+						"submitted": 1,
+						"pending": 1
+					}
+				},
+				{
+					"creationTime": "2025-02-10T10:00:00.000Z",
+					"dueDate": "2025-02-17T23:59:00.000Z",
+					"description": "Learn how to write and call functions. Create reusable code blocks.",
+					"updateTime": "2025-02-10T10:00:00.000Z",
+					"title": "Introduction to Functions",
+					"type": "assignment",
+					"maxScore": 100,
+					"points": 100,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/functions-intro",
+					"state": "PUBLISHED",
+					"id": "assign-functions-intro",
+					"submissionStats": {
+						"total": 2,
+						"graded": 0,
+						"submitted": 0,
+						"pending": 0
+					}
+				}
+			],
+			"creationTime": "2025-01-15T09:00:00.000Z",
+			"students": [
+				{
+					"lastName": "Student",
+					"firstName": "Test",
+					"gradedSubmissionCount": 2,
+					"displayName": "Test Student",
+					"profile": {
+						"name": {
+							"fullName": "Test Student",
+							"familyName": "Student",
+							"givenName": "Test"
+						},
+						"photoUrl": "https://cdn.example.com/placeholder.png",
+						"emailAddress": "student@test.com",
+						"id": "student-test-user-id"
+					},
+					"submissionCount": 3,
+					"name": "Test Student",
+					"id": "student-test",
+					"userId": "student-test-user",
+					"courseId": "classroom-prog-fundamentals",
+					"email": "student@test.com"
+				},
+				{
+					"lastName": "Learner",
+					"firstName": "Another",
+					"gradedSubmissionCount": 1,
+					"displayName": "Another Learner",
+					"profile": {
+						"name": {
+							"fullName": "Another Learner",
+							"familyName": "Learner",
+							"givenName": "Another"
+						},
+						"photoUrl": "https://cdn.example.com/placeholder.png",
+						"emailAddress": "another@test.com",
+						"id": "another-learner-user-id"
+					},
+					"submissionCount": 2,
+					"name": "Another Learner",
+					"id": "another-learner",
+					"userId": "another-learner-user",
+					"courseId": "classroom-prog-fundamentals",
+					"email": "another@test.com"
+				}
+			],
+			"descriptionHeading": "Learn programming fundamentals",
+			"guardianNotificationsEnabled": false,
+			"ownerId": "teacher@schoolemail.com",
+			"description": "Introduction to programming concepts and basic algorithms",
+			"updateTime": "2025-08-13T15:30:00.000Z",
+			"calendarId": "calendar_prog_fundamentals",
+			"alternateLink": "https://classroom.example.com/prog-fundamentals",
+			"section": "Period 1",
+			"teacherProfile": {
+				"name": {
+					"givenName": "Test",
+					"fullName": "Test Teacher",
+					"familyName": "Teacher"
+				},
+				"emailAddress": "teacher@schoolemail.com",
+				"id": "teacher-test-id",
+				"photoUrl": "https://cdn.example.com/teacher-photo.png"
+			},
+			"courseState": "ACTIVE",
+			"name": "Programming Fundamentals",
+			"id": "classroom-prog-fundamentals",
+			"enrollmentCode": "abc123",
+			"room": "Computer Lab 1",
+			"teacherFolder": {
+				"alternateLink": "https://drive.example.com/prog-fundamentals-folder",
+				"id": "folder-prog-fundamentals",
+				"title": "Programming Fundamentals - Teacher Resources"
+			},
+			"teacherGroupEmail": "prog_fundamentals_teachers@example.com",
+			"submissions": []
+		},
+		{
+			"studentCount": 1,
+			"courseGroupEmail": "web_dev_test@example.com",
+			"assignments": [
+				{
+					"creationTime": "2025-01-18T10:00:00.000Z",
+					"dueDate": "2025-01-25T23:59:00.000Z",
+					"description": "Create your first HTML webpage with proper structure, headings, paragraphs, and lists.",
+					"updateTime": "2025-01-18T10:00:00.000Z",
+					"title": "HTML Basics",
+					"type": "assignment",
+					"maxScore": 100,
+					"points": 100,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/html-basics",
+					"state": "PUBLISHED",
+					"id": "assign-html-basics",
+					"submissionStats": {
+						"total": 1,
+						"graded": 1,
+						"submitted": 1,
+						"pending": 0
+					}
+				},
+				{
+					"creationTime": "2025-02-01T10:00:00.000Z",
+					"dueDate": "2025-02-08T23:59:00.000Z",
+					"description": "Style your webpage with CSS. Add colors, fonts, and layout.",
+					"updateTime": "2025-02-01T10:00:00.000Z",
+					"title": "CSS Styling Challenge",
+					"type": "assignment",
+					"maxScore": 100,
+					"points": 100,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/css-styling",
+					"state": "PUBLISHED",
+					"id": "assign-css-styling",
+					"submissionStats": {
+						"total": 1,
+						"graded": 0,
+						"submitted": 1,
+						"pending": 1
+					}
+				},
+				{
+					"creationTime": "2025-02-15T10:00:00.000Z",
+					"dueDate": "2025-02-22T23:59:00.000Z",
+					"description": "Add interactive features to your webpage using JavaScript.",
+					"updateTime": "2025-02-15T10:00:00.000Z",
+					"title": "JavaScript Interactivity",
+					"type": "assignment",
+					"maxScore": 150,
+					"points": 150,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/js-interactive",
+					"state": "PUBLISHED",
+					"id": "assign-js-interactive",
+					"submissionStats": {
+						"total": 1,
+						"graded": 0,
+						"submitted": 0,
+						"pending": 0
+					}
+				}
+			],
+			"creationTime": "2025-01-15T11:00:00.000Z",
+			"students": [
+				{
+					"lastName": "Student",
+					"firstName": "Test",
+					"gradedSubmissionCount": 1,
+					"displayName": "Test Student",
+					"profile": {
+						"name": {
+							"fullName": "Test Student",
+							"familyName": "Student",
+							"givenName": "Test"
+						},
+						"photoUrl": "https://cdn.example.com/placeholder.png",
+						"emailAddress": "student@test.com",
+						"id": "student-test-user-id"
+					},
+					"submissionCount": 2,
+					"name": "Test Student",
+					"id": "student-test",
+					"userId": "student-test-user",
+					"courseId": "classroom-web-dev",
+					"email": "student@test.com"
+				}
+			],
+			"descriptionHeading": "Build modern websites",
+			"guardianNotificationsEnabled": false,
+			"ownerId": "teacher@schoolemail.com",
+			"description": "Learn HTML, CSS, and JavaScript for web development",
+			"updateTime": "2025-08-13T16:00:00.000Z",
+			"calendarId": "calendar_web_dev",
+			"alternateLink": "https://classroom.example.com/web-dev",
+			"section": "Period 3",
+			"teacherProfile": {
+				"name": {
+					"givenName": "Test",
+					"fullName": "Test Teacher",
+					"familyName": "Teacher"
+				},
+				"emailAddress": "teacher@schoolemail.com",
+				"id": "teacher-test-id",
+				"photoUrl": "https://cdn.example.com/teacher-photo.png"
+			},
+			"courseState": "ACTIVE",
+			"name": "Web Development",
+			"id": "classroom-web-dev",
+			"enrollmentCode": "web456",
+			"room": "Computer Lab 2",
+			"teacherFolder": {
+				"alternateLink": "https://drive.example.com/web-dev-folder",
+				"id": "folder-web-dev",
+				"title": "Web Development - Teacher Resources"
+			},
+			"teacherGroupEmail": "web_dev_teachers@example.com",
+			"submissions": []
+		}
+	]
+}

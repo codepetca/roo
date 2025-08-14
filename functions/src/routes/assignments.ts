@@ -4,6 +4,7 @@ import { db, getCurrentTimestamp, sanitizeDocument } from "../config/firebase";
 import { Assignment } from "../types";
 import { createAssignmentSchema, testWriteSchema } from "../schemas";
 import { handleRouteError, validateData, sendApiResponse } from "../middleware/validation";
+import { serializeTimestamps } from "../services/firestore-repository";
 import * as admin from "firebase-admin";
 
 /**
@@ -99,32 +100,17 @@ export async function listAssignments(req: Request, res: Response) {
       
       const gradedCount = gradedSnapshot.size;
       
-      // Helper function to safely convert Firebase Timestamp to API format
-      const safeTimestampConversion = (timestamp: any, fallbackTime?: admin.firestore.Timestamp) => {
-        if (timestamp && timestamp.seconds !== undefined && timestamp.nanoseconds !== undefined) {
-          return { _seconds: timestamp.seconds, _nanoseconds: timestamp.nanoseconds };
-        }
-        
-        // Use fallback timestamp or current time if no valid timestamp found
-        const fallback = fallbackTime || getCurrentTimestamp() as admin.firestore.Timestamp;
-        logger.warn(`Invalid timestamp found for assignment ${doc.id}, using fallback`, {
-          assignmentId: doc.id,
-          originalTimestamp: timestamp,
-          fallbackUsed: true
-        });
-        return { _seconds: fallback.seconds, _nanoseconds: fallback.nanoseconds };
-      };
-
-      return {
+      // Prepare assignment data with proper timestamp serialization
+      const assignmentData = {
         id: doc.id,
         title: data.title,
         description: data.description || "",
         maxPoints: data.maxPoints || 100,
         isQuiz: data.isQuiz || false,
         classroomId: data.classroomId || undefined,
-        dueDate: data.dueDate ? safeTimestampConversion(data.dueDate) : undefined,
-        createdAt: safeTimestampConversion(data.createdAt),
-        updatedAt: safeTimestampConversion(data.updatedAt, data.createdAt),
+        dueDate: data.dueDate || undefined,
+        createdAt: data.createdAt || getCurrentTimestamp(),
+        updatedAt: data.updatedAt || data.createdAt || getCurrentTimestamp(),
         gradingRubric: data.gradingRubric || {
           enabled: true,
           criteria: ["Content", "Grammar"],
@@ -135,6 +121,9 @@ export async function listAssignments(req: Request, res: Response) {
         submissionCount,
         gradedCount
       };
+
+      // Serialize timestamps to ISO strings for consistent API response
+      return serializeTimestamps(assignmentData);
     }));
 
     logger.info(`Retrieved ${assignments.length} assignments from Firestore`);

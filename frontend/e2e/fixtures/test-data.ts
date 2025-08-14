@@ -47,10 +47,10 @@ export const LARGE_DATASET = {
  */
 export function createMockTeacher(overrides: Partial<TeacherProfile> = {}): TeacherProfile {
 	return {
-		email: 'e2e.teacher@test.com',
-		name: 'E2E Test Teacher',
+		email: 'dev.codepet@gmail.com',
+		name: 'Dev CodePet',
 		isTeacher: true,
-		displayName: 'Prof. Test',
+		displayName: 'Dev CodePet',
 		...overrides
 	};
 }
@@ -62,6 +62,24 @@ export function createMockStudents(
 	count: number,
 	classroomId: string = 'classroom-1'
 ): StudentSnapshot[] {
+	const students: StudentSnapshot[] = [];
+
+	// Always include Stewart as the first student for testing
+	students.push({
+		id: 'stewart-chan',
+		email: 'stewart.chan@gapps.yrdsb.ca',
+		name: 'Stewart Chan',
+		firstName: 'Stewart',
+		lastName: 'Chan',
+		displayName: 'Stewart Chan',
+		userId: 'stewart-chan-user',
+		courseId: classroomId,
+		joinTime: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // Joined 15 days ago
+		overallGrade: 87.5, // Good student grade
+		submissionCount: 8,
+		gradedSubmissionCount: 7
+	});
+
 	const firstNames = [
 		'Alice',
 		'Bob',
@@ -87,12 +105,14 @@ export function createMockStudents(
 		'Lopez'
 	];
 
-	return Array.from({ length: count }, (_, index) => {
+	// Generate remaining students (count - 1 since Stewart is already added)
+	const remainingCount = Math.max(0, count - 1);
+	for (let index = 0; index < remainingCount; index++) {
 		const firstName = firstNames[index % firstNames.length];
 		const lastName = lastNames[Math.floor(index / firstNames.length) % lastNames.length];
-		const studentNumber = String(index + 1).padStart(3, '0');
+		const studentNumber = String(index + 2).padStart(3, '0'); // Start from 002 since Stewart is 001
 
-		return {
+		students.push({
 			id: `student-${studentNumber}`,
 			email: `student${studentNumber}@test.com`,
 			name: `${firstName} ${lastName}`,
@@ -105,8 +125,10 @@ export function createMockStudents(
 			overallGrade: Math.round((Math.random() * 40 + 60) * 10) / 10, // Random grade between 60-100
 			submissionCount: Math.floor(Math.random() * 10) + 1,
 			gradedSubmissionCount: Math.floor(Math.random() * 8) + 1
-		};
-	});
+		});
+	}
+
+	return students;
 }
 
 /**
