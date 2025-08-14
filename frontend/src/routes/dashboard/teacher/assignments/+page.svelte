@@ -29,8 +29,9 @@
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase().trim();
 			filtered = filtered.filter(
-				(a) => a.displayTitle.toLowerCase().includes(query) || 
-					   (a.description?.toLowerCase() || '').includes(query)
+				(a) =>
+					a.displayTitle.toLowerCase().includes(query) ||
+					(a.description?.toLowerCase() || '').includes(query)
 			);
 		}
 
@@ -71,16 +72,10 @@
 	<div class="flex items-start justify-between">
 		<div>
 			<h1 class="text-2xl font-bold text-gray-900">Assignments & Quizzes</h1>
-			<p class="mt-1 text-gray-600">
-				Manage your assignments and quizzes with real-time updates
-			</p>
+			<p class="mt-1 text-gray-600">Manage your assignments and quizzes with real-time updates</p>
 		</div>
 		<div class="flex gap-2">
-			<Button
-				variant="outline"
-				onclick={refreshAssignments}
-				disabled={loading}
-			>
+			<Button variant="outline" onclick={refreshAssignments} disabled={loading}>
 				{#if loading}
 					<svg
 						class="mr-2 -ml-1 inline h-4 w-4 animate-spin"
@@ -113,9 +108,7 @@
 			<!-- Real-time Status -->
 			{#if dataStore.initialized}
 				<div class="rounded-md bg-green-50 px-3 py-2">
-					<p class="text-sm text-green-700">
-						🔄 Live updates
-					</p>
+					<p class="text-sm text-green-700">🔄 Live updates</p>
 				</div>
 			{/if}
 		</div>
@@ -132,9 +125,7 @@
 			{#snippet children()}
 				{error}
 				<div class="mt-3">
-					<Button variant="secondary" size="sm" onclick={refreshAssignments}>
-						Try Again
-					</Button>
+					<Button variant="secondary" size="sm" onclick={refreshAssignments}>Try Again</Button>
 				</div>
 			{/snippet}
 		</Alert>

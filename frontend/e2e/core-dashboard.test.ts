@@ -6,7 +6,14 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { signInAsTeacher, verifyDashboardState, navigateDashboardSafely, waitForPageReady, debugPage, TestDataHelpers } from './test-helpers';
+import {
+	signInAsTeacher,
+	verifyDashboardState,
+	navigateDashboardSafely,
+	waitForPageReady,
+	debugPage,
+	TestDataHelpers
+} from './test-helpers';
 
 test.describe('Core Dashboard Data Display', () => {
 	test.beforeEach(async ({ page }) => {
@@ -61,7 +68,7 @@ test.describe('Core Dashboard Data Display', () => {
 				// Wait longer and re-check
 				await page.waitForTimeout(10000);
 				const finalState = await verifyDashboardState(page);
-				
+
 				if (finalState === 'loading') {
 					console.log('⚠️ Dashboard took too long to load - treating as functional but slow');
 				} else {
@@ -84,7 +91,12 @@ test.describe('Core Dashboard Data Display', () => {
 
 				let foundDataElements = 0;
 				for (const check of dataChecks) {
-					if (await page.locator(check.selector).isVisible({ timeout: 3000 }).catch(() => false)) {
+					if (
+						await page
+							.locator(check.selector)
+							.isVisible({ timeout: 3000 })
+							.catch(() => false)
+					) {
 						console.log(`✓ Found ${check.name}`);
 						foundDataElements++;
 					}
@@ -93,10 +105,14 @@ test.describe('Core Dashboard Data Display', () => {
 				if (foundDataElements > 0) {
 					console.log(`✓ Found ${foundDataElements}/${dataChecks.length} data elements`);
 				} else {
-					console.log('⚠️ Data state detected but no specific elements found - this might be expected');
+					console.log(
+						'⚠️ Data state detected but no specific elements found - this might be expected'
+					);
 				}
 			} else if (dashboardState === 'empty') {
-				console.log('⚪ Dashboard shows empty state - this is acceptable for clean test environment');
+				console.log(
+					'⚪ Dashboard shows empty state - this is acceptable for clean test environment'
+				);
 
 				// Verify empty state UI elements
 				const emptyStateElements = [
@@ -109,14 +125,21 @@ test.describe('Core Dashboard Data Display', () => {
 
 				let foundEmptyElements = 0;
 				for (const selector of emptyStateElements) {
-					if (await page.locator(selector).isVisible({ timeout: 3000 }).catch(() => false)) {
+					if (
+						await page
+							.locator(selector)
+							.isVisible({ timeout: 3000 })
+							.catch(() => false)
+					) {
 						console.log(`✓ Found empty state UI: ${selector}`);
 						foundEmptyElements++;
 					}
 				}
 
 				if (foundEmptyElements === 0) {
-					console.log('⚠️ Empty state detected but no typical empty UI found - might be minimal design');
+					console.log(
+						'⚠️ Empty state detected but no typical empty UI found - might be minimal design'
+					);
 				} else {
 					console.log(`✓ Found ${foundEmptyElements} empty state indicators`);
 				}
@@ -142,7 +165,7 @@ test.describe('Core Dashboard Data Display', () => {
 			const essentialElements = [
 				'h1, h2, [data-testid="dashboard-heading"]' // At minimum, should have a page heading
 			];
-			
+
 			const optionalElements = [
 				'nav, .navigation, .nav-menu, .sidebar', // Navigation (nice to have)
 				'main, .main-content, [data-testid="dashboard-content"]' // Main content area (nice to have)
@@ -151,7 +174,12 @@ test.describe('Core Dashboard Data Display', () => {
 			// Check essential elements (must have at least one)
 			let hasEssentials = false;
 			for (const element of essentialElements) {
-				if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+				if (
+					await page
+						.locator(element)
+						.isVisible({ timeout: 3000 })
+						.catch(() => false)
+				) {
 					console.log(`✓ Found essential dashboard structure: ${element}`);
 					hasEssentials = true;
 					break;
@@ -161,7 +189,12 @@ test.describe('Core Dashboard Data Display', () => {
 			// Check optional elements (warn but don't fail)
 			let optionalCount = 0;
 			for (const element of optionalElements) {
-				if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+				if (
+					await page
+						.locator(element)
+						.isVisible({ timeout: 3000 })
+						.catch(() => false)
+				) {
 					console.log(`✓ Found optional dashboard structure: ${element}`);
 					optionalCount++;
 				} else {
@@ -172,22 +205,29 @@ test.describe('Core Dashboard Data Display', () => {
 			if (!hasEssentials) {
 				throw new Error('Dashboard lacks basic structure (no headings found)');
 			}
-			
-			console.log(`✓ Dashboard structure valid (${optionalCount}/${optionalElements.length} optional elements found)`);
+
+			console.log(
+				`✓ Dashboard structure valid (${optionalCount}/${optionalElements.length} optional elements found)`
+			);
 
 			// State-specific validation (informational, not required for test to pass)
 			if (dashboardState === 'populated') {
 				console.log('✓ Dashboard structure valid with populated data');
-				
+
 				// Look for data-related elements
 				const dataElements = [
 					'text=/classroom|student|assignment/i',
 					'[data-testid*="card"], [data-testid*="list"]',
 					'table, .table, .data-table'
 				];
-				
+
 				for (const dataElement of dataElements) {
-					if (await page.locator(dataElement).isVisible({ timeout: 2000 }).catch(() => false)) {
+					if (
+						await page
+							.locator(dataElement)
+							.isVisible({ timeout: 2000 })
+							.catch(() => false)
+					) {
 						console.log(`✓ Found data element: ${dataElement}`);
 						break;
 					}
@@ -204,20 +244,25 @@ test.describe('Core Dashboard Data Display', () => {
 
 				let foundGuidance = false;
 				for (const helpful of helpfulElements) {
-					if (await page.locator(helpful).isVisible({ timeout: 2000 }).catch(() => false)) {
+					if (
+						await page
+							.locator(helpful)
+							.isVisible({ timeout: 2000 })
+							.catch(() => false)
+					) {
 						console.log(`✓ Found helpful guidance: ${helpful}`);
 						foundGuidance = true;
 						break;
 					}
 				}
-				
+
 				if (!foundGuidance) {
 					console.log('⚠️ No guidance elements found in empty state - user may need direction');
 				}
 			} else if (dashboardState === 'error') {
 				throw new Error(`Dashboard is in error state: ${dashboardState}`);
 			}
-			
+
 			console.log('✓ Dashboard structure test completed successfully');
 		} catch (error) {
 			await debugPage(page, 'dashboard-structure-failure');
@@ -255,11 +300,13 @@ test.describe('Core Dashboard Data Display', () => {
 
 							// Check if navigation occurred
 							const currentUrl = page.url();
-							const navigationSuccess = 
+							const navigationSuccess =
 								currentUrl.includes('classroom') ||
 								currentUrl.includes('assignment') ||
-								await page.locator('text=/assignment|submission|student.*list|classroom.*detail/i')
-									.isVisible({ timeout: 5000 }).catch(() => false);
+								(await page
+									.locator('text=/assignment|submission|student.*list|classroom.*detail/i')
+									.isVisible({ timeout: 5000 })
+									.catch(() => false));
 
 							if (navigationSuccess) {
 								console.log('✓ Classroom navigation successful');
@@ -289,7 +336,12 @@ test.describe('Core Dashboard Data Display', () => {
 				];
 
 				for (const option of setupOptions) {
-					if (await page.locator(option).isVisible({ timeout: 2000 }).catch(() => false)) {
+					if (
+						await page
+							.locator(option)
+							.isVisible({ timeout: 2000 })
+							.catch(() => false)
+					) {
 						console.log(`✓ Found setup option: ${option}`);
 						break;
 					}
@@ -335,10 +387,15 @@ test.describe('Core Dashboard Data Display', () => {
 					];
 
 					for (const indicator of assignmentIndicators) {
-						if (await page.locator(indicator).isVisible({ timeout: 3000 }).catch(() => false)) {
+						if (
+							await page
+								.locator(indicator)
+								.isVisible({ timeout: 3000 })
+								.catch(() => false)
+						) {
 							assignmentAreaFound = true;
 							console.log(`✓ Found assignment area on ${url}`);
-							
+
 							// Check for state-specific content
 							if (dashboardState === 'populated') {
 								const dataElements = [
@@ -347,9 +404,14 @@ test.describe('Core Dashboard Data Display', () => {
 									'[data-testid="assignment-list-item"]',
 									'text=/[0-9]+.*assignment/i'
 								];
-								
+
 								for (const dataElement of dataElements) {
-									if (await page.locator(dataElement).isVisible({ timeout: 2000 }).catch(() => false)) {
+									if (
+										await page
+											.locator(dataElement)
+											.isVisible({ timeout: 2000 })
+											.catch(() => false)
+									) {
 										console.log(`✓ Found assignment data: ${dataElement}`);
 										break;
 									}
@@ -360,9 +422,14 @@ test.describe('Core Dashboard Data Display', () => {
 									'text=/create.*first.*assignment/i',
 									'button:has-text("Create"), button:has-text("Add")'
 								];
-								
+
 								for (const emptyElement of emptyElements) {
-									if (await page.locator(emptyElement).isVisible({ timeout: 2000 }).catch(() => false)) {
+									if (
+										await page
+											.locator(emptyElement)
+											.isVisible({ timeout: 2000 })
+											.catch(() => false)
+									) {
 										console.log(`✓ Found assignment empty state: ${emptyElement}`);
 										break;
 									}

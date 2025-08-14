@@ -129,7 +129,7 @@
 
 					// Update auth store manually since we can't use Firebase custom tokens
 					const { auth } = await import('$lib/stores/auth.svelte');
-					
+
 					// Create an AuthUser object for the auth store
 					const studentUser = {
 						uid: result.userProfile.uid,
@@ -190,9 +190,9 @@
 	}
 </script>
 
-<div class="space-y-4">
+<div class="space-y-4" data-testid="student-passcode-auth-form">
 	{#if error}
-		<div class="rounded-md bg-red-50 p-4">
+		<div class="rounded-md bg-red-50 p-4" data-testid="auth-error-message">
 			<div class="flex">
 				<div class="flex-shrink-0">
 					<svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
@@ -214,7 +214,7 @@
 	{/if}
 
 	{#if success}
-		<div class="rounded-md bg-green-50 p-4">
+		<div class="rounded-md bg-green-50 p-4" data-testid="auth-success-message">
 			<div class="flex">
 				<div class="flex-shrink-0">
 					<svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
@@ -236,7 +236,7 @@
 	{/if}
 
 	<!-- Main Login Form - Always Visible -->
-	<div class="space-y-4">
+	<div class="space-y-4" data-testid="student-login-form">
 		<div class="text-center">
 			<h3 class="mb-2 text-lg font-medium text-gray-900">Student Login</h3>
 			<p class="text-sm text-gray-600">Enter your email and permanent login code</p>
@@ -250,6 +250,7 @@
 				id="email"
 				type="email"
 				bind:value={email}
+				data-testid="email-input"
 				placeholder="your.name@schooldomain.edu"
 				disabled={loading}
 				class="w-full"
@@ -265,6 +266,7 @@
 				id="passcode"
 				type="text"
 				bind:value={passcode}
+				data-testid="passcode-input"
 				placeholder="ABC12"
 				disabled={loading}
 				maxlength="5"
@@ -277,6 +279,7 @@
 		<Button
 			onclick={handleSignIn}
 			disabled={loading || !email || passcode.length !== 5}
+			data-testid="submit-auth-button"
 			class="w-full"
 		>
 			{#if loading}
@@ -308,6 +311,7 @@
 					<button
 						type="button"
 						onclick={toggleRequestHelp}
+						data-testid="request-passcode-button"
 						disabled={loading}
 						class="font-medium text-blue-600 hover:text-blue-500 focus:underline focus:outline-none"
 					>
@@ -321,6 +325,7 @@
 						<Button
 							onclick={handleRequestPasscode}
 							disabled={loading || !email}
+							data-testid="send-passcode-button"
 							variant="secondary"
 							class="w-full"
 						>
@@ -329,6 +334,7 @@
 						<button
 							type="button"
 							onclick={toggleRequestHelp}
+							data-testid="cancel-request-button"
 							disabled={loading}
 							class="text-sm text-gray-600 hover:text-gray-800"
 						>

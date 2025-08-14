@@ -102,6 +102,12 @@ export const firebaseAuth = firebase.auth;
 export const firestore = firebase.db;
 export const firebaseFunctions = firebase.functions;
 
+// Expose Firebase services to global scope for E2E testing
+if (typeof window !== 'undefined') {
+	(window as any).firebaseAuth = firebaseAuth;
+	(window as any).firebaseFunctions = firebaseFunctions;
+}
+
 // Configure Google provider with required scopes for teachers
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/spreadsheets');

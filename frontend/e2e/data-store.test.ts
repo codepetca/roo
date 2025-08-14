@@ -49,7 +49,7 @@ test.describe('Data Store Tests', () => {
 
 		// Check initial loading state
 		const initialLoadingElements = page.locator('.animate-pulse, .animate-spin, text=/loading/i');
-		const hasInitialLoading = await initialLoadingElements.count() > 0;
+		const hasInitialLoading = (await initialLoadingElements.count()) > 0;
 
 		console.log('✓ Initial loading state present:', hasInitialLoading);
 
@@ -77,7 +77,7 @@ test.describe('Data Store Tests', () => {
 
 		// Test reactive updates by triggering a refresh
 		const refreshButton = page.getByRole('button', { name: /refresh/i });
-		
+
 		if (await refreshButton.isVisible({ timeout: 3000 })) {
 			// Monitor state changes during refresh
 			const stateBeforeRefresh = await page.evaluate(() => {
@@ -200,7 +200,7 @@ test.describe('Data Store Tests', () => {
 			console.log('✓ Error handling test:', errorHandling);
 			expect(errorHandling.setError).toBe(true);
 			expect(errorHandling.clearError).toBe(true);
-			
+
 			if (errorHandling.errorAfterSet) {
 				expect(errorHandling.loadingAfterError).toBe(false); // Loading should stop on error
 			}
@@ -229,7 +229,7 @@ test.describe('Data Store Tests', () => {
 
 			// Test selection methods
 			const firstClassroomId = classrooms[0].id;
-			
+
 			return {
 				hasSelectMethod: typeof dataStore.selectClassroom === 'function',
 				hasClearSelectionMethod: typeof dataStore.clearSelections === 'function',
@@ -245,7 +245,7 @@ test.describe('Data Store Tests', () => {
 			console.log('✓ Selection state test:', selectionTest);
 			expect(selectionTest.hasSelectMethod).toBe(true);
 			expect(selectionTest.hasClearSelectionMethod).toBe(true);
-			
+
 			// Test actual selection
 			if (selectionTest.firstClassroomId) {
 				await page.evaluate((classroomId) => {
@@ -295,7 +295,7 @@ test.describe('Data Store Tests', () => {
 		} else {
 			console.log('✓ Derived state test:', derivedStateTest);
 			expect(derivedStateTest.hasDashboardStats).toBe(true);
-			
+
 			// Derived stats should be consistent with raw data
 			if (derivedStateTest.classroomCount > 0) {
 				expect(derivedStateTest.totalClassrooms).toEqual(derivedStateTest.classroomCount);
@@ -323,7 +323,7 @@ test.describe('Data Store Tests', () => {
 			// Test cleanup method (if available)
 			if (typeof dataStore.cleanup === 'function') {
 				dataStore.cleanup();
-				
+
 				const afterCleanup = {
 					initialized: dataStore.initialized,
 					classroomCount: dataStore.classrooms?.count || 0,
@@ -348,7 +348,7 @@ test.describe('Data Store Tests', () => {
 			console.log(`⚠️ Cleanup test failed: ${cleanupTest.error}`);
 		} else {
 			console.log('✓ Data store cleanup test:', cleanupTest);
-			
+
 			if (cleanupTest.hasCleanupMethod) {
 				expect(cleanupTest.afterCleanup.initialized).toBe(false);
 				expect(cleanupTest.afterCleanup.classroomCount).toBe(0);
@@ -390,7 +390,7 @@ test.describe('Data Store Tests', () => {
 
 		// Essential state should persist
 		expect(stateAfterNavigation.initialized).toBe(true);
-		
+
 		// User info should persist
 		if (initialState.currentUser) {
 			expect(stateAfterNavigation.currentUser).toBe(true);
@@ -408,11 +408,11 @@ test.describe('Data Store Tests', () => {
 
 			// Try to trigger multiple operations simultaneously
 			const operations = [];
-			
+
 			if (typeof dataStore.refresh === 'function') {
 				operations.push(dataStore.refresh());
 			}
-			
+
 			if (typeof dataStore.loadTestData === 'function') {
 				operations.push(Promise.resolve(dataStore.loadTestData()));
 			}
@@ -424,7 +424,7 @@ test.describe('Data Store Tests', () => {
 			// Wait for all operations
 			try {
 				await Promise.all(operations);
-				
+
 				return {
 					operationCount: operations.length,
 					success: true,
@@ -447,7 +447,7 @@ test.describe('Data Store Tests', () => {
 			console.log(`⚠️ Concurrency test limitation: ${concurrencyTest.error}`);
 		} else {
 			console.log('✓ Concurrency test:', concurrencyTest);
-			
+
 			if (concurrencyTest.success) {
 				expect(concurrencyTest.finalState.initialized).toBe(true);
 			}

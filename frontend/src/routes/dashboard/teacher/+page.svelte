@@ -6,6 +6,7 @@
 	import { PageHeader, LoadingSkeleton } from '$lib/components/dashboard';
 	import StudentResetManager from '$lib/components/auth/StudentResetManager.svelte';
 	import StudentPasscodeSender from '$lib/components/auth/StudentPasscodeSender.svelte';
+	import { PUBLIC_USE_EMULATORS } from '$env/static/public';
 
 	// Handle classroom selection
 	function handleClassroomSelect(classroomId: string) {
@@ -47,11 +48,6 @@
 				Import Data
 			{/snippet}
 		</Button>
-		<Button variant="outline" onclick={dataStore.loadTestData}>
-			{#snippet children()}
-				Load Test Data
-			{/snippet}
-		</Button>
 		<Button variant="primary" onclick={dataStore.refresh} {loading}>
 			{#snippet children()}
 				Refresh
@@ -72,7 +68,8 @@
 	{#if dataStore.initialized && !loading}
 		<div class="rounded-md bg-green-50 p-2">
 			<p class="text-sm text-green-700">
-				🔄 Real-time updates active • Last updated: {dataStore.classrooms.lastUpdated?.toLocaleTimeString() || 'Never'}
+				🔄 Real-time updates active • Last updated: {dataStore.classrooms.lastUpdated?.toLocaleTimeString() ||
+					'Never'}
 			</p>
 		</div>
 	{/if}
@@ -120,17 +117,43 @@
 						/>
 					</svg>
 
-					<h3 class="mt-2 text-sm font-medium text-gray-900">No Data Available</h3>
+					<h3 class="mt-2 text-sm font-medium text-gray-900">No Classroom Data Found</h3>
 					<p class="mt-1 text-sm text-gray-500">
-						Import your classroom data to get started with the dashboard.
+						{#if teacher?.email}
+							No classrooms found for {teacher.email}.
+							{#if teacher.email === 'dev.codepet@gmail.com' || teacher.email === 'test.codepet@gmail.com'}
+								This account has test data available. Try refreshing the page.
+							{:else}
+								Import your classroom data to get started.
+							{/if}
+						{:else}
+							Import your classroom data to get started with the dashboard.
+						{/if}
 					</p>
-					<div class="mt-4">
-						<Button variant="primary" onclick={goToDataImport}>
+					<div class="mt-4 space-y-2">
+						<Button variant="primary" onclick={dataStore.refresh}>
 							{#snippet children()}
-								Import Classroom Data
+								Refresh Data
 							{/snippet}
 						</Button>
+						<div>
+							<Button variant="secondary" onclick={goToDataImport}>
+								{#snippet children()}
+									Import Classroom Data
+								{/snippet}
+							</Button>
+						</div>
 					</div>
+
+					{#if teacher?.email}
+						<div class="mt-6 rounded border bg-gray-50 p-3 text-xs text-gray-400">
+							<strong>Debug Info:</strong><br />
+							Logged in as: {teacher.email}<br />
+							School Email: {teacher.schoolEmail || 'Not set'}<br />
+							Role: {teacher.role}<br />
+							Environment: {PUBLIC_USE_EMULATORS === 'true' ? 'Emulators' : 'Staging Firebase'}
+						</div>
+					{/if}
 				</div>
 			{/snippet}
 		</Card>
@@ -294,7 +317,8 @@
 									</div>
 									<div class="ml-4 flex-shrink-0">
 										<span
-											class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {classroom.statusBadge.variant === 'warning'
+											class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {classroom
+												.statusBadge.variant === 'warning'
 												? 'bg-orange-100 text-orange-800'
 												: 'bg-green-100 text-green-800'}"
 										>

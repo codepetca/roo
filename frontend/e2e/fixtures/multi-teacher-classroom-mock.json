@@ -21,7 +21,7 @@
 			"isTeacher": true
 		},
 		{
-			"email": "teacher@example.com", 
+			"email": "teacher@example.com",
 			"name": "Example Teacher",
 			"displayName": "Example Teacher",
 			"isTeacher": true

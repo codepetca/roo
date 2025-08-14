@@ -24,6 +24,8 @@ console.log(`📊 Generated data:`);
 console.log(`   - Teacher: ${mockSnapshot.teacher.email}`);
 console.log(`   - Classrooms: ${mockSnapshot.classrooms.length}`);
 console.log(`   - Students: ${mockSnapshot.globalStats.totalStudents}`);
-console.log(`   - Stewart included: ${mockSnapshot.classrooms.some(c => 
-    c.students.some(s => s.email === 'stewart.chan@gapps.yrdsb.ca')
-)}`);
+console.log(
+	`   - Stewart included: ${mockSnapshot.classrooms.some((c) =>
+		c.students.some((s) => s.email === 'stewart.chan@gapps.yrdsb.ca')
+	)}`
+);

@@ -13,11 +13,13 @@
 	// Student-specific derived statistics
 	let totalGrades = $derived(myGrades.length);
 	let averageScore = $derived(
-		myGrades.length === 0 ? 0 : Math.round(
-			myGrades.reduce((sum, grade) => {
-				return sum + (grade.score / grade.maxScore) * 100;
-			}, 0) / myGrades.length
-		)
+		myGrades.length === 0
+			? 0
+			: Math.round(
+					myGrades.reduce((sum, grade) => {
+						return sum + (grade.score / grade.maxScore) * 100;
+					}, 0) / myGrades.length
+				)
 	);
 	let completedAssignments = $derived(myGrades.length);
 	let totalAssignments = $derived(assignments.length);

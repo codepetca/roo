@@ -105,21 +105,36 @@ describe('API Client', () => {
 	});
 
 	describe('Assignments API', () => {
-		const mockAssignments: Assignment[] = [
+		// Raw API response (what the server sends - ISO strings)
+		const mockAssignmentResponse = [
 			{
 				id: 'assignment-1',
 				classroomId: 'classroom-1',
 				title: 'Test Assignment',
 				description: 'A test assignment',
 				dueDate: '2022-01-20T12:00:00.000Z',
-				maxPoints: 100,
-				gradingRubric: {
+				maxScore: 100,
+				rubric: {
 					enabled: true,
-					criteria: ['Content', 'Grammar'],
-					promptTemplate: 'Grade this assignment'
+					criteria: [
+						{
+							id: 'content-1',
+							title: 'Content',
+							description: 'Quality of content',
+							maxPoints: 50
+						},
+						{
+							id: 'grammar-1',
+							title: 'Grammar',
+							description: 'Grammar and style',
+							maxPoints: 50
+						}
+					]
 				},
-				isQuiz: false,
-				formId: undefined,
+				status: 'published',
+				submissionCount: 0,
+				gradedCount: 0,
+				pendingCount: 0,
 				createdAt: '2022-01-20T12:00:00.000Z',
 				updatedAt: '2022-01-20T12:00:00.000Z'
 			},
@@ -129,15 +144,86 @@ describe('API Client', () => {
 				title: 'Test Quiz',
 				description: 'A test quiz',
 				dueDate: '2022-01-20T12:00:00.000Z',
-				maxPoints: 50,
-				gradingRubric: {
+				maxScore: 50,
+				rubric: {
 					enabled: true,
-					criteria: ['Correctness']
+					criteria: [
+						{
+							id: 'correctness-1',
+							title: 'Correctness',
+							description: 'Answer accuracy',
+							maxPoints: 50
+						}
+					]
 				},
-				isQuiz: true,
-				formId: 'form-123',
+				status: 'published',
+				type: 'quiz',
+				submissionCount: 0,
+				gradedCount: 0,
+				pendingCount: 0,
 				createdAt: '2022-01-20T12:00:00.000Z',
 				updatedAt: '2022-01-20T12:00:00.000Z'
+			}
+		];
+
+		// Expected result after schema transformation (Date objects)
+		const expectedAssignments: Assignment[] = [
+			{
+				id: 'assignment-1',
+				classroomId: 'classroom-1',
+				title: 'Test Assignment',
+				description: 'A test assignment',
+				dueDate: new Date('2022-01-20T12:00:00.000Z'),
+				maxScore: 100,
+				rubric: {
+					enabled: true,
+					criteria: [
+						{
+							id: 'content-1',
+							title: 'Content',
+							description: 'Quality of content',
+							maxPoints: 50
+						},
+						{
+							id: 'grammar-1',
+							title: 'Grammar',
+							description: 'Grammar and style',
+							maxPoints: 50
+						}
+					]
+				},
+				status: 'published',
+				submissionCount: 0,
+				gradedCount: 0,
+				pendingCount: 0,
+				createdAt: new Date('2022-01-20T12:00:00.000Z'),
+				updatedAt: new Date('2022-01-20T12:00:00.000Z')
+			},
+			{
+				id: 'quiz-1',
+				classroomId: 'classroom-1',
+				title: 'Test Quiz',
+				description: 'A test quiz',
+				dueDate: new Date('2022-01-20T12:00:00.000Z'),
+				maxScore: 50,
+				rubric: {
+					enabled: true,
+					criteria: [
+						{
+							id: 'correctness-1',
+							title: 'Correctness',
+							description: 'Answer accuracy',
+							maxPoints: 50
+						}
+					]
+				},
+				status: 'published',
+				type: 'quiz',
+				submissionCount: 0,
+				gradedCount: 0,
+				pendingCount: 0,
+				createdAt: new Date('2022-01-20T12:00:00.000Z'),
+				updatedAt: new Date('2022-01-20T12:00:00.000Z')
 			}
 		];
 
@@ -147,7 +233,7 @@ describe('API Client', () => {
 				json: () =>
 					Promise.resolve({
 						success: true,
-						data: mockAssignments
+						data: mockAssignmentResponse
 					})
 			});
 
@@ -156,12 +242,12 @@ describe('API Client', () => {
 			expect(mockFetch).toHaveBeenCalledWith(
 				'http://localhost:5001/test-project/us-central1/api/assignments',
 				expect.objectContaining({
-					headers: {
+					headers: expect.objectContaining({
 						'Content-Type': 'application/json'
-					}
+					})
 				})
 			);
-			expect(result).toEqual(mockAssignments);
+			expect(result).toEqual(expectedAssignments);
 		});
 
 		it('should handle empty assignments list', async () => {
@@ -179,7 +265,8 @@ describe('API Client', () => {
 		});
 
 		it('should create assignment successfully', async () => {
-			const newAssignment = mockAssignments[0];
+			const newAssignment = mockAssignmentResponse[0];
+			const expectedAssignment = expectedAssignments[0];
 			const createRequest = {
 				title: 'Test Assignment',
 				description: 'A test assignment',
@@ -204,12 +291,13 @@ describe('API Client', () => {
 					body: JSON.stringify(createRequest)
 				})
 			);
-			expect(result).toEqual(newAssignment);
+			expect(result).toEqual(expectedAssignment);
 		});
 	});
 
 	describe('Submissions API', () => {
-		const mockSubmissions: Submission[] = [
+		// Raw API response (what the server sends - ISO strings)
+		const mockSubmissionResponse = [
 			{
 				id: 'submission-1',
 				assignmentId: 'assignment-1',
@@ -217,13 +305,40 @@ describe('API Client', () => {
 				studentId: 'student-1',
 				studentEmail: 'student@test.com',
 				studentName: 'Test Student',
-				submittedAt: '2022-01-20T12:00:00.000Z',
-				documentUrl: 'https://example.com/doc',
-				status: 'submitted',
+				version: 1,
+				isLatest: true,
 				content: 'Student submission content',
+				attachments: [],
+				status: 'submitted',
+				submittedAt: '2022-01-20T12:00:00.000Z',
+				source: 'roo-direct',
+				late: false,
 				grade: null,
 				createdAt: '2022-01-20T12:00:00.000Z',
 				updatedAt: '2022-01-20T12:00:00.000Z'
+			}
+		];
+
+		// Expected result after schema transformation (Date objects)
+		const expectedSubmissions: Submission[] = [
+			{
+				id: 'submission-1',
+				assignmentId: 'assignment-1',
+				classroomId: 'classroom-1',
+				studentId: 'student-1',
+				studentEmail: 'student@test.com',
+				studentName: 'Test Student',
+				version: 1,
+				isLatest: true,
+				content: 'Student submission content',
+				attachments: [],
+				status: 'submitted',
+				submittedAt: new Date('2022-01-20T12:00:00.000Z'),
+				source: 'roo-direct',
+				late: false,
+				grade: null,
+				createdAt: new Date('2022-01-20T12:00:00.000Z'),
+				updatedAt: new Date('2022-01-20T12:00:00.000Z')
 			}
 		];
 
@@ -233,7 +348,7 @@ describe('API Client', () => {
 				json: () =>
 					Promise.resolve({
 						success: true,
-						data: mockSubmissions
+						data: mockSubmissionResponse
 					})
 			});
 
@@ -243,11 +358,12 @@ describe('API Client', () => {
 				'http://localhost:5001/test-project/us-central1/api/submissions/assignment/assignment-1',
 				expect.any(Object)
 			);
-			expect(result).toEqual(mockSubmissions);
+			expect(result).toEqual(expectedSubmissions);
 		});
 
 		it('should get individual submission', async () => {
-			const mockSubmission = mockSubmissions[0];
+			const mockSubmission = mockSubmissionResponse[0];
+			const expectedSubmission = expectedSubmissions[0];
 
 			mockFetch.mockResolvedValue({
 				ok: true,
@@ -264,11 +380,12 @@ describe('API Client', () => {
 				'http://localhost:5001/test-project/us-central1/api/submissions/submission-1',
 				expect.any(Object)
 			);
-			expect(result).toEqual(mockSubmission);
+			expect(result).toEqual(expectedSubmission);
 		});
 
 		it('should create submission successfully', async () => {
-			const newSubmission = mockSubmissions[0];
+			const newSubmission = mockSubmissionResponse[0];
+			const expectedSubmission = expectedSubmissions[0];
 			const createRequest = {
 				assignmentId: 'assignment-1',
 				studentId: 'student-1',
@@ -296,7 +413,7 @@ describe('API Client', () => {
 					body: JSON.stringify(createRequest)
 				})
 			);
-			expect(result).toEqual(newSubmission);
+			expect(result).toEqual(expectedSubmission);
 		});
 
 		it('should update submission status', async () => {
@@ -310,7 +427,7 @@ describe('API Client', () => {
 				json: () =>
 					Promise.resolve({
 						success: true,
-						data: { ...mockSubmissions[0], status: 'graded' }
+						data: { ...mockSubmissionResponse[0], status: 'graded' }
 					})
 			});
 
@@ -328,7 +445,8 @@ describe('API Client', () => {
 	});
 
 	describe('Grades API', () => {
-		const mockGrades: Grade[] = [
+		// Raw API response (what the server sends - ISO strings)
+		const mockGradeResponse = [
 			{
 				id: 'grade-1',
 				submissionId: 'submission-1',
@@ -339,26 +457,57 @@ describe('API Client', () => {
 				maxScore: 100,
 				percentage: 85,
 				feedback: 'Good work!',
-				gradingDetails: {
-					criteria: [
-						{
-							name: 'Content',
-							score: 85,
-							maxScore: 100,
-							feedback: 'Well written content'
-						}
-					]
-				},
+				rubricScores: [
+					{
+						criterionId: 'content-1',
+						criterionTitle: 'Content',
+						score: 85,
+						maxScore: 100,
+						feedback: 'Well written content'
+					}
+				],
 				gradedBy: 'ai',
 				gradedAt: '2022-01-20T12:00:00.000Z',
 				gradingMethod: 'points',
 				version: 1,
 				isLatest: true,
 				submissionVersionGraded: 1,
-				postedToClassroom: false,
+				isLocked: false,
+				createdAt: '2022-01-20T16:00:00.000Z',
+				updatedAt: '2022-01-20T16:00:00.000Z'
+			}
+		];
+
+		// Expected result after schema transformation (Date objects)
+		const expectedGrades: Grade[] = [
+			{
+				id: 'grade-1',
+				submissionId: 'submission-1',
+				assignmentId: 'assignment-1',
+				studentId: 'student-1',
+				classroomId: 'classroom-1',
+				score: 85,
+				maxScore: 100,
+				percentage: 85,
+				feedback: 'Good work!',
+				rubricScores: [
+					{
+						criterionId: 'content-1',
+						criterionTitle: 'Content',
+						score: 85,
+						maxScore: 100,
+						feedback: 'Well written content'
+					}
+				],
+				gradedBy: 'ai',
+				gradedAt: new Date('2022-01-20T12:00:00.000Z'),
+				gradingMethod: 'points',
+				version: 1,
+				isLatest: true,
 				submissionVersionGraded: 1,
-				createdAt: { _seconds: 1642694400, _nanoseconds: 0 },
-				updatedAt: { _seconds: 1642694400, _nanoseconds: 0 }
+				isLocked: false,
+				createdAt: new Date('2022-01-20T16:00:00.000Z'),
+				updatedAt: new Date('2022-01-20T16:00:00.000Z')
 			}
 		];
 
@@ -368,7 +517,7 @@ describe('API Client', () => {
 				json: () =>
 					Promise.resolve({
 						success: true,
-						data: mockGrades
+						data: mockGradeResponse
 					})
 			});
 
@@ -378,11 +527,12 @@ describe('API Client', () => {
 				'http://localhost:5001/test-project/us-central1/api/grades/assignment/assignment-1',
 				expect.any(Object)
 			);
-			expect(result).toEqual(mockGrades);
+			expect(result).toEqual(expectedGrades);
 		});
 
 		it('should get grade by submission', async () => {
-			const mockGrade = mockGrades[0];
+			const mockGrade = mockGradeResponse[0];
+			const expectedGrade = expectedGrades[0];
 
 			mockFetch.mockResolvedValue({
 				ok: true,
@@ -399,7 +549,7 @@ describe('API Client', () => {
 				'http://localhost:5001/test-project/us-central1/api/grades/submission/submission-1',
 				expect.any(Object)
 			);
-			expect(result).toEqual(mockGrade);
+			expect(result).toEqual(expectedGrade);
 		});
 	});
 

@@ -27,7 +27,7 @@ test.describe('Model Integration Tests', () => {
 			// Wait for initialization
 			let attempts = 0;
 			while (!dataStore.initialized && attempts < 50) {
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 				attempts++;
 			}
 
@@ -76,7 +76,12 @@ test.describe('Model Integration Tests', () => {
 
 		let foundAssignments = false;
 		for (const element of assignmentElements) {
-			if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(element)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found assignment data: ${element}`);
 				foundAssignments = true;
 				break;
@@ -125,14 +130,16 @@ test.describe('Model Integration Tests', () => {
 			if (classrooms.length === 0) return { error: 'No classrooms loaded' };
 
 			const classroom = classrooms[0];
-			
+
 			// Check that timestamps are converted to Date objects
 			return {
 				createdAtIsDate: classroom.createdAt instanceof Date,
 				updatedAtIsDate: classroom.updatedAt instanceof Date,
 				createdAtValid: classroom.createdAt && !isNaN(classroom.createdAt.getTime()),
 				updatedAtValid: classroom.updatedAt && !isNaN(classroom.updatedAt.getTime()),
-				hasTimestampMethods: typeof classroom.getAge === 'function' || typeof classroom.formatCreatedDate === 'function'
+				hasTimestampMethods:
+					typeof classroom.getAge === 'function' ||
+					typeof classroom.formatCreatedDate === 'function'
 			};
 		});
 
@@ -155,7 +162,7 @@ test.describe('Model Integration Tests', () => {
 			if (!dataStore?.classrooms) return { error: 'No classroom collection' };
 
 			const collection = dataStore.classrooms;
-			
+
 			return {
 				hasCountProperty: typeof collection.count === 'number',
 				hasAllProperty: Array.isArray(collection.all),
@@ -232,7 +239,7 @@ test.describe('Model Integration Tests', () => {
 
 		// Test manual refresh to see if models update
 		const refreshButton = page.getByRole('button', { name: /refresh/i });
-		
+
 		if (await refreshButton.isVisible({ timeout: 3000 })) {
 			// Get initial data count
 			const initialCount = await page.evaluate(() => {
@@ -280,15 +287,15 @@ test.describe('Model Integration Tests', () => {
 			if (!dataStore?.classrooms?.all?.length) return { error: 'No classroom data' };
 
 			const initialClassroomCount = dataStore.classrooms.count;
-			
+
 			// Test loading test data (if available)
 			if (typeof dataStore.loadTestData === 'function') {
 				try {
 					dataStore.loadTestData();
-					
+
 					// Wait for reactivity
-					await new Promise(resolve => setTimeout(resolve, 100));
-					
+					await new Promise((resolve) => setTimeout(resolve, 100));
+
 					const newCount = dataStore.classrooms.count;
 					return {
 						initialCount: initialClassroomCount,
@@ -308,7 +315,7 @@ test.describe('Model Integration Tests', () => {
 			console.log(`⚠️ Reactivity test limitation: ${reactivityTest.error}`);
 		} else {
 			console.log('✓ Model reactivity test:', reactivityTest);
-			
+
 			// Should show evidence of state management
 			if (reactivityTest.testDataLoaded) {
 				expect(reactivityTest.stateChanged).toBe(true);

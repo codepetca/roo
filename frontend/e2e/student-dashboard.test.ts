@@ -28,7 +28,12 @@ test.describe('Student Dashboard', () => {
 
 		let foundHeading = false;
 		for (const heading of headingElements) {
-			if (await page.locator(heading).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(heading)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found dashboard heading: ${heading}`);
 				foundHeading = true;
 				break;
@@ -53,7 +58,12 @@ test.describe('Student Dashboard', () => {
 
 		let foundNav = false;
 		for (const nav of studentNavElements) {
-			if (await page.locator(nav).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(nav)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found student navigation: ${nav}`);
 				foundNav = true;
 				break;
@@ -82,7 +92,12 @@ test.describe('Student Dashboard', () => {
 
 		let foundAssignments = false;
 		for (const element of assignmentElements) {
-			if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(element)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found assignment content: ${element}`);
 				foundAssignments = true;
 				break;
@@ -99,7 +114,12 @@ test.describe('Student Dashboard', () => {
 			];
 
 			for (const emptyState of emptyStates) {
-				if (await page.locator(emptyState).isVisible({ timeout: 2000 }).catch(() => false)) {
+				if (
+					await page
+						.locator(emptyState)
+						.isVisible({ timeout: 2000 })
+						.catch(() => false)
+				) {
 					console.log(`✓ Found empty assignments state: ${emptyState}`);
 					break;
 				}
@@ -123,7 +143,12 @@ test.describe('Student Dashboard', () => {
 
 		let foundGrades = false;
 		for (const element of gradeElements) {
-			if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(element)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found grade information: ${element}`);
 				foundGrades = true;
 				break;
@@ -139,7 +164,12 @@ test.describe('Student Dashboard', () => {
 			];
 
 			for (const emptyState of emptyGrades) {
-				if (await page.locator(emptyState).isVisible({ timeout: 2000 }).catch(() => false)) {
+				if (
+					await page
+						.locator(emptyState)
+						.isVisible({ timeout: 2000 })
+						.catch(() => false)
+				) {
 					console.log(`✓ Found empty grades state: ${emptyState}`);
 					break;
 				}
@@ -162,13 +192,18 @@ test.describe('Student Dashboard', () => {
 
 		let foundGradesLink = false;
 		for (const link of gradesLinks) {
-			if (await page.locator(link).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(link)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found grades navigation: ${link}`);
-				
+
 				// Try to navigate
 				await page.locator(link).first().click();
 				await page.waitForTimeout(2000);
-				
+
 				const currentUrl = page.url();
 				if (currentUrl.includes('/grades')) {
 					console.log('✓ Successfully navigated to grades page');
@@ -182,7 +217,7 @@ test.describe('Student Dashboard', () => {
 			// Try direct navigation to test the page exists
 			await page.goto('/dashboard/student/grades');
 			await waitForPageReady(page);
-			
+
 			const finalUrl = page.url();
 			if (finalUrl.includes('/grades')) {
 				console.log('✓ Student grades page accessible via direct navigation');
@@ -206,7 +241,12 @@ test.describe('Student Dashboard', () => {
 
 		let foundProfile = false;
 		for (const element of profileElements) {
-			if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(element)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found profile element: ${element}`);
 				foundProfile = true;
 				break;
@@ -223,10 +263,10 @@ test.describe('Student Dashboard', () => {
 
 		// Check for loading indicators
 		const loadingElements = page.locator('.animate-pulse, .animate-spin, text=/loading/i');
-		
+
 		// Wait for loading to complete
 		await waitForPageReady(page);
-		
+
 		// Should not show loading indicators after load
 		const finalLoadingCount = await loadingElements.count();
 		expect(finalLoadingCount).toBeLessThanOrEqual(1); // Allow for minimal residual loading
@@ -249,7 +289,12 @@ test.describe('Student Dashboard', () => {
 
 		let foundActivity = false;
 		for (const element of activityElements) {
-			if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(element)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found activity/announcement: ${element}`);
 				foundActivity = true;
 				break;
@@ -275,10 +320,15 @@ test.describe('Student Dashboard', () => {
 
 		let hasError = false;
 		for (const error of errorElements) {
-			if (await page.locator(error).isVisible({ timeout: 2000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(error)
+					.isVisible({ timeout: 2000 })
+					.catch(() => false)
+			) {
 				console.log(`Found error state: ${error}`);
 				hasError = true;
-				
+
 				// Should have retry mechanism
 				const retryButton = page.getByRole('button', { name: /try.*again|retry|refresh/i });
 				if (await retryButton.isVisible({ timeout: 2000 }).catch(() => false)) {
@@ -309,7 +359,12 @@ test.describe('Student Dashboard', () => {
 
 		let foundHelp = false;
 		for (const help of helpElements) {
-			if (await page.locator(help).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(help)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found help/support: ${help}`);
 				foundHelp = true;
 				break;
@@ -335,7 +390,12 @@ test.describe('Student Dashboard', () => {
 
 		let foundLogout = false;
 		for (const logout of logoutElements) {
-			if (await page.locator(logout).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(logout)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found logout option: ${logout}`);
 				foundLogout = true;
 				break;

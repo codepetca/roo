@@ -13,7 +13,7 @@ export default defineConfig({
 	projects: [
 		{
 			name: 'chromium',
-			use: { 
+			use: {
 				...devices['Desktop Chrome'],
 				// Optimize for test performance
 				launchOptions: {

@@ -6,7 +6,13 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { TEST_TEACHER, TEST_STUDENT, waitForPageReady, debugPage, signInAsTeacher } from './test-helpers';
+import {
+	TEST_TEACHER,
+	TEST_STUDENT,
+	waitForPageReady,
+	debugPage,
+	signInAsTeacher
+} from './test-helpers';
 
 test.describe('Complete Authentication Flows', () => {
 	test.beforeEach(async ({ page }) => {
@@ -85,16 +91,18 @@ test.describe('Complete Authentication Flows', () => {
 
 		// Look for Google authentication option
 		const googleButton = page.getByTestId('select-google-auth-button');
-		
+
 		if (await googleButton.isVisible({ timeout: 3000 })) {
 			console.log('✓ Google auth option found');
-			
+
 			// Click Google auth option
 			await googleButton.click();
 			await page.waitForTimeout(1000);
-			
+
 			// Should show Google auth component
-			const googleAuthVisible = await page.locator('text=/sign.*in.*with.*google/i').isVisible({ timeout: 3000 });
+			const googleAuthVisible = await page
+				.locator('text=/sign.*in.*with.*google/i')
+				.isVisible({ timeout: 3000 });
 			if (googleAuthVisible) {
 				console.log('✓ Google OAuth component loaded');
 			} else {
@@ -118,25 +126,24 @@ test.describe('Complete Authentication Flows', () => {
 
 		if (await passcodeInput.isVisible({ timeout: 3000 })) {
 			console.log('Testing student passcode login...');
-			
+
 			// Fill passcode (use a test passcode)
 			await passcodeInput.fill('TEST123');
-			
+
 			const submitButton = page.getByRole('button', { name: /sign.*in|login|submit/i });
 			await submitButton.click();
 			await page.waitForTimeout(3000);
-			
 		} else if (await emailInput.isVisible({ timeout: 3000 })) {
 			console.log('Testing student email login...');
-			
+
 			// Fill student email credentials
 			await emailInput.fill(TEST_STUDENT.email);
-			
+
 			const passwordInput = page.getByPlaceholder(/password/i);
 			if (await passwordInput.isVisible({ timeout: 2000 })) {
 				await passwordInput.fill(TEST_STUDENT.password);
 			}
-			
+
 			const submitButton = page.getByRole('button', { name: /sign.*in|login|submit/i });
 			await submitButton.click();
 			await page.waitForTimeout(3000);
@@ -195,7 +202,12 @@ test.describe('Complete Authentication Flows', () => {
 
 		let foundError = false;
 		for (const errorSelector of errorElements) {
-			if (await page.locator(errorSelector).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(errorSelector)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found error message: ${errorSelector}`);
 				foundError = true;
 				break;
@@ -232,11 +244,11 @@ test.describe('Complete Authentication Flows', () => {
 			const createAccountLink = page.locator('text=/create.*teacher.*account/i');
 			if (await createAccountLink.isVisible({ timeout: 3000 })) {
 				console.log('✓ Found create account link for teachers');
-				
+
 				// Click to go to signup
 				await createAccountLink.click();
 				await page.waitForTimeout(1000);
-				
+
 				// Should show teacher signup flow
 				const signupHeading = page.locator('text=/create.*teacher.*account/i');
 				if (await signupHeading.isVisible({ timeout: 3000 })) {
@@ -298,7 +310,6 @@ test.describe('Complete Authentication Flows', () => {
 			// Should eventually handle the timeout
 			await page.waitForTimeout(8000);
 			console.log('✓ Timeout handling test completed');
-
 		} finally {
 			// Restore normal network conditions
 			await client.send('Network.emulateNetworkConditions', {
@@ -317,12 +328,12 @@ test.describe('Complete Authentication Flows', () => {
 		try {
 			await signInAsTeacher(page);
 			console.log('✓ Teacher sign-in successful');
-			
+
 			// Verify we're on dashboard
 			const currentUrl = page.url();
 			if (currentUrl.includes('/dashboard')) {
 				console.log('✓ On dashboard, testing persistence...');
-				
+
 				// Reload the page
 				await page.reload();
 				await waitForPageReady(page);
@@ -365,7 +376,12 @@ test.describe('Complete Authentication Flows', () => {
 
 		let foundPasswordReset = false;
 		for (const resetElement of forgotPasswordElements) {
-			if (await page.locator(resetElement).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(resetElement)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found password reset option: ${resetElement}`);
 				foundPasswordReset = true;
 				break;

@@ -32,11 +32,11 @@ test.describe('Teacher Assignment Detail Page', () => {
 			const button = page.locator(selector).first();
 			if (await button.isVisible({ timeout: 3000 }).catch(() => false)) {
 				console.log(`✓ Found assignment detail link: ${selector}`);
-				
+
 				// Click to navigate to detail page
 				await button.click();
 				await page.waitForTimeout(2000);
-				
+
 				// Should navigate to assignment detail page
 				const currentUrl = page.url();
 				if (currentUrl.includes('/assignments/') && currentUrl.split('/').length > 5) {
@@ -74,7 +74,12 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 			let foundElements = 0;
 			for (const element of assignmentElements) {
-				if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+				if (
+					await page
+						.locator(element)
+						.isVisible({ timeout: 3000 })
+						.catch(() => false)
+				) {
 					foundElements++;
 				}
 			}
@@ -84,20 +89,15 @@ test.describe('Teacher Assignment Detail Page', () => {
 			} else {
 				console.log('⚠️ Assignment detail page may be missing content');
 			}
-
 		} else {
 			// Might redirect or show error
 			console.log('Assignment detail page redirected or not found');
-			
+
 			// Check for common redirect destinations
-			const redirectCheck = [
-				'/dashboard/teacher',
-				'/dashboard/teacher/assignments',
-				'/login'
-			];
+			const redirectCheck = ['/dashboard/teacher', '/dashboard/teacher/assignments', '/login'];
 
 			const finalUrl = page.url();
-			if (redirectCheck.some(path => finalUrl.includes(path))) {
+			if (redirectCheck.some((path) => finalUrl.includes(path))) {
 				console.log(`✓ Redirected to valid page: ${finalUrl}`);
 			}
 		}
@@ -119,7 +119,12 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 		let foundError = false;
 		for (const indicator of errorIndicators) {
-			if (await page.locator(indicator).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(indicator)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found proper error handling: ${indicator}`);
 				foundError = true;
 				break;
@@ -128,7 +133,11 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 		// Should either show error or redirect to assignments list
 		const currentUrl = page.url();
-		if (!foundError && currentUrl.includes('/assignments') && !currentUrl.includes('/assignments/non-existent')) {
+		if (
+			!foundError &&
+			currentUrl.includes('/assignments') &&
+			!currentUrl.includes('/assignments/non-existent')
+		) {
 			console.log('✓ Redirected back to assignments list');
 		} else if (!foundError) {
 			console.log('⚠️ No clear error handling for invalid assignment ID');
@@ -152,7 +161,12 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 		let foundSubmissions = false;
 		for (const element of submissionElements) {
-			if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(element)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found submission content: ${element}`);
 				foundSubmissions = true;
 				break;
@@ -168,7 +182,12 @@ test.describe('Teacher Assignment Detail Page', () => {
 			];
 
 			for (const emptyState of emptyStates) {
-				if (await page.locator(emptyState).isVisible({ timeout: 2000 }).catch(() => false)) {
+				if (
+					await page
+						.locator(emptyState)
+						.isVisible({ timeout: 2000 })
+						.catch(() => false)
+				) {
 					console.log(`✓ Found empty submissions state: ${emptyState}`);
 					break;
 				}
@@ -191,13 +210,18 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 		let foundNavigation = false;
 		for (const selector of navButtons) {
-			if (await page.locator(selector).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(selector)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found navigation option: ${selector}`);
-				
+
 				// Test the navigation
 				await page.locator(selector).first().click();
 				await page.waitForTimeout(2000);
-				
+
 				const newUrl = page.url();
 				if (newUrl.includes('/assignments') && !newUrl.match(/\/assignments\/[^\/]+$/)) {
 					console.log('✓ Successfully navigated back to assignments list');
@@ -228,7 +252,12 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 		let foundGrading = false;
 		for (const element of gradingElements) {
-			if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(element)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found grading functionality: ${element}`);
 				foundGrading = true;
 				break;
@@ -246,10 +275,10 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 		// Check for loading indicators
 		const loadingElements = page.locator('.animate-pulse, .animate-spin, text=/loading/i');
-		
+
 		// Wait for loading to complete
 		await waitForPageReady(page);
-		
+
 		// Should eventually stop showing loading indicators
 		const finalLoadingCount = await loadingElements.count();
 		expect(finalLoadingCount).toBeLessThanOrEqual(1); // Allow for some residual spinners
@@ -270,7 +299,12 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 		let foundStats = 0;
 		for (const stat of statsElements) {
-			if (await page.locator(stat).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(stat)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				foundStats++;
 			}
 		}

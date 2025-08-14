@@ -58,24 +58,24 @@ export async function signInAsStudent(page: Page) {
 
 		// Check what type of student auth is available with comprehensive selectors
 		const passcodeSelectors = [
-			'input[placeholder*="passcode" i]',
-			'input[placeholder*="code" i]', 
 			'[data-testid="passcode-input"]',
+			'input[placeholder*="passcode" i]',
+			'input[placeholder*="code" i]',
 			'input[name="passcode"]',
-			'input[type="text"][placeholder*="enter" i]'
+			'input[type="text"][placeholder*="ABC12" i]'
 		];
-		
+
 		const emailSelectors = [
-			'input[placeholder*="student@school.com" i]',
+			'[data-testid="email-input"]',
+			'input[placeholder*="schooldomain.edu" i]',
 			'input[placeholder*="email" i]',
 			'input[type="email"]',
-			'[data-testid="email-input"]',
 			'input[name="email"]'
 		];
-		
+
 		let foundPasscodeInput = null;
 		let foundEmailInput = null;
-		
+
 		// Try to find passcode input
 		for (const selector of passcodeSelectors) {
 			try {
@@ -89,7 +89,7 @@ export async function signInAsStudent(page: Page) {
 				continue;
 			}
 		}
-		
+
 		// Try to find email input
 		for (const selector of emailSelectors) {
 			try {
@@ -103,34 +103,39 @@ export async function signInAsStudent(page: Page) {
 				continue;
 			}
 		}
-		
-		if (foundPasscodeInput) {
+
+		if (foundPasscodeInput && foundEmailInput) {
 			console.log('Using passcode authentication...');
+
+			// Fill email first
+			await foundEmailInput.clear();
+			await foundEmailInput.fill(TEST_STUDENT.email);
+
+			// Then fill passcode
 			await foundPasscodeInput.clear();
-			await foundPasscodeInput.fill('TEST123');
-			
+			await foundPasscodeInput.fill('TEST1');
+
 			// Submit with comprehensive button search
 			const submitSelectors = [
-				'button[type="submit"]',
 				'[data-testid="submit-auth-button"]',
+				'button[type="submit"]',
 				'[data-testid="submit-button"]',
 				'button:has-text("Sign In")',
 				'button:has-text("Submit")',
 				'button:has-text("Login")',
 				'input[type="submit"]'
 			];
-			
+
 			await clickElementSafely(page, submitSelectors[0], {
 				fallbackSelectors: submitSelectors.slice(1)
 			});
-			
-		} else if (foundEmailInput) {
+		} else if (foundEmailInput && !foundPasscodeInput) {
 			console.log('Using email authentication...');
-			
+
 			// Fill student email credentials
 			await foundEmailInput.clear();
 			await foundEmailInput.fill(TEST_STUDENT.email);
-			
+
 			// Find password input
 			const passwordSelectors = [
 				'input[placeholder*="password" i]',
@@ -138,7 +143,7 @@ export async function signInAsStudent(page: Page) {
 				'[data-testid="password-input"]',
 				'input[name="password"]'
 			];
-			
+
 			let foundPasswordInput = null;
 			for (const selector of passwordSelectors) {
 				try {
@@ -152,52 +157,85 @@ export async function signInAsStudent(page: Page) {
 					continue;
 				}
 			}
-			
+
 			if (foundPasswordInput) {
 				await foundPasswordInput.clear();
 				await foundPasswordInput.fill(TEST_STUDENT.password);
 			} else {
 				throw new Error('Password input not found for email authentication');
 			}
-			
+
 			// Submit form with comprehensive button search
 			const submitSelectors = [
-				'button[type="submit"]',
 				'[data-testid="submit-auth-button"]',
+				'button[type="submit"]',
 				'[data-testid="submit-button"]',
 				'button:has-text("Sign In")',
 				'button:has-text("Submit")',
 				'button:has-text("Login")',
 				'input[type="submit"]'
 			];
-			
+
 			await clickElementSafely(page, submitSelectors[0], {
 				fallbackSelectors: submitSelectors.slice(1)
 			});
 		} else {
-			// Check for other student auth patterns
+			// Check for other student auth patterns or if we missed the form
 			const alternativeAuthIndicators = [
+				'[data-testid="student-passcode-auth-form"]',
+				'[data-testid="student-login-form"]',
 				'text=/enter.*student.*id/i',
 				'text=/class.*code/i',
 				'text=/join.*class/i',
 				'input[placeholder*="student id" i]',
 				'input[placeholder*="class code" i]'
 			];
-			
+
 			let foundAlternative = false;
 			for (const indicator of alternativeAuthIndicators) {
-				if (await page.locator(indicator).isVisible({ timeout: 2000 }).catch(() => false)) {
+				if (
+					await page
+						.locator(indicator)
+						.isVisible({ timeout: 2000 })
+						.catch(() => false)
+				) {
 					console.log(`⚠️ Found alternative student auth method: ${indicator}`);
 					foundAlternative = true;
 					break;
 				}
 			}
-			
+
 			if (!foundAlternative) {
 				await debugPage(page, 'student-auth-methods-not-found');
-				throw new Error('No recognized student authentication method found (passcode, email, or alternative)');
+				throw new Error(
+					'No recognized student authentication method found (email, passcode, or alternative)'
+				);
 			} else {
-				throw new Error('Found alternative student auth methods but they are not yet supported in test helpers');
+				// Try again with student form detection
+				const studentForm = page.locator('[data-testid="student-passcode-auth-form"]');
+				if (await studentForm.isVisible({ timeout: 2000 }).catch(() => false)) {
+					console.log('Found student auth form, retrying input detection...');
+					// Retry with form-specific selectors
+					const emailInput = studentForm.locator('[data-testid="email-input"]');
+					const passcodeInput = studentForm.locator('[data-testid="passcode-input"]');
+
+					if (
+						(await emailInput.isVisible({ timeout: 2000 })) &&
+						(await passcodeInput.isVisible({ timeout: 2000 }))
+					) {
+						await emailInput.fill(TEST_STUDENT.email);
+						await passcodeInput.fill('TEST1');
+
+						const submitButton = studentForm.locator('[data-testid="submit-auth-button"]');
+						await submitButton.click();
+					} else {
+						throw new Error('Student form found but inputs not available');
+					}
+				} else {
+					throw new Error(
+						'Found alternative student auth methods but they are not yet supported in test helpers'
+					);
+				}
 			}
 		}
 
@@ -218,16 +256,16 @@ export async function signInAsStudent(page: Page) {
 					'text=/student.*not.*found/i',
 					'[data-testid*="error"]'
 				];
-				
+
 				let errorMessage = 'Unknown authentication error';
 				for (const errorSelector of errorSelectors) {
 					const errorElement = page.locator(errorSelector).first();
 					if (await errorElement.isVisible({ timeout: 2000 }).catch(() => false)) {
-						errorMessage = await errorElement.textContent() || errorMessage;
+						errorMessage = (await errorElement.textContent()) || errorMessage;
 						break;
 					}
 				}
-				
+
 				throw new Error(`Student authentication failed: ${errorMessage}`);
 			} else {
 				// We might be on a different page - check if it's a valid student area
@@ -239,7 +277,7 @@ export async function signInAsStudent(page: Page) {
 				}
 			}
 		}
-		
+
 		console.log('✓ Student sign-in flow completed successfully');
 	} catch (error) {
 		console.log('❌ Student sign-in failed:', error.message);
@@ -295,7 +333,10 @@ export async function setupTestTeacherProfile(page: Page): Promise<boolean> {
 				for (const authSource of authSources) {
 					try {
 						const auth = authSource();
-						if (auth && (auth.currentUser || typeof auth.signInWithEmailAndPassword === 'function')) {
+						if (
+							auth &&
+							(auth.currentUser || typeof auth.signInWithEmailAndPassword === 'function')
+						) {
 							firebaseAuth = auth;
 							break;
 						}
@@ -498,7 +539,6 @@ export async function createTestTeacherAccount(page: Page): Promise<boolean> {
 	}
 }
 
-
 /**
  * Update school email for authenticated user
  * This ensures the user profile matches the imported classroom data
@@ -507,53 +547,76 @@ export async function updateSchoolEmailForTestUser(page: Page): Promise<boolean>
 	try {
 		console.log('Updating school email for test user...');
 
-		// Wait for Firebase to be available
-		await page.waitForTimeout(3000);
+		// Wait for Firebase to be available and page to settle
+		await page.waitForTimeout(2000);
 
 		const response = await page.evaluate(async () => {
 			try {
-				// Wait for Firebase modules to load
-				await new Promise((resolve) => setTimeout(resolve, 2000));
-
-				// Try different ways to access Firebase auth
+				// Use a more robust approach to get Firebase Auth
+				// The Firebase services should be available via the global app
+				const maxRetries = 10;
 				let user = null;
 
-				// Try to get current user from various auth sources
-				const userSources = [
-					() => (window as any).firebaseAuth?.currentUser,
-					() => (window as any).firebase?.auth()?.currentUser,
-					() => (window as any).getAuth?.()?.currentUser,
-					() => {
-						const authKeys = Object.keys(window).filter((key) => key.toLowerCase().includes('auth'));
-						for (const key of authKeys) {
-							const authObj = (window as any)[key];
-							if (authObj?.currentUser) return authObj.currentUser;
+				for (let i = 0; i < maxRetries; i++) {
+					// Try to access Firebase auth from the global scope
+					// These are exported from the app and should be available
+					const authSources = [
+						// Try the specific exports from Firebase setup
+						() => (window as any).firebaseAuth?.currentUser,
+						// Try common Firebase patterns
+						() => (window as any).__FIREBASE_DEFAULTS__?.auth?.currentUser,
+						// Try to find auth via the app
+						() => {
+							const firebase = (window as any).firebase;
+							if (firebase?.apps?.[0]) {
+								return firebase.auth(firebase.apps[0]).currentUser;
+							}
+							return null;
+						},
+						// Look for auth in common locations
+						() => {
+							const keys = Object.keys(window);
+							for (const key of keys) {
+								if (key.includes('auth') || key.includes('Auth')) {
+									const obj = (window as any)[key];
+									if (obj?.currentUser) return obj.currentUser;
+								}
+							}
+							return null;
 						}
-						return null;
-					}
-				];
+					];
 
-				for (const userSource of userSources) {
-					try {
-						const currentUser = userSource();
-						if (currentUser) {
-							user = currentUser;
-							break;
-						}
-					} catch {}
+					for (const authSource of authSources) {
+						try {
+							const currentUser = authSource();
+							if (currentUser && currentUser.uid) {
+								user = currentUser;
+								break;
+							}
+						} catch {}
+					}
+
+					if (user) break;
+
+					// Wait a bit and try again
+					await new Promise((resolve) => setTimeout(resolve, 500));
 				}
 
 				if (!user) {
-					const availableKeys = Object.keys(window).filter(
+					// Log available window properties for debugging
+					const firebaseKeys = Object.keys(window).filter(
 						(k) => k.toLowerCase().includes('fire') || k.toLowerCase().includes('auth')
 					);
-					throw new Error(
-						`No authenticated user found. Available Firebase keys: ${availableKeys.join(', ')}`
-					);
+					console.log('Available Firebase-related keys:', firebaseKeys);
+					return {
+						ok: false,
+						status: 404,
+						error: 'No authenticated user found after retries'
+					};
 				}
 
+				console.log('Found authenticated user:', user.email || user.uid);
 				const token = await user.getIdToken(true);
-				console.log('Got auth token, calling school email update...');
 
 				// Call the school email update endpoint
 				const response = await fetch(
@@ -592,7 +655,7 @@ export async function updateSchoolEmailForTestUser(page: Page): Promise<boolean>
 			return true;
 		} else {
 			console.log(
-				`❌ Failed to update school email: ${response.status} - ${JSON.stringify(response.data || response.error)}`
+				`❌ Failed to update school email: ${response.status} - ${response.error || JSON.stringify(response.data)}`
 			);
 			return false;
 		}
@@ -650,20 +713,20 @@ export async function signInAsTeacher(page: Page) {
 		} else {
 			// Manual form filling with improved selectors
 			console.log('Filling credentials manually...');
-			
+
 			const emailSelectors = [
 				'[data-testid="email-input"]',
 				'input[placeholder*="teacher@school.com" i]',
 				'input[placeholder*="email" i]:first-of-type',
 				'input[type="email"]'
 			];
-			
+
 			const passwordSelectors = [
 				'[data-testid="password-input"]',
 				'input[placeholder*="password" i]',
 				'input[type="password"]'
 			];
-			
+
 			let emailFilled = false;
 			for (const selector of emailSelectors) {
 				try {
@@ -681,11 +744,13 @@ export async function signInAsTeacher(page: Page) {
 					continue;
 				}
 			}
-			
+
 			if (!emailFilled) {
-				throw new Error(`Could not find or fill email input field. Available selectors: ${emailSelectors.join(', ')}`);
+				throw new Error(
+					`Could not find or fill email input field. Available selectors: ${emailSelectors.join(', ')}`
+				);
 			}
-			
+
 			let passwordFilled = false;
 			for (const selector of passwordSelectors) {
 				try {
@@ -701,71 +766,61 @@ export async function signInAsTeacher(page: Page) {
 					continue;
 				}
 			}
-			
+
 			if (!passwordFilled) {
-				throw new Error(`Could not find or fill password input field. Available selectors: ${passwordSelectors.join(', ')}`);
+				throw new Error(
+					`Could not find or fill password input field. Available selectors: ${passwordSelectors.join(', ')}`
+				);
 			}
 		}
 
-		// Submit form with comprehensive selector strategy and error handling
+		// Submit form with optimized approach
 		console.log('Submitting form...');
-		const submitSelectors = [
-			'button[type="submit"]', // Most reliable
-			'[data-testid="submit-auth-button"]',
-			'[data-testid="submit-button"]',
-			'button:has-text("Sign In")',
-			'button:has-text("Login")',
-			'button:has-text("Submit")',
-			'input[type="submit"]',
-			'form button:not([type="button"])', // Any button in form that's not explicitly type="button"
-		];
-		
+
 		try {
-			await clickElementSafely(page, submitSelectors[0], { 
-				timeout: 10000, 
-				retries: 2,
-				fallbackSelectors: submitSelectors.slice(1)
+			// First try the exact test ID which should be most reliable
+			await clickElementSafely(page, '[data-testid="submit-auth-button"]', {
+				timeout: 5000,
+				retries: 1,
+				fallbackSelectors: ['button[type="submit"]', 'button:has-text("Sign In")']
 			});
 		} catch (submitError) {
 			// Fallback: press Enter in the password field
 			console.log('Submit button click failed, trying Enter key...');
-			try {
-				const passwordField = page.locator('input[type="password"]').first();
-				if (await passwordField.isVisible({ timeout: 2000 })) {
-					await passwordField.press('Enter');
-					console.log('✓ Submitted form by pressing Enter in password field');
-				} else {
-					throw new Error('No password field found for Enter key fallback');
-				}
-			} catch (enterError) {
-				throw new Error(`Form submission failed: ${submitError.message}. Enter key fallback also failed: ${enterError.message}`);
-			}
+			const passwordField = page.locator('[data-testid="password-input"]');
+			await passwordField.press('Enter');
+			console.log('✓ Submitted form by pressing Enter in password field');
 		}
 
 		// Wait for auth response with better error detection
 		console.log('Waiting for authentication response...');
 		await page.waitForTimeout(2000);
-		
+
 		// Check for immediate errors first
 		const errorSelectors = [
-			'[data-testid="auth-error"]',
 			'[data-testid="auth-error-message"]',
+			'[data-testid="auth-error"]',
 			'text=/invalid.*credentials/i',
 			'text=/user.*not.*found/i',
 			'text=/authentication.*failed/i',
 			'text=/sign.*in.*failed/i'
 		];
-		
+
 		let hasAuthError = false;
 		for (const errorSelector of errorSelectors) {
-			if (await page.locator(errorSelector).isVisible({ timeout: 1000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(errorSelector)
+					.isVisible({ timeout: 2000 })
+					.catch(() => false)
+			) {
 				const errorText = await page.locator(errorSelector).textContent();
 				console.log(`Authentication error detected: ${errorText}`);
 				hasAuthError = true;
 				break;
 			}
 		}
-		
+
 		if (hasAuthError) {
 			throw new Error('Authentication failed - ensure test account exists');
 		}
@@ -798,7 +853,7 @@ export async function signInAsTeacher(page: Page) {
 		} else {
 			console.log('⚠️ School email update failed - dashboard may show empty state');
 		}
-		
+
 		console.log('✓ Teacher sign-in flow completed successfully');
 	} catch (error) {
 		console.log('❌ Sign-in failed:', error.message);
@@ -850,7 +905,7 @@ export async function waitForImportSuccess(page: Page): Promise<boolean> {
 
 	// Wait for any processing to complete
 	await waitForPageReady(page);
-	
+
 	// First, check for import failure indicators with more comprehensive selectors
 	const failureSelectors = [
 		'[data-testid*="import-error"], [data-testid*="error"]',
@@ -927,7 +982,7 @@ export async function waitForImportSuccess(page: Page): Promise<boolean> {
 		.locator('text=/upload.*classroom.*snapshot|select.*file|choose.*file/i')
 		.isVisible({ timeout: 1000 })
 		.catch(() => false);
-		
+
 	if (stillOnUploadStep) {
 		console.log('❌ Still on upload step - import did not progress');
 		return false;
@@ -941,16 +996,18 @@ export async function waitForImportSuccess(page: Page): Promise<boolean> {
  * Flexible dashboard state verification that handles both empty and populated states
  * Enhanced with better loading detection and more comprehensive state analysis
  */
-export async function verifyDashboardState(page: Page): Promise<'empty' | 'populated' | 'error' | 'loading'> {
+export async function verifyDashboardState(
+	page: Page
+): Promise<'empty' | 'populated' | 'error' | 'loading'> {
 	// Don't navigate again if we're already on dashboard - just ensure ready
 	if (!page.url().includes('/dashboard')) {
 		await page.goto('/dashboard/teacher');
 	}
-	
+
 	// Wait longer for dashboard to fully load
 	await waitForPageReady(page);
 	await page.waitForTimeout(2000); // Additional wait for data loading
-	
+
 	// Check for loading states first
 	const loadingIndicators = [
 		'.animate-spin',
@@ -962,7 +1019,12 @@ export async function verifyDashboardState(page: Page): Promise<'empty' | 'popul
 
 	let isLoading = false;
 	for (const loadingIndicator of loadingIndicators) {
-		if (await page.locator(loadingIndicator).isVisible({ timeout: 1000 }).catch(() => false)) {
+		if (
+			await page
+				.locator(loadingIndicator)
+				.isVisible({ timeout: 1000 })
+				.catch(() => false)
+		) {
 			console.log(`⏳ Found loading indicator: ${loadingIndicator}`);
 			isLoading = true;
 			break;
@@ -972,16 +1034,21 @@ export async function verifyDashboardState(page: Page): Promise<'empty' | 'popul
 	if (isLoading) {
 		// Wait a bit more for loading to complete
 		await page.waitForTimeout(5000);
-		
+
 		// Recheck if still loading
 		let stillLoading = false;
 		for (const loadingIndicator of loadingIndicators) {
-			if (await page.locator(loadingIndicator).isVisible({ timeout: 1000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(loadingIndicator)
+					.isVisible({ timeout: 1000 })
+					.catch(() => false)
+			) {
 				stillLoading = true;
 				break;
 			}
 		}
-		
+
 		if (stillLoading) {
 			console.log('⚠️ Dashboard still loading after extended wait');
 			return 'loading';
@@ -1001,7 +1068,12 @@ export async function verifyDashboardState(page: Page): Promise<'empty' | 'popul
 	];
 
 	for (const errorIndicator of errorIndicators) {
-		if (await page.locator(errorIndicator).isVisible({ timeout: 2000 }).catch(() => false)) {
+		if (
+			await page
+				.locator(errorIndicator)
+				.isVisible({ timeout: 2000 })
+				.catch(() => false)
+		) {
 			console.log(`❌ Dashboard error detected: ${errorIndicator}`);
 			return 'error';
 		}
@@ -1011,7 +1083,7 @@ export async function verifyDashboardState(page: Page): Promise<'empty' | 'popul
 	const populatedDataIndicators = [
 		// Specific data with counts/numbers
 		'text=/[0-9]+.*classroom/i',
-		'text=/[0-9]+.*student/i', 
+		'text=/[0-9]+.*student/i',
 		'text=/[0-9]+.*assignment/i',
 		'text=/[0-9]+.*submission/i',
 		// Data cards and lists
@@ -1037,7 +1109,12 @@ export async function verifyDashboardState(page: Page): Promise<'empty' | 'popul
 	let hasPopulatedData = false;
 	let populatedCount = 0;
 	for (const indicator of populatedDataIndicators) {
-		if (await page.locator(indicator).isVisible({ timeout: 2000 }).catch(() => false)) {
+		if (
+			await page
+				.locator(indicator)
+				.isVisible({ timeout: 2000 })
+				.catch(() => false)
+		) {
 			console.log(`✓ Found populated data indicator: ${indicator}`);
 			hasPopulatedData = true;
 			populatedCount++;
@@ -1071,7 +1148,12 @@ export async function verifyDashboardState(page: Page): Promise<'empty' | 'popul
 	let hasEmptyState = false;
 	let emptyCount = 0;
 	for (const emptyIndicator of emptyStateIndicators) {
-		if (await page.locator(emptyIndicator).isVisible({ timeout: 2000 }).catch(() => false)) {
+		if (
+			await page
+				.locator(emptyIndicator)
+				.isVisible({ timeout: 2000 })
+				.catch(() => false)
+		) {
 			console.log(`⚪ Found empty state indicator: ${emptyIndicator}`);
 			hasEmptyState = true;
 			emptyCount++;
@@ -1093,7 +1175,12 @@ export async function verifyDashboardState(page: Page): Promise<'empty' | 'popul
 
 	let hasStructure = false;
 	for (const structure of dashboardStructure) {
-		if (await page.locator(structure).isVisible({ timeout: 1000 }).catch(() => false)) {
+		if (
+			await page
+				.locator(structure)
+				.isVisible({ timeout: 1000 })
+				.catch(() => false)
+		) {
 			hasStructure = true;
 			break;
 		}
@@ -1108,39 +1195,53 @@ export async function verifyDashboardState(page: Page): Promise<'empty' | 'popul
 	}
 }
 
-
 /**
  * Enhanced dashboard navigation helper that works with any data state
  */
 export async function navigateDashboardSafely(page: Page) {
 	await page.goto('/dashboard/teacher');
 	await waitForPageReady(page);
-	
+
 	// Check if we're redirected to login (not authenticated)
 	if (page.url().includes('/login')) {
 		throw new Error('Redirected to login - user not authenticated');
 	}
-	
+
 	// More flexible dashboard detection
 	const dashboardIndicators = [
 		// URL-based check (most reliable)
 		page.url().includes('/dashboard'),
 		// Content-based checks (more flexible)
-		await page.locator('text=/dashboard/i').isVisible({ timeout: 3000 }).catch(() => false),
-		await page.locator('text=/overview/i').isVisible({ timeout: 3000 }).catch(() => false),
-		await page.locator('nav, .navigation, .nav-menu, .sidebar, header').isVisible({ timeout: 3000 }).catch(() => false),
-		await page.locator('[data-testid="dashboard-content"], [data-testid="teacher-dashboard"], main').isVisible({ timeout: 3000 }).catch(() => false),
+		await page
+			.locator('text=/dashboard/i')
+			.isVisible({ timeout: 3000 })
+			.catch(() => false),
+		await page
+			.locator('text=/overview/i')
+			.isVisible({ timeout: 3000 })
+			.catch(() => false),
+		await page
+			.locator('nav, .navigation, .nav-menu, .sidebar, header')
+			.isVisible({ timeout: 3000 })
+			.catch(() => false),
+		await page
+			.locator('[data-testid="dashboard-content"], [data-testid="teacher-dashboard"], main')
+			.isVisible({ timeout: 3000 })
+			.catch(() => false),
 		// Fallback - any structured content
-		await page.locator('h1, h2, .container, .content, section').isVisible({ timeout: 3000 }).catch(() => false)
+		await page
+			.locator('h1, h2, .container, .content, section')
+			.isVisible({ timeout: 3000 })
+			.catch(() => false)
 	];
-	
-	const onDashboard = dashboardIndicators.some(indicator => indicator === true);
-	
+
+	const onDashboard = dashboardIndicators.some((indicator) => indicator === true);
+
 	if (!onDashboard) {
 		console.warn('Dashboard indicators not found, but continuing - may be minimal UI');
 		// Don't throw error, just warn - the UI might be minimal
 	}
-	
+
 	return await verifyDashboardState(page);
 }
 
@@ -1154,15 +1255,15 @@ export const PageElements = {
 	studentButton: '[data-testid="select-student-button"]',
 	emailButton: '[data-testid="select-email-auth-button"]',
 	googleButton: '[data-testid="select-google-auth-button"]',
-	
+
 	// Dashboard elements
 	dashboardHeading: 'h1, h2, [data-testid="dashboard-heading"]',
 	dashboardContent: '[data-testid="dashboard-content"], main, .dashboard-container',
-	
+
 	// Data import elements
 	importButton: 'button:has-text("Import"), [data-testid="import-button"]',
 	fileUpload: 'input[type="file"], [data-testid="file-upload"]',
-	
+
 	// Common UI elements
 	loadingSpinner: '.animate-spin, [data-testid*="loading"], .loading',
 	errorMessage: '[data-testid*="error"], .error-message, .alert-error',
@@ -1180,7 +1281,7 @@ export async function checkWelcomeText(page: Page): Promise<boolean> {
 		'text="Welcome to Roo"',
 		'.welcome, .login-header, .page-title'
 	];
-	
+
 	for (const selector of welcomeSelectors) {
 		try {
 			if (await page.locator(selector).isVisible({ timeout: 2000 })) {
@@ -1190,7 +1291,7 @@ export async function checkWelcomeText(page: Page): Promise<boolean> {
 			continue;
 		}
 	}
-	
+
 	return false;
 }
 
@@ -1206,7 +1307,7 @@ export const TestDataHelpers = {
 		// This can be configured based on environment or test setup
 		return !process.env.E2E_EXPECT_DATA;
 	},
-	
+
 	/**
 	 * Determine appropriate assertion based on data state
 	 */
@@ -1237,8 +1338,9 @@ export async function waitForPageReady(page: Page, options: { skipViteErrorCheck
 			() => {
 				// Check for most common loading patterns efficiently
 				return (
-					document.querySelectorAll('.animate-spin, .animate-pulse, [data-testid*="loading"], button[disabled] svg.animate-spin').length === 0 &&
-					!document.body.textContent?.toLowerCase().includes('loading')
+					document.querySelectorAll(
+						'.animate-spin, .animate-pulse, [data-testid*="loading"], button[disabled] svg.animate-spin'
+					).length === 0 && !document.body.textContent?.toLowerCase().includes('loading')
 				);
 			},
 			{ timeout: 15000 }
@@ -1260,20 +1362,20 @@ export async function handleViteErrorOverlay(page: Page) {
 		const viteOverlay = page.locator('vite-error-overlay');
 		if (await viteOverlay.isVisible({ timeout: 1000 }).catch(() => false)) {
 			console.log('Vite error overlay detected, attempting to close...');
-			
+
 			// Try to click the close button if it exists
 			const closeBtn = viteOverlay.locator('button, .close, [aria-label="close"]').first();
 			if (await closeBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
 				await closeBtn.click();
 				await page.waitForTimeout(500);
 			}
-			
+
 			// If overlay persists, try pressing Escape
 			if (await viteOverlay.isVisible({ timeout: 500 }).catch(() => false)) {
 				await page.keyboard.press('Escape');
 				await page.waitForTimeout(500);
 			}
-			
+
 			// If still there, try to hide it via JavaScript
 			if (await viteOverlay.isVisible({ timeout: 500 }).catch(() => false)) {
 				await page.evaluate(() => {
@@ -1294,22 +1396,22 @@ export async function handleViteErrorOverlay(page: Page) {
  * Enhanced wait for element with better error handling
  */
 export async function waitForElementSafely(
-	page: Page, 
-	selector: string, 
+	page: Page,
+	selector: string,
 	options: { timeout?: number; visible?: boolean } = {}
 ) {
 	const { timeout = 10000, visible = true } = options;
-	
+
 	try {
 		await handleViteErrorOverlay(page);
 		const element = page.locator(selector);
-		
+
 		if (visible) {
 			await element.waitFor({ state: 'visible', timeout });
 		} else {
 			await element.waitFor({ timeout });
 		}
-		
+
 		return element;
 	} catch (error) {
 		console.warn(`Element not found within ${timeout}ms: ${selector}`);
@@ -1319,7 +1421,7 @@ export async function waitForElementSafely(
 }
 
 /**
- * Safe click with retry logic and better error handling
+ * Safe click with optimized retry logic and better error handling
  * Tries multiple selector strategies before giving up
  */
 export async function clickElementSafely(
@@ -1327,40 +1429,51 @@ export async function clickElementSafely(
 	selector: string,
 	options: { timeout?: number; retries?: number; fallbackSelectors?: string[] } = {}
 ) {
-	const { timeout = 10000, retries = 2, fallbackSelectors = [] } = options;
+	const { timeout = 8000, retries = 1, fallbackSelectors = [] } = options; // Reduced defaults
 	const allSelectors = [selector, ...fallbackSelectors];
-	
+
 	for (let attempt = 0; attempt <= retries; attempt++) {
 		// Try each selector strategy
 		for (const currentSelector of allSelectors) {
 			try {
 				await handleViteErrorOverlay(page);
-				
+
 				const element = page.locator(currentSelector);
-				await element.waitFor({ state: 'visible', timeout: timeout / allSelectors.length });
+
+				// Wait for element with shorter timeout per selector
+				await element.waitFor({
+					state: 'visible',
+					timeout: Math.max(2000, timeout / allSelectors.length)
+				});
+
+				// Ensure element is ready
 				await element.scrollIntoViewIfNeeded();
-				await page.waitForTimeout(200);
-				
-				// Ensure element is still visible and enabled
-				if (await element.isVisible() && await element.isEnabled()) {
+
+				// Quick check for visibility and enabled state
+				const isVisible = await element.isVisible();
+				const isEnabled = await element.isEnabled();
+
+				if (isVisible && isEnabled) {
 					await element.click();
 					console.log(`✓ Successfully clicked: ${currentSelector}`);
 					return;
+				} else {
+					console.log(`⚠️ Element not ready: visible=${isVisible}, enabled=${isEnabled}`);
 				}
 			} catch (selectorError) {
-				// Continue to next selector
+				// Continue to next selector - no logging for expected failures
 				continue;
 			}
 		}
-		
+
 		if (attempt === retries) {
 			console.warn(`Failed to click any selector after ${retries + 1} attempts:`, allSelectors);
 			await debugPage(page, `click-failure-${selector.replace(/[^a-zA-Z0-9]/g, '-')}`);
 			throw new Error(`Could not click element with any selector: ${allSelectors.join(', ')}`);
 		}
-		
+
 		console.log(`Click attempt ${attempt + 1} failed for all selectors, retrying...`);
-		await page.waitForTimeout(1000);
+		await page.waitForTimeout(500); // Reduced retry delay
 	}
 }
 
@@ -1371,10 +1484,10 @@ export async function debugPage(page: Page, name: string) {
 	await page.screenshot({ path: `debug-${name}.png`, fullPage: true });
 	const title = await page.title();
 	const url = page.url();
-	
+
 	// Log basic debug info only
 	const consoleErrors = [];
-	
+
 	console.log(`Debug ${name}: ${title} at ${url}`);
 	if (consoleErrors.length > 0) {
 		console.log('Console errors:', consoleErrors);

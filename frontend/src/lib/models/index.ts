@@ -17,14 +17,14 @@ export { AssignmentCollection } from './assignment.collection';
 
 // Types (re-exported from Zod schemas for convenience)
 export type {
-  Classroom,
-  Assignment,
-  Grade,
-  Submission,
-  StudentEnrollment,
-  ClassroomWithAssignments,
-  AssignmentWithStats,
-  TeacherDashboard,
-  StudentDashboard,
-  DashboardUser
+	Classroom,
+	Assignment,
+	Grade,
+	Submission,
+	StudentEnrollment,
+	ClassroomWithAssignments,
+	AssignmentWithStats,
+	TeacherDashboard,
+	StudentDashboard,
+	DashboardUser
 } from '@shared/schemas/core';

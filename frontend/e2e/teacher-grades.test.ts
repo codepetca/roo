@@ -43,10 +43,10 @@ test.describe('Teacher Grades Page', () => {
 
 		// Should show loading skeleton initially
 		const loadingElements = page.locator('.animate-pulse, .animate-spin');
-		
+
 		// Wait for loading to complete
 		await waitForPageReady(page);
-		
+
 		// Should not show loading indicators after load
 		const finalLoadingCount = await loadingElements.count();
 		expect(finalLoadingCount).toBeLessThanOrEqual(1); // Allow for one refresh button spinner
@@ -73,10 +73,10 @@ test.describe('Teacher Grades Page', () => {
 
 		// Check if we have no grades (empty state)
 		const emptyState = page.locator('text=/no.*grades.*found/i');
-		
+
 		if (await emptyState.isVisible({ timeout: 3000 })) {
 			console.log('✓ Showing empty grades state');
-			
+
 			// Should show empty state message
 			await expect(emptyState).toBeVisible();
 			await expect(page.locator('text=/no.*grades.*available/i')).toBeVisible();
@@ -92,8 +92,11 @@ test.describe('Teacher Grades Page', () => {
 		await waitForPageReady(page);
 
 		// Look for grades table or grade list items
-		const hasGradesTable = await page.locator('table thead').isVisible({ timeout: 3000 }).catch(() => false);
-		const hasGradesList = await page.locator('[data-testid="grade-item"]').count() > 0;
+		const hasGradesTable = await page
+			.locator('table thead')
+			.isVisible({ timeout: 3000 })
+			.catch(() => false);
+		const hasGradesList = (await page.locator('[data-testid="grade-item"]').count()) > 0;
 
 		if (hasGradesTable || hasGradesList) {
 			console.log('✓ Found grades data display');
@@ -101,7 +104,7 @@ test.describe('Teacher Grades Page', () => {
 			if (hasGradesTable) {
 				// Verify table headers
 				const expectedHeaders = ['student', 'assignment', 'score', 'grade', 'graded.*by', 'date'];
-				
+
 				for (const header of expectedHeaders) {
 					await expect(page.locator(`th:has-text(/${header}/i)`)).toBeVisible({ timeout: 2000 });
 				}
@@ -131,10 +134,10 @@ test.describe('Teacher Grades Page', () => {
 
 		// Get all filter options
 		const options = await filterDropdown.locator('option').allTextContents();
-		
+
 		if (options.length > 1) {
 			console.log('✓ Multiple assignment options available for filtering');
-			
+
 			// Select the second option (not "All Assignments")
 			await filterDropdown.selectOption({ index: 1 });
 			await page.waitForTimeout(1000);
@@ -164,7 +167,7 @@ test.describe('Teacher Grades Page', () => {
 
 		// Should complete refresh
 		await waitForPageReady(page);
-		
+
 		console.log('✓ Grades refresh completed');
 	});
 
@@ -175,13 +178,18 @@ test.describe('Teacher Grades Page', () => {
 		// Should have navigation elements
 		const navElements = [
 			'[href*="/dashboard/teacher"]', // Dashboard link
-			'[href*="/assignments"]',        // Assignments link
-			'text=/dashboard|overview/i'     // Dashboard text link
+			'[href*="/assignments"]', // Assignments link
+			'text=/dashboard|overview/i' // Dashboard text link
 		];
 
 		let navFound = false;
 		for (const selector of navElements) {
-			if (await page.locator(selector).isVisible({ timeout: 2000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(selector)
+					.isVisible({ timeout: 2000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found navigation element: ${selector}`);
 				navFound = true;
 				break;
@@ -206,7 +214,12 @@ test.describe('Teacher Grades Page', () => {
 
 		let hasError = false;
 		for (const errorSelector of errorIndicators) {
-			if (await page.locator(errorSelector).isVisible({ timeout: 2000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(errorSelector)
+					.isVisible({ timeout: 2000 })
+					.catch(() => false)
+			) {
 				console.log(`Found error state: ${errorSelector}`);
 				hasError = true;
 

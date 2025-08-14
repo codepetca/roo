@@ -30,16 +30,21 @@ export const API_BASE_URL =
  */
 async function getAuthToken(): Promise<string | null> {
 	if (!firebaseAuth.currentUser) {
-		console.warn('No authenticated user found for API request');
+		console.warn('⚠️ No authenticated user found for API request');
 		return null;
 	}
 
 	try {
-		const token = await firebaseAuth.currentUser.getIdToken();
-		console.debug('Auth token obtained for API request', { uid: firebaseAuth.currentUser.uid });
+		// Force refresh token to ensure it's not expired
+		const token = await firebaseAuth.currentUser.getIdToken(true);
+		console.debug('✅ Auth token obtained for API request', {
+			uid: firebaseAuth.currentUser.uid,
+			email: firebaseAuth.currentUser.email,
+			tokenLength: token.length
+		});
 		return token;
 	} catch (error) {
-		console.error('Failed to get auth token:', error);
+		console.error('❌ Failed to get auth token:', error);
 		return null;
 	}
 }
@@ -62,10 +67,13 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 	}
 
 	const fullUrl = `${API_BASE_URL}/api${endpoint}`;
-	console.debug('API Request:', {
+	console.log('🌐 API Request:', {
 		method: options.method || 'GET',
 		url: fullUrl,
-		hasAuth: !!token
+		hasAuth: !!token,
+		headers: Object.keys(headers),
+		useEmulators: PUBLIC_USE_EMULATORS,
+		baseUrl: API_BASE_URL
 	});
 
 	const response = await fetch(fullUrl, {
@@ -73,11 +81,25 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 		headers
 	});
 
+	console.log('📡 API Response:', {
+		status: response.status,
+		statusText: response.statusText,
+		ok: response.ok,
+		url: fullUrl
+	});
+
 	// Always parse JSON response first
 	let data;
 	try {
 		data = await response.json();
+		console.log('📦 Response data preview:', {
+			success: data.success,
+			hasData: !!data.data,
+			dataType: typeof data.data,
+			error: data.error
+		});
 	} catch (parseError) {
+		console.error('❌ Failed to parse response JSON:', parseError);
 		// If JSON parsing fails, it's likely a real network error or invalid response
 		if (!response.ok) {
 			const url = `${API_BASE_URL}/api${endpoint}`;
@@ -93,6 +115,13 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 		const url = `${API_BASE_URL}/api${endpoint}`;
 		const errorMessage = data.message || data.error || response.statusText || 'Unknown error';
 
+		console.error('❌ API Error Response:', {
+			status: response.status,
+			statusText: response.statusText,
+			errorMessage,
+			data
+		});
+
 		// Create error with status info but also attach the parsed response
 		const error = new Error(
 			`${response.status} ${errorMessage} (${options.method || 'GET'} ${url})`
@@ -102,6 +131,7 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 		throw error;
 	}
 
+	console.log('✅ API request successful');
 	return data;
 }
 
@@ -129,6 +159,8 @@ export async function typedApiRequest<T>(
 	// Extract data from API response wrapper if present
 	// Handle both wrapped ({ success: true, data: {...} }) and direct responses
 	let dataToValidate = rawResponse;
+	let isApiWrapper = false;
+
 	if (
 		rawResponse &&
 		typeof rawResponse === 'object' &&
@@ -137,12 +169,26 @@ export async function typedApiRequest<T>(
 	) {
 		// API response wrapper format
 		console.debug('🔧 Detected API wrapper format, extracting data field');
+		isApiWrapper = true;
 		dataToValidate = (rawResponse as any).data;
+
+		// Handle API errors from wrapper
+		if (!(rawResponse as any).success) {
+			const error = (rawResponse as any).error || 'API request failed';
+			throw new Error(error);
+		}
+
+		// For array endpoints: convert null to empty array
+		if (dataToValidate === null && schema._def.typeName === 'ZodArray') {
+			console.debug('🔧 Converting null array response to empty array');
+			dataToValidate = [];
+		}
 	}
 
 	// Add detailed logging for debugging validation issues
 	console.debug('Data to validate:', JSON.stringify(dataToValidate, null, 2));
-	console.debug('Validating against schema:', schema._def);
+	console.debug('Schema type:', schema._def.typeName);
+	console.debug('Is API wrapper:', isApiWrapper);
 
 	const validation = safeValidateApiResponse(schema, dataToValidate);
 

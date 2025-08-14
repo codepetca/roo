@@ -171,13 +171,32 @@ export type ApiResponse<T> = {
 };
 
 // ============================================
-// List Response DTOs
+// List Response DTOs - API Wrapper Schemas
 // ============================================
 
+// Arrays can be null when API returns {success: false, data: null}
+export const assignmentListResponseSchema = apiResponseSchema(
+	z.array(assignmentResponseSchema).nullable()
+);
+export const submissionListResponseSchema = apiResponseSchema(
+	z.array(submissionResponseSchema).nullable()
+);
+export const gradeListResponseSchema = apiResponseSchema(z.array(gradeResponseSchema).nullable());
+
+// Single item responses
+export const assignmentResponseWrapperSchema = apiResponseSchema(
+	assignmentResponseSchema.nullable()
+);
+export const submissionResponseWrapperSchema = apiResponseSchema(
+	submissionResponseSchema.nullable()
+);
+export const gradeResponseWrapperSchema = apiResponseSchema(gradeResponseSchema.nullable());
+
+// Note: healthCheckWrapperSchema defined after healthCheckResponseSchema
+
+// Legacy schemas (keeping for backward compatibility)
 export const assignmentsListResponseSchema = apiResponseSchema(z.array(assignmentResponseSchema));
-
 export const submissionsListResponseSchema = apiResponseSchema(z.array(submissionResponseSchema));
-
 export const gradesListResponseSchema = apiResponseSchema(z.array(gradeResponseSchema));
 
 // ============================================
@@ -298,6 +317,9 @@ export const healthCheckResponseSchema = z.object({
 	version: z.string(),
 	endpoints: z.array(z.string())
 });
+
+// Health check response wrapper (defined here after healthCheckResponseSchema)
+export const healthCheckWrapperSchema = apiResponseSchema(healthCheckResponseSchema.nullable());
 
 // ============================================
 // Type exports for convenience

@@ -28,16 +28,18 @@ test.describe('Cross-page Navigation Tests', () => {
 		}
 
 		// 3. Navigate to data import if no data
-		const hasData = await page.locator('text=/no.*data|import.*data/i').isVisible({ timeout: 3000 });
-		
+		const hasData = await page
+			.locator('text=/no.*data|import.*data/i')
+			.isVisible({ timeout: 3000 });
+
 		if (hasData) {
 			console.log('Testing data import flow...');
-			
+
 			const importButton = page.getByRole('button', { name: /import.*data/i });
 			if (await importButton.isVisible({ timeout: 3000 })) {
 				await importButton.click();
 				await waitForPageReady(page);
-				
+
 				currentUrl = page.url();
 				if (currentUrl.includes('/import') || currentUrl.includes('/onboarding')) {
 					console.log('✓ Step 2: Successfully navigated to data import');
@@ -82,7 +84,12 @@ test.describe('Cross-page Navigation Tests', () => {
 
 				let foundAssignmentNav = false;
 				for (const element of assignmentElements) {
-					if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+					if (
+						await page
+							.locator(element)
+							.isVisible({ timeout: 3000 })
+							.catch(() => false)
+					) {
 						console.log(`✓ Step 2: Found assignment navigation: ${element}`);
 						foundAssignmentNav = true;
 						break;
@@ -97,7 +104,12 @@ test.describe('Cross-page Navigation Tests', () => {
 				];
 
 				for (const element of gradesElements) {
-					if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+					if (
+						await page
+							.locator(element)
+							.isVisible({ timeout: 3000 })
+							.catch(() => false)
+					) {
 						await page.locator(element).first().click();
 						await waitForPageReady(page);
 						console.log('✓ Step 3: Navigated to student grades');
@@ -119,7 +131,7 @@ test.describe('Cross-page Navigation Tests', () => {
 
 	test('should handle navigation state persistence', async ({ page }) => {
 		await signInAsTeacher(page);
-		
+
 		// Navigate through multiple pages and verify state persistence
 		const navigationPath = [
 			'/dashboard/teacher',
@@ -156,7 +168,7 @@ test.describe('Cross-page Navigation Tests', () => {
 		// Test direct navigation to specific assignment
 		const deepLinks = [
 			'/dashboard/teacher/assignments/test-assignment-1',
-			'/dashboard/teacher/assignments', 
+			'/dashboard/teacher/assignments',
 			'/dashboard/teacher/grades'
 		];
 
@@ -167,11 +179,14 @@ test.describe('Cross-page Navigation Tests', () => {
 
 				const currentUrl = page.url();
 				const isCorrectPage = currentUrl.includes(link.split('/').pop() || '');
-				
+
 				console.log(`✓ Deep link test: ${link} -> ${isCorrectPage ? 'success' : 'redirected'}`);
-				
+
 				// Should either show the page or handle the redirect gracefully
-				const hasErrorPage = await page.locator('text=/404|not.*found|error/i').isVisible({ timeout: 2000 }).catch(() => false);
+				const hasErrorPage = await page
+					.locator('text=/404|not.*found|error/i')
+					.isVisible({ timeout: 2000 })
+					.catch(() => false);
 				expect(hasErrorPage).toBe(false); // Should not show error page
 			} catch (error) {
 				console.log(`⚠️ Deep link failed: ${link} - ${error.message}`);
@@ -195,7 +210,7 @@ test.describe('Cross-page Navigation Tests', () => {
 		// Test browser back button
 		await page.goBack();
 		await waitForPageReady(page);
-		
+
 		let currentUrl = page.url();
 		expect(currentUrl).toContain('/assignments');
 		console.log('✓ Browser back navigation works');
@@ -203,7 +218,7 @@ test.describe('Cross-page Navigation Tests', () => {
 		// Test browser forward button
 		await page.goForward();
 		await waitForPageReady(page);
-		
+
 		currentUrl = page.url();
 		expect(currentUrl).toContain('/grades');
 		console.log('✓ Browser forward navigation works');
@@ -223,13 +238,16 @@ test.describe('Cross-page Navigation Tests', () => {
 			await waitForPageReady(page);
 
 			const currentUrl = page.url();
-			
+
 			// Should redirect to login or show appropriate message
 			if (currentUrl.includes('/login')) {
 				console.log(`✓ Protected route ${route} correctly redirected to login`);
 			} else if (currentUrl === route) {
 				// Check for authentication prompt
-				const authRequired = await page.locator('text=/sign.*in|login|authenticate/i').isVisible({ timeout: 2000 }).catch(() => false);
+				const authRequired = await page
+					.locator('text=/sign.*in|login|authenticate/i')
+					.isVisible({ timeout: 2000 })
+					.catch(() => false);
 				if (authRequired) {
 					console.log(`✓ Protected route ${route} shows authentication requirement`);
 				} else {
@@ -251,13 +269,16 @@ test.describe('Cross-page Navigation Tests', () => {
 			await waitForPageReady(page);
 
 			const currentUrl = page.url();
-			
+
 			// Should either redirect or show appropriate role-based content
 			if (currentUrl.includes('/teacher')) {
 				console.log(`✓ Teacher accessing student route ${route} redirected to teacher area`);
 			} else if (currentUrl === route) {
 				// Check if it shows teacher-appropriate content or error
-				const hasRoleError = await page.locator('text=/unauthorized|access.*denied|not.*authorized/i').isVisible({ timeout: 2000 }).catch(() => false);
+				const hasRoleError = await page
+					.locator('text=/unauthorized|access.*denied|not.*authorized/i')
+					.isVisible({ timeout: 2000 })
+					.catch(() => false);
 				if (hasRoleError) {
 					console.log(`✓ Role-based access control working for ${route}`);
 				}
@@ -287,7 +308,12 @@ test.describe('Cross-page Navigation Tests', () => {
 
 			let foundNavElements = 0;
 			for (const navElement of navigationElements) {
-				if (await page.locator(navElement).isVisible({ timeout: 2000 }).catch(() => false)) {
+				if (
+					await page
+						.locator(navElement)
+						.isVisible({ timeout: 2000 })
+						.catch(() => false)
+				) {
 					foundNavElements++;
 				}
 			}
@@ -355,15 +381,16 @@ test.describe('Cross-page Navigation Tests', () => {
 
 			const navigationTime = endTime - startTime;
 			navigationTimes.push(navigationTime);
-			
+
 			console.log(`✓ Navigation to ${routes[i]}: ${navigationTime}ms`);
 		}
 
-		const averageTime = navigationTimes.reduce((sum, time) => sum + time, 0) / navigationTimes.length;
+		const averageTime =
+			navigationTimes.reduce((sum, time) => sum + time, 0) / navigationTimes.length;
 		console.log(`✓ Average navigation time: ${averageTime.toFixed(2)}ms`);
 
 		// Navigation should be reasonably fast (under 5 seconds per page)
-		navigationTimes.forEach(time => {
+		navigationTimes.forEach((time) => {
 			expect(time).toBeLessThan(5000);
 		});
 	});
@@ -385,8 +412,14 @@ test.describe('Cross-page Navigation Tests', () => {
 
 				// Should handle gracefully with 404 page or redirect
 				const currentUrl = page.url();
-				const hasNotFoundPage = await page.locator('text=/404|not.*found|page.*not.*found/i').isVisible({ timeout: 2000 }).catch(() => false);
-				const redirectedToValidPage = currentUrl.includes('/dashboard/teacher') && !currentUrl.includes('nonexistent') && !currentUrl.includes('invalid');
+				const hasNotFoundPage = await page
+					.locator('text=/404|not.*found|page.*not.*found/i')
+					.isVisible({ timeout: 2000 })
+					.catch(() => false);
+				const redirectedToValidPage =
+					currentUrl.includes('/dashboard/teacher') &&
+					!currentUrl.includes('nonexistent') &&
+					!currentUrl.includes('invalid');
 
 				if (hasNotFoundPage) {
 					console.log(`✓ Invalid route ${route} shows proper 404 page`);

@@ -29,7 +29,12 @@ test.describe('Real-time Listener Tests', () => {
 
 		let foundRealtimeIndicator = false;
 		for (const indicator of realtimeIndicators) {
-			if (await page.locator(indicator).isVisible({ timeout: 5000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(indicator)
+					.isVisible({ timeout: 5000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found real-time indicator: ${indicator}`);
 				foundRealtimeIndicator = true;
 				break;
@@ -75,7 +80,12 @@ test.describe('Real-time Listener Tests', () => {
 
 		let foundTimestamp = false;
 		for (const element of timestampElements) {
-			if (await page.locator(element).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(element)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				const timestampText = await page.locator(element).textContent();
 				console.log(`✓ Found timestamp: ${timestampText}`);
 				foundTimestamp = true;
@@ -101,7 +111,7 @@ test.describe('Real-time Listener Tests', () => {
 			// Check for Firebase connection state handling
 			const firebase = (window as any).firebase;
 			const dataStore = (window as any).dataStore;
-			
+
 			if (!firebase && !dataStore) return { error: 'Firebase or DataStore not accessible' };
 
 			return {
@@ -116,12 +126,13 @@ test.describe('Real-time Listener Tests', () => {
 			console.log(`⚠️ Connection status check failed: ${connectionStatus.error}`);
 		} else {
 			console.log('✓ Real-time connection status:', connectionStatus);
-			
+
 			// Should have either Firebase or a data store managing real-time state
-			const hasRealTimeCapability = connectionStatus.hasFirebase || 
-				connectionStatus.hasDataStore || 
+			const hasRealTimeCapability =
+				connectionStatus.hasFirebase ||
+				connectionStatus.hasDataStore ||
 				connectionStatus.hasRealtimeService;
-			
+
 			expect(hasRealTimeCapability).toBe(true);
 		}
 	});
@@ -132,7 +143,7 @@ test.describe('Real-time Listener Tests', () => {
 
 		// Try to trigger a refresh to simulate data changes
 		const refreshButton = page.getByRole('button', { name: /refresh/i });
-		
+
 		if (await refreshButton.isVisible({ timeout: 3000 })) {
 			// Get initial data state
 			const initialState = await page.evaluate(() => {
@@ -231,7 +242,12 @@ test.describe('Real-time Listener Tests', () => {
 
 		let foundOfflineIndicator = false;
 		for (const indicator of offlineIndicators) {
-			if (await page.locator(indicator).isVisible({ timeout: 3000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(indicator)
+					.isVisible({ timeout: 3000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found offline indicator: ${indicator}`);
 				foundOfflineIndicator = true;
 				break;
@@ -252,7 +268,12 @@ test.describe('Real-time Listener Tests', () => {
 
 		let foundOnlineIndicator = false;
 		for (const indicator of onlineIndicators) {
-			if (await page.locator(indicator).isVisible({ timeout: 5000 }).catch(() => false)) {
+			if (
+				await page
+					.locator(indicator)
+					.isVisible({ timeout: 5000 })
+					.catch(() => false)
+			) {
 				console.log(`✓ Found online indicator: ${indicator}`);
 				foundOnlineIndicator = true;
 				break;
@@ -303,9 +324,12 @@ test.describe('Real-time Listener Tests', () => {
 
 			const classrooms = dataStore.classrooms?.all || [];
 			const assignments = dataStore.assignments?.all || [];
-			
+
 			// Check if data is consistent
-			const totalStudentsFromClassrooms = classrooms.reduce((sum, c) => sum + (c.studentCount || 0), 0);
+			const totalStudentsFromClassrooms = classrooms.reduce(
+				(sum, c) => sum + (c.studentCount || 0),
+				0
+			);
 			const totalStudentsFromDashboard = dataStore.dashboardStats?.totalStudents || 0;
 
 			return {
@@ -313,7 +337,9 @@ test.describe('Real-time Listener Tests', () => {
 				assignmentCount: assignments.length,
 				studentsFromClassrooms: totalStudentsFromClassrooms,
 				studentsFromDashboard: totalStudentsFromDashboard,
-				dataConsistent: totalStudentsFromClassrooms === totalStudentsFromDashboard || totalStudentsFromDashboard === 0
+				dataConsistent:
+					totalStudentsFromClassrooms === totalStudentsFromDashboard ||
+					totalStudentsFromDashboard === 0
 			};
 		});
 
@@ -321,7 +347,7 @@ test.describe('Real-time Listener Tests', () => {
 			console.log(`⚠️ Consistency check failed: ${consistencyCheck.error}`);
 		} else {
 			console.log('✓ Real-time data consistency:', consistencyCheck);
-			
+
 			// Data should be consistent across different views
 			if (consistencyCheck.studentsFromClassrooms > 0) {
 				expect(consistencyCheck.dataConsistent).toBe(true);
@@ -331,15 +357,15 @@ test.describe('Real-time Listener Tests', () => {
 
 	test('should maintain listener performance', async ({ page }) => {
 		await page.goto('/dashboard/teacher');
-		
+
 		// Measure time to initialize listeners
 		const startTime = Date.now();
 		await waitForPageReady(page);
 		const endTime = Date.now();
-		
+
 		const initTime = endTime - startTime;
 		console.log(`✓ Listener initialization time: ${initTime}ms`);
-		
+
 		// Should initialize reasonably quickly (under 10 seconds)
 		expect(initTime).toBeLessThan(10000);
 
@@ -347,7 +373,7 @@ test.describe('Real-time Listener Tests', () => {
 		const performanceMetrics = await page.evaluate(() => {
 			const performance = window.performance;
 			const memory = (performance as any).memory;
-			
+
 			return {
 				navigationStart: performance.timing?.navigationStart,
 				loadComplete: performance.timing?.loadEventEnd,
@@ -357,10 +383,11 @@ test.describe('Real-time Listener Tests', () => {
 		});
 
 		console.log('✓ Performance metrics:', performanceMetrics);
-		
+
 		// Should have reasonable memory usage
 		if (performanceMetrics.memoryUsed && performanceMetrics.memoryLimit) {
-			const memoryUsagePercent = (performanceMetrics.memoryUsed / performanceMetrics.memoryLimit) * 100;
+			const memoryUsagePercent =
+				(performanceMetrics.memoryUsed / performanceMetrics.memoryLimit) * 100;
 			expect(memoryUsagePercent).toBeLessThan(50); // Should use less than 50% of heap limit
 		}
 	});
