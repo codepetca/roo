@@ -22,7 +22,7 @@ test.describe('Core Dashboard Data Display', () => {
 	});
 
 	test('should display teacher dashboard page', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Should show dashboard structure
@@ -361,8 +361,8 @@ test.describe('Core Dashboard Data Display', () => {
 
 			// Try different assignment-related routes
 			const assignmentUrls = [
-				'/dashboard/teacher/assignments',
-				'/dashboard/teacher',
+				'/(dashboard)/teacher/assignments',
+				'/(dashboard)/teacher',
 				'/assignments'
 			];
 

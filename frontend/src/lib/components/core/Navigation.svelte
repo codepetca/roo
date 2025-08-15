@@ -31,18 +31,13 @@
 	}
 </script>
 
-<header class="fixed top-0 left-0 right-0 z-50 border-b border-gray-200 bg-white shadow-sm">
+<header class="fixed top-0 right-0 left-0 z-50 border-b border-gray-200 bg-white shadow-sm">
 	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 		<div class="flex h-16 items-center justify-between">
 			<!-- Logo and Brand -->
 			<div class="flex items-center space-x-3">
 				<div class="flex items-center space-x-2">
-					<svg
-						class="h-8 w-8 text-blue-600"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
+					<svg class="h-8 w-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
 							stroke-linecap="round"
 							stroke-linejoin="round"

@@ -1001,7 +1001,7 @@ export async function verifyDashboardState(
 ): Promise<'empty' | 'populated' | 'error' | 'loading'> {
 	// Don't navigate again if we're already on dashboard - just ensure ready
 	if (!page.url().includes('/dashboard')) {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 	}
 
 	// Wait longer for dashboard to fully load
@@ -1199,7 +1199,7 @@ export async function verifyDashboardState(
  * Enhanced dashboard navigation helper that works with any data state
  */
 export async function navigateDashboardSafely(page: Page) {
-	await page.goto('/dashboard/teacher');
+	await page.goto('/(dashboard)/teacher');
 	await waitForPageReady(page);
 
 	// Check if we're redirected to login (not authenticated)

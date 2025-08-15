@@ -15,14 +15,14 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should display student dashboard page', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 		await waitForPageReady(page);
 
 		// Should show dashboard heading
 		const headingElements = [
 			'h1:has-text(/student.*dashboard/i)',
 			'h2:has-text(/student.*dashboard/i)',
-			'h1:has-text(/dashboard/i)',
+			'h1:has-text(/(dashboard)/i)',
 			'text=/welcome.*student/i'
 		];
 
@@ -44,7 +44,7 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should show student-specific navigation', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 		await waitForPageReady(page);
 
 		// Look for student navigation elements
@@ -76,7 +76,7 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should display student assignment data', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 		await waitForPageReady(page);
 
 		// Look for assignment-related content
@@ -128,7 +128,7 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should show grade information', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 		await waitForPageReady(page);
 
 		// Look for grade/score information
@@ -178,7 +178,7 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should navigate to student grades page', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 		await waitForPageReady(page);
 
 		// Look for grades navigation
@@ -215,7 +215,7 @@ test.describe('Student Dashboard', () => {
 
 		if (!foundGradesLink) {
 			// Try direct navigation to test the page exists
-			await page.goto('/dashboard/student/grades');
+			await page.goto('/(dashboard)/student/grades');
 			await waitForPageReady(page);
 
 			const finalUrl = page.url();
@@ -226,7 +226,7 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should show student profile information', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 		await waitForPageReady(page);
 
 		// Look for student profile elements
@@ -259,7 +259,7 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should handle loading states', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 
 		// Check for loading indicators
 		const loadingElements = page.locator('.animate-pulse, .animate-spin, text=/loading/i');
@@ -273,7 +273,7 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should display recent activity or announcements', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 		await waitForPageReady(page);
 
 		// Look for activity or announcement sections
@@ -307,7 +307,7 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should handle error states gracefully', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 		await waitForPageReady(page);
 
 		// Check for error indicators
@@ -344,7 +344,7 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should provide access to help or support', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 		await waitForPageReady(page);
 
 		// Look for help/support elements
@@ -377,7 +377,7 @@ test.describe('Student Dashboard', () => {
 	});
 
 	test('should allow logout functionality', async ({ page }) => {
-		await page.goto('/dashboard/student');
+		await page.goto('/(dashboard)/student');
 		await waitForPageReady(page);
 
 		// Look for logout options

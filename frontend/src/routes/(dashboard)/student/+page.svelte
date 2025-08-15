@@ -162,12 +162,18 @@
 	<!-- Page Header -->
 	<PageHeader
 		title="Student Dashboard"
-		description="Welcome back, {auth.user?.email?.split('@')[0] || 'Student'}! Track your grades and view assignment feedback."
+		description="Welcome back, {auth.user?.email?.split('@')[0] ||
+			'Student'}! Track your grades and view assignment feedback."
 		{actions}
 	/>
 
 	{#if error}
-		<Alert variant="error" title="Error loading dashboard" dismissible onDismiss={() => error = null}>
+		<Alert
+			variant="error"
+			title="Error loading dashboard"
+			dismissible
+			onDismiss={() => (error = null)}
+		>
 			{#snippet children()}
 				{error}
 				<div class="mt-3">

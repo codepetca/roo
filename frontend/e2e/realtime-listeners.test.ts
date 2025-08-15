@@ -15,7 +15,7 @@ test.describe('Real-time Listener Tests', () => {
 	});
 
 	test('should initialize real-time listeners on dashboard load', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Check for real-time status indicators
@@ -67,7 +67,7 @@ test.describe('Real-time Listener Tests', () => {
 	});
 
 	test('should show last updated timestamps', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Look for last updated timestamps
@@ -103,7 +103,7 @@ test.describe('Real-time Listener Tests', () => {
 	});
 
 	test('should handle real-time connection states', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Check for connection state management
@@ -138,7 +138,7 @@ test.describe('Real-time Listener Tests', () => {
 	});
 
 	test('should simulate data updates and show real-time changes', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Try to trigger a refresh to simulate data changes
@@ -183,7 +183,7 @@ test.describe('Real-time Listener Tests', () => {
 	});
 
 	test('should handle listener cleanup on page navigation', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Check if listeners are set up
@@ -197,11 +197,11 @@ test.describe('Real-time Listener Tests', () => {
 
 		if (initialListenerState.hasListeners) {
 			// Navigate away from the page
-			await page.goto('/dashboard/teacher/assignments');
+			await page.goto('/(dashboard)/teacher/assignments');
 			await waitForPageReady(page);
 
 			// Navigate back
-			await page.goto('/dashboard/teacher');
+			await page.goto('/(dashboard)/teacher');
 			await waitForPageReady(page);
 
 			// Should handle listener lifecycle properly
@@ -225,7 +225,7 @@ test.describe('Real-time Listener Tests', () => {
 	});
 
 	test('should handle offline/online state changes', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Simulate going offline
@@ -287,7 +287,7 @@ test.describe('Real-time Listener Tests', () => {
 	});
 
 	test('should handle listener errors gracefully', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Try to simulate a listener error by tampering with network or Firebase
@@ -314,7 +314,7 @@ test.describe('Real-time Listener Tests', () => {
 	});
 
 	test('should show real-time data consistency', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Check data consistency across different views
@@ -356,7 +356,7 @@ test.describe('Real-time Listener Tests', () => {
 	});
 
 	test('should maintain listener performance', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 
 		// Measure time to initialize listeners
 		const startTime = Date.now();
