@@ -176,88 +176,7 @@ export const classroomWithDataSchema = z.object({
 });
 
 // ============================================
-// OPTIMIZED Entity-Based Schemas (NEW - matches AppScript output)
-// ============================================
-
-// Clean classroom schema (no nested data, references only)
-export const cleanClassroomSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  section: z.string().optional(),
-  description: z.string().optional(),
-  courseState: z.enum(['ACTIVE', 'ARCHIVED', 'PROVISIONED', 'DECLINED', 'SUSPENDED']),
-  creationTime: z.string().datetime(),
-  updateTime: z.string().datetime(),
-  ownerId: z.string(),
-  studentCount: z.number().min(0),
-  assignmentCount: z.number().min(0),
-  totalSubmissions: z.number().min(0),
-  ungradedSubmissions: z.number().min(0)
-});
-
-// Clean assignment schema (with classroom reference, no nested data)
-export const cleanAssignmentSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  description: z.string(),
-  type: z.enum(['assignment', 'quiz', 'written', 'form']),
-  maxScore: z.number().min(0),
-  status: z.enum(['draft', 'published', 'partial', 'graded', 'closed']),
-  dueDate: z.string().datetime().optional(),
-  creationTime: z.string().datetime(),
-  updateTime: z.string().datetime(),
-  classroomId: z.string(), // Reference to classroom
-  materials: assignmentMaterialsSchema.optional()
-});
-
-// Clean submission schema (with references, no nested data)
-export const cleanSubmissionSchema = enhancedSubmissionSchema.extend({
-  classroomId: z.string(),  // Reference to classroom
-  assignmentId: z.string(), // Reference to assignment  
-  studentId: z.string()     // Reference to student
-});
-
-// Student enrollment schema (student-classroom relationship)
-export const studentEnrollmentSchema = z.object({
-  id: z.string(),
-  studentId: z.string(),
-  classroomId: z.string(),
-  studentEmail: z.string().email(),
-  studentName: z.string(),
-  status: z.enum(['active', 'removed']).default('active'),
-  enrolledAt: z.string().datetime(),
-  updatedAt: z.string().datetime()
-});
-
-// OPTIMIZED: Entity-based snapshot schema (NEW - matches AppScript)
-export const optimizedClassroomSnapshotSchema = z.object({
-  // Teacher information
-  teacher: teacherProfileSchema,
-  
-  // Separate entity collections (NO NESTING!)
-  entities: z.object({
-    classrooms: z.array(cleanClassroomSchema),
-    assignments: z.array(cleanAssignmentSchema),
-    submissions: z.array(cleanSubmissionSchema),
-    enrollments: z.array(studentEnrollmentSchema)
-  }),
-  
-  // Global statistics (calculated from entities)
-  globalStats: z.object({
-    totalClassrooms: z.number().min(0),
-    totalStudents: z.number().min(0),
-    totalAssignments: z.number().min(0),
-    totalSubmissions: z.number().min(0),
-    ungradedSubmissions: z.number().min(0),
-    averageGrade: z.number().optional()
-  }),
-  
-  // Snapshot metadata
-  snapshotMetadata: snapshotMetadataSchema
-});
-
-// ============================================
-// LEGACY: Complete Classroom Snapshot Schema (DEPRECATED)
+// Complete Classroom Snapshot Schema
 // ============================================
 export const classroomSnapshotSchema = z.object({
   // Teacher information
@@ -296,15 +215,6 @@ export const classroomPartialSnapshotSchema = z.object({
 // ============================================
 export type SnapshotMetadata = z.infer<typeof snapshotMetadataSchema>;
 export type TeacherProfile = z.infer<typeof teacherProfileSchema>;
-
-// NEW OPTIMIZED TYPES (matches AppScript output)
-export type CleanClassroom = z.infer<typeof cleanClassroomSchema>;
-export type CleanAssignment = z.infer<typeof cleanAssignmentSchema>;
-export type CleanSubmission = z.infer<typeof cleanSubmissionSchema>;
-export type StudentEnrollment = z.infer<typeof studentEnrollmentSchema>;
-export type OptimizedClassroomSnapshot = z.infer<typeof optimizedClassroomSnapshotSchema>;
-
-// LEGACY TYPES (deprecated but kept for compatibility)
 export type AssignmentWithStats = z.infer<typeof assignmentWithStatsSchema>;
 export type StudentSnapshot = z.infer<typeof studentSnapshotSchema>;
 export type SubmissionSnapshot = z.infer<typeof submissionSnapshotSchema>; // Now uses EnhancedSubmission type

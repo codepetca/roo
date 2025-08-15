@@ -3,11 +3,7 @@ import { logger } from "firebase-functions";
 import { SnapshotProcessor } from "../services/snapshot-processor";
 import { FirestoreRepository } from "../services/firestore-repository";
 import { getUserFromRequest } from "../middleware/validation";
-import { 
-  classroomSnapshotSchema, 
-  optimizedClassroomSnapshotSchema,
-  OptimizedClassroomSnapshot 
-} from "@shared/schemas/classroom-snapshot";
+import { classroomSnapshotSchema } from "@shared/schemas/classroom-snapshot";
 import { z } from "zod";
 import { db } from "../config/firebase";
 
@@ -118,56 +114,13 @@ export async function importSnapshot(req: Request, res: Response): Promise<Respo
       });
     }
 
-    // Detect and validate snapshot format (optimized vs legacy)
-    const rawSnapshot = req.body;
-    if (!rawSnapshot || typeof rawSnapshot !== "object") {
+    // Basic validation for now
+    const snapshot = req.body;
+    if (!snapshot || typeof snapshot !== "object") {
       return res.status(400).json({
         success: false,
         error: "Invalid JSON format"
       });
-    }
-
-    // Try optimized format first (new AppScript output)
-    let snapshot: any;
-    let isOptimized = false;
-    
-    const optimizedValidation = optimizedClassroomSnapshotSchema.safeParse(rawSnapshot);
-    if (optimizedValidation.success) {
-      logger.info("Using optimized snapshot format", {
-        teacherEmail: user.email,
-        entityCounts: {
-          classrooms: optimizedValidation.data.entities.classrooms.length,
-          assignments: optimizedValidation.data.entities.assignments.length,
-          submissions: optimizedValidation.data.entities.submissions.length,
-          enrollments: optimizedValidation.data.entities.enrollments.length
-        }
-      });
-      snapshot = optimizedValidation.data;
-      isOptimized = true;
-    } else {
-      // Fall back to legacy format
-      const legacyValidation = classroomSnapshotSchema.safeParse(rawSnapshot);
-      if (legacyValidation.success) {
-        logger.info("Using legacy snapshot format", {
-          teacherEmail: user.email,
-          classroomCount: legacyValidation.data.classrooms.length
-        });
-        snapshot = legacyValidation.data;
-        isOptimized = false;
-      } else {
-        logger.error("Snapshot validation failed for both formats", {
-          optimizedErrors: optimizedValidation.error.errors,
-          legacyErrors: legacyValidation.error.errors
-        });
-        return res.status(400).json({
-          success: false,
-          error: "Invalid snapshot format",
-          details: {
-            optimizedFormatErrors: optimizedValidation.error.errors,
-            legacyFormatErrors: legacyValidation.error.errors
-          }
-        });
-      }
     }
     
     // Validate teacher email matches user's school email
@@ -205,22 +158,12 @@ export async function importSnapshot(req: Request, res: Response): Promise<Respo
 
     logger.info("Starting snapshot import", {
       teacherEmail: user.email,
-      format: isOptimized ? 'optimized' : 'legacy',
-      entityCount: isOptimized 
-        ? `${snapshot.entities.classrooms.length} classrooms` 
-        : `${snapshot.classrooms.length} classrooms`,
+      classroomCount: snapshot.classrooms.length,
       snapshotId: `${user.uid}_${Date.now()}`
     });
 
-    // Process the snapshot using appropriate method
-    let processingResult: any;
-    if (isOptimized) {
-      // NEW: Direct entity processing for optimized format
-      processingResult = await snapshotProcessor.processOptimizedSnapshot(snapshot as OptimizedClassroomSnapshot);
-    } else {
-      // LEGACY: Complex transformation processing
-      processingResult = await snapshotProcessor.processSnapshot(snapshot);
-    }
+    // Process the snapshot
+    const processingResult = await snapshotProcessor.processSnapshot(snapshot);
     
     if (processingResult.success) {
       logger.info("Snapshot import successful", {

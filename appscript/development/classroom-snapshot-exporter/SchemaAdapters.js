@@ -32,46 +32,61 @@ var SchemaAdapters = {
   },
   
   /**
-   * OPTIMIZED: Adapt classroom data with minimal bloat
-   * Converts Google Classroom Course to clean classroom format for Firebase
+   * Adapt classroom data
+   * Converts Google Classroom Course to ClassroomWithData schema format
    * @param {Object} course - Google Classroom course object
-   * @returns {Object} Clean classroom object with minimal fields
+   * @returns {Object} ClassroomWithData compatible object
    */
   adaptClassroom: function(course) {
     try {
       const now = new Date().toISOString();
       
       return {
-        // Core classroom information (ESSENTIAL ONLY)
+        // Core classroom information
         id: course.id || '',
         name: course.name || 'Untitled Course',
         section: course.section || undefined,
         description: course.description || undefined,
+        descriptionHeading: course.descriptionHeading || undefined,
+        room: course.room || undefined,
         
-        // Basic metadata (STRIPPED DOWN)
+        // Classroom metadata
+        enrollmentCode: course.enrollmentCode || '',
         courseState: course.courseState || 'ACTIVE',
         creationTime: course.creationTime || now,
         updateTime: course.updateTime || now,
         
-        // Essential reference (simplified)
-        ownerId: course.ownerId || '',
+        // Links and access
+        alternateLink: course.alternateLink || `https://classroom.google.com/c/${course.id}`,
+        teacherGroupEmail: course.teacherGroupEmail || undefined,
+        courseGroupEmail: course.courseGroupEmail || undefined,
         
-        // Counts (calculated separately - no nested data)
+        // Counts (will be updated by the main export process)
         studentCount: 0,
         assignmentCount: 0,
         totalSubmissions: 0,
-        ungradedSubmissions: 0
+        ungradedSubmissions: 0,
         
-        // REMOVED Google Classroom bloat:
-        // - enrollmentCode (not needed for Firebase)
-        // - alternateLink (Google-specific URL)
-        // - teacherGroupEmail/courseGroupEmail (Google-specific)
-        // - teacherFolder (Google Drive specific) 
-        // - calendarId (Google Calendar specific)
-        // - guardianNotificationSettings (Google-specific)
-        // - room (not essential)
-        // - descriptionHeading (redundant)
-        // - assignments/students/submissions (now separate entities)
+        // Nested data arrays (will be populated by main export process)
+        assignments: [],
+        students: [],
+        submissions: [],
+        
+        // Teacher-specific settings
+        teacherFolder: course.teacherFolder ? {
+          id: course.teacherFolder.id,
+          title: course.teacherFolder.title,
+          alternateLink: course.teacherFolder.alternateLink
+        } : undefined,
+        
+        // Calendar integration
+        calendarId: course.calendarId || undefined,
+        
+        // Permissions and ownership
+        ownerId: course.ownerId || '',
+        guardianNotificationSettings: course.guardiansEnabled ? {
+          enabled: course.guardiansEnabled
+        } : undefined
       };
     } catch (error) {
       console.error('Error adapting classroom:', error);
@@ -79,10 +94,11 @@ var SchemaAdapters = {
       return {
         id: course.id || 'unknown',
         name: course.name || 'Unknown Course',
+        enrollmentCode: course.enrollmentCode || '',
         courseState: 'ACTIVE',
         creationTime: new Date().toISOString(),
         updateTime: new Date().toISOString(),
-        ownerId: course.ownerId || '',
+        alternateLink: `https://classroom.google.com/c/${course.id || 'unknown'}`,
         studentCount: 0,
         assignmentCount: 0,
         totalSubmissions: 0,
@@ -96,10 +112,10 @@ var SchemaAdapters = {
   },
   
   /**
-   * OPTIMIZED: Adapt assignment data with minimal bloat
-   * Converts Google Classroom CourseWork to clean assignment format for Firebase
+   * Adapt assignment data
+   * Converts Google Classroom CourseWork to AssignmentWithStats schema format
    * @param {Object} courseWork - Google Classroom courseWork object
-   * @returns {Object} Clean assignment object with minimal fields
+   * @returns {Object} AssignmentWithStats compatible object
    */
   adaptAssignment: function(courseWork) {
     try {
@@ -113,7 +129,7 @@ var SchemaAdapters = {
       };
       
       return {
-        // Core assignment data (ESSENTIAL ONLY)
+        // Core assignment data
         id: courseWork.id || '',
         title: courseWork.title || 'Untitled Assignment',
         description: courseWork.description || '',
@@ -121,28 +137,45 @@ var SchemaAdapters = {
         // Assignment classification
         type: workTypeMapping[courseWork.workType] || 'assignment',
         maxScore: courseWork.maxPoints || 100,
-        status: (courseWork.state || 'PUBLISHED').toLowerCase(),
         
-        // Timing information (essential)
+        // Timing information
         dueDate: courseWork.dueDate ? this.convertGoogleDateTime(courseWork.dueDate, courseWork.dueTime) : undefined,
         creationTime: courseWork.creationTime || now,
         updateTime: courseWork.updateTime || now,
         
-        // Classroom reference (set by parent)
-        classroomId: courseWork.courseId || '',
+        // Google Classroom specific
+        workType: courseWork.workType || 'ASSIGNMENT',
+        alternateLink: courseWork.alternateLink || '',
         
-        // Simplified materials (if available)
-        materials: courseWork.enhancedMaterials || undefined
+        // Status and state
+        state: courseWork.state || 'PUBLISHED',
         
-        // REMOVED Google Classroom bloat:
-        // - workType (Google-specific enum)
-        // - alternateLink (Google-specific URL)
-        // - submissionStats (calculated separately)
-        // - quizData (too complex for initial version)
-        // - rubric (not commonly used)
-        // - points (duplicate of maxScore)
-        // - gradingPeriodId (Google-specific)
-        // - categoryId/topicId (Google-specific)
+        // Submission statistics (from enhanced data if available)
+        submissionStats: courseWork.submissionStats || {
+          total: 0,
+          submitted: 0,
+          graded: 0,
+          pending: 0
+        },
+        
+        // Enhanced data (optional)
+        materials: courseWork.enhancedMaterials || (courseWork.materials ? {
+          driveFiles: [],
+          links: [],
+          youtubeVideos: [],
+          forms: []
+        } : undefined),
+        
+        // Quiz data (if available)
+        quizData: courseWork.quizData || undefined,
+        
+        // Rubric data (placeholder for future enhancement)
+        rubric: undefined,
+        
+        // Legacy compatibility fields
+        points: courseWork.maxPoints || undefined,
+        gradingPeriodId: courseWork.gradingPeriodId || undefined,
+        categoryId: courseWork.topicId || undefined
       };
     } catch (error) {
       console.error('Error adapting assignment:', error);
@@ -153,10 +186,12 @@ var SchemaAdapters = {
         description: courseWork.description || '',
         type: 'assignment',
         maxScore: courseWork.maxPoints || 100,
-        status: 'published',
         creationTime: new Date().toISOString(),
         updateTime: new Date().toISOString(),
-        classroomId: courseWork.courseId || ''
+        workType: courseWork.workType || 'ASSIGNMENT',
+        alternateLink: courseWork.alternateLink || '',
+        state: 'PUBLISHED',
+        submissionStats: { total: 0, submitted: 0, graded: 0, pending: 0 }
       };
     }
   },
@@ -422,48 +457,6 @@ var SchemaAdapters = {
   },
   
   /**
-   * OPTIMIZED: Adapt student enrollment data (NEW - for entity-based structure)
-   * Creates clean enrollment entity linking student to classroom
-   * @param {Object} student - Google Classroom student object
-   * @param {string} classroomId - Classroom ID for enrollment
-   * @returns {Object} Clean student enrollment object
-   */
-  adaptStudentEnrollment: function(student, classroomId) {
-    try {
-      const now = new Date().toISOString();
-      
-      return {
-        // Core enrollment data
-        id: `enrollment-${student.userId || 'unknown'}-${classroomId}`,
-        studentId: student.userId || student.profile?.id || '',
-        classroomId: classroomId || '',
-        
-        // Student reference data (for easy access)
-        studentEmail: student.profile?.emailAddress || '',
-        studentName: student.profile?.name?.fullName || 'Unknown Student',
-        
-        // Enrollment status
-        status: 'active', // Google Classroom students are active by default
-        enrolledAt: student.creationTime || now,
-        updatedAt: student.updateTime || now
-      };
-    } catch (error) {
-      console.error('Error adapting student enrollment:', error);
-      // Return minimal valid enrollment object
-      return {
-        id: `enrollment-${student.userId || 'unknown'}-${classroomId}`,
-        studentId: student.userId || 'unknown',
-        classroomId: classroomId || '',
-        studentEmail: student.profile?.emailAddress || 'unknown@example.com',
-        studentName: student.profile?.name?.fullName || 'Unknown Student',
-        status: 'active',
-        enrolledAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-  },
-  
-  /**
    * Validate adapted data against basic schema requirements
    * @param {string} type - Type of object (teacher, classroom, assignment, student, submission)
    * @param {Object} data - Adapted data object
@@ -499,13 +492,6 @@ var SchemaAdapters = {
           if (!data.id) errors.push('Submission ID is required');
           if (!data.assignmentId) errors.push('Submission assignmentId is required');
           if (!data.studentId) errors.push('Submission studentId is required');
-          break;
-          
-        case 'enrollment':
-          if (!data.id) errors.push('Enrollment ID is required');
-          if (!data.studentId) errors.push('Enrollment studentId is required');
-          if (!data.classroomId) errors.push('Enrollment classroomId is required');
-          if (!data.studentEmail) errors.push('Enrollment studentEmail is required');
           break;
       }
       

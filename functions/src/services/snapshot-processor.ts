@@ -1,7 +1,4 @@
-import { 
-  ClassroomSnapshot, 
-  OptimizedClassroomSnapshot 
-} from "@shared/schemas/classroom-snapshot";
+import { ClassroomSnapshot } from "@shared/schemas/classroom-snapshot";
 import {
   snapshotToCore,
   mergeSnapshotWithExisting,
@@ -131,101 +128,6 @@ export class SnapshotProcessor {
       result.success = false;
       result.errors.push({
         entity: "snapshot",
-        id: "global",
-        error: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-
-    return result;
-  }
-
-  /**
-   * OPTIMIZED: Process entity-based snapshot with direct insertion
-   * For snapshots that come pre-structured from AppScript
-   */
-  async processOptimizedSnapshot(snapshot: OptimizedClassroomSnapshot): Promise<ProcessingResult> {
-    const startTime = Date.now();
-    const result: ProcessingResult = {
-      success: true,
-      stats: {
-        classroomsCreated: 0,
-        classroomsUpdated: 0,
-        assignmentsCreated: 0,
-        assignmentsUpdated: 0,
-        submissionsCreated: 0,
-        submissionsVersioned: 0,
-        gradesPreserved: 0,
-        gradesCreated: 0,
-        enrollmentsCreated: 0,
-        enrollmentsUpdated: 0,
-        enrollmentsArchived: 0
-      },
-      errors: [],
-      processingTime: 0
-    };
-
-    try {
-      logger.info("Processing optimized entity-based snapshot");
-
-      // Step 1: Process teacher (simple update)
-      await this.processTeacher({
-        email: snapshot.teacher.email,
-        name: snapshot.teacher.name,
-        displayName: snapshot.teacher.displayName,
-        classroomIds: snapshot.entities.classrooms.map(c => c.id),
-        totalClassrooms: snapshot.entities.classrooms.length
-      }, snapshot.teacher.email);
-
-      // Step 2: Direct batch operations (NO COMPLEX TRANSFORMATIONS!)
-      logger.info("Starting direct entity insertion");
-
-      // Batch insert classrooms
-      if (snapshot.entities.classrooms.length > 0) {
-        await this.repository.batchCreate("classrooms", snapshot.entities.classrooms as any[]);
-        result.stats.classroomsCreated = snapshot.entities.classrooms.length;
-      }
-
-      // Batch insert assignments
-      if (snapshot.entities.assignments.length > 0) {
-        await this.repository.batchCreate("assignments", snapshot.entities.assignments as any[]);
-        result.stats.assignmentsCreated = snapshot.entities.assignments.length;
-      }
-
-      // Batch insert enrollments
-      if (snapshot.entities.enrollments.length > 0) {
-        await this.repository.batchCreate("enrollments", snapshot.entities.enrollments as any[]);
-        result.stats.enrollmentsCreated = snapshot.entities.enrollments.length;
-      }
-
-      // Batch insert submissions (with grade handling)
-      if (snapshot.entities.submissions.length > 0) {
-        await this.repository.batchCreate("submissions", snapshot.entities.submissions as any[]);
-        result.stats.submissionsCreated = snapshot.entities.submissions.length;
-
-        // Process any grades from submissions
-        const submissionsWithGrades = snapshot.entities.submissions.filter(s => s.grade);
-        if (submissionsWithGrades.length > 0) {
-          logger.info(`Processing ${submissionsWithGrades.length} grades from submissions`);
-          // Grade processing can be added here if needed
-          result.stats.gradesCreated = submissionsWithGrades.length;
-        }
-      }
-
-      result.processingTime = Date.now() - startTime;
-      
-      logger.info(`Optimized snapshot processing completed in ${result.processingTime}ms`, {
-        stats: result.stats,
-        totalEntities: snapshot.entities.classrooms.length + 
-                      snapshot.entities.assignments.length + 
-                      snapshot.entities.submissions.length + 
-                      snapshot.entities.enrollments.length
-      });
-
-    } catch (error) {
-      logger.error("Error processing optimized snapshot", error);
-      result.success = false;
-      result.errors.push({
-        entity: "optimized-snapshot",
         id: "global",
         error: error instanceof Error ? error.message : "Unknown error"
       });
