@@ -231,12 +231,12 @@ export class FirestoreRepository {
       userEmail,
       user: user ? { id: user.id, email: user.email, schoolEmail: user.schoolEmail } : null,
       teacherEmail,
-      queryField: "teacherId"
+      queryField: "teacherEmail"
     });
     
     // Query classrooms by the appropriate email
     const snapshot = await db.collection(this.collections.classrooms)
-      .where("teacherId", "==", teacherEmail)
+      .where("teacherEmail", "==", teacherEmail)
       .orderBy("updatedAt", "desc")
       .get();
 

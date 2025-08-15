@@ -170,6 +170,7 @@ export const classroomWithDataSchema = z.object({
   
   // Permissions and ownership
   ownerId: z.string(),
+  teacherEmail: z.string().email(),
   guardianNotificationSettings: z.object({
     enabled: z.boolean()
   }).optional()

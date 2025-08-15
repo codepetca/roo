@@ -38,7 +38,7 @@ var ClassroomSnapshotExporter = {
       
       // Step 2: Get all classrooms with nested data
       console.log('Step 2: Collecting classrooms with data...');
-      const classrooms = this.getAllClassroomsWithData(config);
+      const classrooms = this.getAllClassroomsWithData(config, teacher.email);
       
       // Step 3: Calculate global statistics
       console.log('Step 3: Calculating global statistics...');
@@ -127,9 +127,10 @@ var ClassroomSnapshotExporter = {
   /**
    * Get all classrooms with complete nested data
    * @param {Object} config - Export configuration
+   * @param {string} teacherEmail - Teacher's email address
    * @returns {Array} Array of classroom objects with nested data
    */
-  getAllClassroomsWithData: function(config) {
+  getAllClassroomsWithData: function(config, teacherEmail) {
     try {
       // Step 1: Get basic classroom list
       console.log('Fetching classroom list...');
@@ -168,13 +169,13 @@ var ClassroomSnapshotExporter = {
         console.log(`Processing classroom ${i + 1}/${classrooms.length}: ${classroom.name}`);
         
         try {
-          const enrichedClassroom = this.enrichClassroomWithData(classroom, config);
+          const enrichedClassroom = this.enrichClassroomWithData(classroom, config, teacherEmail);
           enrichedClassrooms.push(enrichedClassroom);
           
         } catch (classroomError) {
           console.error(`Error processing classroom ${classroom.name}:`, classroomError);
           // Include classroom with minimal data rather than failing completely
-          enrichedClassrooms.push(SchemaAdapters.adaptClassroom(classroom));
+          enrichedClassrooms.push(SchemaAdapters.adaptClassroom(classroom, teacherEmail));
         }
         
         // Add small delay to avoid rate limiting
@@ -196,12 +197,13 @@ var ClassroomSnapshotExporter = {
    * Enrich a single classroom with all nested data
    * @param {Object} classroom - Basic classroom object
    * @param {Object} config - Export configuration
+   * @param {string} teacherEmail - Teacher's email address
    * @returns {Object} Enriched classroom with nested data
    */
-  enrichClassroomWithData: function(classroom, config) {
+  enrichClassroomWithData: function(classroom, config, teacherEmail) {
     try {
       // Start with adapted classroom structure
-      const enrichedClassroom = SchemaAdapters.adaptClassroom(classroom);
+      const enrichedClassroom = SchemaAdapters.adaptClassroom(classroom, teacherEmail);
       
       // Get assignments for this classroom
       console.log(`  Fetching assignments for ${classroom.name}...`);
