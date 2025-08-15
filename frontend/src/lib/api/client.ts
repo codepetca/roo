@@ -61,7 +61,7 @@ function transformLegacyGradeData(gradeData: any): any {
 		transformed.percentage = Math.round((gradeData.score / gradeData.maxScore) * 100);
 	}
 
-	// Add version fields if missing  
+	// Add version fields if missing
 	if (!gradeData.version) {
 		transformed.version = 1;
 	}

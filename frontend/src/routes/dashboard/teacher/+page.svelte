@@ -5,8 +5,6 @@
 	import { Button, Alert, Card } from '$lib/components/ui';
 	import { PageHeader, LoadingSkeleton } from '$lib/components/dashboard';
 	import StatsGrid from '$lib/components/core/StatsGrid.svelte';
-	import StudentResetManager from '$lib/components/auth/StudentResetManager.svelte';
-	import StudentPasscodeSender from '$lib/components/auth/StudentPasscodeSender.svelte';
 	import { PUBLIC_USE_EMULATORS } from '$env/static/public';
 
 	// Handle classroom selection
@@ -16,10 +14,6 @@
 		goto(`/dashboard/teacher/assignments`);
 	}
 
-	// Handle assignment view
-	function handleViewAssignment(assignmentId: string) {
-		window.location.href = `/dashboard/teacher/assignments/${assignmentId}`;
-	}
 
 	// Navigate to data import
 	function goToDataImport() {
@@ -334,25 +328,6 @@
 						{/each}
 					</div>
 				{/if}
-			</div>
-		</div>
-
-		<!-- Student Management -->
-		<div class="rounded-lg border border-gray-200 bg-white">
-			<div class="border-b border-gray-200 px-6 py-4">
-				<h3 class="text-lg font-semibold text-gray-900">Student Management</h3>
-				<p class="text-sm text-gray-600">Send login codes and help students with access issues</p>
-			</div>
-			<div class="space-y-8 p-6">
-				<!-- Send Login Codes (Primary) -->
-				<div>
-					<StudentPasscodeSender />
-				</div>
-
-				<!-- Reset Student Access (Secondary) -->
-				<div class="border-t border-gray-200 pt-6">
-					<StudentResetManager />
-				</div>
 			</div>
 		</div>
 	{/if}

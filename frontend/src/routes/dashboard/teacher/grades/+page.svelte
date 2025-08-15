@@ -86,16 +86,18 @@
 					newGrades.push(...result.value);
 				}
 			});
-			
-			// Deduplicate grades by ID to prevent duplicates
-			const gradeMap = new Map<string, Grade>();
+
+			// Deduplicate grades by ID to prevent duplicates  
+			const gradeIds = new Set<string>();
+			const uniqueGrades: Grade[] = [];
 			newGrades.forEach((grade) => {
-				if (grade.id) {
-					gradeMap.set(grade.id, grade);
+				if (grade.id && !gradeIds.has(grade.id)) {
+					gradeIds.add(grade.id);
+					uniqueGrades.push(grade);
 				}
 			});
-			
-			allGrades = Array.from(gradeMap.values());
+
+			allGrades = uniqueGrades;
 		} catch (err) {
 			console.error('Failed to load grades data:', err);
 			error = err instanceof Error ? err.message : 'Failed to load grades data';
