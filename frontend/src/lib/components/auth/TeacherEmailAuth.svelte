@@ -20,6 +20,7 @@
 	let displayName = '';
 	let schoolEmail = '';
 	let loading = false;
+	let loadingMessage = '';
 	let error = '';
 
 	// Fill demo credentials for testing
@@ -55,23 +56,36 @@
 			let userCredential;
 
 			if (mode === 'signup') {
+				loadingMessage = 'Creating your account...';
+				
 				// Create new account
 				userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
 
+				loadingMessage = 'Updating your profile...';
+				
 				// Update display name if provided
 				if (displayName) {
 					const { updateProfile } = await import('firebase/auth');
 					await updateProfile(userCredential.user, { displayName });
 				}
 
-				// Create teacher profile with school email
+				loadingMessage = 'Setting up your teacher profile...';
+				
+				// Create teacher profile with school email - wait for it to complete
 				await api.createProfile({
 					uid: userCredential.user.uid,
 					role: 'teacher',
 					schoolEmail: schoolEmail.trim(),
 					displayName: displayName || undefined
 				});
+
+				loadingMessage = 'Profile setup complete!';
+				
+				// Small delay to let the profile propagate through the system
+				await new Promise(resolve => setTimeout(resolve, 1000));
 			} else {
+				loadingMessage = 'Signing you in...';
+				
 				// Sign in existing account
 				userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
 			}
@@ -105,6 +119,7 @@
 			}
 		} finally {
 			loading = false;
+			loadingMessage = '';
 		}
 	}
 
@@ -242,7 +257,7 @@
 		>
 			{#if loading}
 				<LoadingSpinner size="sm" />
-				{mode === 'login' ? 'Signing In...' : 'Creating Account...'}
+				{loadingMessage || (mode === 'login' ? 'Signing In...' : 'Creating Account...')}
 			{:else}
 				{mode === 'login' ? 'Sign In' : 'Create Account'}
 			{/if}

@@ -59,6 +59,8 @@ async function getUserProfile(firebaseUser: User): Promise<AuthUser | null> {
 	try {
 		const token = await firebaseUser.getIdToken();
 
+		console.log('Fetching user profile for:', firebaseUser.email);
+
 		const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
 			headers: {
 				Authorization: `Bearer ${token}`,
@@ -66,24 +68,30 @@ async function getUserProfile(firebaseUser: User): Promise<AuthUser | null> {
 			}
 		});
 
+		console.log('Profile fetch response status:', response.status);
+
 		if (!response.ok) {
-			console.error('Failed to get user profile - user needs to complete onboarding');
+			const errorText = await response.text();
+			console.error('Failed to get user profile - HTTP error:', response.status, errorText);
 			return null;
 		}
 
 		const data = await response.json();
+		console.log('Profile API response:', data);
 
 		if (data.success && data.data) {
-			return {
+			const profile = {
 				uid: firebaseUser.uid,
 				email: firebaseUser.email,
-				displayName: firebaseUser.displayName,
+				displayName: firebaseUser.displayName || data.data.displayName,
 				role: data.data.role,
 				schoolEmail: data.data.schoolEmail || null
 			};
+			console.log('Created user profile:', profile);
+			return profile;
 		}
 
-		console.error('Invalid user profile data received');
+		console.error('Invalid user profile data received:', data);
 		return null;
 	} catch (error) {
 		console.error('Error getting user profile:', error);
