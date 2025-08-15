@@ -204,7 +204,7 @@
 				</p>
 			</div>
 			<div class="p-6">
-				{#if classrooms.length === 0}
+				{#if !classrooms || classrooms.length === 0}
 					<div class="py-12 text-center">
 						<svg
 							class="mx-auto h-12 w-12 text-gray-400"
@@ -233,7 +233,7 @@
 					</div>
 				{:else}
 					<div class="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-						{#each classrooms as classroom (classroom.id)}
+						{#each classrooms as classroom, index (`${classroom.id}-${classroom.createdAt._seconds}-${index}`)}
 							<div
 								class="cursor-pointer rounded-lg border border-gray-200 p-6 transition-colors hover:border-gray-300"
 								onclick={() => handleClassroomSelect(classroom.id)}
@@ -287,7 +287,7 @@
 				<p class="text-sm text-gray-600">Latest submissions and grades across all your classes</p>
 			</div>
 			<div class="p-6">
-				{#if recentActivity.length === 0}
+				{#if !recentActivity || recentActivity.length === 0}
 					<p class="py-8 text-center text-sm text-gray-500">No recent activity</p>
 				{:else}
 					<div class="space-y-4">

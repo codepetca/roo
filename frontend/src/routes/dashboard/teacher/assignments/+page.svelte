@@ -16,13 +16,13 @@
 
 	// Filtered assignments based on search and filter
 	let filteredAssignments = $derived(() => {
-		let filtered = assignments;
+		let filtered = assignments || [];
 
 		// Filter by type
 		if (activeFilter === 'quizzes') {
-			filtered = dataStore.assignments.quizzes;
+			filtered = dataStore.assignments?.quizzes || [];
 		} else if (activeFilter === 'assignments') {
-			filtered = dataStore.assignments.assignments;
+			filtered = dataStore.assignments?.assignments || [];
 		}
 
 		// Filter by search query (client-side search)
@@ -40,16 +40,16 @@
 
 	// Filter tabs configuration
 	let filterTabs = $derived([
-		{ key: 'all' as const, label: 'All', count: assignments.length },
+		{ key: 'all' as const, label: 'All', count: assignments?.length || 0 },
 		{
 			key: 'quizzes' as const,
 			label: 'Quizzes',
-			count: dataStore.assignments.quizzes.length
+			count: dataStore.assignments?.quizzes?.length || 0
 		},
 		{
 			key: 'assignments' as const,
 			label: 'Assignments',
-			count: dataStore.assignments.assignments.length
+			count: dataStore.assignments?.assignments?.length || 0
 		}
 	]);
 

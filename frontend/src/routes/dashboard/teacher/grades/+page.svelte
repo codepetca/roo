@@ -23,7 +23,7 @@
 
 	// Assignment lookup for grade display
 	let assignmentLookup = $derived(
-		assignments.reduce(
+		(assignments || []).reduce(
 			(lookup, assignment) => {
 				lookup[assignment.id] = assignment;
 				return lookup;
@@ -79,12 +79,23 @@
 
 			const results = await Promise.allSettled(gradePromises);
 
-			// Collect all successful results
+			// Collect all successful results and deduplicate by ID
+			const newGrades: Grade[] = [];
 			results.forEach((result) => {
 				if (result.status === 'fulfilled') {
-					allGrades = [...allGrades, ...result.value];
+					newGrades.push(...result.value);
 				}
 			});
+			
+			// Deduplicate grades by ID to prevent duplicates
+			const gradeMap = new Map<string, Grade>();
+			newGrades.forEach((grade) => {
+				if (grade.id) {
+					gradeMap.set(grade.id, grade);
+				}
+			});
+			
+			allGrades = Array.from(gradeMap.values());
 		} catch (err) {
 			console.error('Failed to load grades data:', err);
 			error = err instanceof Error ? err.message : 'Failed to load grades data';
@@ -373,7 +384,7 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-gray-200 bg-white">
-							{#each filteredGrades as grade, index (`grade-${index}-${grade.assignmentId || 'unknown'}-${grade.studentId || 'unknown'}`)}
+							{#each filteredGrades as grade, index (grade.id || `grade-${index}-${grade.assignmentId || 'unknown'}-${grade.studentId || 'unknown'}`)}
 								{@const studentName = (grade as { studentName?: string }).studentName}
 								{@const assignment = assignmentLookup[grade.assignmentId]}
 								{@const percentage = Math.round((grade.score / grade.maxScore) * 100)}
