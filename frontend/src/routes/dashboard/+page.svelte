@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { auth } from '$lib/stores';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 
 	// This page should redirect to role-specific dashboard
@@ -8,13 +9,14 @@
 	onMount(() => {
 		if (auth.user) {
 			if (auth.user.role === 'teacher') {
-				goto('/dashboard/teacher', { replaceState: true });
+				goto('/(dashboard)/teacher', { replaceState: true });
 			} else {
-				goto('/dashboard/student', { replaceState: true });
+				goto('/(dashboard)/student', { replaceState: true });
 			}
 		} else if (!auth.loading) {
-			// Not authenticated, redirect to login
-			goto('/login', { replaceState: true });
+			// Not authenticated, redirect to login with current path
+			const currentPath = $page.url.pathname;
+			goto(`/login?redirect=${encodeURIComponent(currentPath)}`, { replaceState: true });
 		}
 	});
 </script>
