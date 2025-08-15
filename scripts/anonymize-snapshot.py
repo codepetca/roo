@@ -63,15 +63,15 @@ def anonymize_json(data):
     used_names = set()
     
     # Pre-populate teacher mapping
-    name_mapping["Stewart Chan"] = "Test Teacher"
-    name_mapping["Test Teacher"] = "Test Teacher"  # Handle already anonymized
+    name_mapping["Stewart Chan"] = "Dev CodePet"
+    name_mapping["Test Teacher"] = "Dev CodePet"  # Handle already anonymized
     
     # First pass: collect all unique names and student numbers
     def collect_identifiers(obj):
         if isinstance(obj, dict):
             # Collect teacher name
             if obj.get("email") == "stewart.chan@gapps.yrdsb.ca":
-                name_mapping["Stewart Chan"] = "Test Teacher"
+                name_mapping["Stewart Chan"] = "Dev CodePet"
             
             # Collect student data
             if "name" in obj and "email" in obj:
@@ -139,9 +139,9 @@ def anonymize_json(data):
         if isinstance(obj, dict):
             new_obj = {}
             for key, value in obj.items():
-                # Replace teacher email
-                if key == "email" and value == "stewart.chan@gapps.yrdsb.ca":
-                    new_obj[key] = "test.codepet@gmail.com"
+                # Replace teacher email (including teacherEmail field)
+                if key in ["email", "teacherEmail"] and value == "stewart.chan@gapps.yrdsb.ca":
+                    new_obj[key] = "dev.codepet@gmail.com"
                 # Replace student emails
                 elif key in ["email", "studentEmail"] and "@gapps.yrdsb.ca" in str(value):
                     student_number = value.split("@")[0]
@@ -229,20 +229,22 @@ def anonymize_json(data):
     return replace_identifiers(data)
 
 def main():
-    input_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-mock.json")
+    source_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-stewart.chan-2025-08-15.json")
+    output_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-mock.json")
     
-    print(f"Reading {input_file}...")
-    with open(input_file, 'r') as f:
+    print(f"Reading {source_file}...")
+    with open(source_file, 'r') as f:
         data = json.load(f)
     
     print("Anonymizing data...")
     anonymized_data = anonymize_json(data)
     
-    print(f"Writing anonymized data back to {input_file}...")
-    with open(input_file, 'w') as f:
+    print(f"Writing anonymized data to {output_file}...")
+    with open(output_file, 'w') as f:
         json.dump(anonymized_data, f, indent=2)
     
     print("✅ Anonymization complete!")
+    print(f"Fresh anonymized test data is now available in {output_file}")
 
 if __name__ == "__main__":
     main()
