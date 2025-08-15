@@ -141,7 +141,7 @@ def anonymize_json(data):
             for key, value in obj.items():
                 # Replace teacher email
                 if key == "email" and value == "stewart.chan@gapps.yrdsb.ca":
-                    new_obj[key] = "teacher@schoolemail.com"
+                    new_obj[key] = "test.codepet@gmail.com"
                 # Replace student emails
                 elif key in ["email", "studentEmail"] and "@gapps.yrdsb.ca" in str(value):
                     student_number = value.split("@")[0]
@@ -160,18 +160,6 @@ def anonymize_json(data):
                 # Replace student IDs
                 elif key == "studentId" and value in student_id_mapping:
                     new_obj[key] = student_id_mapping[value]
-                # Handle enrollment IDs (format: enrollment-{studentId}-{classroomId})
-                elif key == "id" and isinstance(value, str) and value.startswith("enrollment-"):
-                    parts = value.split("-")
-                    if len(parts) == 3:
-                        student_id = parts[1]
-                        classroom_id = parts[2]
-                        if student_id in student_id_mapping:
-                            new_obj[key] = f"enrollment-{student_id_mapping[student_id]}-{classroom_id}"
-                        else:
-                            new_obj[key] = value
-                    else:
-                        new_obj[key] = value
                 # Replace Google URLs with placeholders
                 elif key in ["alternateLink", "formUrl", "responseUrl", "thumbnailUrl", "photoUrl"]:
                     if "classroom.google.com" in str(value):
@@ -241,10 +229,7 @@ def anonymize_json(data):
     return replace_identifiers(data)
 
 def main():
-    # Read from the real production snapshot
-    input_file = Path("/Users/stew/Downloads/classroom-snapshot-stewart.chan-2025-08-15.json")
-    # Write to the optimized mock file
-    output_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/optimized-snapshot-mock.json")
+    input_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-mock.json")
     
     print(f"Reading {input_file}...")
     with open(input_file, 'r') as f:
@@ -253,8 +238,8 @@ def main():
     print("Anonymizing data...")
     anonymized_data = anonymize_json(data)
     
-    print(f"Writing anonymized data to {output_file}...")
-    with open(output_file, 'w') as f:
+    print(f"Writing anonymized data back to {input_file}...")
+    with open(input_file, 'w') as f:
         json.dump(anonymized_data, f, indent=2)
     
     print("✅ Anonymization complete!")
