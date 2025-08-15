@@ -97,10 +97,16 @@ function exportClassroomSnapshot(options = {}) {
     const snapshot = ClassroomSnapshotExporter.export(options);
     
     console.log('Export completed successfully');
+    
+    // Handle both legacy and optimized formats
+    const classroomCount = snapshot.entities ? 
+      snapshot.entities.classrooms.length : 
+      (snapshot.classrooms ? snapshot.classrooms.length : 0);
+    
     return {
       success: true,
       data: snapshot,
-      message: `Exported ${snapshot.classrooms.length} classrooms with ${snapshot.globalStats.totalStudents} students`
+      message: `Exported ${classroomCount} classrooms with ${snapshot.globalStats.totalStudents} students`
     };
     
   } catch (error) {
@@ -212,12 +218,18 @@ function testExport() {
     if (result.success) {
       // Validate the schema
       const validation = SnapshotConfig.validateSnapshot(result.data);
+      
+      // Handle both legacy and optimized formats
+      const classroomCount = result.data.entities ? 
+        result.data.entities.classrooms.length : 
+        (result.data.classrooms ? result.data.classrooms.length : 0);
+      
       return {
         success: true,
         message: 'Test export completed successfully',
         validation: validation,
         sampleData: {
-          classroomCount: result.data.classrooms.length,
+          classroomCount: classroomCount,
           studentCount: result.data.globalStats.totalStudents,
           assignmentCount: result.data.globalStats.totalAssignments
         }
@@ -370,8 +382,13 @@ function devFullExport() {
     });
     
     if (result.success) {
+      // Handle both legacy and optimized formats
+      const classroomCount = result.data.entities ? 
+        result.data.entities.classrooms.length : 
+        (result.data.classrooms ? result.data.classrooms.length : 0);
+      
       console.log('Full export successful:', {
-        classrooms: result.data.classrooms.length,
+        classrooms: classroomCount,
         students: result.data.globalStats.totalStudents,
         assignments: result.data.globalStats.totalAssignments,
         submissions: result.data.globalStats.totalSubmissions
@@ -393,3 +410,7 @@ function devFullExport() {
     return { success: false, error: error.message };
   }
 }
+
+// ============================================
+// PRODUCTION VERSION - READY FOR SCHOOL DEPLOYMENT
+// ============================================

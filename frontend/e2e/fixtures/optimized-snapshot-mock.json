@@ -1,0 +1,179 @@
+{
+  "snapshotMetadata": {
+    "fetchedAt": "2025-08-15T12:00:00.000Z",
+    "source": "google-classroom",
+    "version": "2.0.0",
+    "expiresAt": "2025-08-15T12:30:00.000Z"
+  },
+  "teacher": {
+    "email": "teacher@test.com",
+    "name": "Test Teacher",
+    "displayName": "Test Teacher",
+    "isTeacher": true
+  },
+  "entities": {
+    "classrooms": [
+      {
+        "id": "classroom-101",
+        "name": "Computer Science 101",
+        "section": "Period 1",
+        "description": "Introduction to programming concepts",
+        "courseState": "ACTIVE",
+        "creationTime": "2025-01-15T09:00:00.000Z",
+        "updateTime": "2025-08-15T10:00:00.000Z",
+        "ownerId": "teacher@test.com",
+        "studentCount": 3,
+        "assignmentCount": 2,
+        "totalSubmissions": 4,
+        "ungradedSubmissions": 1
+      }
+    ],
+    "assignments": [
+      {
+        "id": "assignment-hello-world",
+        "title": "Hello World Program",
+        "description": "Write your first program that prints Hello World",
+        "type": "assignment",
+        "maxScore": 100,
+        "status": "published",
+        "dueDate": "2025-08-20T23:59:00.000Z",
+        "creationTime": "2025-08-10T09:00:00.000Z",
+        "updateTime": "2025-08-10T09:00:00.000Z",
+        "classroomId": "classroom-101"
+      },
+      {
+        "id": "assignment-variables",
+        "title": "Variables and Data Types",
+        "description": "Learn about different variable types in programming",
+        "type": "assignment", 
+        "maxScore": 100,
+        "status": "published",
+        "creationTime": "2025-08-12T09:00:00.000Z",
+        "updateTime": "2025-08-12T09:00:00.000Z",
+        "classroomId": "classroom-101"
+      }
+    ],
+    "enrollments": [
+      {
+        "id": "enrollment-student1-classroom101",
+        "studentId": "student1@test.com",
+        "classroomId": "classroom-101",
+        "studentEmail": "student1@test.com",
+        "studentName": "Student One",
+        "status": "active",
+        "enrolledAt": "2025-08-01T09:00:00.000Z",
+        "updatedAt": "2025-08-01T09:00:00.000Z"
+      },
+      {
+        "id": "enrollment-student2-classroom101", 
+        "studentId": "student2@test.com",
+        "classroomId": "classroom-101",
+        "studentEmail": "student2@test.com", 
+        "studentName": "Student Two",
+        "status": "active",
+        "enrolledAt": "2025-08-01T09:00:00.000Z",
+        "updatedAt": "2025-08-01T09:00:00.000Z"
+      },
+      {
+        "id": "enrollment-student3-classroom101",
+        "studentId": "student3@test.com", 
+        "classroomId": "classroom-101",
+        "studentEmail": "student3@test.com",
+        "studentName": "Student Three",
+        "status": "active", 
+        "enrolledAt": "2025-08-01T09:00:00.000Z",
+        "updatedAt": "2025-08-01T09:00:00.000Z"
+      }
+    ],
+    "submissions": [
+      {
+        "id": "submission-student1-hello",
+        "classroomId": "classroom-101",
+        "assignmentId": "assignment-hello-world", 
+        "studentId": "student1@test.com",
+        "studentEmail": "student1@test.com",
+        "studentName": "Student One",
+        "maxScore": 100,
+        "status": "graded",
+        "submittedAt": "2025-08-14T14:30:00.000Z",
+        "updatedAt": "2025-08-15T10:00:00.000Z",
+        "studentWork": "print('Hello World!')",
+        "attachmentCount": 0,
+        "grade": {
+          "score": 95,
+          "maxScore": 100,
+          "percentage": 95,
+          "feedback": "Great job! Your code works perfectly.",
+          "gradedBy": "ai",
+          "gradedAt": "2025-08-15T10:00:00.000Z"
+        }
+      },
+      {
+        "id": "submission-student2-hello",
+        "classroomId": "classroom-101", 
+        "assignmentId": "assignment-hello-world",
+        "studentId": "student2@test.com",
+        "studentEmail": "student2@test.com",
+        "studentName": "Student Two", 
+        "maxScore": 100,
+        "status": "graded",
+        "submittedAt": "2025-08-14T16:00:00.000Z",
+        "updatedAt": "2025-08-15T11:00:00.000Z",
+        "studentWork": "console.log('Hello World!');",
+        "attachmentCount": 0,
+        "grade": {
+          "score": 90,
+          "maxScore": 100,
+          "percentage": 90,
+          "feedback": "Good work! Note that this looks like JavaScript syntax.",
+          "gradedBy": "ai",
+          "gradedAt": "2025-08-15T11:00:00.000Z"
+        }
+      },
+      {
+        "id": "submission-student3-hello",
+        "classroomId": "classroom-101",
+        "assignmentId": "assignment-hello-world",
+        "studentId": "student3@test.com", 
+        "studentEmail": "student3@test.com",
+        "studentName": "Student Three",
+        "maxScore": 100,
+        "status": "graded",
+        "submittedAt": "2025-08-14T18:00:00.000Z",
+        "updatedAt": "2025-08-15T09:00:00.000Z",
+        "studentWork": "printf('Hello World!');",
+        "attachmentCount": 0,
+        "grade": {
+          "score": 85,
+          "maxScore": 100, 
+          "percentage": 85,
+          "feedback": "Good attempt! This looks like C syntax. Make sure to use the correct language.",
+          "gradedBy": "ai",
+          "gradedAt": "2025-08-15T09:00:00.000Z"
+        }
+      },
+      {
+        "id": "submission-student1-variables",
+        "classroomId": "classroom-101",
+        "assignmentId": "assignment-variables",
+        "studentId": "student1@test.com",
+        "studentEmail": "student1@test.com", 
+        "studentName": "Student One",
+        "maxScore": 100,
+        "status": "submitted",
+        "submittedAt": "2025-08-15T08:00:00.000Z",
+        "updatedAt": "2025-08-15T08:00:00.000Z",
+        "studentWork": "x = 5\ny = 'hello'\nprint(x, y)",
+        "attachmentCount": 0
+      }
+    ]
+  },
+  "globalStats": {
+    "totalClassrooms": 1,
+    "totalStudents": 3,
+    "totalAssignments": 2,
+    "totalSubmissions": 4,
+    "ungradedSubmissions": 1,
+    "averageGrade": 90
+  }
+}

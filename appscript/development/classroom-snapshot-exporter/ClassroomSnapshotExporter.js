@@ -7,13 +7,13 @@
 var ClassroomSnapshotExporter = {
   
   /**
-   * Main export function - orchestrates the complete snapshot export
+   * Main export function - orchestrates the complete snapshot export using optimized entity collection
    * @param {Object} options - Export configuration options
-   * @returns {Object} Complete classroom snapshot matching schema
+   * @returns {Object} Optimized classroom snapshot with entity references
    */
   export: function(options = {}) {
     const startTime = new Date();
-    console.log('Starting classroom snapshot export with options:', options);
+    console.log('Starting optimized classroom snapshot export with options:', options);
     
     try {
       // Set default options
@@ -36,22 +36,22 @@ var ClassroomSnapshotExporter = {
       console.log('Step 1: Getting teacher profile...');
       const teacher = this.getTeacherProfile();
       
-      // Step 2: Get all classrooms with nested data
-      console.log('Step 2: Collecting classrooms with data...');
-      const classrooms = this.getAllClassroomsWithData(config);
+      // Step 2: Collect all entities in parallel (OPTIMIZED APPROACH)
+      console.log('Step 2: Collecting all entities in parallel...');
+      const entities = this.collectAllEntitiesParallel(config);
       
-      // Step 3: Calculate global statistics
+      // Step 3: Calculate global statistics from entities
       console.log('Step 3: Calculating global statistics...');
-      const globalStats = this.calculateGlobalStats(classrooms);
+      const globalStats = this.calculateGlobalStatsFromEntities(entities);
       
       // Step 4: Create snapshot metadata
       console.log('Step 4: Creating snapshot metadata...');
       const snapshotMetadata = this.createSnapshotMetadata(config.source);
       
-      // Step 5: Assemble complete snapshot
+      // Step 5: Assemble optimized snapshot with entity references
       const snapshot = {
         teacher: teacher,
-        classrooms: classrooms,
+        entities: entities, // Changed from nested structure to flat entities
         globalStats: globalStats,
         snapshotMetadata: snapshotMetadata
       };
@@ -59,8 +59,11 @@ var ClassroomSnapshotExporter = {
       const endTime = new Date();
       const duration = endTime - startTime;
       
-      console.log(`Export completed successfully in ${duration}ms:`, {
-        classrooms: classrooms.length,
+      console.log(`Optimized export completed successfully in ${duration}ms:`, {
+        classrooms: entities.classrooms.length,
+        assignments: entities.assignments.length,
+        submissions: entities.submissions.length,
+        enrollments: entities.enrollments.length,
         totalStudents: globalStats.totalStudents,
         totalAssignments: globalStats.totalAssignments,
         totalSubmissions: globalStats.totalSubmissions
@@ -125,7 +128,250 @@ var ClassroomSnapshotExporter = {
   },
   
   /**
-   * Get all classrooms with complete nested data
+   * OPTIMIZED: Collect all entities in parallel using reference-based linking
+   * @param {Object} config - Export configuration
+   * @returns {Object} Object containing separate entity collections
+   */
+  collectAllEntitiesParallel: function(config) {
+    try {
+      console.log('Starting optimized parallel entity collection...');
+      
+      // Step 1: Get basic classroom list first
+      console.log('  Collecting classrooms...');
+      let rawClassrooms = DataCollectors.collectClassrooms();
+      
+      // Apply classroom filtering if specified
+      if (config.selectedClassrooms) {
+        rawClassrooms = rawClassrooms.filter(c => config.selectedClassrooms.includes(c.id));
+      }
+      if (config.maxClassrooms) {
+        rawClassrooms = rawClassrooms.slice(0, config.maxClassrooms);
+      }
+      
+      if (rawClassrooms.length === 0) {
+        console.log('No classrooms found or selected');
+        return {
+          classrooms: [],
+          assignments: [],
+          submissions: [],
+          enrollments: []
+        };
+      }
+      
+      const classroomIds = rawClassrooms.map(c => c.id);
+      console.log(`  Found ${classroomIds.length} classrooms to process`);
+      
+      // Step 2: Collect all entities in parallel - NO NESTING!
+      console.log('  Collecting all entities in parallel...');
+      const [allAssignments, allStudents, allSubmissions] = this.collectAllEntitiesFromClassrooms(classroomIds, config);
+      
+      // Step 3: Calculate submission stats from collected data (avoid double API calls)
+      console.log('  Calculating submission statistics from collected data...');
+      this.calculateSubmissionStats(allAssignments, allSubmissions);
+      
+      // Step 4: Transform to clean entity format with references only
+      console.log('  Transforming entities to reference-based format...');
+      
+      // Clean classrooms (no nested data)
+      const cleanClassrooms = rawClassrooms.map(classroom => {
+        const adapted = SchemaAdapters.adaptClassroom(classroom);
+        // Remove any nested data - use counts only
+        delete adapted.assignments;
+        delete adapted.students; 
+        delete adapted.submissions;
+        return adapted;
+      });
+      
+      // Clean assignments with classroom references only
+      const cleanAssignments = allAssignments.map(assignment => {
+        const adapted = SchemaAdapters.adaptAssignment(assignment);
+        // Ensure classroom reference is set
+        adapted.classroomId = assignment.courseId;
+        return adapted;
+      });
+      
+      // Clean submissions with references only  
+      const cleanSubmissions = allSubmissions.map(submission => {
+        // Find assignment to get proper context
+        const assignment = allAssignments.find(a => a.id === submission.courseWorkId);
+        const student = allStudents.find(s => (s.userId || s.profile?.id) === submission.userId);
+        
+        const adapted = SchemaAdapters.adaptSubmission(submission, assignment, student);
+        // Ensure all references are set
+        adapted.classroomId = submission.courseId;
+        adapted.assignmentId = submission.courseWorkId;
+        adapted.studentId = submission.userId;
+        return adapted;
+      });
+      
+      // Clean enrollments (student-classroom relationships)
+      const cleanEnrollments = [];
+      for (const student of allStudents) {
+        const studentId = student.userId || student.profile?.id;
+        if (studentId) {
+          const enrollment = SchemaAdapters.adaptStudentEnrollment(student, student.classroomId);
+          enrollment.studentId = studentId;
+          enrollment.classroomId = student.classroomId;
+          cleanEnrollments.push(enrollment);
+        }
+      }
+      
+      console.log(`  Entity collection complete:`, {
+        classrooms: cleanClassrooms.length,
+        assignments: cleanAssignments.length, 
+        submissions: cleanSubmissions.length,
+        enrollments: cleanEnrollments.length
+      });
+      
+      return {
+        classrooms: cleanClassrooms,
+        assignments: cleanAssignments,
+        submissions: cleanSubmissions,
+        enrollments: cleanEnrollments
+      };
+      
+    } catch (error) {
+      console.error('Error in parallel entity collection:', error);
+      throw new Error(`Failed to collect entities: ${error.message}`);
+    }
+  },
+  
+  /**
+   * Collect all assignments, students, and submissions from multiple classrooms
+   * @param {Array} classroomIds - Array of classroom IDs
+   * @param {Object} config - Configuration options
+   * @returns {Array} [allAssignments, allStudents, allSubmissions]
+   */
+  collectAllEntitiesFromClassrooms: function(classroomIds, config) {
+    const allAssignments = [];
+    const allStudents = [];
+    const allSubmissions = [];
+    
+    for (const classroomId of classroomIds) {
+      console.log(`    Processing classroom ${classroomId}...`);
+      
+      try {
+        // Collect assignments for this classroom
+        const assignments = DataCollectors.collectAssignments(classroomId, config);
+        assignments.forEach(assignment => {
+          assignment.courseId = classroomId; // Ensure classroom reference
+          allAssignments.push(assignment);
+        });
+        
+        // Collect students for this classroom  
+        let students = DataCollectors.collectStudents(classroomId);
+        if (config.maxStudentsPerClass && students.length > config.maxStudentsPerClass) {
+          students = students.slice(0, config.maxStudentsPerClass);
+        }
+        students.forEach(student => {
+          student.classroomId = classroomId; // Add classroom reference
+          allStudents.push(student);
+        });
+        
+        // Collect submissions for this classroom if requested (OPTIMIZED: Use parallel collection)
+        if (config.includeSubmissions && assignments.length > 0) {
+          try {
+            console.log(`    Collecting submissions for ${assignments.length} assignments using parallel method...`);
+            const submissions = DataCollectors.collectSubmissionsParallel(classroomId, assignments, config);
+            submissions.forEach(submission => {
+              submission.courseId = classroomId; // Ensure classroom reference
+              allSubmissions.push(submission);
+            });
+            console.log(`    Collected ${submissions.length} submissions in parallel`);
+          } catch (submissionError) {
+            console.warn(`    Failed to collect submissions for classroom ${classroomId}: ${submissionError.message}`);
+          }
+        }
+        
+      } catch (classroomError) {
+        console.error(`    Error processing classroom ${classroomId}: ${classroomError.message}`);
+      }
+    }
+    
+    return [allAssignments, allStudents, allSubmissions];
+  },
+  
+  /**
+   * Calculate submission statistics from collected data (avoids double API calls)
+   * @param {Array} assignments - All collected assignments
+   * @param {Array} submissions - All collected submissions
+   */
+  calculateSubmissionStats: function(assignments, submissions) {
+    try {
+      // Group submissions by assignment ID
+      const submissionsByAssignment = {};
+      submissions.forEach(submission => {
+        const assignmentId = submission.courseWorkId || submission.assignmentId;
+        if (!submissionsByAssignment[assignmentId]) {
+          submissionsByAssignment[assignmentId] = [];
+        }
+        submissionsByAssignment[assignmentId].push(submission);
+      });
+      
+      // Calculate stats for each assignment
+      assignments.forEach(assignment => {
+        const assignmentSubmissions = submissionsByAssignment[assignment.id] || [];
+        
+        const stats = {
+          total: assignmentSubmissions.length,
+          submitted: 0,
+          graded: 0,
+          pending: 0
+        };
+        
+        assignmentSubmissions.forEach(submission => {
+          const state = submission.state || 'NEW';
+          if (state === 'TURNED_IN' || state === 'RETURNED') {
+            stats.submitted++;
+          }
+          if (submission.assignedGrade !== undefined) {
+            stats.graded++;
+          }
+          if (state === 'NEW' || state === 'CREATED') {
+            stats.pending++;
+          }
+        });
+        
+        // Update the assignment's submissionStats
+        if (assignment.submissionStats) {
+          assignment.submissionStats = stats;
+        }
+      });
+      
+      console.log(`  Calculated stats for ${assignments.length} assignments`);
+      
+    } catch (error) {
+      console.warn('Error calculating submission stats:', error);
+    }
+  },
+  
+  /**
+   * Calculate global statistics from entity collections
+   * @param {Object} entities - Entity collections object
+   * @returns {Object} Global statistics
+   */
+  calculateGlobalStatsFromEntities: function(entities) {
+    const ungradedCount = entities.submissions.filter(sub => 
+      sub.status === 'pending' || sub.status === 'submitted'
+    ).length;
+    
+    const gradedSubmissions = entities.submissions.filter(sub => sub.grade && sub.grade.score !== undefined);
+    const averageGrade = gradedSubmissions.length > 0 
+      ? gradedSubmissions.reduce((sum, sub) => sum + (sub.grade.percentage || 0), 0) / gradedSubmissions.length
+      : undefined;
+    
+    return {
+      totalClassrooms: entities.classrooms.length,
+      totalStudents: entities.enrollments.length,
+      totalAssignments: entities.assignments.length,
+      totalSubmissions: entities.submissions.length,
+      ungradedSubmissions: ungradedCount,
+      averageGrade: averageGrade
+    };
+  },
+  
+  /**
+   * LEGACY: Get all classrooms with complete nested data (DEPRECATED - use collectAllEntitiesParallel instead)
    * @param {Object} config - Export configuration
    * @returns {Array} Array of classroom objects with nested data
    */

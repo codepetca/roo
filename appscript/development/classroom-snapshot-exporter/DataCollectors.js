@@ -217,8 +217,8 @@ var DataCollectors = {
         }
       }
       
-      // Add submission statistics
-      enhanced.submissionStats = this.getAssignmentSubmissionStats(courseId, assignment.id);
+      // Add submission statistics (will be calculated later from collected data to avoid double API calls)
+      enhanced.submissionStats = { total: 0, submitted: 0, graded: 0, pending: 0 };
       
       return enhanced;
       
