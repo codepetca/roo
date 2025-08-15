@@ -87,7 +87,7 @@
 				}
 			});
 
-			// Deduplicate grades by ID to prevent duplicates  
+			// Deduplicate grades by ID to prevent duplicates
 			const gradeIds = new Set<string>();
 			const uniqueGrades: Grade[] = [];
 			newGrades.forEach((grade) => {

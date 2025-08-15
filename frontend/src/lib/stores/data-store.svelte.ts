@@ -264,7 +264,7 @@ class DataStore {
 	/**
 	 * Refresh all data manually
 	 */
-	async refresh(): Promise<void> {
+	refresh = async (): Promise<void> => {
 		try {
 			this.setLoading(true);
 			this.clearError();
@@ -287,7 +287,7 @@ class DataStore {
 		} finally {
 			this.setLoading(false);
 		}
-	}
+	};
 
 	/**
 	 * Select a classroom

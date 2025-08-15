@@ -14,7 +14,6 @@
 		goto(`/dashboard/teacher/assignments`);
 	}
 
-
 	// Navigate to data import
 	function goToDataImport() {
 		goto('/teacher/data-import');
