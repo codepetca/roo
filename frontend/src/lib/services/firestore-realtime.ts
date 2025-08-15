@@ -29,7 +29,14 @@ export class FirestoreRealtimeService {
 	/**
 	 * Start listening to classrooms for a teacher
 	 */
-	subscribeToClassrooms(teacherEmail: string, onClassroomChange: (change: { type: 'added' | 'modified' | 'removed', classroom?: Classroom, id: string }) => void): void {
+	subscribeToClassrooms(
+		teacherEmail: string,
+		onClassroomChange: (change: {
+			type: 'added' | 'modified' | 'removed';
+			classroom?: Classroom;
+			id: string;
+		}) => void
+	): void {
 		// Unsubscribe from existing listener if any
 		this.unsubscribe('classrooms');
 
@@ -77,7 +84,14 @@ export class FirestoreRealtimeService {
 	/**
 	 * Start listening to assignments for specific classrooms
 	 */
-	subscribeToAssignments(classroomIds: string[], onAssignmentChange: (change: { type: 'added' | 'modified' | 'removed', assignment?: Assignment, id: string }) => void): void {
+	subscribeToAssignments(
+		classroomIds: string[],
+		onAssignmentChange: (change: {
+			type: 'added' | 'modified' | 'removed';
+			assignment?: Assignment;
+			id: string;
+		}) => void
+	): void {
 		// Unsubscribe from existing listener if any
 		this.unsubscribe('assignments');
 

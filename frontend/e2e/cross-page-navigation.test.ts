@@ -71,7 +71,7 @@ test.describe('Cross-page Navigation Tests', () => {
 			await signInAsStudent(page);
 
 			// 2. Should land on student dashboard
-			let currentUrl = page.url();
+			const currentUrl = page.url();
 			if (currentUrl.includes('/(dashboard)/student')) {
 				console.log('✓ Step 1: Successfully logged in and reached student dashboard');
 
@@ -319,12 +319,21 @@ test.describe('Cross-page Navigation Tests', () => {
 			await waitForPageReady(page);
 
 			// Check for basic UI elements that indicate the page loaded properly
-			const hasHeader = await page.locator('header').isVisible({ timeout: 3000 }).catch(() => false);
-			const hasNav = await page.locator('nav').isVisible({ timeout: 3000 }).catch(() => false);
-			const hasContent = await page.locator('h1, h2, main').isVisible({ timeout: 3000 }).catch(() => false);
+			const hasHeader = await page
+				.locator('header')
+				.isVisible({ timeout: 3000 })
+				.catch(() => false);
+			const hasNav = await page
+				.locator('nav')
+				.isVisible({ timeout: 3000 })
+				.catch(() => false);
+			const hasContent = await page
+				.locator('h1, h2, main')
+				.isVisible({ timeout: 3000 })
+				.catch(() => false);
 
 			console.log(`✓ Page ${path} - Header: ${hasHeader}, Nav: ${hasNav}, Content: ${hasContent}`);
-			
+
 			// Should have at least basic page structure
 			expect(hasHeader || hasNav || hasContent).toBe(true);
 		}
@@ -340,7 +349,10 @@ test.describe('Cross-page Navigation Tests', () => {
 		// Check state before refresh using UI indicators
 		const beforeRefreshState = {
 			authenticated: !page.url().includes('/login'),
-			hasContent: await page.locator('h1, h2').isVisible({ timeout: 2000 }).catch(() => false),
+			hasContent: await page
+				.locator('h1, h2')
+				.isVisible({ timeout: 2000 })
+				.catch(() => false),
 			currentPath: page.url()
 		};
 
@@ -351,7 +363,10 @@ test.describe('Cross-page Navigation Tests', () => {
 		// Check state after refresh using UI indicators
 		const afterRefreshState = {
 			authenticated: !page.url().includes('/login'),
-			hasContent: await page.locator('h1, h2').isVisible({ timeout: 2000 }).catch(() => false),
+			hasContent: await page
+				.locator('h1, h2')
+				.isVisible({ timeout: 2000 })
+				.catch(() => false),
 			currentPath: page.url()
 		};
 

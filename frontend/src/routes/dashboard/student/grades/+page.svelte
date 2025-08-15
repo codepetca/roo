@@ -34,24 +34,37 @@
 			loading = true;
 			error = null;
 
-			// Load assignments first
-			assignments = await api.listAssignments();
-
-			// Load all grades and filter for current student
-			// TODO: Replace with student-specific API endpoint
-			let allGrades: Grade[] = [];
-			for (const assignment of assignments) {
-				try {
-					const grades = await api.getGradesByAssignment(assignment.id);
-					// Filter grades for current student (by email for now)
-					const studentGrades = grades.filter((grade) => grade.studentEmail === auth.user?.email);
-					allGrades = [...allGrades, ...studentGrades];
-				} catch (err) {
-					console.warn(`Could not load grades for assignment ${assignment.id}:`, err);
-				}
+			// Check if user is authenticated
+			if (!auth.isAuthenticated()) {
+				error = 'Please log in to view your grades';
+				return;
 			}
 
-			myGrades = allGrades;
+			// Load assignments and grades concurrently for better performance
+			const [assignmentsData, gradesData] = await Promise.allSettled([
+				api.listAssignments(),
+				api.getMyGrades()
+			]);
+
+			// Handle assignments result
+			if (assignmentsData.status === 'fulfilled') {
+				assignments = assignmentsData.value;
+			} else {
+				console.warn('Could not load assignments:', assignmentsData.reason);
+				assignments = [];
+			}
+
+			// Handle grades result
+			if (gradesData.status === 'fulfilled') {
+				myGrades = gradesData.value;
+			} else {
+				console.warn('Could not load grades:', gradesData.reason);
+				myGrades = [];
+				// Don't set error here unless both fail - assignments might still be loading
+				if (assignmentsData.status === 'rejected') {
+					error = 'Failed to load grades data';
+				}
+			}
 		} catch (err: unknown) {
 			console.error('Failed to load grades:', err);
 			error = (err as Error)?.message || 'Failed to load grades';
@@ -277,7 +290,7 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-gray-200 bg-white">
-							{#each myGrades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
+							{#each myGrades as grade, index (`grade-${index}-${grade.assignmentId || 'unknown'}-${grade.studentId || 'unknown'}`)}
 								{@const assignment = assignmentLookup[grade.assignmentId]}
 								{@const percentage = Math.round((grade.score / grade.maxScore) * 100)}
 								{@const letterGrade = getLetterGrade(percentage)}

@@ -29,6 +29,9 @@ const dateTimeSchema = z.union([
   z.date(),
   // Empty object (API returning {}) - default to current date
   z.object({}).transform(() => new Date()),
+  // null or undefined - default to current date
+  z.null().transform(() => new Date()),
+  z.undefined().transform(() => new Date()),
   // String that can be parsed as date
   z.string().transform(val => {
     const date = new Date(val);
@@ -95,14 +98,18 @@ export const classroomSchema = baseEntitySchema.extend({
 });
 
 /**
- * Assignment Schema - Individual assignments
+ * Assignment Base Schema - Core assignment fields without transform
  */
-export const assignmentSchema = baseEntitySchema.extend({
+const assignmentBaseSchema = baseEntitySchema.extend({
   classroomId: z.string(),
   title: z.string().min(1).optional(),
   name: z.string().min(1).optional(), // Google Classroom uses 'name' instead of 'title'
   description: z.string().optional(),
   type: z.enum(['coding', 'quiz', 'written', 'form']).optional(),
+  
+  // Legacy compatibility fields
+  isQuiz: z.boolean().optional(),
+  maxPoints: z.number().min(0).optional(),
   
   // Timing
   dueDate: dateTimeSchema.optional(),
@@ -110,7 +117,7 @@ export const assignmentSchema = baseEntitySchema.extend({
   // Grading
   maxScore: z.number().min(0).default(100),
   
-  // Rubric (optional)
+  // Rubric (optional) - handle both new and legacy formats
   rubric: z.object({
     enabled: z.boolean().default(false),
     criteria: z.array(z.object({
@@ -119,6 +126,13 @@ export const assignmentSchema = baseEntitySchema.extend({
       description: z.string(),
       maxPoints: z.number().min(0)
     })).default([])
+  }).optional(),
+  
+  // Legacy rubric format compatibility
+  gradingRubric: z.object({
+    enabled: z.boolean().optional(),
+    criteria: z.array(z.string()).optional(),
+    promptTemplate: z.string().optional()
   }).optional(),
   
   // Status
@@ -133,6 +147,31 @@ export const assignmentSchema = baseEntitySchema.extend({
   submissionCount: z.number().int().min(0).default(0),
   gradedCount: z.number().int().min(0).default(0),
   pendingCount: z.number().int().min(0).default(0)
+});
+
+/**
+ * Assignment Schema - Individual assignments with legacy compatibility transform
+ */
+export const assignmentSchema = assignmentBaseSchema.transform(data => {
+  // Transform legacy fields to new format
+  const result = { ...data };
+  
+  // Handle legacy isQuiz -> type conversion
+  if (data.isQuiz === true && !data.type) {
+    result.type = 'quiz' as const;
+  }
+  
+  // Handle legacy maxPoints -> maxScore conversion
+  if (data.maxPoints && !data.maxScore) {
+    result.maxScore = data.maxPoints;
+  }
+  
+  // Clean up legacy fields from result
+  delete result.isQuiz;
+  delete result.maxPoints;
+  delete result.gradingRubric;
+  
+  return result;
 });
 
 /**
@@ -352,7 +391,7 @@ export const studentDashboardSchema = z.object({
   studentId: z.string(),
   classrooms: z.array(z.object({
     classroom: classroomSchema,
-    assignments: z.array(assignmentSchema.extend({
+    assignments: z.array(assignmentBaseSchema.extend({
       hasSubmission: z.boolean().optional(),
       isGraded: z.boolean().optional(),
       isPending: z.boolean().optional(),

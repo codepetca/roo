@@ -247,7 +247,8 @@
 									</div>
 									<div class="ml-4 flex-shrink-0">
 										<span
-											class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {classroom.courseState === 'ARCHIVED'
+											class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {classroom.courseState ===
+											'ARCHIVED'
 												? 'bg-orange-100 text-orange-800'
 												: 'bg-green-100 text-green-800'}"
 										>

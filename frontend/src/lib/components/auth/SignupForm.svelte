@@ -117,7 +117,13 @@
 		</Alert>
 	{/if}
 
-	<form onsubmit={(e) => { e.preventDefault(); handleSubmit(); }} class="space-y-4">
+	<form
+		onsubmit={(e) => {
+			e.preventDefault();
+			handleSubmit();
+		}}
+		class="space-y-4"
+	>
 		<!-- Role Selection (only if userRole prop is not set) -->
 		{#if !userRole || userRole === undefined}
 			<fieldset>

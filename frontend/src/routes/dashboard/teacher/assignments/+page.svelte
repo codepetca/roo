@@ -229,7 +229,7 @@
 						</p>
 					</div>
 				{:else}
-					{#each filteredAssignments as assignment (assignment.id)}
+					{#each filteredAssignments as assignment, index (`assignment-${index}-${assignment.id}`)}
 						<div class="p-6 transition-colors hover:bg-gray-50">
 							<div class="flex items-start justify-between">
 								<div class="flex items-start space-x-4">

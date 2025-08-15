@@ -7,12 +7,7 @@
 import { api } from '$lib/api';
 import { auth } from '$lib/stores/auth.svelte';
 import { realtimeService } from '$lib/services/firestore-realtime';
-import type { 
-	Classroom, 
-	Assignment, 
-	TeacherDashboard, 
-	DashboardUser 
-} from '@shared/schemas/core';
+import type { Classroom, Assignment, TeacherDashboard, DashboardUser } from '@shared/schemas/core';
 
 /**
  * Schema-first data store with reactive arrays and computed values
@@ -56,11 +51,15 @@ class DataStore {
 	selectedAssignmentId = $state<string | null>(null);
 
 	selectedClassroom = $derived(
-		this.selectedClassroomId ? this.classrooms.find(c => c.id === this.selectedClassroomId) ?? null : null
+		this.selectedClassroomId
+			? (this.classrooms.find((c) => c.id === this.selectedClassroomId) ?? null)
+			: null
 	);
 
 	selectedAssignment = $derived(
-		this.selectedAssignmentId ? this.assignments.find(a => a.id === this.selectedAssignmentId) ?? null : null
+		this.selectedAssignmentId
+			? (this.assignments.find((a) => a.id === this.selectedAssignmentId) ?? null)
+			: null
 	);
 
 	/**
@@ -235,17 +234,15 @@ class DataStore {
 				this.classrooms = [...this.classrooms, change.classroom];
 			} else if (change.type === 'modified' && change.classroom) {
 				// Update existing classroom
-				this.classrooms = this.classrooms.map(c => 
-					c.id === change.id ? change.classroom! : c
-				);
+				this.classrooms = this.classrooms.map((c) => (c.id === change.id ? change.classroom! : c));
 			} else if (change.type === 'removed') {
 				// Remove classroom
-				this.classrooms = this.classrooms.filter(c => c.id !== change.id);
+				this.classrooms = this.classrooms.filter((c) => c.id !== change.id);
 			}
 		});
 
 		// Listen to assignment changes for active classrooms
-		const classroomIds = this.classrooms.map(c => c.id);
+		const classroomIds = this.classrooms.map((c) => c.id);
 		if (classroomIds.length > 0) {
 			realtimeService.subscribeToAssignments(classroomIds, (change) => {
 				if (change.type === 'added' && change.assignment) {
@@ -253,12 +250,12 @@ class DataStore {
 					this.assignments = [...this.assignments, change.assignment];
 				} else if (change.type === 'modified' && change.assignment) {
 					// Update existing assignment
-					this.assignments = this.assignments.map(a => 
+					this.assignments = this.assignments.map((a) =>
 						a.id === change.id ? change.assignment! : a
 					);
 				} else if (change.type === 'removed') {
 					// Remove assignment
-					this.assignments = this.assignments.filter(a => a.id !== change.id);
+					this.assignments = this.assignments.filter((a) => a.id !== change.id);
 				}
 			});
 		}
@@ -296,7 +293,7 @@ class DataStore {
 	 * Select a classroom
 	 */
 	selectClassroom(classroomId: string): void {
-		const classroom = this.classrooms.find(c => c.id === classroomId);
+		const classroom = this.classrooms.find((c) => c.id === classroomId);
 		if (classroom) {
 			this.selectedClassroomId = classroomId;
 			console.log('🏠 Selected classroom:', classroom.name);
@@ -309,7 +306,7 @@ class DataStore {
 	 * Select an assignment
 	 */
 	selectAssignment(assignmentId: string): void {
-		const assignment = this.assignments.find(a => a.id === assignmentId);
+		const assignment = this.assignments.find((a) => a.id === assignmentId);
 		if (assignment) {
 			this.selectedAssignmentId = assignmentId;
 			console.log('📝 Selected assignment:', assignment.title || assignment.name);

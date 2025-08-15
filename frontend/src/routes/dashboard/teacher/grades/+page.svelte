@@ -1,14 +1,18 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
+	import { dataStore } from '$lib/stores/data-store.svelte';
+	import { auth } from '$lib/stores';
 	import type { Assignment, Grade } from '@shared/types';
 
 	// State using Svelte 5 runes
-	let assignments = $state<Assignment[]>([]);
 	let allGrades = $state<Grade[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let selectedAssignment = $state<string>('all');
+
+	// Get assignments from data store
+	let assignments = $derived(dataStore.assignments);
 
 	// Filtered grades based on selected assignment
 	let filteredGrades = $derived(
@@ -49,22 +53,38 @@
 			loading = true;
 			error = null;
 
-			// Load assignments first
-			assignments = await api.listAssignments();
+			// Check if user is authenticated
+			if (!auth.isAuthenticated()) {
+				error = 'Please log in to view grades';
+				return;
+			}
 
-			// Load all grades (we'll filter client-side for simplicity)
-			// In a real app, you might want to paginate this or load per assignment
+			// Ensure data store is initialized (has assignments)
+			if (!dataStore.initialized || assignments.length === 0) {
+				await dataStore.initialize();
+			}
+
+			// Load grades for all assignments at once
 			allGrades = [];
 
-			// Try to load grades for each assignment
-			for (const assignment of assignments) {
+			// Use Promise.allSettled to handle individual failures gracefully
+			const gradePromises = assignments.map(async (assignment) => {
 				try {
-					const grades = await api.getGradesByAssignment(assignment.id);
-					allGrades = [...allGrades, ...grades];
+					return await api.getGradesByAssignment(assignment.id);
 				} catch (err) {
 					console.warn(`Could not load grades for assignment ${assignment.id}:`, err);
+					return [];
 				}
-			}
+			});
+
+			const results = await Promise.allSettled(gradePromises);
+
+			// Collect all successful results
+			results.forEach((result) => {
+				if (result.status === 'fulfilled') {
+					allGrades = [...allGrades, ...result.value];
+				}
+			});
 		} catch (err) {
 			console.error('Failed to load grades data:', err);
 			error = err instanceof Error ? err.message : 'Failed to load grades data';
@@ -279,7 +299,7 @@
 						class="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none"
 					>
 						<option value="all">All Assignments ({allGrades.length} grades)</option>
-						{#each assignments as assignment (assignment.id)}
+						{#each assignments as assignment, index (`assignment-${index}-${assignment.id}`)}
 							{@const gradeCount = allGrades.filter((g) => g.assignmentId === assignment.id).length}
 							<option value={assignment.id}>
 								{assignment.title} ({gradeCount} grades)
@@ -353,7 +373,7 @@
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-gray-200 bg-white">
-							{#each filteredGrades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
+							{#each filteredGrades as grade, index (`grade-${index}-${grade.assignmentId || 'unknown'}-${grade.studentId || 'unknown'}`)}
 								{@const studentName = (grade as { studentName?: string }).studentName}
 								{@const assignment = assignmentLookup[grade.assignmentId]}
 								{@const percentage = Math.round((grade.score / grade.maxScore) * 100)}
