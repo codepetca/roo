@@ -9,13 +9,34 @@ import { z } from 'zod';
  * for clean transformation and data management.
  */
 
-// Helper for date/timestamp handling - expects ISO strings from API
+// Helper for date/timestamp handling - flexible parsing for various Firebase formats
 const dateTimeSchema = z.union([
+  // ISO datetime string
   z.string().datetime().transform(val => new Date(val)),
+  // Firebase Timestamp object (admin SDK)
   z.object({
     _seconds: z.number(),
     _nanoseconds: z.number()
-  }).transform(val => new Date(val._seconds * 1000 + val._nanoseconds / 1000000))
+  }).transform(val => new Date(val._seconds * 1000 + val._nanoseconds / 1000000)),
+  // Firebase Timestamp object (client SDK)
+  z.object({
+    seconds: z.number(),
+    nanoseconds: z.number()
+  }).transform(val => new Date(val.seconds * 1000 + val.nanoseconds / 1000000)),
+  // Raw timestamp number (milliseconds)
+  z.number().transform(val => new Date(val)),
+  // Date object (already parsed)
+  z.date(),
+  // Empty object (API returning {}) - default to current date
+  z.object({}).transform(() => new Date()),
+  // String that can be parsed as date
+  z.string().transform(val => {
+    const date = new Date(val);
+    if (isNaN(date.getTime())) {
+      throw new Error(`Invalid date string: ${val}`);
+    }
+    return date;
+  })
 ]).transform(val => val instanceof Date ? val : val);
 
 // Base entity schema with common fields

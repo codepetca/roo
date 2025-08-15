@@ -3,10 +3,10 @@
 	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { Button, Alert } from '$lib/components/ui';
 	import { LoadingSkeleton } from '$lib/components/dashboard';
-	import type { AssignmentModel } from '$lib/models/assignment.model';
+	import type { Assignment } from '$lib/models';
 
 	// Reactive state from data store
-	let assignments = $derived(dataStore.assignments.all);
+	let assignments = $derived(dataStore.assignments);
 	let loading = $derived(dataStore.loading);
 	let error = $derived(dataStore.error);
 

@@ -42,9 +42,9 @@ Location: frontend/src/lib/components/auth/AuthGuard.svelte
 					redirecting = true;
 					// Redirect to appropriate dashboard based on user's actual role
 					if (auth.user?.role === 'teacher') {
-						goto('/(dashboard)/teacher');
+						goto('/dashboard/teacher');
 					} else {
-						goto('/(dashboard)/student');
+						goto('/dashboard/student');
 					}
 				}
 				return;

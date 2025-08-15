@@ -4,9 +4,13 @@
 	import { auth } from '$lib/stores';
 
 	onMount(() => {
-		// Redirect authenticated users to dashboard
+		// Redirect authenticated users to appropriate dashboard
 		if (auth.user) {
-			goto('/dashboard');
+			if (auth.user.role === 'teacher') {
+				goto('/dashboard/teacher');
+			} else {
+				goto('/dashboard/student');
+			}
 		} else {
 			// Redirect unauthenticated users to login
 			goto('/login');

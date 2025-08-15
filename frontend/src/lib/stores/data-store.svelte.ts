@@ -1,25 +1,26 @@
 /**
- * Model-Based Data Store with Real-time Updates
- * Single source of truth using validated models and collections
+ * Schema-First Data Store with Real-time Updates
+ * Single source of truth using Zod schema-inferred types
  * Location: frontend/src/lib/stores/data-store.svelte.ts
  */
 
 import { api } from '$lib/api';
 import { auth } from '$lib/stores/auth.svelte';
 import { realtimeService } from '$lib/services/firestore-realtime';
-import { ClassroomCollection } from '$lib/models/classroom.collection';
-import { AssignmentCollection } from '$lib/models/assignment.collection';
-import { ClassroomModel } from '$lib/models/classroom.model';
-import { AssignmentModel } from '$lib/models/assignment.model';
-import type { TeacherDashboard, DashboardUser } from '@shared/schemas/core';
+import type { 
+	Classroom, 
+	Assignment, 
+	TeacherDashboard, 
+	DashboardUser 
+} from '@shared/schemas/core';
 
 /**
- * Enhanced data store with model-based collections and real-time sync
+ * Schema-first data store with reactive arrays and computed values
  */
 class DataStore {
-	// Model collections
-	classrooms = new ClassroomCollection();
-	assignments = new AssignmentCollection();
+	// Core data arrays using schema-inferred types
+	classrooms = $state<Classroom[]>([]);
+	assignments = $state<Assignment[]>([]);
 
 	// User state
 	currentUser = $state<DashboardUser | null>(null);
@@ -40,26 +41,26 @@ class DataStore {
 
 	// Computed dashboard statistics
 	dashboardStats = $derived({
-		totalClassrooms: this.classrooms.count,
-		totalStudents: this.classrooms.totalStudents,
-		totalAssignments: this.classrooms.totalAssignments,
-		ungradedSubmissions: this.classrooms.totalUngradedSubmissions,
+		totalClassrooms: this.classrooms.length,
+		totalStudents: this.classrooms.reduce((sum, c) => sum + c.studentCount, 0),
+		totalAssignments: this.assignments.length,
+		ungradedSubmissions: this.classrooms.reduce((sum, c) => sum + c.ungradedSubmissions, 0),
 		averageGrade: 0 // TODO: Calculate from grades collection
 	});
 
 	// Computed state
-	hasData = $derived(this.classrooms.count > 0 || this.assignments.count > 0);
+	hasData = $derived(this.classrooms.length > 0 || this.assignments.length > 0);
 
 	// Selected entities state
 	selectedClassroomId = $state<string | null>(null);
 	selectedAssignmentId = $state<string | null>(null);
 
 	selectedClassroom = $derived(
-		this.selectedClassroomId ? this.classrooms.get(this.selectedClassroomId) : null
+		this.selectedClassroomId ? this.classrooms.find(c => c.id === this.selectedClassroomId) ?? null : null
 	);
 
 	selectedAssignment = $derived(
-		this.selectedAssignmentId ? this.assignments.get(this.selectedAssignmentId) : null
+		this.selectedAssignmentId ? this.assignments.find(a => a.id === this.selectedAssignmentId) ?? null : null
 	);
 
 	/**
@@ -149,28 +150,25 @@ class DataStore {
 			// Set current user
 			this.currentUser = dashboardData.teacher;
 
-			// Populate classroom collection with models
+			// Set classrooms array directly (already validated by API)
 			if (dashboardData.classrooms && dashboardData.classrooms.length > 0) {
-				const classroomModels = dashboardData.classrooms.map((classroom) =>
-					ClassroomModel.fromFirestore(classroom)
-				);
-				this.classrooms.setAll(classroomModels);
+				this.classrooms = dashboardData.classrooms;
 
 				console.log(
 					'🏠 Loaded classrooms:',
-					classroomModels.map((c) => ({
+					this.classrooms.map((c) => ({
 						id: c.id,
-						name: c.displayName,
+						name: c.name,
 						studentCount: c.studentCount,
 						assignmentCount: c.assignmentCount
 					}))
 				);
 
 				// Load assignments for these classrooms
-				await this.loadAssignmentsForClassrooms(classroomModels.map((c) => c.id));
+				await this.loadAssignmentsForClassrooms(this.classrooms.map((c) => c.id));
 			} else {
 				console.warn('⚠️ No classrooms found in dashboard data');
-				this.classrooms.clear();
+				this.classrooms = [];
 			}
 
 			// Set recent activity
@@ -205,12 +203,12 @@ class DataStore {
 			// Load assignments from API
 			const allAssignments = await api.listAssignments();
 
-			// Filter assignments for our classrooms and create models
-			const relevantAssignments = allAssignments
-				.filter((assignment) => classroomIds.includes(assignment.classroomId))
-				.map((assignment) => AssignmentModel.fromFirestore(assignment));
+			// Filter assignments for our classrooms (already validated by API)
+			const relevantAssignments = allAssignments.filter((assignment) =>
+				classroomIds.includes(assignment.classroomId)
+			);
 
-			this.assignments.setAll(relevantAssignments);
+			this.assignments = relevantAssignments;
 
 			console.log('✅ Loaded assignments:', relevantAssignments.length);
 		} catch (error) {
@@ -231,12 +229,38 @@ class DataStore {
 		console.log('🔊 Setting up real-time listeners...');
 
 		// Listen to classroom changes
-		realtimeService.subscribeToClassrooms(this.currentUser.schoolEmail, this.classrooms);
+		realtimeService.subscribeToClassrooms(this.currentUser.schoolEmail, (change) => {
+			if (change.type === 'added' && change.classroom) {
+				// Add new classroom
+				this.classrooms = [...this.classrooms, change.classroom];
+			} else if (change.type === 'modified' && change.classroom) {
+				// Update existing classroom
+				this.classrooms = this.classrooms.map(c => 
+					c.id === change.id ? change.classroom! : c
+				);
+			} else if (change.type === 'removed') {
+				// Remove classroom
+				this.classrooms = this.classrooms.filter(c => c.id !== change.id);
+			}
+		});
 
 		// Listen to assignment changes for active classrooms
-		const classroomIds = this.classrooms.ids;
+		const classroomIds = this.classrooms.map(c => c.id);
 		if (classroomIds.length > 0) {
-			realtimeService.subscribeToAssignments(classroomIds, this.assignments);
+			realtimeService.subscribeToAssignments(classroomIds, (change) => {
+				if (change.type === 'added' && change.assignment) {
+					// Add new assignment
+					this.assignments = [...this.assignments, change.assignment];
+				} else if (change.type === 'modified' && change.assignment) {
+					// Update existing assignment
+					this.assignments = this.assignments.map(a => 
+						a.id === change.id ? change.assignment! : a
+					);
+				} else if (change.type === 'removed') {
+					// Remove assignment
+					this.assignments = this.assignments.filter(a => a.id !== change.id);
+				}
+			});
 		}
 	}
 
@@ -272,10 +296,10 @@ class DataStore {
 	 * Select a classroom
 	 */
 	selectClassroom(classroomId: string): void {
-		const classroom = this.classrooms.get(classroomId);
+		const classroom = this.classrooms.find(c => c.id === classroomId);
 		if (classroom) {
 			this.selectedClassroomId = classroomId;
-			console.log('🏠 Selected classroom:', classroom.displayName);
+			console.log('🏠 Selected classroom:', classroom.name);
 		} else {
 			console.warn('⚠️ Classroom not found:', classroomId);
 		}
@@ -285,10 +309,10 @@ class DataStore {
 	 * Select an assignment
 	 */
 	selectAssignment(assignmentId: string): void {
-		const assignment = this.assignments.get(assignmentId);
+		const assignment = this.assignments.find(a => a.id === assignmentId);
 		if (assignment) {
 			this.selectedAssignmentId = assignmentId;
-			console.log('📝 Selected assignment:', assignment.displayTitle);
+			console.log('📝 Selected assignment:', assignment.title || assignment.name);
 		} else {
 			console.warn('⚠️ Assignment not found:', assignmentId);
 		}
@@ -337,8 +361,8 @@ class DataStore {
 		realtimeService.unsubscribeAll();
 
 		// Clear all data
-		this.classrooms.clear();
-		this.assignments.clear();
+		this.classrooms = [];
+		this.assignments = [];
 		this.recentActivity = [];
 		this.currentUser = null;
 		this.initialized = false;
@@ -357,9 +381,9 @@ class DataStore {
 	loadTestData(): void {
 		console.log('🧪 Loading test data...');
 
-		// Create test classrooms
-		const testClassrooms = [
-			ClassroomModel.fromFirestore({
+		// Create test classrooms using schema-compliant objects
+		const testClassrooms: Classroom[] = [
+			{
 				id: 'test-classroom-1',
 				teacherId: 'test@teacher.com',
 				name: 'Computer Science Period 1',
@@ -368,10 +392,13 @@ class DataStore {
 				assignmentCount: 8,
 				activeSubmissions: 18,
 				ungradedSubmissions: 5,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString()
-			}),
-			ClassroomModel.fromFirestore({
+				courseState: 'ACTIVE',
+				studentIds: [],
+				assignmentIds: [],
+				createdAt: new Date(),
+				updatedAt: new Date()
+			},
+			{
 				id: 'test-classroom-2',
 				teacherId: 'test@teacher.com',
 				name: 'Computer Science Period 2',
@@ -380,42 +407,43 @@ class DataStore {
 				assignmentCount: 6,
 				activeSubmissions: 12,
 				ungradedSubmissions: 3,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString()
-			})
+				courseState: 'ACTIVE',
+				studentIds: [],
+				assignmentIds: [],
+				createdAt: new Date(),
+				updatedAt: new Date()
+			}
 		];
 
-		this.classrooms.setAll(testClassrooms);
+		this.classrooms = testClassrooms;
 
-		// Create test assignments
-		const testAssignments = [
-			AssignmentModel.fromFirestore({
+		// Create test assignments using schema-compliant objects
+		const testAssignments: Assignment[] = [
+			{
 				id: 'test-assignment-1',
 				classroomId: 'test-classroom-1',
 				title: 'Karel the Dog - Basic Commands',
+				name: 'Karel the Dog - Basic Commands',
 				description: 'Introduction to programming with Karel',
-				maxPoints: 100,
-				isQuiz: false,
-				submissionCount: 20,
-				gradedCount: 15,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString()
-			}),
-			AssignmentModel.fromFirestore({
+				maxScore: 100,
+				type: 'coding',
+				createdAt: new Date(),
+				updatedAt: new Date()
+			},
+			{
 				id: 'test-assignment-2',
 				classroomId: 'test-classroom-1',
 				title: 'Programming Quiz #1',
+				name: 'Programming Quiz #1',
 				description: 'Basic programming concepts',
-				maxPoints: 50,
-				isQuiz: true,
-				submissionCount: 22,
-				gradedCount: 22,
-				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString()
-			})
+				maxScore: 50,
+				type: 'quiz',
+				createdAt: new Date(),
+				updatedAt: new Date()
+			}
 		];
 
-		this.assignments.setAll(testAssignments);
+		this.assignments = testAssignments;
 
 		// Set test user
 		this.currentUser = {

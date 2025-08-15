@@ -2,6 +2,9 @@
 	import { onMount } from 'svelte';
 	import { auth } from '$lib/stores';
 	import { api } from '$lib/api';
+	import StatsGrid from '$lib/components/core/StatsGrid.svelte';
+	import { PageHeader } from '$lib/components/dashboard';
+	import { Alert, Button } from '$lib/components/ui';
 	import type { Assignment, Grade } from '@shared/types';
 
 	// State using Svelte 5 runes
@@ -24,8 +27,8 @@
 	let completedAssignments = $derived(myGrades.length);
 	let totalAssignments = $derived(assignments.length);
 
-	// Quick stats for student dashboard
-	let quickStats = $derived([
+	// Transform stats for StatsGrid component
+	let statsData = $derived(() => [
 		{
 			title: 'Average Grade',
 			value: `${averageScore}%`,
@@ -145,77 +148,56 @@
 	});
 </script>
 
-<div class="space-y-6">
-	<!-- Welcome Section -->
-	<div class="rounded-lg bg-white p-6 shadow">
-		<h1 class="mb-2 text-2xl font-bold text-gray-900">Student Dashboard</h1>
-		<p class="text-gray-600">
-			Welcome back, {auth.user?.email?.split('@')[0] || 'Student'}! Track your grades and view
-			assignment feedback.
-		</p>
+{#snippet actions()}
+	<div class="flex gap-2">
+		<Button variant="secondary" onclick={loadStudentDashboardData} disabled={loading}>
+			{#snippet children()}
+				Refresh
+			{/snippet}
+		</Button>
 	</div>
+{/snippet}
 
-	{#if loading}
+<div class="space-y-6">
+	<!-- Page Header -->
+	<PageHeader
+		title="Student Dashboard"
+		description="Welcome back, {auth.user?.email?.split('@')[0] ||
+			'Student'}! Track your grades and view assignment feedback."
+		{actions}
+	/>
+
+	{#if error}
+		<Alert
+			variant="error"
+			title="Error loading dashboard"
+			dismissible
+			onDismiss={() => (error = null)}
+		>
+			{#snippet children()}
+				{error}
+				<div class="mt-3">
+					<Button variant="secondary" size="sm" onclick={loadStudentDashboardData}>
+						{#snippet children()}
+							Try Again
+						{/snippet}
+					</Button>
+				</div>
+			{/snippet}
+		</Alert>
+	{:else if loading}
 		<!-- Loading State -->
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
 			{#each Array.from({ length: 4 }, (_, i) => i) as i (i)}
-				<div class="animate-pulse rounded-lg bg-white p-6 shadow">
+				<div class="animate-pulse rounded-lg bg-white p-6 shadow-sm">
 					<div class="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
 					<div class="h-8 w-1/2 rounded bg-gray-200"></div>
 				</div>
 			{/each}
 		</div>
-	{:else if error}
-		<!-- Error State -->
-		<div class="rounded-lg border border-red-200 bg-red-50 p-6">
-			<div class="flex items-center">
-				<svg
-					class="mr-2 h-5 w-5 text-red-400"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
-				<h3 class="font-medium text-red-800">Error loading dashboard</h3>
-			</div>
-			<p class="mt-1 text-red-700">{error}</p>
-			<button
-				onclick={loadStudentDashboardData}
-				class="mt-3 rounded-md bg-red-100 px-3 py-1 text-sm text-red-800 transition-colors hover:bg-red-200"
-			>
-				Try Again
-			</button>
-		</div>
 	{:else}
 		<!-- Quick Stats Cards -->
-		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-			{#each quickStats as stat (stat.title)}
-				<div class="rounded-lg bg-white p-6 shadow">
-					<div class="flex items-center justify-between">
-						<div>
-							<p class="text-sm font-medium text-gray-600">{stat.title}</p>
-							<p class="text-3xl font-bold text-gray-900">{stat.value}</p>
-						</div>
-						<div class="rounded-lg p-3 {stat.color}">
-							<svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d={stat.icon}
-								/>
-							</svg>
-						</div>
-					</div>
-				</div>
-			{/each}
-		</div>
+		<StatsGrid stats={statsData} />
 
 		<!-- Recent Activity -->
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">

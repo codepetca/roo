@@ -17,10 +17,7 @@ import {
 	type QuerySnapshot
 } from 'firebase/firestore';
 import { firestore } from '$lib/firebase';
-import type { ClassroomCollection } from '$lib/models/classroom.collection';
-import type { AssignmentCollection } from '$lib/models/assignment.collection';
-import { ClassroomModel } from '$lib/models/classroom.model';
-import { AssignmentModel } from '$lib/models/assignment.model';
+import type { Classroom, Assignment } from '$lib/models';
 
 /**
  * Service for managing Firestore real-time listeners
@@ -32,7 +29,7 @@ export class FirestoreRealtimeService {
 	/**
 	 * Start listening to classrooms for a teacher
 	 */
-	subscribeToClassrooms(teacherEmail: string, classroomCollection: ClassroomCollection): void {
+	subscribeToClassrooms(teacherEmail: string, onClassroomChange: (change: { type: 'added' | 'modified' | 'removed', classroom?: Classroom, id: string }) => void): void {
 		// Unsubscribe from existing listener if any
 		this.unsubscribe('classrooms');
 
@@ -60,19 +57,16 @@ export class FirestoreRealtimeService {
 						type: change.type
 					});
 
-					classroomCollection.handleRealtimeChange(
-						{
-							type: change.type,
-							id: change.doc.id,
-							data: change.doc.data()
-						},
-						(data) => ClassroomModel.fromFirestore(data)
-					);
+					const classroomData = { id: change.doc.id, ...change.doc.data() } as Classroom;
+					onClassroomChange({
+						type: change.type,
+						classroom: change.type !== 'removed' ? classroomData : undefined,
+						id: change.doc.id
+					});
 				});
 			},
 			(error) => {
 				console.error('❌ Classroom listener error:', error);
-				classroomCollection.setError('Failed to sync classrooms');
 			}
 		);
 
@@ -83,7 +77,7 @@ export class FirestoreRealtimeService {
 	/**
 	 * Start listening to assignments for specific classrooms
 	 */
-	subscribeToAssignments(classroomIds: string[], assignmentCollection: AssignmentCollection): void {
+	subscribeToAssignments(classroomIds: string[], onAssignmentChange: (change: { type: 'added' | 'modified' | 'removed', assignment?: Assignment, id: string }) => void): void {
 		// Unsubscribe from existing listener if any
 		this.unsubscribe('assignments');
 
@@ -123,19 +117,16 @@ export class FirestoreRealtimeService {
 						title: data.title || data.name
 					});
 
-					assignmentCollection.handleRealtimeChange(
-						{
-							type: change.type,
-							id: change.doc.id,
-							data: change.doc.data()
-						},
-						(data) => AssignmentModel.fromFirestore(data)
-					);
+					const assignmentData = { id: change.doc.id, ...change.doc.data() } as Assignment;
+					onAssignmentChange({
+						type: change.type,
+						assignment: change.type !== 'removed' ? assignmentData : undefined,
+						id: change.doc.id
+					});
 				});
 			},
 			(error) => {
 				console.error('❌ Assignment listener error:', error);
-				assignmentCollection.setError('Failed to sync assignments');
 			}
 		);
 
