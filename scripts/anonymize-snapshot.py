@@ -141,7 +141,7 @@ def anonymize_json(data):
             for key, value in obj.items():
                 # Replace teacher email (including teacherEmail field)
                 if key in ["email", "teacherEmail"] and value == "stewart.chan@gapps.yrdsb.ca":
-                    new_obj[key] = "dev.codepet@gmail.com"
+                    new_obj[key] = "teacher@test.com"
                 # Replace student emails
                 elif key in ["email", "studentEmail"] and "@gapps.yrdsb.ca" in str(value):
                     student_number = value.split("@")[0]
