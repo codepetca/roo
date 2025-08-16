@@ -27,7 +27,8 @@
       "Bash(firebase functions:list:*)",
       "Bash(firebase deploy:*)",
       "Bash(npm test)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "mcp__firebase__firestore_list_collections"
     ],
     "deny": []
   },

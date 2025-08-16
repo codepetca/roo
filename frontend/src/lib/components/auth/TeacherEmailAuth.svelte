@@ -2,7 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 	import { firebaseAuth } from '$lib/firebase';
-	import { api } from '$lib/api';
+	import { api, API_BASE_URL } from '$lib/api';
 	import { Button, Alert, LoadingSpinner } from '$lib/components/ui';
 
 	const dispatch = createEventDispatcher<{
@@ -57,12 +57,12 @@
 
 			if (mode === 'signup') {
 				loadingMessage = 'Creating your account...';
-				
+
 				// Create new account
 				userCredential = await createUserWithEmailAndPassword(firebaseAuth, email, password);
 
 				loadingMessage = 'Updating your profile...';
-				
+
 				// Update display name if provided
 				if (displayName) {
 					const { updateProfile } = await import('firebase/auth');
@@ -70,22 +70,70 @@
 				}
 
 				loadingMessage = 'Setting up your teacher profile...';
-				
+
 				// Create teacher profile with school email - wait for it to complete
-				await api.createProfile({
+				const profileResult = await api.createProfile({
 					uid: userCredential.user.uid,
 					role: 'teacher',
 					schoolEmail: schoolEmail.trim(),
 					displayName: displayName || undefined
 				});
 
+				if (!profileResult.success) {
+					throw new Error(profileResult.message || 'Failed to create teacher profile');
+				}
+
+				loadingMessage = 'Verifying profile setup...';
+
+				// Verify profile exists by attempting to fetch it with retry logic
+				let profileVerified = false;
+				const maxRetries = 5;
+				const retryDelay = 1000; // 1 second between retries
+
+				for (let attempt = 1; attempt <= maxRetries; attempt++) {
+					try {
+						// Get fresh token to ensure auth state is updated
+						const freshToken = await userCredential.user.getIdToken(true);
+
+						// Try to fetch the profile
+						const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
+							headers: {
+								Authorization: `Bearer ${freshToken}`,
+								'Content-Type': 'application/json'
+							}
+						});
+
+						if (response.ok) {
+							const profileData = await response.json();
+							if (profileData.success && profileData.data) {
+								profileVerified = true;
+								console.log('✅ Profile verified successfully:', profileData.data);
+								break;
+							}
+						}
+
+						if (attempt < maxRetries) {
+							console.log(
+								`⏳ Profile verification attempt ${attempt} failed, retrying in ${retryDelay}ms...`
+							);
+							await new Promise((resolve) => setTimeout(resolve, retryDelay));
+						}
+					} catch (verifyError) {
+						console.warn(`Profile verification attempt ${attempt} failed:`, verifyError);
+						if (attempt < maxRetries) {
+							await new Promise((resolve) => setTimeout(resolve, retryDelay));
+						}
+					}
+				}
+
+				if (!profileVerified) {
+					console.warn('⚠️ Profile verification failed after all retries, proceeding anyway');
+				}
+
 				loadingMessage = 'Profile setup complete!';
-				
-				// Small delay to let the profile propagate through the system
-				await new Promise(resolve => setTimeout(resolve, 1000));
 			} else {
 				loadingMessage = 'Signing you in...';
-				
+
 				// Sign in existing account
 				userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
 			}

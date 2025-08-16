@@ -82,10 +82,10 @@ export async function getUserProfile(req: Request, res: Response) {
       updatedAt: getCurrentTimestamp()
     });
 
-    // Return user profile
+    // Return user profile with proper wrapper format
     sendApiResponse(
       res,
-      userProfile,
+      { data: userProfile },
       true,
       "User profile retrieved successfully"
     );
