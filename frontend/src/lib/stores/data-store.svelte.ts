@@ -53,6 +53,35 @@ class DataStore {
 		assignments: this.assignments.filter(a => a.type !== 'quiz')
 	});
 
+	// Computed assignments grouped by classroom for hierarchical UI
+	assignmentsByClassroom = $derived(() => {
+		const grouped = new Map<string, Assignment[]>();
+		
+		// Initialize with empty arrays for all classrooms
+		this.classrooms.forEach(classroom => {
+			grouped.set(classroom.id, []);
+		});
+		
+		// Group assignments by classroom
+		this.assignments.forEach(assignment => {
+			const classroomAssignments = grouped.get(assignment.classroomId);
+			if (classroomAssignments) {
+				classroomAssignments.push(assignment);
+			}
+		});
+		
+		// Sort assignments within each classroom by creation date (newest first)
+		grouped.forEach((assignments, classroomId) => {
+			assignments.sort((a, b) => {
+				const aDate = new Date(a.createdAt).getTime();
+				const bDate = new Date(b.createdAt).getTime();
+				return bDate - aDate;
+			});
+		});
+		
+		return grouped;
+	});
+
 	// Selected entities state
 	selectedClassroomId = $state<string | null>(null);
 	selectedAssignmentId = $state<string | null>(null);
@@ -68,6 +97,12 @@ class DataStore {
 			? (this.assignments.find((a) => a.id === this.selectedAssignmentId) ?? null)
 			: null
 	);
+
+	// Computed: assignments for currently selected classroom
+	selectedClassroomAssignments = $derived(() => {
+		if (!this.selectedClassroomId) return [];
+		return this.assignments.filter(a => a.classroomId === this.selectedClassroomId);
+	});
 
 	/**
 	 * Initialize the data store and load all data
@@ -345,6 +380,8 @@ class DataStore {
 		const classroom = this.classrooms.find((c) => c.id === classroomId);
 		if (classroom) {
 			this.selectedClassroomId = classroomId;
+			// Clear assignment selection when switching classrooms
+			this.selectedAssignmentId = null;
 			console.log('🏠 Selected classroom:', classroom.name);
 		} else {
 			console.warn('⚠️ Classroom not found:', classroomId);
@@ -355,9 +392,22 @@ class DataStore {
 	 * Select an assignment
 	 */
 	selectAssignment(assignmentId: string): void {
+		if (!assignmentId) {
+			this.selectedAssignmentId = null;
+			console.log('📝 Cleared assignment selection');
+			return;
+		}
+
 		const assignment = this.assignments.find((a) => a.id === assignmentId);
 		if (assignment) {
 			this.selectedAssignmentId = assignmentId;
+			
+			// Auto-select the classroom if not already selected
+			if (this.selectedClassroomId !== assignment.classroomId) {
+				this.selectedClassroomId = assignment.classroomId;
+				console.log('🏠 Auto-selected classroom for assignment');
+			}
+			
 			console.log('📝 Selected assignment:', assignment.title || assignment.name);
 		} else {
 			console.warn('⚠️ Assignment not found:', assignmentId);
@@ -365,11 +415,25 @@ class DataStore {
 	}
 
 	/**
-	 * Clear selections
+	 * Select an assignment within a specific classroom (hierarchical selection)
 	 */
-	clearSelections(): void {
+	selectAssignmentInClassroom(assignmentId: string, classroomId: string): void {
+		// First ensure the classroom is selected
+		if (this.selectedClassroomId !== classroomId) {
+			this.selectClassroom(classroomId);
+		}
+		
+		// Then select the assignment
+		this.selectAssignment(assignmentId);
+	}
+
+	/**
+	 * Clear current selection (go back to dashboard overview)
+	 */
+	clearSelection(): void {
 		this.selectedClassroomId = null;
 		this.selectedAssignmentId = null;
+		console.log('🔄 Cleared all selections, returning to dashboard overview');
 	}
 
 	/**
