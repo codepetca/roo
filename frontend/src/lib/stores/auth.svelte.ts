@@ -15,6 +15,7 @@ import { firebaseAuth } from '../firebase';
 import { goto } from '$app/navigation';
 import { browser } from '$app/environment';
 import { API_BASE_URL } from '../api';
+import { userService, type UserProfile, type CreateProfileData } from '../services/user-service';
 
 // User interface for our store
 interface AuthUser {
@@ -57,69 +58,23 @@ async function setAuthCookie(user: User | null) {
  */
 async function getUserProfile(firebaseUser: User): Promise<AuthUser | null> {
 	try {
-		const token = await firebaseUser.getIdToken();
-
-		console.log('Fetching user profile for:', firebaseUser.email);
-
-		const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
-			headers: {
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json'
-			}
-		});
-
-		console.log('Profile fetch response status:', response.status);
-
-		if (!response.ok) {
-			const errorText = await response.text();
-			console.error('Failed to get user profile - HTTP error:', response.status, errorText);
-			return null;
-		}
-
-		const data = await response.json();
-		console.log('Profile API response:', data);
-
-		// Handle both old format (direct data) and new format (wrapped data)
-		let profileData = data;
-		if (data.success && data.data) {
-			// New wrapped format
-			profileData = data.data;
-		} else if (data.success && !data.data) {
-			// Handle success: true but no data field - use the response directly
-			profileData = data;
-		} else if (!data.success) {
-			// Explicit failure
-			console.error('Profile fetch failed:', data.error || 'Unknown error');
-			return null;
-		}
-
-		// Validate we have the required fields
-		if (!profileData || typeof profileData !== 'object') {
-			console.error('Invalid profile data structure:', profileData);
-			return null;
-		}
-
-		if (!profileData.role) {
-			console.error('Profile missing required role field:', profileData);
-			return null;
-		}
-
-		const profile = {
-			uid: firebaseUser.uid,
-			email: firebaseUser.email,
-			displayName:
-				firebaseUser.displayName ||
-				profileData.displayName ||
-				profileData.email?.split('@')[0] ||
-				'User',
-			role: profileData.role as 'teacher' | 'student',
-			schoolEmail: profileData.schoolEmail || null
+		console.log('📡 Getting user profile via UserService for:', firebaseUser.email);
+		
+		const profile = await userService.getProfileWithFallback(firebaseUser);
+		
+		// Convert UserProfile to AuthUser format
+		const authUser: AuthUser = {
+			uid: profile.uid,
+			email: profile.email,
+			displayName: profile.displayName,
+			role: profile.role,
+			schoolEmail: profile.schoolEmail || null
 		};
 
-		console.log('✅ Created user profile from API data:', profile);
-		return profile;
+		console.log('✅ Retrieved user profile via UserService:', authUser);
+		return authUser;
 	} catch (error) {
-		console.error('Error getting user profile:', error);
+		console.error('❌ Failed to get user profile via UserService:', error);
 		return null;
 	}
 }
@@ -311,31 +266,17 @@ async function createAccount(data: {
 			console.log('✅ Display name updated');
 		}
 
-		console.log('📡 Creating user profile in Firestore...');
-		// Create user profile in Firestore using our API
-		const token = await firebaseUser.getIdToken();
-		const response = await fetch(`${API_BASE_URL}/api/functions/createProfileForExistingUser`, {
-			method: 'POST',
-			headers: {
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				uid: firebaseUser.uid,
-				role: data.role,
-				schoolEmail: data.schoolEmail,
-				displayName: data.displayName
-			})
-		});
-
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({}));
-			console.error('❌ Profile creation failed:', response.status, errorData);
-			throw new Error(errorData.message || 'Failed to create user profile');
-		}
-
-		const profileResult = await response.json();
-		console.log('✅ Profile creation response:', profileResult);
+		console.log('📡 Creating user profile via UserService...');
+		// Create user profile using unified UserService
+		const profileData: CreateProfileData = {
+			uid: firebaseUser.uid,
+			role: data.role,
+			schoolEmail: data.schoolEmail,
+			displayName: data.displayName
+		};
+		
+		const createdProfile = await userService.createProfile(profileData);
+		console.log('✅ Profile created via UserService:', createdProfile);
 
 		// Set auth cookie
 		console.log('🍪 Setting auth cookie...');

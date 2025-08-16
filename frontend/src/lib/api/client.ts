@@ -17,61 +17,6 @@ import {
 import { z } from 'zod';
 import { safeValidateApiResponse } from '../schemas';
 
-/**
- * Transform legacy grade data format to match core schema expectations
- */
-function transformLegacyGradeData(gradeData: any): any {
-	if (!gradeData || typeof gradeData !== 'object') {
-		return gradeData;
-	}
-
-	const transformed = { ...gradeData };
-
-	// Fix gradedBy field: if it's an email, convert to 'manual'
-	if (gradeData.gradedBy && typeof gradeData.gradedBy === 'string') {
-		if (gradeData.gradedBy.includes('@')) {
-			transformed.gradedBy = 'manual';
-		} else if (!['ai', 'manual', 'auto'].includes(gradeData.gradedBy)) {
-			transformed.gradedBy = 'manual'; // Default to manual for unknown values
-		}
-	}
-
-	// Fix rubricScores: ensure it's an array
-	if (gradeData.rubricScores) {
-		if (!Array.isArray(gradeData.rubricScores)) {
-			// Convert object to array if needed, or default to empty array
-			transformed.rubricScores = [];
-		}
-	} else {
-		// Add empty array if missing
-		transformed.rubricScores = [];
-	}
-
-	// Add required submissionVersionGraded if missing
-	if (!gradeData.submissionVersionGraded) {
-		transformed.submissionVersionGraded = 1;
-	}
-
-	// Ensure other required fields have defaults
-	if (!gradeData.feedback) {
-		transformed.feedback = '';
-	}
-
-	if (!gradeData.percentage && gradeData.score && gradeData.maxScore) {
-		transformed.percentage = Math.round((gradeData.score / gradeData.maxScore) * 100);
-	}
-
-	// Add version fields if missing
-	if (!gradeData.version) {
-		transformed.version = 1;
-	}
-
-	if (gradeData.isLatest === undefined) {
-		transformed.isLatest = true;
-	}
-
-	return transformed;
-}
 
 /**
  * Base URL for direct HTTP calls
@@ -212,52 +157,34 @@ export async function typedApiRequest<T>(
 		rawResponse: JSON.stringify(rawResponse, null, 2)
 	});
 
-	// Extract data from API response wrapper if present
-	// Handle both wrapped ({ success: true, data: {...} }) and direct responses
-	let dataToValidate = rawResponse;
-	let isApiWrapper = false;
-
+	// Extract data from standard API response wrapper: { success: boolean, data: T, error?: string }
 	if (
-		rawResponse &&
-		typeof rawResponse === 'object' &&
-		'success' in rawResponse &&
-		('data' in rawResponse || 'grades' in rawResponse)
+		!rawResponse ||
+		typeof rawResponse !== 'object' ||
+		!('success' in rawResponse) ||
+		!('data' in rawResponse)
 	) {
-		// API response wrapper format
-		console.debug('🔧 Detected API wrapper format, extracting data/grades field');
-		isApiWrapper = true;
-		// Handle both data and grades field names
-		dataToValidate = (rawResponse as any).data || (rawResponse as any).grades;
+		throw new Error('Invalid API response format - expected { success, data, error? }');
+	}
 
-		// Handle API errors from wrapper
-		if (!(rawResponse as any).success) {
-			const error = (rawResponse as any).error || 'API request failed';
-			throw new Error(error);
-		}
+	// Handle API errors from wrapper
+	if (!(rawResponse as any).success) {
+		const error = (rawResponse as any).error || 'API request failed';
+		throw new Error(error);
+	}
 
-		// For array endpoints: convert null to empty array
-		if (dataToValidate === null && schema._def.typeName === 'ZodArray') {
-			console.debug('🔧 Converting null array response to empty array');
-			dataToValidate = [];
-		}
+	let dataToValidate = (rawResponse as any).data;
+
+	// For array endpoints: convert null to empty array
+	if (dataToValidate === null && schema._def.typeName === 'ZodArray') {
+		console.debug('🔧 Converting null array response to empty array');
+		dataToValidate = [];
 	}
 
 	// Add detailed logging for debugging validation issues
 	console.debug('Data to validate:', JSON.stringify(dataToValidate, null, 2));
 	console.debug('Schema type:', schema._def.typeName);
-	console.debug('Is API wrapper:', isApiWrapper);
 
-	// Transform legacy grade data format to match core schema before validation
-	if (schema._def.typeName === 'ZodArray' && Array.isArray(dataToValidate)) {
-		dataToValidate = dataToValidate.map((item: any) => {
-			if (item && typeof item === 'object' && 'gradedBy' in item) {
-				return transformLegacyGradeData(item);
-			}
-			return item;
-		});
-	} else if (dataToValidate && typeof dataToValidate === 'object' && 'gradedBy' in dataToValidate) {
-		dataToValidate = transformLegacyGradeData(dataToValidate);
-	}
 
 	const validation = safeValidateApiResponse(schema, dataToValidate);
 
