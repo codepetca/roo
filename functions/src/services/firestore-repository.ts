@@ -234,9 +234,9 @@ export class FirestoreRepository {
       queryField: "teacherEmail"
     });
     
-    // Query classrooms by the appropriate email
+    // Query classrooms by the appropriate email (stored in teacherId field)
     const snapshot = await db.collection(this.collections.classrooms)
-      .where("teacherEmail", "==", teacherEmail)
+      .where("teacherId", "==", teacherEmail)
       .orderBy("updatedAt", "desc")
       .get();
 

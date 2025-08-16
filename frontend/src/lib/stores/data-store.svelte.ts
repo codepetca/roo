@@ -46,6 +46,13 @@ class DataStore {
 	// Computed state
 	hasData = $derived(this.classrooms.length > 0 || this.assignments.length > 0);
 
+	// Computed assignment groupings for UI
+	assignmentsGrouped = $derived({
+		all: this.assignments,
+		quizzes: this.assignments.filter(a => a.type === 'quiz'),
+		assignments: this.assignments.filter(a => a.type !== 'quiz')
+	});
+
 	// Selected entities state
 	selectedClassroomId = $state<string | null>(null);
 	selectedAssignmentId = $state<string | null>(null);
@@ -228,26 +235,65 @@ class DataStore {
 		console.log('🔊 Setting up real-time listeners...');
 
 		// Listen to classroom changes
-		realtimeService.subscribeToClassrooms(this.currentUser.schoolEmail, (change) => {
+		realtimeService.subscribeToClassrooms(this.currentUser.schoolEmail, async (change) => {
 			if (change.type === 'added' && change.classroom) {
 				// Add new classroom
 				this.classrooms = [...this.classrooms, change.classroom];
+				
+				// Load assignments for the new classroom
+				console.log('📝 Loading assignments for new classroom:', change.classroom.id);
+				try {
+					const newAssignments = await api.listAssignmentsByClassroom(change.classroom.id);
+					// Add new assignments that don't already exist
+					const existingIds = new Set(this.assignments.map(a => a.id));
+					const uniqueNewAssignments = newAssignments.filter(a => !existingIds.has(a.id));
+					if (uniqueNewAssignments.length > 0) {
+						this.assignments = [...this.assignments, ...uniqueNewAssignments];
+						console.log('✅ Added', uniqueNewAssignments.length, 'assignments for classroom', change.classroom.id);
+					}
+				} catch (error) {
+					console.error('❌ Failed to load assignments for new classroom:', error);
+				}
+				
+				// Update assignment listeners with new classroom
+				this.updateAssignmentListeners();
 			} else if (change.type === 'modified' && change.classroom) {
 				// Update existing classroom
 				this.classrooms = this.classrooms.map((c) => (c.id === change.id ? change.classroom! : c));
 			} else if (change.type === 'removed') {
 				// Remove classroom
 				this.classrooms = this.classrooms.filter((c) => c.id !== change.id);
+				// Remove assignments for this classroom
+				this.assignments = this.assignments.filter((a) => a.classroomId !== change.id);
+				// Update assignment listeners
+				this.updateAssignmentListeners();
 			}
 		});
 
-		// Listen to assignment changes for active classrooms
+		// Set up initial assignment listeners
+		this.updateAssignmentListeners();
+	}
+
+	/**
+	 * Update assignment listeners based on current classrooms
+	 */
+	private updateAssignmentListeners(): void {
 		const classroomIds = this.classrooms.map((c) => c.id);
+		
 		if (classroomIds.length > 0) {
+			console.log('🔄 Updating assignment listeners for classrooms:', classroomIds);
+			
+			// Unsubscribe from previous assignment listener
+			realtimeService.unsubscribe('assignments');
+			
+			// Subscribe to assignments for all current classrooms
 			realtimeService.subscribeToAssignments(classroomIds, (change) => {
 				if (change.type === 'added' && change.assignment) {
-					// Add new assignment
-					this.assignments = [...this.assignments, change.assignment];
+					// Check if assignment already exists
+					const exists = this.assignments.some(a => a.id === change.assignment!.id);
+					if (!exists) {
+						this.assignments = [...this.assignments, change.assignment];
+					}
 				} else if (change.type === 'modified' && change.assignment) {
 					// Update existing assignment
 					this.assignments = this.assignments.map((a) =>
@@ -258,6 +304,9 @@ class DataStore {
 					this.assignments = this.assignments.filter((a) => a.id !== change.id);
 				}
 			});
+		} else {
+			console.log('⚠️ No classrooms to listen to for assignments');
+			realtimeService.unsubscribe('assignments');
 		}
 	}
 
@@ -346,6 +395,54 @@ class DataStore {
 	 */
 	clearError(): void {
 		this.error = null;
+	}
+
+	/**
+	 * Helper function to format date for display
+	 */
+	formatDate(date: Date | { _seconds: number } | undefined): string {
+		if (!date) return 'No due date';
+		
+		// Handle Firestore timestamp format
+		if (typeof date === 'object' && '_seconds' in date) {
+			date = new Date(date._seconds * 1000);
+		}
+		
+		// Convert string to Date if needed
+		if (typeof date === 'string') {
+			date = new Date(date);
+		}
+		
+		return date.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric'
+		});
+	}
+
+	/**
+	 * Get display title for assignment (handles both title and name fields)
+	 */
+	getAssignmentDisplayTitle(assignment: Assignment): string {
+		return assignment.title || assignment.name || 'Untitled Assignment';
+	}
+
+	/**
+	 * Get type label for assignment
+	 */
+	getAssignmentTypeLabel(assignment: Assignment): string {
+		if (assignment.type === 'quiz') return 'Quiz';
+		if (assignment.type === 'coding') return 'Coding';
+		if (assignment.type === 'written') return 'Written';
+		if (assignment.type === 'form') return 'Form';
+		return 'Assignment';
+	}
+
+	/**
+	 * Check if assignment is auto-gradable
+	 */
+	isAssignmentAutoGradable(assignment: Assignment): boolean {
+		return assignment.type === 'quiz' || assignment.type === 'form';
 	}
 
 	/**

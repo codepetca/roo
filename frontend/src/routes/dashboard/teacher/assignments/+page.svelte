@@ -6,7 +6,6 @@
 	import type { Assignment } from '$lib/models';
 
 	// Reactive state from data store
-	let assignments = $derived(dataStore.assignments);
 	let loading = $derived(dataStore.loading);
 	let error = $derived(dataStore.error);
 
@@ -16,22 +15,27 @@
 
 	// Filtered assignments based on search and filter
 	let filteredAssignments = $derived(() => {
-		let filtered = assignments || [];
-
-		// Filter by type
+		// Always use the grouped data for consistency
+		let filtered: Assignment[] = [];
+		
 		if (activeFilter === 'quizzes') {
-			filtered = dataStore.assignments?.quizzes || [];
+			filtered = dataStore.assignmentsGrouped.quizzes || [];
 		} else if (activeFilter === 'assignments') {
-			filtered = dataStore.assignments?.assignments || [];
+			filtered = dataStore.assignmentsGrouped.assignments || [];
+		} else {
+			// For 'all', use the main assignments array
+			filtered = dataStore.assignments || [];
 		}
 
 		// Filter by search query (client-side search)
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase().trim();
 			filtered = filtered.filter(
-				(a) =>
-					a.displayTitle.toLowerCase().includes(query) ||
-					(a.description?.toLowerCase() || '').includes(query)
+				(a) => {
+					const title = dataStore.getAssignmentDisplayTitle(a).toLowerCase();
+					const description = (a.description?.toLowerCase() || '');
+					return title.includes(query) || description.includes(query);
+				}
 			);
 		}
 
@@ -40,16 +44,16 @@
 
 	// Filter tabs configuration
 	let filterTabs = $derived([
-		{ key: 'all' as const, label: 'All', count: assignments?.length || 0 },
+		{ key: 'all' as const, label: 'All', count: dataStore.assignments?.length || 0 },
 		{
 			key: 'quizzes' as const,
 			label: 'Quizzes',
-			count: dataStore.assignments?.quizzes?.length || 0
+			count: dataStore.assignmentsGrouped.quizzes?.length || 0
 		},
 		{
 			key: 'assignments' as const,
 			label: 'Assignments',
-			count: dataStore.assignments?.assignments?.length || 0
+			count: dataStore.assignmentsGrouped.assignments?.length || 0
 		}
 	]);
 
@@ -64,6 +68,21 @@
 			console.log('🔄 Initializing data store from assignments page...');
 			dataStore.initialize();
 		}
+		
+		// Debug reactive values
+		$effect(() => {
+			console.log('🔍 Assignments page debug:', {
+				assignments: dataStore.assignments?.length || 0,
+				assignmentsGrouped: {
+					quizzes: dataStore.assignmentsGrouped.quizzes?.length || 0,
+					assignments: dataStore.assignmentsGrouped.assignments?.length || 0
+				},
+				filteredAssignments: filteredAssignments?.length || 0,
+				activeFilter,
+				searchQuery,
+				sampleAssignment: dataStore.assignments?.[0]
+			});
+		});
 	});
 </script>
 
@@ -131,7 +150,7 @@
 		</Alert>
 	{/if}
 
-	{#if loading && assignments.length === 0}
+	{#if loading && dataStore.assignments.length === 0}
 		<!-- Loading State -->
 		<div class="rounded-lg bg-white p-6 shadow">
 			<div class="animate-pulse space-y-4">
@@ -198,7 +217,7 @@
 			<!-- Results Summary -->
 			<div class="border-b border-gray-200 bg-gray-50 px-6 py-3">
 				<p class="text-sm text-gray-600">
-					Showing {filteredAssignments.length} of {assignments.length}
+					Showing {filteredAssignments.length} of {dataStore.assignments?.length || 0}
 					{filteredAssignments.length === 1 ? 'item' : 'items'}
 					{searchQuery.trim() ? `matching "${searchQuery}"` : ''}
 				</p>
@@ -235,7 +254,7 @@
 								<div class="flex items-start space-x-4">
 									<!-- Type Icon -->
 									<div
-										class="p-2 {assignment.isQuiz
+										class="p-2 {assignment.type === 'quiz'
 											? 'bg-green-100 text-green-600'
 											: 'bg-blue-100 text-blue-600'} rounded-lg"
 									>
@@ -244,7 +263,7 @@
 												stroke-linecap="round"
 												stroke-linejoin="round"
 												stroke-width="2"
-												d={assignment.isQuiz
+												d={assignment.type === 'quiz'
 													? 'M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2M9 5a2 2 0 012 2v6a2 2 0 01-2 2M9 5V3a2 2 0 012-2h4a2 2 0 012 2v2M9 13h6m-3-3v3'
 													: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'}
 											/>
@@ -255,14 +274,14 @@
 									<div class="min-w-0 flex-1">
 										<div class="mb-1 flex items-center space-x-2">
 											<h3 class="truncate text-lg font-semibold text-gray-900">
-												{assignment.displayTitle}
+												{dataStore.getAssignmentDisplayTitle(assignment)}
 											</h3>
 											<span
-												class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {assignment.isQuiz
+												class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {assignment.type === 'quiz'
 													? 'bg-green-100 text-green-800'
 													: 'bg-blue-100 text-blue-800'}"
 											>
-												{assignment.typeLabel}
+												{dataStore.getAssignmentTypeLabel(assignment)}
 											</span>
 										</div>
 
@@ -285,7 +304,7 @@
 														d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
 													/>
 												</svg>
-												Due: {assignment.formatDueDate()}
+												Due: {dataStore.formatDate(assignment.dueDate)}
 											</span>
 											<span class="flex items-center">
 												<svg
@@ -301,9 +320,9 @@
 														d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
 													/>
 												</svg>
-												{assignment.maxPoints} points
+												{assignment.maxPoints || assignment.maxScore || 0} points
 											</span>
-											{#if assignment.hasUngraded}
+											{#if assignment.pendingCount && assignment.pendingCount > 0}
 												<span class="flex items-center text-orange-600">
 													<svg
 														class="mr-1 h-4 w-4"
@@ -318,10 +337,10 @@
 															d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 														/>
 													</svg>
-													{assignment.ungradedCount} ungraded
+													{assignment.pendingCount} ungraded
 												</span>
 											{/if}
-											{#if assignment.isAutoGradable()}
+											{#if dataStore.isAssignmentAutoGradable(assignment)}
 												<span class="flex items-center text-green-600">
 													<svg
 														class="mr-1 h-4 w-4"

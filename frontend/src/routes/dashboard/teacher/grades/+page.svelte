@@ -315,7 +315,7 @@
 						{#each assignments as assignment, index (`assignment-${index}-${assignment.id}`)}
 							{@const gradeCount = allGrades.filter((g) => g.assignmentId === assignment.id).length}
 							<option value={assignment.id}>
-								{assignment.title} ({gradeCount} grades)
+								{assignment.title || assignment.name || 'Untitled'} ({gradeCount} grades)
 							</option>
 						{/each}
 					</select>
@@ -400,10 +400,10 @@
 									</td>
 									<td class="px-6 py-4 whitespace-nowrap">
 										<div class="text-sm text-gray-900">
-											{assignment?.title || 'Unknown Assignment'}
+											{assignment ? (assignment.title || assignment.name || 'Unknown Assignment') : 'Unknown Assignment'}
 										</div>
 										<div class="text-sm text-gray-500">
-											{assignment?.isQuiz ? 'Quiz' : 'Assignment'}
+											{assignment?.type === 'quiz' ? 'Quiz' : 'Assignment'}
 										</div>
 									</td>
 									<td class="px-6 py-4 whitespace-nowrap">

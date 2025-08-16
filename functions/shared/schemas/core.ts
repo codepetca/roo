@@ -99,8 +99,9 @@ export const classroomSchema = baseEntitySchema.extend({
 
 /**
  * Assignment Base Schema - Core assignment fields without transform
+ * Exported for use in .extend() operations since the main assignmentSchema uses .transform()
  */
-const assignmentBaseSchema = baseEntitySchema.extend({
+export const assignmentBaseSchema = baseEntitySchema.extend({
   classroomId: z.string(),
   title: z.string().min(1).optional(),
   name: z.string().min(1).optional(), // Google Classroom uses 'name' instead of 'title'
