@@ -63,15 +63,16 @@ def anonymize_json(data):
     used_names = set()
     
     # Pre-populate teacher mapping
-    name_mapping["Stewart Chan"] = "Dev CodePet"
-    name_mapping["Test Teacher"] = "Dev CodePet"  # Handle already anonymized
+    name_mapping["Stewart Chan"] = "Teacher Demo"
+    name_mapping["Test Teacher"] = "Teacher Demo"  # Handle already anonymized
+    name_mapping["Dev CodePet"] = "Teacher Demo"  # Handle already anonymized
     
     # First pass: collect all unique names and student numbers
     def collect_identifiers(obj):
         if isinstance(obj, dict):
             # Collect teacher name
             if obj.get("email") == "stewart.chan@gapps.yrdsb.ca":
-                name_mapping["Stewart Chan"] = "Dev CodePet"
+                name_mapping["Stewart Chan"] = "Teacher Demo"
             
             # Collect student data
             if "name" in obj and "email" in obj:
@@ -141,7 +142,7 @@ def anonymize_json(data):
             for key, value in obj.items():
                 # Replace teacher email (including teacherEmail field)
                 if key in ["email", "teacherEmail"] and value == "stewart.chan@gapps.yrdsb.ca":
-                    new_obj[key] = "teacher@test.com"
+                    new_obj[key] = "teacher@schoolemail.com"
                 # Replace student emails
                 elif key in ["email", "studentEmail"] and "@gapps.yrdsb.ca" in str(value):
                     student_number = value.split("@")[0]
