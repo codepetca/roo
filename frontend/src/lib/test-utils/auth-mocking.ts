@@ -10,19 +10,42 @@
 import { vi } from 'vitest';
 
 /**
- * Default mock user for testing
+ * Default mock teacher user for testing (matches E2E test credentials)
  */
-export const DEFAULT_MOCK_USER = {
-	uid: 'test-user-123',
-	email: 'test.teacher@gmail.com',
+export const DEFAULT_MOCK_TEACHER = {
+	uid: 'teacher-test-uid-123',
+	email: 'teacher@test.com',
 	displayName: 'Test Teacher',
-	getIdToken: vi.fn().mockResolvedValue('mock-id-token-12345')
+	getIdToken: vi.fn().mockResolvedValue('test-token-123')
 };
 
 /**
- * Default mock auth token
+ * Default mock student user for testing (matches E2E test credentials)
  */
-export const DEFAULT_MOCK_TOKEN = 'mock-id-token-12345';
+export const DEFAULT_MOCK_STUDENT = {
+	uid: 'student-test-uid-456',
+	email: 'student@test.com', 
+	displayName: 'Test Student',
+	getIdToken: vi.fn().mockResolvedValue('test-token-456')
+};
+
+/**
+ * Default mock user for testing (defaults to teacher)
+ */
+export const DEFAULT_MOCK_USER = DEFAULT_MOCK_TEACHER;
+
+/**
+ * Default mock auth token (teacher token)
+ */
+export const DEFAULT_MOCK_TOKEN = 'test-token-123';
+
+/**
+ * Mock tokens for specific roles
+ */
+export const MOCK_TOKENS = {
+	teacher: 'test-token-123',
+	student: 'test-token-456'
+};
 
 /**
  * Create a mock Firebase auth object with authenticated user
@@ -67,6 +90,20 @@ export function createMockFirebaseAuthUnauthenticated() {
 		onAuthStateChange: vi.fn(),
 		getCurrentUserToken: vi.fn().mockResolvedValue(null)
 	};
+}
+
+/**
+ * Create a mock Firebase auth object with authenticated teacher
+ */
+export function createMockFirebaseAuthTeacher() {
+	return createMockFirebaseAuth(DEFAULT_MOCK_TEACHER, MOCK_TOKENS.teacher);
+}
+
+/**
+ * Create a mock Firebase auth object with authenticated student
+ */
+export function createMockFirebaseAuthStudent() {
+	return createMockFirebaseAuth(DEFAULT_MOCK_STUDENT, MOCK_TOKENS.student);
 }
 
 /**

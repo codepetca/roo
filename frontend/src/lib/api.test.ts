@@ -4,12 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { AssignmentResponse, SubmissionResponse, GradeResponse } from '@shared/types';
-
-// Type aliases for backward compatibility
-type Assignment = AssignmentResponse;
-type Submission = SubmissionResponse;
-type Grade = GradeResponse;
+import type { Assignment, Submission, Grade } from '@shared/schemas/core';
 
 // Mock fetch globally
 const mockFetch = vi.fn();

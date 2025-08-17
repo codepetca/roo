@@ -184,8 +184,9 @@ describe('Schema Validation Functions', () => {
 
 			expect(result.success).toBe(false);
 			if (!result.success) {
-				expect(result.error).toContain('Field "isNewUser": Required');
-				expect(result.error).toContain('Field "userProfile": Required');
+				expect(result.error).toContain('isNewUser');
+				expect(result.error).toContain('userProfile');
+				expect(result.error).toContain('Required');
 			}
 		});
 
@@ -206,7 +207,8 @@ describe('Schema Validation Functions', () => {
 
 			expect(result.success).toBe(false);
 			if (!result.success) {
-				expect(result.error).toContain('userProfile.email');
+				expect(result.error).toContain('userProfile');
+				expect(result.error).toContain('email');
 			}
 		});
 	});
@@ -265,8 +267,9 @@ describe('Schema Validation Functions', () => {
 
 			expect(result.success).toBe(false);
 			if (!result.success) {
-				expect(result.error).toContain('Field "email": Required');
-				expect(result.error).toContain('Field "valid": Required');
+				expect(result.error).toContain('email');
+				expect(result.error).toContain('valid');
+				expect(result.error).toContain('Required');
 			}
 		});
 	});

@@ -11,11 +11,13 @@ import { typedApiRequest } from './client';
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-// Mock Firebase auth
+// Mock Firebase auth with unified test credentials  
 vi.mock('../firebase', () => ({
 	firebaseAuth: {
 		currentUser: {
-			uid: 'test-user-123',
+			uid: 'teacher-test-uid-123',
+			email: 'teacher@test.com',
+			displayName: 'Test Teacher',
 			getIdToken: vi.fn().mockResolvedValue('test-token-123')
 		}
 	}
@@ -23,11 +25,13 @@ vi.mock('../firebase', () => ({
 
 describe('API Client - Schema Validation', () => {
 	beforeEach(() => {
-		vi.clearAllMocks();
+		// Don't clear all mocks - this clears our auth mock too
+		// Just clear the fetch mock
+		mockFetch.mockClear();
 	});
 
 	afterEach(() => {
-		vi.resetAllMocks();
+		mockFetch.mockReset();
 	});
 
 	describe('typedApiRequest', () => {
@@ -37,16 +41,21 @@ describe('API Client - Schema Validation', () => {
 			email: z.string().email()
 		});
 
-		it('should validate direct response data successfully', async () => {
+		it('should validate API wrapper response format successfully', async () => {
 			const responseData = {
 				id: '123',
 				name: 'Test User',
 				email: 'test@example.com'
 			};
 
+			const wrappedResponse = {
+				success: true,
+				data: responseData
+			};
+
 			mockFetch.mockResolvedValueOnce({
 				ok: true,
-				json: vi.fn().mockResolvedValue(responseData)
+				json: vi.fn().mockResolvedValue(wrappedResponse)
 			});
 
 			const result = await typedApiRequest('/test', { method: 'GET' }, testSchema);
@@ -88,9 +97,9 @@ describe('API Client - Schema Validation', () => {
 				json: vi.fn().mockResolvedValue(wrappedResponse)
 			});
 
-			// This should fail validation since data is null
+			// This should throw the error from the API wrapper
 			await expect(typedApiRequest('/test', { method: 'GET' }, testSchema)).rejects.toThrow(
-				'API response validation failed'
+				'Test error message'
 			);
 		});
 
@@ -146,9 +155,14 @@ describe('API Client - Schema Validation', () => {
 				// Missing email field
 			};
 
+			const wrappedResponse = {
+				success: true,
+				data: invalidResponseData
+			};
+
 			mockFetch.mockResolvedValueOnce({
 				ok: true,
-				json: vi.fn().mockResolvedValue(invalidResponseData)
+				json: vi.fn().mockResolvedValue(wrappedResponse)
 			});
 
 			await expect(typedApiRequest('/test', { method: 'GET' }, testSchema)).rejects.toThrow(
@@ -201,9 +215,14 @@ describe('API Client - Schema Validation', () => {
 				email: 'test@example.com'
 			};
 
+			const wrappedResponse = {
+				success: true,
+				data: responseData
+			};
+
 			mockFetch.mockResolvedValueOnce({
 				ok: true,
-				json: vi.fn().mockResolvedValue(responseData)
+				json: vi.fn().mockResolvedValue(wrappedResponse)
 			});
 
 			await typedApiRequest('/test', { method: 'GET' }, testSchema);

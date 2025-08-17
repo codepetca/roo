@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Assignment, Submission, Grade } from '@shared/types';
+import type { Assignment, Submission, Grade } from '@shared/schemas/core';
 
 // Mock API client
 const mockApi = {
@@ -430,7 +430,9 @@ describe('Dashboard Integration Tests', () => {
 
 			const pendingSubmissions = await mockApi.getUngradedSubmissions();
 
-			expect(pendingSubmissions).toHaveLength(1);
+			// After marking submission-1 as graded, there should be 0 ungraded submissions
+			// since submission-2 was already graded
+			expect(pendingSubmissions).toHaveLength(0);
 			expect(pendingSubmissions.find((s) => s.id === 'submission-1')).toBeUndefined();
 		});
 	});
