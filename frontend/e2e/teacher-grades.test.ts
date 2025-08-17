@@ -16,7 +16,7 @@ test.describe('Teacher Grades Page', () => {
 	});
 
 	test('should display grades page with statistics', async ({ page }) => {
-		await page.goto('/dashboard/teacher/grades');
+		await page.goto('/(dashboard)/teacher/grades');
 		await waitForPageReady(page);
 
 		// Should show grades page header
@@ -39,7 +39,7 @@ test.describe('Teacher Grades Page', () => {
 	});
 
 	test('should handle loading states', async ({ page }) => {
-		await page.goto('/dashboard/teacher/grades');
+		await page.goto('/(dashboard)/teacher/grades');
 
 		// Should show loading skeleton initially
 		const loadingElements = page.locator('.animate-pulse, .animate-spin');
@@ -53,7 +53,7 @@ test.describe('Teacher Grades Page', () => {
 	});
 
 	test('should show assignment filter dropdown', async ({ page }) => {
-		await page.goto('/dashboard/teacher/grades');
+		await page.goto('/(dashboard)/teacher/grades');
 		await waitForPageReady(page);
 
 		// Should show assignment filter
@@ -68,7 +68,7 @@ test.describe('Teacher Grades Page', () => {
 	});
 
 	test('should handle empty grades state', async ({ page }) => {
-		await page.goto('/dashboard/teacher/grades');
+		await page.goto('/(dashboard)/teacher/grades');
 		await waitForPageReady(page);
 
 		// Check if we have no grades (empty state)
@@ -88,7 +88,7 @@ test.describe('Teacher Grades Page', () => {
 	});
 
 	test('should display grades table when data exists', async ({ page }) => {
-		await page.goto('/dashboard/teacher/grades');
+		await page.goto('/(dashboard)/teacher/grades');
 		await waitForPageReady(page);
 
 		// Look for grades table or grade list items
@@ -126,7 +126,7 @@ test.describe('Teacher Grades Page', () => {
 	});
 
 	test('should filter grades by assignment', async ({ page }) => {
-		await page.goto('/dashboard/teacher/grades');
+		await page.goto('/(dashboard)/teacher/grades');
 		await waitForPageReady(page);
 
 		const filterDropdown = page.locator('#assignment-filter');
@@ -153,7 +153,7 @@ test.describe('Teacher Grades Page', () => {
 	});
 
 	test('should refresh grades data', async ({ page }) => {
-		await page.goto('/dashboard/teacher/grades');
+		await page.goto('/(dashboard)/teacher/grades');
 		await waitForPageReady(page);
 
 		const refreshButton = page.getByRole('button', { name: /refresh/i });
@@ -172,12 +172,12 @@ test.describe('Teacher Grades Page', () => {
 	});
 
 	test('should handle navigation from grades page', async ({ page }) => {
-		await page.goto('/dashboard/teacher/grades');
+		await page.goto('/(dashboard)/teacher/grades');
 		await waitForPageReady(page);
 
 		// Should have navigation elements
 		const navElements = [
-			'[href*="/dashboard/teacher"]', // Dashboard link
+			'[href*="/(dashboard)/teacher"]', // Dashboard link
 			'[href*="/assignments"]', // Assignments link
 			'text=/dashboard|overview/i' // Dashboard text link
 		];
@@ -202,7 +202,7 @@ test.describe('Teacher Grades Page', () => {
 	});
 
 	test('should handle error states gracefully', async ({ page }) => {
-		await page.goto('/dashboard/teacher/grades');
+		await page.goto('/(dashboard)/teacher/grades');
 		await waitForPageReady(page);
 
 		// Check for error indicators

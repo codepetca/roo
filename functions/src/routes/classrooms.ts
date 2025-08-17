@@ -416,7 +416,7 @@ export async function updateClassroomCounts(req: Request, res: Response): Promis
     }
 
     // Get user's school email
-    const userDoc = await db.collection("users").doc(user.uid).get();
+    const userDoc = await db.collection("profiles").doc(user.uid).get();
     const userData = userDoc.data();
     const schoolEmail = userData?.schoolEmail || user.email;
     

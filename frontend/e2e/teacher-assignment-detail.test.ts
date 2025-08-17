@@ -16,7 +16,7 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 	test('should navigate to assignment detail from assignments list', async ({ page }) => {
 		// Start from assignments page
-		await page.goto('/dashboard/teacher/assignments');
+		await page.goto('/(dashboard)/teacher/assignments');
 		await waitForPageReady(page);
 
 		// Look for "View Details" buttons or assignment links
@@ -50,14 +50,14 @@ test.describe('Teacher Assignment Detail Page', () => {
 		if (!foundDetailLink) {
 			console.log('⚠️ No assignment detail links found - testing with direct navigation');
 			// Fallback: try direct navigation to a test assignment
-			await page.goto('/dashboard/teacher/assignments/test-assignment-1');
+			await page.goto('/(dashboard)/teacher/assignments/test-assignment-1');
 			await waitForPageReady(page);
 		}
 	});
 
 	test('should display assignment detail page structure', async ({ page }) => {
 		// Navigate directly to assignment detail (assuming we have test data)
-		await page.goto('/dashboard/teacher/assignments/test-assignment-1');
+		await page.goto('/(dashboard)/teacher/assignments/test-assignment-1');
 		await waitForPageReady(page);
 
 		// Check if we're on an assignment detail page
@@ -94,7 +94,7 @@ test.describe('Teacher Assignment Detail Page', () => {
 			console.log('Assignment detail page redirected or not found');
 
 			// Check for common redirect destinations
-			const redirectCheck = ['/dashboard/teacher', '/dashboard/teacher/assignments', '/login'];
+			const redirectCheck = ['/(dashboard)/teacher', '/(dashboard)/teacher/assignments', '/login'];
 
 			const finalUrl = page.url();
 			if (redirectCheck.some((path) => finalUrl.includes(path))) {
@@ -105,7 +105,7 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 	test('should handle assignment not found gracefully', async ({ page }) => {
 		// Try accessing a non-existent assignment
-		await page.goto('/dashboard/teacher/assignments/non-existent-assignment-123');
+		await page.goto('/(dashboard)/teacher/assignments/non-existent-assignment-123');
 		await waitForPageReady(page);
 
 		// Check for error handling
@@ -146,7 +146,7 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 	test('should show submission data when available', async ({ page }) => {
 		// Navigate to assignment detail
-		await page.goto('/dashboard/teacher/assignments/test-assignment-1');
+		await page.goto('/(dashboard)/teacher/assignments/test-assignment-1');
 		await waitForPageReady(page);
 
 		// Look for submission-related content
@@ -196,7 +196,7 @@ test.describe('Teacher Assignment Detail Page', () => {
 	});
 
 	test('should provide navigation back to assignments list', async ({ page }) => {
-		await page.goto('/dashboard/teacher/assignments/test-assignment-1');
+		await page.goto('/(dashboard)/teacher/assignments/test-assignment-1');
 		await waitForPageReady(page);
 
 		// Look for back/navigation buttons
@@ -237,7 +237,7 @@ test.describe('Teacher Assignment Detail Page', () => {
 	});
 
 	test('should show grading functionality when available', async ({ page }) => {
-		await page.goto('/dashboard/teacher/assignments/test-assignment-1');
+		await page.goto('/(dashboard)/teacher/assignments/test-assignment-1');
 		await waitForPageReady(page);
 
 		// Look for grading-related elements
@@ -271,7 +271,7 @@ test.describe('Teacher Assignment Detail Page', () => {
 
 	test('should handle loading states', async ({ page }) => {
 		// Navigate to assignment detail page
-		await page.goto('/dashboard/teacher/assignments/test-assignment-1');
+		await page.goto('/(dashboard)/teacher/assignments/test-assignment-1');
 
 		// Check for loading indicators
 		const loadingElements = page.locator('.animate-pulse, .animate-spin, text=/loading/i');
@@ -285,7 +285,7 @@ test.describe('Teacher Assignment Detail Page', () => {
 	});
 
 	test('should display assignment statistics', async ({ page }) => {
-		await page.goto('/dashboard/teacher/assignments/test-assignment-1');
+		await page.goto('/(dashboard)/teacher/assignments/test-assignment-1');
 		await waitForPageReady(page);
 
 		// Look for statistical information

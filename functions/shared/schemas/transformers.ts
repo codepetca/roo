@@ -75,7 +75,7 @@ export function snapshotToCore(snapshot: ClassroomSnapshot): {
 
   for (const classroomData of snapshot.classrooms) {
     // Transform classroom
-    const classroom = transformClassroom(classroomData, snapshot.teacher.email);
+    const classroom = transformClassroom(classroomData, classroomData.teacherEmail);
     classrooms.push(classroom);
 
     // Transform assignments for this classroom
@@ -124,17 +124,9 @@ function transformTeacher(
 ): DashboardUserInput {
   const classroomIds = classrooms.map(c => StableIdGenerator.classroom(c.id));
   
-  // Extract school email from classroom data (courseGroupEmail or teacherGroupEmail)
-  let schoolEmail: string | undefined;
-  for (const classroom of classrooms) {
-    if (classroom.courseGroupEmail) {
-      schoolEmail = classroom.courseGroupEmail;
-      break;
-    } else if (classroom.teacherGroupEmail) {
-      schoolEmail = classroom.teacherGroupEmail;
-      break;
-    }
-  }
+  // Extract teacher's school email from classroom data (teacherEmail field)
+  // This is the authoritative source for the teacher's school board email
+  const schoolEmail = classrooms.length > 0 ? classrooms[0].teacherEmail : teacherProfile.email;
   
   return {
     email: teacherProfile.email,

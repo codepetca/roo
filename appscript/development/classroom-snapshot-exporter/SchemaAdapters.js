@@ -35,9 +35,10 @@ var SchemaAdapters = {
    * Adapt classroom data
    * Converts Google Classroom Course to ClassroomWithData schema format
    * @param {Object} course - Google Classroom course object
+   * @param {string} teacherEmail - Teacher's email address
    * @returns {Object} ClassroomWithData compatible object
    */
-  adaptClassroom: function(course) {
+  adaptClassroom: function(course, teacherEmail) {
     try {
       const now = new Date().toISOString();
       
@@ -84,6 +85,7 @@ var SchemaAdapters = {
         
         // Permissions and ownership
         ownerId: course.ownerId || '',
+        teacherEmail: teacherEmail || '',
         guardianNotificationSettings: course.guardiansEnabled ? {
           enabled: course.guardiansEnabled
         } : undefined
@@ -106,7 +108,8 @@ var SchemaAdapters = {
         assignments: [],
         students: [],
         submissions: [],
-        ownerId: ''
+        ownerId: '',
+        teacherEmail: teacherEmail || ''
       };
     }
   },

@@ -270,7 +270,7 @@ test.describe('Core Authentication Flow', () => {
 			// Wait for form to be ready and button to be enabled
 			// Use both test ID and fallback selectors
 			let submitButton = page.locator('[data-testid="submit-auth-button"]');
-			let buttonFound = await submitButton.isVisible({ timeout: 2000 }).catch(() => false);
+			const buttonFound = await submitButton.isVisible({ timeout: 2000 }).catch(() => false);
 
 			if (!buttonFound) {
 				// Fallback to visible Sign In button

@@ -15,7 +15,7 @@ test.describe('Data Store Tests', () => {
 	});
 
 	test('should initialize data store correctly', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		const storeInitialization = await page.evaluate(() => {
@@ -45,7 +45,7 @@ test.describe('Data Store Tests', () => {
 	});
 
 	test('should manage loading states correctly', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 
 		// Check initial loading state
 		const initialLoadingElements = page.locator('.animate-pulse, .animate-spin, text=/loading/i');
@@ -72,7 +72,7 @@ test.describe('Data Store Tests', () => {
 	});
 
 	test('should handle reactive state updates', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Test reactive updates by triggering a refresh
@@ -131,7 +131,7 @@ test.describe('Data Store Tests', () => {
 
 	test('should synchronize data between different page views', async ({ page }) => {
 		// Load dashboard first
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		const dashboardData = await page.evaluate(() => {
@@ -144,7 +144,7 @@ test.describe('Data Store Tests', () => {
 		});
 
 		// Navigate to assignments page
-		await page.goto('/dashboard/teacher/assignments');
+		await page.goto('/(dashboard)/teacher/assignments');
 		await waitForPageReady(page);
 
 		const assignmentsPageData = await page.evaluate(() => {
@@ -167,7 +167,7 @@ test.describe('Data Store Tests', () => {
 	});
 
 	test('should handle error states properly', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Test error handling capabilities
@@ -216,7 +216,7 @@ test.describe('Data Store Tests', () => {
 	});
 
 	test('should manage selection state correctly', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Test classroom selection
@@ -268,7 +268,7 @@ test.describe('Data Store Tests', () => {
 	});
 
 	test('should calculate derived state correctly', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		const derivedStateTest = await page.evaluate(() => {
@@ -305,7 +305,7 @@ test.describe('Data Store Tests', () => {
 	});
 
 	test('should handle data store cleanup correctly', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Test cleanup capabilities
@@ -358,7 +358,7 @@ test.describe('Data Store Tests', () => {
 	});
 
 	test('should persist essential state across page navigation', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		const initialState = await page.evaluate(() => {
@@ -371,7 +371,7 @@ test.describe('Data Store Tests', () => {
 		});
 
 		// Navigate to assignments page
-		await page.goto('/dashboard/teacher/assignments');
+		await page.goto('/(dashboard)/teacher/assignments');
 		await waitForPageReady(page);
 
 		const stateAfterNavigation = await page.evaluate(() => {
@@ -398,7 +398,7 @@ test.describe('Data Store Tests', () => {
 	});
 
 	test('should handle concurrent data operations', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Test multiple simultaneous operations

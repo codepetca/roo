@@ -117,11 +117,17 @@
 		</Alert>
 	{/if}
 
-	<form on:submit|preventDefault={handleSubmit} class="space-y-4">
+	<form
+		onsubmit={(e) => {
+			e.preventDefault();
+			handleSubmit();
+		}}
+		class="space-y-4"
+	>
 		<!-- Role Selection (only if userRole prop is not set) -->
 		{#if !userRole || userRole === undefined}
-			<div>
-				<label class="mb-3 block text-sm font-medium text-gray-700"> I am a: </label>
+			<fieldset>
+				<legend class="mb-3 block text-sm font-medium text-gray-700">I am a:</legend>
 				<div class="grid grid-cols-2 gap-3">
 					<label class="relative">
 						<input
@@ -169,7 +175,7 @@
 						</div>
 					</label>
 				</div>
-			</div>
+			</fieldset>
 		{/if}
 
 		<!-- Email -->
@@ -261,7 +267,7 @@
 				variant="secondary"
 				class="flex-1"
 				disabled={loading}
-				on:click={handleCancel}
+				onclick={handleCancel}
 			>
 				Cancel
 			</Button>

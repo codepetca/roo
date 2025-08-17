@@ -21,10 +21,10 @@ import type {
 let currentUser = $state<DashboardUser | null>(null);
 let teacher = $state<Teacher | null>(null);
 let classrooms = $state<Classroom[]>([]);
-let assignments = $state<Assignment[]>([]);
-let submissions = $state<Submission[]>([]);
-let grades = $state<Grade[]>([]);
-let studentEnrollments = $state<StudentEnrollment[]>([]);
+const assignments = $state<Assignment[]>([]);
+const submissions = $state<Submission[]>([]);
+const grades = $state<Grade[]>([]);
+const studentEnrollments = $state<StudentEnrollment[]>([]);
 
 // UI state
 let loading = $state(false);
@@ -53,13 +53,13 @@ let classroomStats = $state<any>(null);
 let classroomAssignments = $state<AssignmentWithStats[]>([]);
 
 // Derived values - computed from state
-let selectedClassroom = $derived(classrooms.find((c) => c.id === selectedClassroomId) || null);
+const selectedClassroom = $derived(classrooms.find((c) => c.id === selectedClassroomId) || null);
 
-let selectedAssignment = $derived(assignments.find((a) => a.id === selectedAssignmentId) || null);
+const selectedAssignment = $derived(assignments.find((a) => a.id === selectedAssignmentId) || null);
 
-let hasData = $derived(classrooms.length > 0 || assignments.length > 0);
+const hasData = $derived(classrooms.length > 0 || assignments.length > 0);
 
-let ungradedCount = $derived(() => {
+const ungradedCount = $derived(() => {
 	if (selectedClassroomId) {
 		const classroom = classrooms.find((c) => c.id === selectedClassroomId);
 		return classroom?.ungradedSubmissions || 0;

@@ -231,10 +231,10 @@ export class FirestoreRepository {
       userEmail,
       user: user ? { id: user.id, email: user.email, schoolEmail: user.schoolEmail } : null,
       teacherEmail,
-      queryField: "teacherId"
+      queryField: "teacherEmail"
     });
     
-    // Query classrooms by the appropriate email
+    // Query classrooms by the appropriate email (stored in teacherId field)
     const snapshot = await db.collection(this.collections.classrooms)
       .where("teacherId", "==", teacherEmail)
       .orderBy("updatedAt", "desc")

@@ -63,7 +63,7 @@ test.describe('Complete Authentication Flows', () => {
 
 		// Should navigate to teacher dashboard or handle auth errors
 		try {
-			await page.waitForURL(/\/dashboard/, { timeout: 10000 });
+			await page.waitForURL(/\/(dashboard)/, { timeout: 10000 });
 			console.log('✓ Teacher login successful - redirected to dashboard');
 		} catch (error) {
 			// Handle potential auth errors gracefully
@@ -99,9 +99,10 @@ test.describe('Complete Authentication Flows', () => {
 			await googleButton.click();
 			await page.waitForTimeout(1000);
 
-			// Should show Google auth component
+			// Should show Google auth component (use first match to avoid strict mode violation)
 			const googleAuthVisible = await page
 				.locator('text=/sign.*in.*with.*google/i')
+				.first()
 				.isVisible({ timeout: 3000 });
 			if (googleAuthVisible) {
 				console.log('✓ Google OAuth component loaded');
@@ -151,7 +152,7 @@ test.describe('Complete Authentication Flows', () => {
 
 		// Check final state
 		const currentUrl = page.url();
-		if (currentUrl.includes('/dashboard/student')) {
+		if (currentUrl.includes('/(dashboard)/student')) {
 			console.log('✓ Student login successful');
 		} else if (currentUrl.includes('/login')) {
 			console.log('⚠️ Student login may have failed or requires different credentials');

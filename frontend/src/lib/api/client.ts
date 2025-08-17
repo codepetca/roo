@@ -156,39 +156,60 @@ export async function typedApiRequest<T>(
 		rawResponse: JSON.stringify(rawResponse, null, 2)
 	});
 
-	// Extract data from API response wrapper if present
-	// Handle both wrapped ({ success: true, data: {...} }) and direct responses
-	let dataToValidate = rawResponse;
-	let isApiWrapper = false;
+	// Extract data from API response - handle both formats:
+	// Format 1: { success: boolean, data: T, error? }
+	// Format 2: { success: boolean, ...actualData }
+	if (!rawResponse || typeof rawResponse !== 'object' || !('success' in rawResponse)) {
+		throw new Error('Invalid API response format - expected { success: boolean, ... }');
+	}
 
-	if (
-		rawResponse &&
-		typeof rawResponse === 'object' &&
-		'success' in rawResponse &&
-		'data' in rawResponse
-	) {
-		// API response wrapper format
-		console.debug('🔧 Detected API wrapper format, extracting data field');
-		isApiWrapper = true;
+	// Handle API errors from wrapper
+	if (!(rawResponse as any).success) {
+		const error = (rawResponse as any).error || 'API request failed';
+		throw new Error(error);
+	}
+
+	let dataToValidate;
+
+	// Check if response has nested 'data' property (Format 1)
+	if ('data' in rawResponse) {
 		dataToValidate = (rawResponse as any).data;
+		console.debug('🔧 Using nested data property from API response');
+	} else {
+		// Handle submissions/assignment response format (Format 2)
+		// Backend returns: { success: true, assignmentId: "...", [...submissions] }
+		const responseObj = rawResponse as any;
 
-		// Handle API errors from wrapper
-		if (!(rawResponse as any).success) {
-			const error = (rawResponse as any).error || 'API request failed';
-			throw new Error(error);
-		}
+		// Look for array data in the response - it should be an unnamed array property
+		const responseKeys = Object.keys(responseObj);
+		const arrayKey = responseKeys.find(
+			(key) =>
+				key !== 'success' &&
+				key !== 'error' &&
+				key !== 'assignmentId' &&
+				Array.isArray(responseObj[key])
+		);
 
-		// For array endpoints: convert null to empty array
-		if (dataToValidate === null && schema._def.typeName === 'ZodArray') {
-			console.debug('🔧 Converting null array response to empty array');
-			dataToValidate = [];
+		if (arrayKey) {
+			dataToValidate = responseObj[arrayKey];
+			console.debug(`🔧 Using array property '${arrayKey}' from API response`);
+		} else {
+			// For non-array responses, extract the data excluding wrapper properties
+			const { success, error, assignmentId, ...actualData } = responseObj;
+			dataToValidate = actualData;
+			console.debug('🔧 Using extracted data from API response wrapper');
 		}
+	}
+
+	// For array endpoints: convert null to empty array
+	if (dataToValidate === null && schema._def.typeName === 'ZodArray') {
+		console.debug('🔧 Converting null array response to empty array');
+		dataToValidate = [];
 	}
 
 	// Add detailed logging for debugging validation issues
 	console.debug('Data to validate:', JSON.stringify(dataToValidate, null, 2));
 	console.debug('Schema type:', schema._def.typeName);
-	console.debug('Is API wrapper:', isApiWrapper);
 
 	const validation = safeValidateApiResponse(schema, dataToValidate);
 

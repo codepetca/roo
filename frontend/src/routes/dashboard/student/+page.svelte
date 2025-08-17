@@ -2,7 +2,10 @@
 	import { onMount } from 'svelte';
 	import { auth } from '$lib/stores';
 	import { api } from '$lib/api';
-	import type { Assignment, Grade } from '@shared/types';
+	import StatsGrid from '$lib/components/core/StatsGrid.svelte';
+	import { PageHeader } from '$lib/components/dashboard';
+	import { Alert, Button } from '$lib/components/ui';
+	import type { Assignment, Grade } from '@shared/schemas/core';
 
 	// State using Svelte 5 runes
 	let myGrades = $state<Grade[]>([]);
@@ -24,8 +27,8 @@
 	let completedAssignments = $derived(myGrades.length);
 	let totalAssignments = $derived(assignments.length);
 
-	// Quick stats for student dashboard
-	let quickStats = $derived([
+	// Transform stats for StatsGrid component
+	let statsData = $derived(() => [
 		{
 			title: 'Average Grade',
 			value: `${averageScore}%`,
@@ -85,41 +88,55 @@
 
 			console.log('🔍 Loading student dashboard data...');
 
-			// Load all assignments to see what's available
+			// Use the dedicated student dashboard endpoint
 			try {
-				assignments = await api.listAssignments();
-				console.log(`✅ Loaded ${assignments.length} assignments`);
-			} catch (assignmentError) {
-				console.warn('⚠️  Failed to load assignments, using empty array:', assignmentError);
-				// Set empty array and continue - student might not have access to any assignments
-				assignments = [];
-			}
+				const dashboardData = await api.getStudentDashboard();
+				console.log('✅ Loaded student dashboard data:', dashboardData);
 
-			// For now, try to load grades from all assignments
-			// TODO: Replace with student-specific API endpoints
-			let allGrades: Grade[] = [];
+				// Extract data from the structured dashboard response
+				const allAssignments: Assignment[] = [];
+				const allGrades: Grade[] = [];
 
-			// Only try to load grades if we have assignments
-			if (assignments.length > 0) {
-				for (const assignment of assignments) {
-					try {
-						const grades = await api.getGradesByAssignment(assignment.id);
-						// Filter grades for current student (by email for now)
-						const studentGrades = grades.filter((grade) => grade.studentEmail === auth.user?.email);
-						allGrades = [...allGrades, ...studentGrades];
-					} catch (err) {
-						console.warn(`Could not load grades for assignment ${assignment.id}:`, err);
-						// Continue with other assignments even if one fails
-					}
+				// Process each classroom's data
+				dashboardData.classrooms.forEach((classroomData) => {
+					// Add assignments from this classroom
+					allAssignments.push(...classroomData.assignments);
+					// Add grades from this classroom
+					allGrades.push(...classroomData.grades);
+				});
+
+				assignments = allAssignments;
+				myGrades = allGrades;
+
+				console.log(`✅ Processed ${assignments.length} assignments and ${myGrades.length} grades`);
+			} catch (dashboardError) {
+				console.warn(
+					'⚠️ Student dashboard API not available, falling back to individual endpoints:',
+					dashboardError
+				);
+
+				// Fallback: try to load individual data (for backward compatibility)
+				try {
+					myGrades = await api.getMyGrades();
+					console.log(`✅ Loaded ${myGrades.length} grades via fallback`);
+				} catch (gradesError) {
+					console.warn('⚠️ Could not load grades:', gradesError);
+					myGrades = [];
+				}
+
+				// Try to load assignments (may not be accessible to students)
+				try {
+					assignments = await api.listAssignments();
+					console.log(`✅ Loaded ${assignments.length} assignments via fallback`);
+				} catch (assignmentError) {
+					console.warn('⚠️ Could not load assignments:', assignmentError);
+					assignments = [];
 				}
 			}
 
-			myGrades = allGrades;
-			console.log(`✅ Loaded ${myGrades.length} grades for student`);
-
 			// If student has no assignments or grades, that's expected for new/unenrolled students
 			if (assignments.length === 0 && myGrades.length === 0) {
-				console.log('ℹ️  Student appears to have no assignments or grades - showing empty state');
+				console.log('ℹ️ Student appears to have no assignments or grades - showing empty state');
 			}
 		} catch (err: unknown) {
 			console.error('❌ Failed to load student dashboard data:', err);
@@ -145,77 +162,56 @@
 	});
 </script>
 
-<div class="space-y-6">
-	<!-- Welcome Section -->
-	<div class="rounded-lg bg-white p-6 shadow">
-		<h1 class="mb-2 text-2xl font-bold text-gray-900">Student Dashboard</h1>
-		<p class="text-gray-600">
-			Welcome back, {auth.user?.email?.split('@')[0] || 'Student'}! Track your grades and view
-			assignment feedback.
-		</p>
+{#snippet actions()}
+	<div class="flex gap-2">
+		<Button variant="secondary" onclick={loadStudentDashboardData} disabled={loading}>
+			{#snippet children()}
+				Refresh
+			{/snippet}
+		</Button>
 	</div>
+{/snippet}
 
-	{#if loading}
+<div class="space-y-6">
+	<!-- Page Header -->
+	<PageHeader
+		title="Student Dashboard"
+		description="Welcome back, {auth.user?.email?.split('@')[0] ||
+			'Student'}! Track your grades and view assignment feedback."
+		{actions}
+	/>
+
+	{#if error}
+		<Alert
+			variant="error"
+			title="Error loading dashboard"
+			dismissible
+			onDismiss={() => (error = null)}
+		>
+			{#snippet children()}
+				{error}
+				<div class="mt-3">
+					<Button variant="secondary" size="sm" onclick={loadStudentDashboardData}>
+						{#snippet children()}
+							Try Again
+						{/snippet}
+					</Button>
+				</div>
+			{/snippet}
+		</Alert>
+	{:else if loading}
 		<!-- Loading State -->
 		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
 			{#each Array.from({ length: 4 }, (_, i) => i) as i (i)}
-				<div class="animate-pulse rounded-lg bg-white p-6 shadow">
+				<div class="animate-pulse rounded-lg bg-white p-6 shadow-sm">
 					<div class="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
 					<div class="h-8 w-1/2 rounded bg-gray-200"></div>
 				</div>
 			{/each}
 		</div>
-	{:else if error}
-		<!-- Error State -->
-		<div class="rounded-lg border border-red-200 bg-red-50 p-6">
-			<div class="flex items-center">
-				<svg
-					class="mr-2 h-5 w-5 text-red-400"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-					/>
-				</svg>
-				<h3 class="font-medium text-red-800">Error loading dashboard</h3>
-			</div>
-			<p class="mt-1 text-red-700">{error}</p>
-			<button
-				onclick={loadStudentDashboardData}
-				class="mt-3 rounded-md bg-red-100 px-3 py-1 text-sm text-red-800 transition-colors hover:bg-red-200"
-			>
-				Try Again
-			</button>
-		</div>
 	{:else}
 		<!-- Quick Stats Cards -->
-		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-			{#each quickStats as stat (stat.title)}
-				<div class="rounded-lg bg-white p-6 shadow">
-					<div class="flex items-center justify-between">
-						<div>
-							<p class="text-sm font-medium text-gray-600">{stat.title}</p>
-							<p class="text-3xl font-bold text-gray-900">{stat.value}</p>
-						</div>
-						<div class="rounded-lg p-3 {stat.color}">
-							<svg class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d={stat.icon}
-								/>
-							</svg>
-						</div>
-					</div>
-				</div>
-			{/each}
-		</div>
+		<StatsGrid stats={statsData} />
 
 		<!-- Recent Activity -->
 		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -251,7 +247,7 @@
 						</div>
 					{:else}
 						<div class="space-y-4">
-							{#each recentGrades as grade (grade.id || `${grade.studentId}-${grade.assignmentId}`)}
+							{#each recentGrades as grade, index (`recent-grade-${index}-${grade.assignmentId || 'unknown'}-${grade.studentId || 'unknown'}`)}
 								{@const percentage = Math.round((grade.score / grade.maxScore) * 100)}
 								{@const letterGrade = getLetterGrade(percentage)}
 								<div class="flex items-center justify-between rounded-lg bg-gray-50 p-3">
@@ -345,12 +341,12 @@
 						</div>
 					{:else}
 						<div class="space-y-4">
-							{#each assignments.slice(0, 5) as assignment (assignment.id)}
+							{#each assignments.slice(0, 5) as assignment, index (`assignment-${index}-${assignment.id}`)}
 								{@const hasGrade = myGrades.some((g) => g.assignmentId === assignment.id)}
 								<div class="flex items-center justify-between rounded-lg bg-gray-50 p-3">
 									<div class="flex items-center space-x-3">
 										<div
-											class="p-2 {assignment.isQuiz
+											class="p-2 {assignment.type === 'quiz'
 												? 'bg-green-100 text-green-600'
 												: 'bg-blue-100 text-blue-600'} rounded-lg"
 										>
@@ -359,16 +355,17 @@
 													stroke-linecap="round"
 													stroke-linejoin="round"
 													stroke-width="2"
-													d={assignment.isQuiz
+													d={assignment.type === 'quiz'
 														? 'M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2M9 5a2 2 0 012 2v6a2 2 0 01-2 2M9 5V3a2 2 0 012-2h4a2 2 0 012 2v2M9 13h6m-3-3v3'
 														: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'}
 												/>
 											</svg>
 										</div>
 										<div>
-											<p class="font-medium text-gray-900">{assignment.title}</p>
+											<p class="font-medium text-gray-900">{assignment.title || assignment.name}</p>
 											<p class="text-sm text-gray-500">
-												{assignment.isQuiz ? 'Quiz' : 'Assignment'} • {assignment.maxPoints} points
+												{assignment.type === 'quiz' ? 'Quiz' : 'Assignment'} • {assignment.maxScore}
+												points
 											</p>
 										</div>
 									</div>

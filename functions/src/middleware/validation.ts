@@ -289,6 +289,7 @@ export function handleRouteError(error: unknown, req: Request, res: Response) {
   if (error && typeof error === "object" && "name" in error && error.name === "ValidationError") {
     const validationError = error as ValidationError;
     return res.status(400).json({
+      success: false,
       error: "Validation failed",
       details: validationError.issues.map(issue => ({
         path: issue.path.join("."),
@@ -300,6 +301,7 @@ export function handleRouteError(error: unknown, req: Request, res: Response) {
   // Handle Zod errors
   if (error instanceof z.ZodError) {
     return res.status(400).json({
+      success: false,
       error: "Validation failed",
       details: error.issues.map(issue => ({
         path: issue.path.join("."),
@@ -310,6 +312,7 @@ export function handleRouteError(error: unknown, req: Request, res: Response) {
   
   // Default error response
   return res.status(500).json({
+    success: false,
     error: "Internal server error",
     message: error instanceof Error ? error.message : "Unknown error"
   });

@@ -55,6 +55,7 @@ import {
 	studentDashboardSchema,
 	classroomSchema,
 	assignmentSchema,
+	assignmentBaseSchema, // For .extend() operations
 	submissionSchema,
 	gradeSchema,
 	studentEnrollmentSchema,
@@ -128,7 +129,7 @@ export const api = {
 			`/classrooms/${classroomId}/assignments`,
 			{},
 			z.array(
-				assignmentSchema.extend({
+				assignmentBaseSchema.extend({
 					submissions: z.array(
 						submissionSchema.extend({
 							grade: gradeSchema.nullable()
@@ -772,7 +773,7 @@ export const api = {
 			`/classrooms/${classroomId}/assignments/stats`,
 			{},
 			z.array(
-				assignmentSchema.extend({
+				assignmentBaseSchema.extend({
 					submissions: z.array(
 						submissionSchema.extend({
 							grade: gradeSchema.nullable()

@@ -15,7 +15,7 @@ test.describe('Model Integration Tests', () => {
 	});
 
 	test('should load ClassroomModel data from API', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Test that ClassroomModel integration works by checking for model-specific computed properties
@@ -62,7 +62,7 @@ test.describe('Model Integration Tests', () => {
 	});
 
 	test('should load AssignmentModel data with proper validation', async ({ page }) => {
-		await page.goto('/dashboard/teacher/assignments');
+		await page.goto('/(dashboard)/teacher/assignments');
 		await waitForPageReady(page);
 
 		// Check for assignment data loaded through models
@@ -118,7 +118,7 @@ test.describe('Model Integration Tests', () => {
 	});
 
 	test('should validate model timestamp handling', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Test that models handle timestamps correctly
@@ -153,7 +153,7 @@ test.describe('Model Integration Tests', () => {
 	});
 
 	test('should handle model collection operations', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Test collection methods
@@ -187,7 +187,7 @@ test.describe('Model Integration Tests', () => {
 
 	test('should handle model validation errors gracefully', async ({ page }) => {
 		// Inject invalid data to test model validation
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		const validationTest = await page.evaluate(async () => {
@@ -234,7 +234,7 @@ test.describe('Model Integration Tests', () => {
 	});
 
 	test('should synchronize models with API updates', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Test manual refresh to see if models update
@@ -278,7 +278,7 @@ test.describe('Model Integration Tests', () => {
 	});
 
 	test('should handle model state reactivity', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Test that UI updates when model state changes
@@ -324,7 +324,7 @@ test.describe('Model Integration Tests', () => {
 	});
 
 	test('should handle model error states', async ({ page }) => {
-		await page.goto('/dashboard/teacher');
+		await page.goto('/(dashboard)/teacher');
 		await waitForPageReady(page);
 
 		// Check for error handling in the data store

@@ -15,6 +15,7 @@ import { firebaseAuth } from '../firebase';
 import { goto } from '$app/navigation';
 import { browser } from '$app/environment';
 import { API_BASE_URL } from '../api';
+import { userService, type UserProfile, type CreateProfileData } from '../services/user-service';
 
 // User interface for our store
 interface AuthUser {
@@ -57,36 +58,23 @@ async function setAuthCookie(user: User | null) {
  */
 async function getUserProfile(firebaseUser: User): Promise<AuthUser | null> {
 	try {
-		const token = await firebaseUser.getIdToken();
+		console.log('📡 Getting user profile via UserService for:', firebaseUser.email);
 
-		const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
-			headers: {
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json'
-			}
-		});
+		const profile = await userService.getProfileWithFallback(firebaseUser);
 
-		if (!response.ok) {
-			console.error('Failed to get user profile - user needs to complete onboarding');
-			return null;
-		}
+		// Convert UserProfile to AuthUser format
+		const authUser: AuthUser = {
+			uid: profile.uid,
+			email: profile.email,
+			displayName: profile.displayName,
+			role: profile.role,
+			schoolEmail: profile.schoolEmail || null
+		};
 
-		const data = await response.json();
-
-		if (data.success && data.data) {
-			return {
-				uid: firebaseUser.uid,
-				email: firebaseUser.email,
-				displayName: firebaseUser.displayName,
-				role: data.data.role,
-				schoolEmail: data.data.schoolEmail || null
-			};
-		}
-
-		console.error('Invalid user profile data received');
-		return null;
+		console.log('✅ Retrieved user profile via UserService:', authUser);
+		return authUser;
 	} catch (error) {
-		console.error('Error getting user profile:', error);
+		console.error('❌ Failed to get user profile via UserService:', error);
 		return null;
 	}
 }
@@ -102,23 +90,58 @@ function initializeAuth() {
 
 	// Set up the auth state listener
 	const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
-		console.log('Auth state changed:', firebaseUser ? 'User logged in' : 'User logged out');
+		console.log(
+			'🔄 Auth state changed:',
+			firebaseUser ? `User logged in (${firebaseUser.email})` : 'User logged out'
+		);
 		error = null;
 
 		try {
 			if (firebaseUser) {
 				loading = true;
-				// Get user profile from Firestore (includes role)
-				user = await getUserProfile(firebaseUser);
-				await setAuthCookie(firebaseUser);
+				console.log('📡 Fetching user profile for:', firebaseUser.email);
+
+				// Get user profile from Firestore (includes role) with retry logic
+				let profile = null;
+				const maxRetries = 3;
+
+				for (let attempt = 1; attempt <= maxRetries; attempt++) {
+					profile = await getUserProfile(firebaseUser);
+
+					if (profile) {
+						console.log('✅ Profile fetched successfully on attempt', attempt);
+						break;
+					}
+
+					if (attempt < maxRetries) {
+						console.log(`⏳ Profile fetch attempt ${attempt} failed, retrying...`);
+						// Wait before retry, with exponential backoff
+						await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+					}
+				}
+
+				if (profile) {
+					user = profile;
+					await setAuthCookie(firebaseUser);
+					console.log('✅ Auth state updated successfully:', {
+						uid: profile.uid,
+						role: profile.role
+					});
+				} else {
+					console.error('❌ Failed to get user profile after all retries');
+					error = 'Failed to load user profile. Please try signing in again.';
+					user = null;
+				}
+
 				loading = false;
 			} else {
 				user = null;
 				await setAuthCookie(null);
 				loading = false;
+				console.log('✅ User signed out successfully');
 			}
 		} catch (err) {
-			console.error('Auth state change error:', err);
+			console.error('❌ Auth state change error:', err);
 			error = err instanceof Error ? err.message : 'Authentication error';
 			user = null;
 			loading = false;
@@ -144,29 +167,66 @@ async function signIn(email: string, password: string): Promise<void> {
 	error = null;
 	loading = true;
 
+	console.log('🔑 Starting sign in process for:', email);
+
 	try {
+		console.log('🔐 Attempting Firebase authentication...');
 		const result = await signInWithEmailAndPassword(firebaseAuth, email, password);
+		console.log('✅ Firebase authentication successful:', {
+			uid: result.user.uid,
+			email: result.user.email
+		});
+
 		await setAuthCookie(result.user);
+		console.log('🍪 Auth cookie set successfully');
 
 		// Get user profile from Firestore (includes role)
+		console.log('📡 Fetching user profile after sign in...');
 		user = await getUserProfile(result.user);
 
 		if (!user) {
+			console.error('❌ User profile not found after sign in');
 			error = 'User profile not found. Please contact support.';
 			return;
 		}
 
+		console.log('✅ User profile loaded successfully:', {
+			uid: user.uid,
+			role: user.role,
+			hasSchoolEmail: !!user.schoolEmail
+		});
+
 		// Check if teacher needs to set school email
 		if (user.role === 'teacher' && !user.schoolEmail) {
-			console.log('Teacher needs to set school email, redirecting to onboarding...');
+			console.log('🎓 Teacher needs to set school email, redirecting to onboarding...');
 			await goto('/teacher/onboarding');
 		} else {
+			console.log('🎯 Redirecting to dashboard...');
 			// Redirect to dashboard
 			await goto('/dashboard');
 		}
+
+		console.log('✅ Sign in process completed successfully');
 	} catch (err: unknown) {
-		console.error('Sign in error:', err);
-		error = (err as Error)?.message || 'Failed to sign in';
+		console.error('❌ Sign in error:', err);
+
+		// Enhanced error handling with more specific messages
+		const authError = err as { code?: string; message?: string };
+
+		if (authError.code === 'auth/invalid-credential') {
+			error = 'Invalid email or password. Please check your credentials and try again.';
+		} else if (authError.code === 'auth/user-not-found') {
+			error = 'No account found with this email. Please create an account first.';
+		} else if (authError.code === 'auth/wrong-password') {
+			error = 'Incorrect password. Please try again.';
+		} else if (authError.code === 'auth/too-many-requests') {
+			error = 'Too many failed attempts. Please wait a moment and try again.';
+		} else if (authError.code === 'auth/network-request-failed') {
+			error = 'Network error. Please check your connection and try again.';
+		} else {
+			error = authError.message || 'Failed to sign in. Please try again.';
+		}
+
 		throw err;
 	} finally {
 		loading = false;
@@ -186,7 +246,10 @@ async function createAccount(data: {
 	error = null;
 	loading = true;
 
+	console.log('🆕 Starting account creation for:', data.email, 'role:', data.role);
+
 	try {
+		console.log('🔐 Creating Firebase user...');
 		// Create user with Firebase Auth
 		const userCredential = await createUserWithEmailAndPassword(
 			firebaseAuth,
@@ -194,54 +257,57 @@ async function createAccount(data: {
 			data.password
 		);
 		const firebaseUser = userCredential.user;
+		console.log('✅ Firebase user created:', { uid: firebaseUser.uid, email: firebaseUser.email });
 
 		// Update display name if provided
 		if (data.displayName) {
+			console.log('📝 Updating display name...');
 			await updateProfile(firebaseUser, { displayName: data.displayName });
+			console.log('✅ Display name updated');
 		}
 
-		// Create user profile in Firestore using our API
-		const token = await firebaseUser.getIdToken();
-		const response = await fetch(`${API_BASE_URL}/api/functions/createProfileForExistingUser`, {
-			method: 'POST',
-			headers: {
-				Authorization: `Bearer ${token}`,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				uid: firebaseUser.uid,
-				role: data.role,
-				schoolEmail: data.schoolEmail,
-				displayName: data.displayName
-			})
-		});
+		console.log('📡 Creating user profile via UserService...');
+		// Create user profile using unified UserService
+		const profileData: CreateProfileData = {
+			uid: firebaseUser.uid,
+			role: data.role,
+			schoolEmail: data.schoolEmail,
+			displayName: data.displayName
+		};
 
-		if (!response.ok) {
-			const errorData = await response.json().catch(() => ({}));
-			throw new Error(errorData.message || 'Failed to create user profile');
-		}
+		const createdProfile = await userService.createProfile(profileData);
+		console.log('✅ Profile created via UserService:', createdProfile);
 
 		// Set auth cookie
+		console.log('🍪 Setting auth cookie...');
 		await setAuthCookie(firebaseUser);
 
 		// Get the complete user profile
+		console.log('📡 Fetching complete user profile...');
 		const newUser = await getUserProfile(firebaseUser);
 		if (!newUser) {
+			console.error('❌ Failed to retrieve created user profile');
 			throw new Error('Failed to retrieve created user profile');
 		}
 
+		console.log('✅ Account creation completed successfully:', {
+			uid: newUser.uid,
+			role: newUser.role
+		});
 		user = newUser;
 		return newUser;
 	} catch (err: unknown) {
-		console.error('Account creation error:', err);
+		console.error('❌ Account creation error:', err);
 		const authError = err as { code?: string; message?: string };
 
 		if (authError.code === 'auth/email-already-in-use') {
-			error = 'An account with this email already exists';
+			error = 'An account with this email already exists. Try signing in instead.';
 		} else if (authError.code === 'auth/invalid-email') {
 			error = 'Please enter a valid email address';
 		} else if (authError.code === 'auth/weak-password') {
 			error = 'Password is too weak. Please choose a stronger password';
+		} else if (authError.code === 'auth/network-request-failed') {
+			error = 'Network error. Please check your connection and try again.';
 		} else {
 			error = authError.message || 'Failed to create account';
 		}
