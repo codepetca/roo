@@ -17,8 +17,19 @@
 	let expandedClassrooms = $state<Set<string>>(new Set());
 	let hoveredItem = $state<string | null>(null);
 
-	// Reactive data from store
-	let classrooms = $derived(dataStore.classrooms);
+	// Reactive data from store with deduplication
+	let classrooms = $derived(() => {
+		// Deduplicate classrooms by ID to prevent Svelte each key errors
+		const seen = new Set<string>();
+		return dataStore.classrooms.filter(classroom => {
+			if (seen.has(classroom.id)) {
+				console.warn(`🔧 Duplicate classroom detected and filtered: ${classroom.id}`);
+				return false;
+			}
+			seen.add(classroom.id);
+			return true;
+		});
+	});
 	let assignments = $derived(dataStore.assignments);
 	let selectedClassroomId = $derived(dataStore.selectedClassroomId);
 	let selectedAssignmentId = $derived(dataStore.selectedAssignmentId);
@@ -62,7 +73,7 @@
 	}
 
 	// Handle assignment selection
-	function handleAssignmentSelect(assignmentId: string, classroomId: string) {
+	async function handleAssignmentSelect(assignmentId: string, classroomId: string) {
 		// Ensure classroom is selected and expanded
 		if (selectedClassroomId !== classroomId) {
 			dataStore.selectClassroom(classroomId);
@@ -73,6 +84,15 @@
 		
 		// Select assignment
 		dataStore.selectAssignment(assignmentId);
+		
+		// Load assignment data (submissions, grades, students)
+		try {
+			await dataStore.loadAssignmentData(assignmentId);
+			console.log(`✅ Assignment data loaded for: ${assignmentId}`);
+		} catch (error) {
+			console.error('❌ Failed to load assignment data:', error);
+			// Note: Error handling is already done in the loadAssignmentData method
+		}
 		
 		onAssignmentSelect?.(assignmentId, classroomId);
 	}
@@ -85,13 +105,8 @@
 		return 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
 	}
 
-	// Initialize data and restore expanded state
+	// Restore expanded state from localStorage
 	onMount(() => {
-		// Initialize data store if needed
-		if (!dataStore.initialized) {
-			dataStore.initialize();
-		}
-		
 		// Restore expanded classrooms from localStorage
 		try {
 			const stored = localStorage.getItem('expandedClassrooms');

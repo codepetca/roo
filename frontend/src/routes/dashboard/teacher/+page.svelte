@@ -1,40 +1,83 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { Button, Alert, Card } from '$lib/components/ui';
-	import { PageHeader, LoadingSkeleton } from '$lib/components/dashboard';
-	import StatsGrid from '$lib/components/core/StatsGrid.svelte';
-	import { PUBLIC_USE_EMULATORS } from '$env/static/public';
+	import { PageHeader } from '$lib/components/dashboard';
+	import { api } from '$lib/api';
+	import type { PageData } from './$types';
 
-	// Handle classroom selection
-	function handleClassroomSelect(classroomId: string) {
-		dataStore.selectClassroom(classroomId);
-		// Navigate to assignments for this classroom
-		goto(`/dashboard/teacher/assignments`);
+	let { data }: { data: PageData } = $props();
+
+	// Set data in store when component mounts
+	onMount(async () => {
+		console.log('📦 Dashboard page mounted, setting data from load functions...');
+		
+		// Set the assignments data from load functions (already loaded server-side)
+		dataStore.setData({
+			assignments: data.assignments,
+			user: data.user
+		});
+
+		// Load dashboard data client-side (requires authentication)
+		try {
+			console.log('📡 Loading dashboard data client-side with authentication...');
+			dataStore.setLoading(true);
+			
+			const dashboardData = await api.getTeacherDashboard();
+			console.log('✅ Dashboard data loaded client-side:', dashboardData);
+			
+			// Update store with dashboard data
+			dataStore.setData({
+				classrooms: dashboardData.classrooms || [],
+				recentActivity: dashboardData.recentActivity || [],
+				user: {
+					...data.user,
+					...dashboardData.teacher // Update with real user data
+				}
+			});
+			
+		} catch (error) {
+			console.error('❌ Failed to load dashboard data client-side:', error);
+			dataStore.setError('Failed to load dashboard data');
+		} finally {
+			dataStore.setLoading(false);
+		}
+	});
+
+	// Reactive state from data store (updated by load functions)
+	let loading = $derived(dataStore.loading);
+	let error = $derived(dataStore.error || (data.error ? data.error : null));
+	let hasData = $derived(dataStore.hasData);
+	let teacher = $derived(dataStore.currentUser);
+	let classrooms = $derived(dataStore.classrooms);
+	let assignments = $derived(dataStore.assignments);
+	let dashboardStats = $derived(dataStore.dashboardStats);
+	let recentActivity = $derived(dataStore.recentActivity);
+
+	// Manual refresh using SvelteKit invalidation
+	async function handleRefresh() {
+		console.log('🔄 Manual refresh triggered...');
+		dataStore.setLoading(true);
+		
+		try {
+			// Invalidate the page data to trigger a reload
+			await invalidate('/dashboard/teacher');
+			console.log('✅ Page data invalidated and reloaded');
+		} catch (err) {
+			console.error('❌ Refresh failed:', err);
+			dataStore.setError('Failed to refresh data');
+		} finally {
+			dataStore.setLoading(false);
+		}
 	}
 
 	// Navigate to data import
 	function goToDataImport() {
-		goto('/teacher/data-import');
+		window.location.href = '/teacher/data-import';
 	}
 
-	// Reactive state from data store
-	let loading = $derived(dataStore.loading);
-	let error = $derived(dataStore.error);
-	let hasData = $derived(dataStore.hasData);
-	let teacher = $derived(dataStore.currentUser);
-	let classrooms = $derived(dataStore.classrooms);
-	let dashboardStats = $derived(dataStore.dashboardStats);
-	let recentActivity = $derived(dataStore.recentActivity);
-
-	// Initialize data store on mount
-	onMount(() => {
-		console.log('🔄 Dashboard component mounted, initializing data store...');
-		dataStore.initialize();
-	});
-
-	// Transform dashboard stats into StatsGrid format
+	// Transform dashboard stats for display
 	let statsData = $derived(() => {
 		if (!dashboardStats) return [];
 		return [
@@ -55,12 +98,6 @@
 				value: dashboardStats.ungradedSubmissions || 0,
 				icon: 'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z',
 				color: 'bg-orange-500'
-			},
-			{
-				title: 'Average Grade',
-				value: dashboardStats.averageGrade ? `${dashboardStats.averageGrade.toFixed(1)}%` : 'N/A',
-				icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-				color: 'bg-purple-500'
 			}
 		];
 	});
@@ -73,9 +110,14 @@
 				Import Data
 			{/snippet}
 		</Button>
-		<Button variant="primary" onclick={dataStore.refresh} {loading}>
+		<Button variant="primary" onclick={handleRefresh} disabled={loading}>
 			{#snippet children()}
-				Refresh
+				{loading ? 'Refreshing...' : 'Refresh'}
+			{/snippet}
+		</Button>
+		<Button variant="secondary" onclick={dataStore.loadTestData}>
+			{#snippet children()}
+				Load Test Data
 			{/snippet}
 		</Button>
 	</div>
@@ -89,15 +131,20 @@
 		{actions}
 	/>
 
-	<!-- Real-time Status Indicator -->
-	{#if dataStore.initialized && !loading}
-		<div class="rounded-md bg-green-50 p-2">
-			<p class="text-sm text-green-700">
-				🔄 Real-time updates active • Last updated: {dataStore.classrooms.lastUpdated?.toLocaleTimeString() ||
-					'Never'}
-			</p>
-		</div>
-	{/if}
+	<!-- Load Function Debug Info -->
+	<Card>
+		{#snippet children()}
+			<div class="p-6">
+				<h3 class="text-lg font-semibold text-gray-900 mb-4">📦 Load Function Data</h3>
+				<div class="grid grid-cols-2 gap-4 text-sm">
+					<div><strong>User:</strong> {data.user.email}</div>
+					<div><strong>Classrooms from Load:</strong> {data.classrooms.length}</div>
+					<div><strong>Assignments from Load:</strong> {data.assignments.length}</div>
+					<div><strong>Has Load Error:</strong> {data.error || 'None'}</div>
+				</div>
+			</div>
+		{/snippet}
+	</Card>
 
 	<!-- Error State -->
 	{#if error}
@@ -110,7 +157,7 @@
 			{#snippet children()}
 				{error}
 				<div class="mt-3">
-					<Button variant="secondary" size="sm" onclick={dataStore.refresh}>
+					<Button variant="secondary" size="sm" onclick={handleRefresh}>
 						{#snippet children()}
 							Try Again
 						{/snippet}
@@ -120,214 +167,96 @@
 		</Alert>
 	{/if}
 
-	<!-- Content based on store data only -->
-	{#if loading && !hasData}
-		<LoadingSkeleton type="card" rows={3} />
-	{:else if !hasData}
-		<!-- No data state -->
+	<!-- Data Store Debug Information -->
+	<Card>
+		{#snippet children()}
+			<div class="p-6">
+				<h3 class="text-lg font-semibold text-gray-900 mb-4">🐛 Data Store State</h3>
+				<div class="grid grid-cols-2 gap-4 text-sm">
+					<div><strong>Loading:</strong> {loading}</div>
+					<div><strong>Has Data:</strong> {hasData}</div>
+					<div><strong>Classrooms Count:</strong> {classrooms?.length || 0}</div>
+					<div><strong>Assignments Count:</strong> {assignments?.length || 0}</div>
+					<div><strong>Teacher:</strong> {teacher?.email || 'None'}</div>
+					<div><strong>Error:</strong> {error || 'None'}</div>
+				</div>
+				
+				{#if classrooms?.length > 0}
+					<div class="mt-4">
+						<strong>Classrooms:</strong>
+						<ul class="list-disc list-inside text-sm text-gray-600">
+							{#each classrooms as classroom}
+								<li>{classroom.name} ({classroom.id})</li>
+							{/each}
+						</ul>
+					</div>
+				{/if}
+			</div>
+		{/snippet}
+	</Card>
+
+	<!-- Simple Assignments List -->
+	{#if assignments && assignments.length > 0}
 		<Card>
 			{#snippet children()}
-				<div class="py-12 text-center">
-					<svg
-						class="mx-auto h-12 w-12 text-gray-400"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-						/>
-					</svg>
-
-					<h3 class="mt-2 text-sm font-medium text-gray-900">No Classroom Data Found</h3>
-					<p class="mt-1 text-sm text-gray-500">
-						{#if teacher?.email}
-							No classrooms found for {teacher.email}.
-							{#if teacher.email === 'dev.codepet@gmail.com' || teacher.email === 'test.codepet@gmail.com'}
-								This account has test data available. Try refreshing the page.
-							{:else}
-								Import your classroom data to get started.
-							{/if}
-						{:else}
-							Import your classroom data to get started with the dashboard.
-						{/if}
-					</p>
-					<div class="mt-4 space-y-2">
-						<Button variant="primary" onclick={dataStore.refresh}>
-							{#snippet children()}
-								Refresh Data
-							{/snippet}
-						</Button>
-						<div>
-							<Button variant="secondary" onclick={goToDataImport}>
-								{#snippet children()}
-									Import Classroom Data
-								{/snippet}
-							</Button>
-						</div>
+				<div class="p-6">
+					<h3 class="text-lg font-semibold text-gray-900 mb-4">📝 All Assignments ({assignments.length})</h3>
+					<div class="space-y-3">
+						{#each assignments as assignment}
+							<div class="border border-gray-200 rounded-lg p-4">
+								<div class="flex justify-between items-start">
+									<div>
+										<h4 class="font-medium text-gray-900">
+											{assignment.title || assignment.name || 'Untitled Assignment'}
+										</h4>
+										<p class="text-sm text-gray-600">
+											Classroom: {assignment.classroomId}
+										</p>
+										<p class="text-sm text-gray-500">
+											Type: {assignment.type || 'Unknown'} • 
+											Max Score: {assignment.maxScore || assignment.maxPoints || 0}
+										</p>
+									</div>
+									<div class="text-right">
+										<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+											{assignment.type || 'assignment'}
+										</span>
+									</div>
+								</div>
+							</div>
+						{/each}
 					</div>
-
-					{#if teacher?.email}
-						<div class="mt-6 rounded border bg-gray-50 p-3 text-xs text-gray-400">
-							<strong>Debug Info:</strong><br />
-							Logged in as: {teacher.email}<br />
-							School Email: {teacher.schoolEmail || 'Not set'}<br />
-							Role: {teacher.role}<br />
-							Environment: {PUBLIC_USE_EMULATORS === 'true' ? 'Emulators' : 'Staging Firebase'}
-						</div>
-					{/if}
 				</div>
 			{/snippet}
 		</Card>
 	{:else}
-		<!-- Dashboard with data - pure store reactivity -->
-
-		<!-- Quick Stats -->
-		<StatsGrid stats={statsData} />
-
-		<!-- Classrooms Grid -->
-		<div class="rounded-lg border border-gray-200 bg-white">
-			<div class="border-b border-gray-200 px-6 py-4">
-				<h3 class="text-lg font-semibold text-gray-900">Your Classrooms</h3>
-				<p class="text-sm text-gray-600">
-					Manage assignments and track progress across your classes
-				</p>
-			</div>
-			<div class="p-6">
-				{#if !classrooms || classrooms.length === 0}
-					<div class="py-12 text-center">
-						<svg
-							class="mx-auto h-12 w-12 text-gray-400"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-							/>
-						</svg>
-						<h3 class="mt-2 text-sm font-medium text-gray-900">No classrooms found</h3>
-						<p class="mt-1 text-sm text-gray-500">
-							Import your classroom data to see your classes here.
-						</p>
-						<div class="mt-4">
-							<Button variant="primary" onclick={goToDataImport}>
-								{#snippet children()}
-									Import Data
-								{/snippet}
-							</Button>
-						</div>
+		<Card>
+			{#snippet children()}
+				<div class="p-6 text-center">
+					<h3 class="text-lg font-semibold text-gray-900 mb-2">No Assignments Found</h3>
+					<p class="text-gray-600">
+						{#if loading}
+							Loading assignments...
+						{:else if classrooms?.length === 0}
+							No classrooms found. Import classroom data first.
+						{:else}
+							No assignments found in {classrooms?.length || 0} classrooms.
+						{/if}
+					</p>
+					<div class="mt-4 space-x-2">
+						<Button variant="primary" onclick={handleRefresh}>
+							{#snippet children()}
+								Refresh Data
+							{/snippet}
+						</Button>
+						<Button variant="secondary" onclick={dataStore.loadTestData}>
+							{#snippet children()}
+								Load Test Data
+							{/snippet}
+						</Button>
 					</div>
-				{:else}
-					<div class="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
-						{#each classrooms as classroom, index (`${classroom.id}-${classroom.createdAt._seconds}-${index}`)}
-							<div
-								class="cursor-pointer rounded-lg border border-gray-200 p-6 transition-colors hover:border-gray-300"
-								onclick={() => handleClassroomSelect(classroom.id)}
-							>
-								<div class="flex items-start justify-between">
-									<div class="flex-1">
-										<h4 class="text-lg font-semibold text-gray-900">{classroom.name}</h4>
-										{#if classroom.description}
-											<p class="text-sm text-gray-600">{classroom.description}</p>
-										{/if}
-									</div>
-									<div class="ml-4 flex-shrink-0">
-										<span
-											class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {classroom.courseState ===
-											'ARCHIVED'
-												? 'bg-orange-100 text-orange-800'
-												: 'bg-green-100 text-green-800'}"
-										>
-											{classroom.courseState}
-										</span>
-									</div>
-								</div>
-
-								<div class="mt-4 grid grid-cols-3 gap-4 text-center">
-									<div>
-										<p class="text-2xl font-semibold text-gray-900">{classroom.studentCount}</p>
-										<p class="text-xs text-gray-600">Students</p>
-									</div>
-									<div>
-										<p class="text-2xl font-semibold text-gray-900">{classroom.assignmentCount}</p>
-										<p class="text-xs text-gray-600">Assignments</p>
-									</div>
-									<div>
-										<p class="text-2xl font-semibold text-gray-900">
-											{classroom.activeSubmissions}
-										</p>
-										<p class="text-xs text-gray-600">Submissions</p>
-									</div>
-								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</div>
-
-		<!-- Recent Activity -->
-		<div class="rounded-lg border border-gray-200 bg-white">
-			<div class="border-b border-gray-200 px-6 py-4">
-				<h3 class="text-lg font-semibold text-gray-900">Recent Activity</h3>
-				<p class="text-sm text-gray-600">Latest submissions and grades across all your classes</p>
-			</div>
-			<div class="p-6">
-				{#if !recentActivity || recentActivity.length === 0}
-					<p class="py-8 text-center text-sm text-gray-500">No recent activity</p>
-				{:else}
-					<div class="space-y-4">
-						{#each recentActivity.slice(0, 10) as activity, index (index)}
-							<div class="flex items-center space-x-3 rounded-lg bg-gray-50 p-3">
-								{#if activity.type === 'submission'}
-									<div class="flex-shrink-0">
-										<svg class="h-5 w-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-											<path
-												d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2h12v8H4V6z"
-											/>
-											<path d="M6 8h8M6 10h4" />
-										</svg>
-									</div>
-									<div class="min-w-0 flex-1">
-										<p class="text-sm font-medium text-gray-900">
-											New submission from {activity.details.studentName}
-										</p>
-										<p class="text-sm text-gray-500">
-											{activity.details.classroomName}
-										</p>
-									</div>
-								{:else if activity.type === 'grade'}
-									<div class="flex-shrink-0">
-										<svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-											<path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-										</svg>
-									</div>
-									<div class="min-w-0 flex-1">
-										<p class="text-sm font-medium text-gray-900">
-											Assignment graded: {activity.details.score}/{activity.details.maxScore}
-										</p>
-										<p class="text-sm text-gray-500">
-											{activity.details.classroomName}
-										</p>
-									</div>
-								{/if}
-								<div class="flex-shrink-0">
-									<p class="text-xs text-gray-400">
-										{new Date(activity.timestamp).toLocaleString()}
-									</p>
-								</div>
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</div>
+				</div>
+			{/snippet}
+		</Card>
 	{/if}
 </div>

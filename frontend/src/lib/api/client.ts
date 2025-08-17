@@ -157,14 +157,15 @@ export async function typedApiRequest<T>(
 		rawResponse: JSON.stringify(rawResponse, null, 2)
 	});
 
-	// Extract data from standard API response wrapper: { success: boolean, data: T, error?: string }
+	// Extract data from API response - handle both formats:
+	// Format 1: { success: boolean, data: T, error? }
+	// Format 2: { success: boolean, ...actualData }
 	if (
 		!rawResponse ||
 		typeof rawResponse !== 'object' ||
-		!('success' in rawResponse) ||
-		!('data' in rawResponse)
+		!('success' in rawResponse)
 	) {
-		throw new Error('Invalid API response format - expected { success, data, error? }');
+		throw new Error('Invalid API response format - expected { success: boolean, ... }');
 	}
 
 	// Handle API errors from wrapper
@@ -173,7 +174,36 @@ export async function typedApiRequest<T>(
 		throw new Error(error);
 	}
 
-	let dataToValidate = (rawResponse as any).data;
+	let dataToValidate;
+	
+	// Check if response has nested 'data' property (Format 1)
+	if ('data' in rawResponse) {
+		dataToValidate = (rawResponse as any).data;
+		console.debug('🔧 Using nested data property from API response');
+	} else {
+		// Handle submissions/assignment response format (Format 2)
+		// Backend returns: { success: true, assignmentId: "...", [...submissions] }
+		const responseObj = rawResponse as any;
+		
+		// Look for array data in the response - it should be an unnamed array property
+		const responseKeys = Object.keys(responseObj);
+		const arrayKey = responseKeys.find(key => 
+			key !== 'success' && 
+			key !== 'error' && 
+			key !== 'assignmentId' && 
+			Array.isArray(responseObj[key])
+		);
+		
+		if (arrayKey) {
+			dataToValidate = responseObj[arrayKey];
+			console.debug(`🔧 Using array property '${arrayKey}' from API response`);
+		} else {
+			// For non-array responses, extract the data excluding wrapper properties
+			const { success, error, assignmentId, ...actualData } = responseObj;
+			dataToValidate = actualData;
+			console.debug('🔧 Using extracted data from API response wrapper');
+		}
+	}
 
 	// For array endpoints: convert null to empty array
 	if (dataToValidate === null && schema._def.typeName === 'ZodArray') {

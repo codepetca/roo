@@ -2,6 +2,7 @@
 	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { Button, Alert, Card, Badge } from '$lib/components/ui';
 	import { LoadingSkeleton, PageHeader } from '$lib/components/dashboard';
+	import StudentStatusTable from '$lib/components/dashboard/StudentStatusTable.svelte';
 	import StatsGrid from '$lib/components/core/StatsGrid.svelte';
 	import type { Classroom, Assignment } from '@shared/schemas/core';
 
@@ -23,13 +24,7 @@
 		return assignments.filter(a => a.classroomId === selectedClassroom.id);
 	});
 
-	// Computed: Students/submissions for selected assignment (placeholder for now)
-	let assignmentSubmissions = $derived(() => {
-		if (!selectedAssignment) return [];
-		// TODO: In real implementation, this would come from submissions collection
-		// For now, return mock data structure
-		return [];
-	});
+	// Student status data is now handled by the StudentStatusTable component via dataStore.assignmentStudentStatus
 
 	// Transform dashboard stats for StatsGrid
 	let statsData = $derived(() => {
@@ -178,29 +173,18 @@
 					{/snippet}
 				</Card>
 
-				<!-- Submissions/Grades Section -->
-				<Card>
-					{#snippet children()}
-						<div class="p-6">
-							<h3 class="text-lg font-semibold text-gray-900 mb-4">Student Submissions</h3>
-							
-							{#if assignmentSubmissions.length === 0}
-								<div class="text-center py-12">
-									<svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-									</svg>
-									<h4 class="mt-2 text-sm font-medium text-gray-900">No submissions yet</h4>
-									<p class="mt-1 text-sm text-gray-500">
-										Students haven't submitted work for this assignment yet.
-									</p>
-								</div>
-							{:else}
-								<!-- TODO: Add submission list when submission data is available -->
-								<p class="text-gray-600">Submission data will be displayed here when available.</p>
-							{/if}
-						</div>
-					{/snippet}
-				</Card>
+				<!-- Student Status Table -->
+				<StudentStatusTable 
+					assignment={selectedAssignment}
+					onViewSubmission={(studentId, submissionId) => {
+						console.log('View submission for student:', studentId, 'submission:', submissionId);
+						// TODO: Implement submission viewer
+					}}
+					onGradeSubmission={(studentId, submissionId) => {
+						console.log('Grade submission for student:', studentId, 'submission:', submissionId);
+						// TODO: Implement grading interface
+					}}
+				/>
 			</div>
 
 		{:else if selectedClassroom}
