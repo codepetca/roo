@@ -15,20 +15,22 @@ class DataStore {
 	assignments = $state<Assignment[]>([]);
 	submissions = $state<Submission[]>([]);
 	grades = $state<Grade[]>([]);
-	
+
 	// User state
 	currentUser = $state<DashboardUser | null>(null);
-	
+
 	// Simple loading and error states
 	loading = $state<boolean>(false);
 	error = $state<string | null>(null);
-	
+
 	// Recent activity
-	recentActivity = $state<Array<{
-		type: 'submission' | 'grade' | 'assignment';
-		timestamp: string;
-		details: any;
-	}>>([]);
+	recentActivity = $state<
+		Array<{
+			type: 'submission' | 'grade' | 'assignment';
+			timestamp: string;
+			details: any;
+		}>
+	>([]);
 
 	// Computed dashboard statistics
 	dashboardStats = $derived({
@@ -45,8 +47,8 @@ class DataStore {
 	// Assignment groupings for UI
 	assignmentsGrouped = $derived({
 		all: this.assignments,
-		quizzes: this.assignments.filter(a => a.type === 'quiz'),
-		assignments: this.assignments.filter(a => a.type !== 'quiz')
+		quizzes: this.assignments.filter((a) => a.type === 'quiz'),
+		assignments: this.assignments.filter((a) => a.type !== 'quiz')
 	});
 
 	// Selected entities state
@@ -55,13 +57,13 @@ class DataStore {
 
 	selectedClassroom = $derived(
 		this.selectedClassroomId
-			? this.classrooms.find(c => c.id === this.selectedClassroomId) ?? null
+			? (this.classrooms.find((c) => c.id === this.selectedClassroomId) ?? null)
 			: null
 	);
 
 	selectedAssignment = $derived(
 		this.selectedAssignmentId
-			? this.assignments.find(a => a.id === this.selectedAssignmentId) ?? null
+			? (this.assignments.find((a) => a.id === this.selectedAssignmentId) ?? null)
 			: null
 	);
 
@@ -84,7 +86,7 @@ class DataStore {
 		if (data.assignments) this.assignments = data.assignments;
 		if (data.user) this.currentUser = data.user;
 		if (data.recentActivity) this.recentActivity = data.recentActivity;
-		
+
 		this.error = null;
 		console.log('✅ Data store updated successfully');
 	}
@@ -93,7 +95,7 @@ class DataStore {
 	 * Select a classroom
 	 */
 	selectClassroom(classroomId: string): void {
-		const classroom = this.classrooms.find(c => c.id === classroomId);
+		const classroom = this.classrooms.find((c) => c.id === classroomId);
 		if (classroom) {
 			this.selectedClassroomId = classroomId;
 			this.selectedAssignmentId = null; // Clear assignment selection
@@ -113,16 +115,16 @@ class DataStore {
 			return;
 		}
 
-		const assignment = this.assignments.find(a => a.id === assignmentId);
+		const assignment = this.assignments.find((a) => a.id === assignmentId);
 		if (assignment) {
 			this.selectedAssignmentId = assignmentId;
-			
+
 			// Auto-select the classroom if not already selected
 			if (this.selectedClassroomId !== assignment.classroomId) {
 				this.selectedClassroomId = assignment.classroomId;
 				console.log('🏠 Auto-selected classroom for assignment');
 			}
-			
+
 			console.log('📝 Selected assignment:', assignment.title || assignment.name);
 		} else {
 			console.warn('⚠️ Assignment not found:', assignmentId);
@@ -228,7 +230,7 @@ class DataStore {
 		// Set test data
 		this.classrooms = testClassrooms;
 		this.assignments = testAssignments;
-		
+
 		// Set test user
 		this.currentUser = {
 			id: 'test-teacher-id',
@@ -254,17 +256,17 @@ class DataStore {
 	 */
 	formatDate(date: Date | { _seconds: number } | undefined): string {
 		if (!date) return 'No due date';
-		
+
 		// Handle Firestore timestamp format
 		if (typeof date === 'object' && '_seconds' in date) {
 			date = new Date(date._seconds * 1000);
 		}
-		
+
 		// Convert string to Date if needed
 		if (typeof date === 'string') {
 			date = new Date(date);
 		}
-		
+
 		return date.toLocaleDateString('en-US', {
 			month: 'short',
 			day: 'numeric',

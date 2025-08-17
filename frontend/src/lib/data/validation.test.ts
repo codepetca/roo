@@ -1,7 +1,7 @@
 /**
  * TDD Tests for Schema Validation - Unified Architecture
  * Location: frontend/src/lib/data/validation.test.ts
- * 
+ *
  * Testing comprehensive schema validation for:
  * - User profile schemas (teacher/student roles)
  * - API response wrapper schemas
@@ -10,9 +10,9 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { 
-	userProfileSchema, 
-	apiResponseSchema, 
+import {
+	userProfileSchema,
+	apiResponseSchema,
 	createProfileDataSchema,
 	authUserSchema,
 	type UserProfile,
@@ -94,7 +94,7 @@ describe('Schema Validation - TDD Red Phase', () => {
 				isLatest: true
 			};
 
-			// Test missing email  
+			// Test missing email
 			const missingEmail = {
 				uid: 'user-123',
 				displayName: 'Test User',
@@ -122,7 +122,7 @@ describe('Schema Validation - TDD Red Phase', () => {
 			];
 
 			// Act & Assert - All should fail validation
-			invalidEmails.forEach(email => {
+			invalidEmails.forEach((email) => {
 				const profileWithInvalidEmail = {
 					uid: 'user-123',
 					email,
@@ -248,17 +248,19 @@ describe('Schema Validation - TDD Red Phase', () => {
 	describe('apiResponseSchema', () => {
 		it('should validate successful API response', () => {
 			// Arrange - Standard successful response
-			const successResponse: ApiResponse<{id: string; name: string}> = {
+			const successResponse: ApiResponse<{ id: string; name: string }> = {
 				success: true,
 				data: { id: 'test-123', name: 'Test Item' },
 				error: null
 			};
 
 			// Act & Assert - Should pass validation
-			const result = apiResponseSchema(z.object({
-				id: z.string(),
-				name: z.string()
-			})).parse(successResponse);
+			const result = apiResponseSchema(
+				z.object({
+					id: z.string(),
+					name: z.string()
+				})
+			).parse(successResponse);
 
 			expect(result.success).toBe(true);
 			expect(result.data.id).toBe('test-123');
@@ -273,7 +275,7 @@ describe('Schema Validation - TDD Red Phase', () => {
 				error: 'User not found'
 			};
 
-			// Act & Assert - Should pass validation 
+			// Act & Assert - Should pass validation
 			const result = apiResponseSchema(z.null()).parse(failedResponse);
 			expect(result.success).toBe(false);
 			expect(result.error).toBe('User not found');
@@ -587,7 +589,7 @@ describe('Schema Validation - TDD Red Phase', () => {
 				email: 'test@example.com', // Valid ASCII email
 				displayName: '🧑‍🏫 José María García-López',
 				role: 'teacher',
-				schoolEmail: 'jose@university.fr', // Valid ASCII email for schoolEmail  
+				schoolEmail: 'jose@university.fr', // Valid ASCII email for schoolEmail
 				createdAt: new Date(),
 				updatedAt: new Date(),
 				version: 1,
@@ -596,7 +598,7 @@ describe('Schema Validation - TDD Red Phase', () => {
 
 			// Should handle unicode characters in non-email fields properly
 			expect(() => userProfileSchema.parse(unicodeData)).not.toThrow();
-			
+
 			const result = userProfileSchema.parse(unicodeData);
 			expect(result.displayName).toBe('🧑‍🏫 José María García-López');
 			expect(result.uid).toBe('user-测试-123');
@@ -617,7 +619,7 @@ describe('Schema Validation - TDD Red Phase', () => {
 
 			// Parse once
 			const firstParse = userProfileSchema.parse(originalData);
-			
+
 			// Parse again
 			const secondParse = userProfileSchema.parse(firstParse);
 
@@ -632,7 +634,7 @@ describe('Schema Validation - TDD Red Phase', () => {
 				email: 'malicious@example.com',
 				displayName: 'Malicious User',
 				role: 'student',
-				'__proto__': { malicious: true },
+				__proto__: { malicious: true },
 				constructor: { malicious: true },
 				createdAt: new Date(),
 				updatedAt: new Date(),
@@ -664,11 +666,11 @@ describe('Schema Validation - TDD Red Phase', () => {
 
 			// Validate each profile - should be fast
 			const startTime = performance.now();
-			
-			largeDataset.forEach(profile => {
+
+			largeDataset.forEach((profile) => {
 				userProfileSchema.parse(profile);
 			});
-			
+
 			const endTime = performance.now();
 			const duration = endTime - startTime;
 
@@ -697,7 +699,7 @@ describe('Schema Validation - TDD Red Phase', () => {
 			// All should succeed
 			const results = await Promise.all(concurrentValidations);
 			expect(results).toHaveLength(100);
-			results.forEach(result => {
+			results.forEach((result) => {
 				expect(result.uid).toBe('concurrent-test');
 			});
 		});

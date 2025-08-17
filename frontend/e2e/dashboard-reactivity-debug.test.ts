@@ -22,10 +22,13 @@ test.describe('Dashboard Reactivity Debug', () => {
 		console.log('✅ Successfully navigated to teacher dashboard');
 
 		// Wait for data loading to complete (look for loading: false)
-		await page.waitForFunction(() => {
-			const loadingElement = document.querySelector('[data-testid="debug-loading"]');
-			return loadingElement?.textContent?.includes('Loading: false');
-		}, { timeout: 10000 });
+		await page.waitForFunction(
+			() => {
+				const loadingElement = document.querySelector('[data-testid="debug-loading"]');
+				return loadingElement?.textContent?.includes('Loading: false');
+			},
+			{ timeout: 10000 }
+		);
 
 		console.log('✅ Data loading completed');
 
@@ -39,10 +42,18 @@ test.describe('Dashboard Reactivity Debug', () => {
 			// Look for debug information in the UI
 			const loading = getElementText('*:has-text("Loading:")').replace('Loading:', '').trim();
 			const hasData = getElementText('*:has-text("Has Data:")').replace('Has Data:', '').trim();
-			const classroomsCount = getElementText('*:has-text("Classrooms Count:")').replace('Classrooms Count:', '').trim();
-			const assignmentsCount = getElementText('*:has-text("Assignments Count:")').replace('Assignments Count:', '').trim();
-			const classroomsMapSize = getElementText('*:has-text("Classrooms Map Size:")').replace('Classrooms Map Size:', '').trim();
-			const assignmentsMapSize = getElementText('*:has-text("Assignments Map Size:")').replace('Assignments Map Size:', '').trim();
+			const classroomsCount = getElementText('*:has-text("Classrooms Count:")')
+				.replace('Classrooms Count:', '')
+				.trim();
+			const assignmentsCount = getElementText('*:has-text("Assignments Count:")')
+				.replace('Assignments Count:', '')
+				.trim();
+			const classroomsMapSize = getElementText('*:has-text("Classrooms Map Size:")')
+				.replace('Classrooms Map Size:', '')
+				.trim();
+			const assignmentsMapSize = getElementText('*:has-text("Assignments Map Size:")')
+				.replace('Assignments Map Size:', '')
+				.trim();
 			const teacher = getElementText('*:has-text("Teacher:")').replace('Teacher:', '').trim();
 			const error = getElementText('*:has-text("Error:")').replace('Error:', '').trim();
 
@@ -70,24 +81,31 @@ test.describe('Dashboard Reactivity Debug', () => {
 
 		// Analyze the reactivity issue
 		console.log('\n🔍 REACTIVITY ANALYSIS:');
-		
+
 		if (debugInfo.classroomsMapSize > 0 && debugInfo.classroomsCount === 0) {
 			console.log('❌ ISSUE FOUND: Classrooms Map has data but derived array is empty');
-			console.log(`   Map Size: ${debugInfo.classroomsMapSize}, Derived Array: ${debugInfo.classroomsCount}`);
+			console.log(
+				`   Map Size: ${debugInfo.classroomsMapSize}, Derived Array: ${debugInfo.classroomsCount}`
+			);
 		}
 
 		if (debugInfo.assignmentsMapSize > 0 && debugInfo.assignmentsCount === 0) {
 			console.log('❌ ISSUE FOUND: Assignments Map has data but derived array is empty');
-			console.log(`   Map Size: ${debugInfo.assignmentsMapSize}, Derived Array: ${debugInfo.assignmentsCount}`);
+			console.log(
+				`   Map Size: ${debugInfo.assignmentsMapSize}, Derived Array: ${debugInfo.assignmentsCount}`
+			);
 		}
 
-		if (debugInfo.hasData === 'false' && (debugInfo.classroomsMapSize > 0 || debugInfo.assignmentsMapSize > 0)) {
+		if (
+			debugInfo.hasData === 'false' &&
+			(debugInfo.classroomsMapSize > 0 || debugInfo.assignmentsMapSize > 0)
+		) {
 			console.log('❌ ISSUE FOUND: hasData computed property shows false despite Map data');
 		}
 
 		// Test manual data loading
 		console.log('\n🧪 Testing manual "Load Test Data" button...');
-		
+
 		// Click the Load Test Data button
 		const loadTestDataButton = page.locator('button:has-text("Load Test Data")');
 		await expect(loadTestDataButton).toBeVisible();
@@ -104,17 +122,25 @@ test.describe('Dashboard Reactivity Debug', () => {
 			};
 
 			const hasData = getElementText('*:has-text("Has Data:")').replace('Has Data:', '').trim();
-			const classroomsCount = getElementText('*:has-text("Classrooms Count:")').replace('Classrooms Count:', '').trim();
-			const assignmentsCount = getElementText('*:has-text("Assignments Count:")').replace('Assignments Count:', '').trim();
-			const classroomsMapSize = getElementText('*:has-text("Classrooms Map Size:")').replace('Classrooms Map Size:', '').trim();
-			const assignmentsMapSize = getElementText('*:has-text("Assignments Map Size:")').replace('Assignments Map Size:', '').trim();
+			const classroomsCount = getElementText('*:has-text("Classrooms Count:")')
+				.replace('Classrooms Count:', '')
+				.trim();
+			const assignmentsCount = getElementText('*:has-text("Assignments Count:")')
+				.replace('Assignments Count:', '')
+				.trim();
+			const classroomsMapSize = getElementText('*:has-text("Classrooms Map Size:")')
+				.replace('Classrooms Map Size:', '')
+				.trim();
+			const assignmentsMapSize = getElementText('*:has-text("Assignments Map Size:")')
+				.replace('Assignments Map Size:', '')
+				.trim();
 
 			return {
 				hasData,
 				classroomsCount: parseInt(classroomsCount) || 0,
 				assignmentsCount: parseInt(assignmentsCount) || 0,
 				classroomsMapSize: parseInt(classroomsMapSize) || 0,
-				assignmentsMapSize: parseInt(assignmentsMapSize) || 0,
+				assignmentsMapSize: parseInt(assignmentsMapSize) || 0
 			};
 		});
 
@@ -133,14 +159,18 @@ test.describe('Dashboard Reactivity Debug', () => {
 		}
 
 		// Test if assignments are actually visible in UI
-		const assignmentItems = await page.locator('[data-testid="assignment-item"], .assignment-item, *:has-text("Assignment"), *:has-text("Karel"), *:has-text("Quiz")').count();
+		const assignmentItems = await page
+			.locator(
+				'[data-testid="assignment-item"], .assignment-item, *:has-text("Assignment"), *:has-text("Karel"), *:has-text("Quiz")'
+			)
+			.count();
 		console.log(`🔍 Visible assignment items in UI: ${assignmentItems}`);
 
 		// Check for any visible classroom/assignment lists
 		const visibleLists = await page.evaluate(() => {
 			const lists = document.querySelectorAll('ul, ol');
 			let visibleItems = 0;
-			lists.forEach(list => {
+			lists.forEach((list) => {
 				if (list.children.length > 0) {
 					visibleItems += list.children.length;
 				}
@@ -187,14 +217,17 @@ test.describe('Dashboard Reactivity Debug', () => {
 			// Access the global data store if available
 			try {
 				// Try to access the data store from window or global scope
-				const dataStore = (window as any).dataStore || 
-								(window as any).__SVELTE__ ||
-								document.querySelector('[data-svelte]');
+				const dataStore =
+					(window as any).dataStore ||
+					(window as any).__SVELTE__ ||
+					document.querySelector('[data-svelte]');
 
 				console.log('🔍 Attempting direct Map access...');
-				
+
 				// If we can't access directly, try to trigger test data loading
-				const loadTestButton = document.querySelector('button:has-text("Load Test Data")') as HTMLButtonElement;
+				const loadTestButton = document.querySelector(
+					'button:has-text("Load Test Data")'
+				) as HTMLButtonElement;
 				if (loadTestButton) {
 					loadTestButton.click();
 					console.log('🧪 Clicked Load Test Data button from console');
@@ -226,13 +259,17 @@ test.describe('Dashboard Reactivity Debug', () => {
 			};
 
 			const hasData = getElementText('*:has-text("Has Data:")').replace('Has Data:', '').trim();
-			const classroomsCount = getElementText('*:has-text("Classrooms Count:")').replace('Classrooms Count:', '').trim();
-			const assignmentsCount = getElementText('*:has-text("Assignments Count:")').replace('Assignments Count:', '').trim();
+			const classroomsCount = getElementText('*:has-text("Classrooms Count:")')
+				.replace('Classrooms Count:', '')
+				.trim();
+			const assignmentsCount = getElementText('*:has-text("Assignments Count:")')
+				.replace('Assignments Count:', '')
+				.trim();
 
 			return {
 				hasData,
 				classroomsCount: parseInt(classroomsCount) || 0,
-				assignmentsCount: parseInt(assignmentsCount) || 0,
+				assignmentsCount: parseInt(assignmentsCount) || 0
 			};
 		});
 

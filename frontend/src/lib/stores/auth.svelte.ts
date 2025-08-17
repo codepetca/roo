@@ -59,9 +59,9 @@ async function setAuthCookie(user: User | null) {
 async function getUserProfile(firebaseUser: User): Promise<AuthUser | null> {
 	try {
 		console.log('📡 Getting user profile via UserService for:', firebaseUser.email);
-		
+
 		const profile = await userService.getProfileWithFallback(firebaseUser);
-		
+
 		// Convert UserProfile to AuthUser format
 		const authUser: AuthUser = {
 			uid: profile.uid,
@@ -274,7 +274,7 @@ async function createAccount(data: {
 			schoolEmail: data.schoolEmail,
 			displayName: data.displayName
 		};
-		
+
 		const createdProfile = await userService.createProfile(profileData);
 		console.log('✅ Profile created via UserService:', createdProfile);
 

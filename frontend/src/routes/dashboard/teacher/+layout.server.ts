@@ -6,14 +6,14 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 
 	// Check for basic authentication cookie presence
 	const authToken = cookies.get('auth-token') || cookies.get('firebase-auth-token');
-	
+
 	if (!authToken) {
 		console.log('❌ No auth token found, redirecting to login');
 		throw redirect(302, '/login?redirect=/dashboard/teacher');
 	}
 
 	console.log('✅ Auth token found, allowing access to teacher routes');
-	
+
 	// Return minimal user data - real user validation happens client-side
 	// This is a simplified approach that just checks for token presence
 	return {

@@ -400,7 +400,9 @@
 									</td>
 									<td class="px-6 py-4 whitespace-nowrap">
 										<div class="text-sm text-gray-900">
-											{assignment ? (assignment.title || assignment.name || 'Unknown Assignment') : 'Unknown Assignment'}
+											{assignment
+												? assignment.title || assignment.name || 'Unknown Assignment'
+												: 'Unknown Assignment'}
 										</div>
 										<div class="text-sm text-gray-500">
 											{assignment?.type === 'quiz' ? 'Quiz' : 'Assignment'}

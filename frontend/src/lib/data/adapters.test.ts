@@ -1,7 +1,7 @@
 /**
  * TDD Tests for Data Adapters - Unified Architecture
  * Location: frontend/src/lib/data/adapters.test.ts
- * 
+ *
  * Testing data normalization across different Firebase sources:
  * - API responses with { success, data, error } wrapper
  * - Firestore documents with .data() method
@@ -39,7 +39,7 @@ describe('DataAdapter - TDD Red Phase', () => {
 				error: 'User not found'
 			};
 
-			// Act & Assert - This should FAIL initially 
+			// Act & Assert - This should FAIL initially
 			expect(() => DataAdapter.fromApiResponse(failedResponse)).toThrow('User not found');
 		});
 
@@ -52,7 +52,9 @@ describe('DataAdapter - TDD Red Phase', () => {
 			};
 
 			// Act & Assert - This should FAIL initially
-			expect(() => DataAdapter.fromApiResponse(invalidResponse)).toThrow('API response missing data field');
+			expect(() => DataAdapter.fromApiResponse(invalidResponse)).toThrow(
+				'API response missing data field'
+			);
 		});
 
 		it('should throw error when API response data is undefined', () => {
@@ -64,7 +66,9 @@ describe('DataAdapter - TDD Red Phase', () => {
 			} as ApiResponse<any>;
 
 			// Act & Assert - This should FAIL initially
-			expect(() => DataAdapter.fromApiResponse(undefinedResponse)).toThrow('API response missing data field');
+			expect(() => DataAdapter.fromApiResponse(undefinedResponse)).toThrow(
+				'API response missing data field'
+			);
 		});
 
 		it('should handle complex nested data structures', () => {
@@ -136,7 +140,9 @@ describe('DataAdapter - TDD Red Phase', () => {
 			};
 
 			// Act & Assert - This should FAIL initially
-			expect(() => DataAdapter.fromFirestoreDoc(nullDataDoc)).toThrow('Document data is null or undefined');
+			expect(() => DataAdapter.fromFirestoreDoc(nullDataDoc)).toThrow(
+				'Document data is null or undefined'
+			);
 		});
 
 		it('should handle Firestore documents with server timestamps', () => {
@@ -212,12 +218,16 @@ describe('DataAdapter - TDD Red Phase', () => {
 
 		it('should throw error when real-time data is null', () => {
 			// Act & Assert - This should FAIL initially
-			expect(() => DataAdapter.fromRealtimeData(null)).toThrow('Real-time data is null or undefined');
+			expect(() => DataAdapter.fromRealtimeData(null)).toThrow(
+				'Real-time data is null or undefined'
+			);
 		});
 
 		it('should throw error when real-time data is undefined', () => {
 			// Act & Assert - This should FAIL initially
-			expect(() => DataAdapter.fromRealtimeData(undefined)).toThrow('Real-time data is null or undefined');
+			expect(() => DataAdapter.fromRealtimeData(undefined)).toThrow(
+				'Real-time data is null or undefined'
+			);
 		});
 
 		it('should handle array data from real-time listeners', () => {
@@ -311,7 +321,7 @@ describe('DataAdapter - TDD Red Phase', () => {
 
 		it('should validate input types strictly', () => {
 			// Test type validation for each adapter method
-			
+
 			// Test invalid API response (missing success field)
 			const invalidApiResponse = { data: 'test' } as any;
 			expect(() => DataAdapter.fromApiResponse(invalidApiResponse)).toThrow();

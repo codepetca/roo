@@ -1,7 +1,7 @@
 /**
  * TDD Tests for UserService Integration - Unified Architecture
  * Location: frontend/src/lib/services/user-service.test.ts
- * 
+ *
  * Testing the unified service layer that provides:
  * - API fallback to direct Firestore access
  * - Consistent data transformation across sources
@@ -81,10 +81,10 @@ describe('UserService Integration - TDD Red Phase', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		
+
 		// Create new service instance for each test
 		userService = new UserService();
-		
+
 		// Mock Firebase user
 		mockFirebaseUser = {
 			uid: 'test-user-123',
@@ -103,7 +103,7 @@ describe('UserService Integration - TDD Red Phase', () => {
 
 	describe('getUserProfile - API Success Path', () => {
 		it('should fetch user profile via API successfully', async () => {
-			// Arrange - Red Phase: This should FAIL initially  
+			// Arrange - Red Phase: This should FAIL initially
 			const mockApiResponse = {
 				uid: 'test-user-123',
 				email: 'test@example.com',
@@ -137,7 +137,7 @@ describe('UserService Integration - TDD Red Phase', () => {
 			// Arrange - Simulate API timeout
 			const timeoutError = new Error('Request timeout');
 			timeoutError.name = 'TimeoutError';
-			
+
 			mockTypedApiRequest.mockRejectedValue(timeoutError);
 
 			// Act & Assert - Should throw timeout error
@@ -160,18 +160,22 @@ describe('UserService Integration - TDD Red Phase', () => {
 			});
 
 			// Act & Assert - Should throw validation error
-			await expect(userService.getUserProfile(mockFirebaseUser)).rejects.toThrow('Schema validation failed');
+			await expect(userService.getUserProfile(mockFirebaseUser)).rejects.toThrow(
+				'Schema validation failed'
+			);
 		});
 
 		it('should handle API rate limiting', async () => {
-			// Arrange - Rate limit error  
+			// Arrange - Rate limit error
 			const rateLimitError = new Error('Too many requests');
 			rateLimitError.name = 'RateLimitError';
-			
+
 			mockTypedApiRequest.mockRejectedValue(rateLimitError);
 
 			// Act & Assert - Should throw rate limit error
-			await expect(userService.getUserProfile(mockFirebaseUser)).rejects.toThrow('Too many requests');
+			await expect(userService.getUserProfile(mockFirebaseUser)).rejects.toThrow(
+				'Too many requests'
+			);
 		});
 	});
 
@@ -222,18 +226,22 @@ describe('UserService Integration - TDD Red Phase', () => {
 			});
 
 			// Act & Assert - Should throw document not found error
-			await expect(userService.getUserProfileDirect('non-existent-user')).rejects.toThrow('Document does not exist');
+			await expect(userService.getUserProfileDirect('non-existent-user')).rejects.toThrow(
+				'Document does not exist'
+			);
 		});
 
 		it('should handle Firestore permission errors', async () => {
 			// Arrange - Permission denied error
 			const permissionError = new Error('Missing or insufficient permissions');
 			permissionError.name = 'FirebaseError';
-			
+
 			mockGetDoc.mockRejectedValue(permissionError);
 
 			// Act & Assert - Should throw permission error
-			await expect(userService.getUserProfileDirect('test-user-123')).rejects.toThrow('Missing or insufficient permissions');
+			await expect(userService.getUserProfileDirect('test-user-123')).rejects.toThrow(
+				'Missing or insufficient permissions'
+			);
 		});
 
 		it('should validate Firestore data with schema', async () => {
@@ -256,7 +264,9 @@ describe('UserService Integration - TDD Red Phase', () => {
 			});
 
 			// Act & Assert - Should throw validation error
-			await expect(userService.getUserProfileDirect('test-user-123')).rejects.toThrow('Invalid user profile data');
+			await expect(userService.getUserProfileDirect('test-user-123')).rejects.toThrow(
+				'Invalid user profile data'
+			);
 		});
 	});
 
@@ -304,7 +314,7 @@ describe('UserService Integration - TDD Red Phase', () => {
 
 			// API fails
 			mockTypedApiRequest.mockRejectedValue(apiError);
-			
+
 			// Firestore succeeds
 			const mockDoc = {
 				exists: true,
@@ -332,7 +342,9 @@ describe('UserService Integration - TDD Red Phase', () => {
 			mockGetDoc.mockRejectedValue(firestoreError);
 
 			// Act & Assert - Should throw combined error
-			await expect(userService.getProfileWithFallback(mockFirebaseUser)).rejects.toThrow('Profile fetch failed');
+			await expect(userService.getProfileWithFallback(mockFirebaseUser)).rejects.toThrow(
+				'Profile fetch failed'
+			);
 		});
 
 		it('should handle partial network failures gracefully', async () => {
@@ -378,7 +390,7 @@ describe('UserService Integration - TDD Red Phase', () => {
 		it('should log fallback operations for monitoring', async () => {
 			// Arrange - Setup console spy
 			const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-			
+
 			const apiError = new Error('API temporarily unavailable');
 			const mockFirestoreProfile = {
 				uid: 'test-user-123',
@@ -392,7 +404,7 @@ describe('UserService Integration - TDD Red Phase', () => {
 			};
 
 			mockTypedApiRequest.mockRejectedValue(apiError);
-			
+
 			const mockDoc = {
 				exists: true,
 				data: vi.fn().mockReturnValue(mockFirestoreProfile)
@@ -453,7 +465,7 @@ describe('UserService Integration - TDD Red Phase', () => {
 			// Arrange - Invalid creation data
 			const invalidData = {
 				uid: 'test',
-				role: 'invalid-role',
+				role: 'invalid-role'
 				// Missing required fields
 			};
 
@@ -462,7 +474,9 @@ describe('UserService Integration - TDD Red Phase', () => {
 			});
 
 			// Act & Assert - Should throw validation error
-			await expect(userService.createProfile(invalidData as any)).rejects.toThrow('Invalid profile creation data');
+			await expect(userService.createProfile(invalidData as any)).rejects.toThrow(
+				'Invalid profile creation data'
+			);
 		});
 
 		it('should handle Firestore write failures during creation', async () => {
@@ -493,7 +507,7 @@ describe('UserService Integration - TDD Red Phase', () => {
 				capturedProfileData = data;
 				return Promise.resolve();
 			});
-			
+
 			mockCreateProfileValidate.mockReturnValue(createData);
 			mockUserProfileValidate.mockReturnValue({
 				...createData,
@@ -540,7 +554,7 @@ describe('UserService Integration - TDD Red Phase', () => {
 
 			// Assert - All should succeed
 			const results = await Promise.all(requests);
-			results.forEach(result => {
+			results.forEach((result) => {
 				expect(result).toEqual(mockProfile);
 			});
 		});
@@ -560,7 +574,7 @@ describe('UserService Integration - TDD Red Phase', () => {
 		it('should handle service initialization errors', async () => {
 			// Arrange - Test service in uninitialized state
 			const uninitializedService = new UserService();
-			
+
 			// Mock initialization failure
 			mockDoc.mockImplementation(() => {
 				throw new Error('Firebase not initialized');
@@ -660,7 +674,7 @@ describe('UserService Integration - TDD Red Phase', () => {
 					metricsCollector.apiCalls++;
 				} else {
 					mockTypedApiRequest.mockRejectedValue(new Error('API failed'));
-					
+
 					// Setup Firestore fallback
 					const mockDoc = {
 						exists: true,

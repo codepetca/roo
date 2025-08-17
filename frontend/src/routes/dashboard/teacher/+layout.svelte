@@ -3,7 +3,7 @@
 	import type { LayoutData } from './$types';
 
 	let { children, data }: { children?: Snippet; data: LayoutData } = $props();
-	
+
 	// Simple layout - no complex initialization needed
 	// Authentication and user data comes from +layout.server.ts
 	console.log('🎯 Teacher layout loaded with user:', data.user.email);

@@ -21,7 +21,7 @@
 	let classrooms = $derived(() => {
 		// Deduplicate classrooms by ID to prevent Svelte each key errors
 		const seen = new Set<string>();
-		return dataStore.classrooms.filter(classroom => {
+		return dataStore.classrooms.filter((classroom) => {
 			if (seen.has(classroom.id)) {
 				console.warn(`🔧 Duplicate classroom detected and filtered: ${classroom.id}`);
 				return false;
@@ -49,7 +49,7 @@
 			newExpanded.add(classroomId);
 		}
 		expandedClassrooms = newExpanded;
-		
+
 		// Save to localStorage for persistence
 		localStorage.setItem('expandedClassrooms', JSON.stringify([...newExpanded]));
 	}
@@ -60,15 +60,15 @@
 		if (!expandedClassrooms.has(classroomId)) {
 			toggleClassroomExpansion(classroomId);
 		}
-		
+
 		// Select in store
 		dataStore.selectClassroom(classroomId);
-		
+
 		// Clear assignment selection when selecting classroom
 		if (selectedAssignmentId) {
 			dataStore.selectAssignment('');
 		}
-		
+
 		onClassroomSelect?.(classroomId);
 	}
 
@@ -81,10 +81,10 @@
 		if (!expandedClassrooms.has(classroomId)) {
 			toggleClassroomExpansion(classroomId);
 		}
-		
+
 		// Select assignment
 		dataStore.selectAssignment(assignmentId);
-		
+
 		// Load assignment data (submissions, grades, students)
 		try {
 			await dataStore.loadAssignmentData(assignmentId);
@@ -93,7 +93,7 @@
 			console.error('❌ Failed to load assignment data:', error);
 			// Note: Error handling is already done in the loadAssignmentData method
 		}
-		
+
 		onAssignmentSelect?.(assignmentId, classroomId);
 	}
 
@@ -120,13 +120,18 @@
 	});
 </script>
 
-<div class="flex h-full flex-col bg-white border-r border-gray-200 shadow-sm" style="width: 320px;">
+<div class="flex h-full flex-col border-r border-gray-200 bg-white shadow-sm" style="width: 320px;">
 	<!-- Header (No "My Classes" text - just action button) -->
 	<div class="border-b border-gray-200 p-4">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center space-x-2">
 				<svg class="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+					/>
 				</svg>
 				<h2 class="text-lg font-semibold text-gray-900">Classrooms</h2>
 			</div>
@@ -134,12 +139,28 @@
 				{#snippet children()}
 					{#if loading}
 						<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							<circle
+								class="opacity-25"
+								cx="12"
+								cy="12"
+								r="10"
+								stroke="currentColor"
+								stroke-width="4"
+							></circle>
+							<path
+								class="opacity-75"
+								fill="currentColor"
+								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+							></path>
 						</svg>
 					{:else}
 						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+							/>
 						</svg>
 					{/if}
 				{/snippet}
@@ -151,7 +172,9 @@
 	{#if loading && !hasData}
 		<div class="flex flex-1 items-center justify-center">
 			<div class="text-center">
-				<div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+				<div
+					class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"
+				></div>
 				<p class="mt-2 text-sm text-gray-600">Loading classrooms...</p>
 			</div>
 		</div>
@@ -159,8 +182,18 @@
 		<!-- Error State -->
 		<div class="flex flex-1 items-center justify-center p-4">
 			<div class="text-center">
-				<svg class="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z"/>
+				<svg
+					class="mx-auto h-12 w-12 text-red-400"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z"
+					/>
 				</svg>
 				<p class="mt-2 text-sm text-red-600">{error}</p>
 				<Button variant="secondary" size="sm" onclick={dataStore.refresh} class="mt-2">
@@ -174,15 +207,35 @@
 		<!-- Empty State -->
 		<div class="flex flex-1 items-center justify-center p-4">
 			<div class="space-y-4 text-center">
-				<svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+				<svg
+					class="mx-auto h-12 w-12 text-gray-400"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+					/>
 				</svg>
 				<h3 class="mt-2 text-sm font-medium text-gray-900">Get Started with Roo</h3>
 				<p class="text-xs text-gray-500">Import classroom data to see your classes</p>
-				<Button variant="primary" size="sm" onclick={() => (window.location.href = '/teacher/data-import')} class="mt-4">
+				<Button
+					variant="primary"
+					size="sm"
+					onclick={() => (window.location.href = '/teacher/data-import')}
+					class="mt-4"
+				>
 					{#snippet children()}
 						<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+							/>
 						</svg>
 						Import Data
 					{/snippet}
@@ -197,16 +250,16 @@
 					{@const classroomAssignments = assignmentsByClassroom.get(classroom.id) || []}
 					{@const isExpanded = expandedClassrooms.has(classroom.id)}
 					{@const isSelected = selectedClassroomId === classroom.id}
-					
+
 					<!-- Classroom Item -->
 					<div class="space-y-1">
 						<div
-							onmouseenter={() => hoveredItem = classroom.id}
-							onmouseleave={() => hoveredItem = null}
+							onmouseenter={() => (hoveredItem = classroom.id)}
+							onmouseleave={() => (hoveredItem = null)}
 							class="w-full rounded-lg transition-all duration-200 {isSelected
-								? 'bg-blue-50 border border-blue-200 shadow-sm'
+								? 'border border-blue-200 bg-blue-50 shadow-sm'
 								: hoveredItem === classroom.id
-									? 'bg-gray-50 border border-gray-200'
+									? 'border border-gray-200 bg-gray-50'
 									: 'border border-transparent hover:bg-gray-50'}"
 						>
 							<div class="flex items-center justify-between p-3">
@@ -216,36 +269,50 @@
 										<!-- Expand/Collapse Icon -->
 										<button
 											onclick={() => toggleClassroomExpansion(classroom.id)}
-											class="flex-shrink-0 p-0.5 rounded hover:bg-gray-200 transition-colors"
+											class="flex-shrink-0 rounded p-0.5 transition-colors hover:bg-gray-200"
 											aria-label="Toggle classroom assignments"
 										>
 											<svg
-												class="h-4 w-4 text-gray-500 transition-transform duration-200 {isExpanded ? 'rotate-90' : ''}"
+												class="h-4 w-4 text-gray-500 transition-transform duration-200 {isExpanded
+													? 'rotate-90'
+													: ''}"
 												fill="none"
 												viewBox="0 0 24 24"
 												stroke="currentColor"
 											>
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M9 5l7 7-7 7"
+												/>
 											</svg>
 										</button>
-										
+
 										<!-- Classroom Icon -->
-										<div class="flex-shrink-0 p-1.5 bg-blue-100 text-blue-600 rounded-lg">
+										<div class="flex-shrink-0 rounded-lg bg-blue-100 p-1.5 text-blue-600">
 											<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+												/>
 											</svg>
 										</div>
-										
+
 										<!-- Clickable Classroom Name Area -->
 										<button
 											onclick={() => handleClassroomSelect(classroom.id)}
-											class="min-w-0 flex-1 text-left hover:bg-gray-100 rounded px-2 py-1 transition-colors"
+											class="min-w-0 flex-1 rounded px-2 py-1 text-left transition-colors hover:bg-gray-100"
 										>
-											<h3 class="truncate font-medium text-gray-900 text-sm">{classroom.name}</h3>
-											<p class="truncate text-xs text-gray-500">{classroom.courseCode || classroom.section || ''}</p>
+											<h3 class="truncate text-sm font-medium text-gray-900">{classroom.name}</h3>
+											<p class="truncate text-xs text-gray-500">
+												{classroom.courseCode || classroom.section || ''}
+											</p>
 										</button>
 									</div>
-									
+
 									<!-- Classroom Metadata -->
 									<div class="mt-2 ml-6 flex items-center gap-2 text-xs">
 										<Badge variant="info" size="sm">
@@ -267,42 +334,59 @@
 										{/if}
 									</div>
 								</div>
-								
+
 								<!-- Selection Indicator -->
 								{#if isSelected}
-									<svg class="h-5 w-5 flex-shrink-0 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-										<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+									<svg
+										class="h-5 w-5 flex-shrink-0 text-blue-600"
+										fill="currentColor"
+										viewBox="0 0 20 20"
+									>
+										<path
+											fill-rule="evenodd"
+											d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+											clip-rule="evenodd"
+										/>
 									</svg>
 								{/if}
 							</div>
 						</div>
-						
+
 						<!-- Assignment List (Expandable) -->
 						{#if isExpanded && classroomAssignments.length > 0}
 							<div class="ml-6 space-y-1 border-l border-gray-200 pl-4">
 								{#each classroomAssignments as assignment (assignment.id)}
 									{@const isAssignmentSelected = selectedAssignmentId === assignment.id}
-									
+
 									<button
 										onclick={() => handleAssignmentSelect(assignment.id, classroom.id)}
-										onmouseenter={() => hoveredItem = assignment.id}
-										onmouseleave={() => hoveredItem = null}
+										onmouseenter={() => (hoveredItem = assignment.id)}
+										onmouseleave={() => (hoveredItem = null)}
 										class="w-full rounded-md p-2 text-left transition-all duration-150 {isAssignmentSelected
-											? 'bg-blue-50 border border-blue-200'
+											? 'border border-blue-200 bg-blue-50'
 											: hoveredItem === assignment.id
-												? 'bg-gray-50 border border-gray-200'
+												? 'border border-gray-200 bg-gray-50'
 												: 'border border-transparent hover:bg-gray-50'}"
 									>
 										<div class="flex items-center space-x-2">
 											<!-- Assignment Type Icon -->
-											<div class="flex-shrink-0 p-1 {assignment.type === 'quiz' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'} rounded">
+											<div
+												class="flex-shrink-0 p-1 {assignment.type === 'quiz'
+													? 'bg-green-100 text-green-600'
+													: 'bg-blue-100 text-blue-600'} rounded"
+											>
 												<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={getAssignmentIcon(assignment)}/>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d={getAssignmentIcon(assignment)}
+													/>
 												</svg>
 											</div>
-											
+
 											<div class="min-w-0 flex-1">
-												<h4 class="truncate font-medium text-gray-900 text-sm">
+												<h4 class="truncate text-sm font-medium text-gray-900">
 													{dataStore.getAssignmentDisplayTitle(assignment)}
 												</h4>
 												<div class="flex items-center space-x-2 text-xs text-gray-500">
@@ -315,11 +399,19 @@
 													{/if}
 												</div>
 											</div>
-											
+
 											<!-- Assignment Selection Indicator -->
 											{#if isAssignmentSelected}
-												<svg class="h-4 w-4 flex-shrink-0 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-													<path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+												<svg
+													class="h-4 w-4 flex-shrink-0 text-blue-600"
+													fill="currentColor"
+													viewBox="0 0 20 20"
+												>
+													<path
+														fill-rule="evenodd"
+														d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+														clip-rule="evenodd"
+													/>
 												</svg>
 											{/if}
 										</div>
@@ -327,8 +419,8 @@
 								{/each}
 							</div>
 						{:else if isExpanded && classroomAssignments.length === 0}
-							<div class="ml-6 pl-4 border-l border-gray-200">
-								<p class="text-xs text-gray-500 italic p-2">No assignments yet</p>
+							<div class="ml-6 border-l border-gray-200 pl-4">
+								<p class="p-2 text-xs text-gray-500 italic">No assignments yet</p>
 							</div>
 						{/if}
 					</div>
@@ -339,10 +431,20 @@
 
 	<!-- Footer with Import Button -->
 	<div class="border-t border-gray-200 p-4">
-		<Button variant="outline" size="sm" onclick={() => (window.location.href = '/teacher/data-import')} class="w-full">
+		<Button
+			variant="outline"
+			size="sm"
+			onclick={() => (window.location.href = '/teacher/data-import')}
+			class="w-full"
+		>
 			{#snippet children()}
 				<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+					/>
 				</svg>
 				Import More Data
 			{/snippet}

@@ -17,7 +17,6 @@ import {
 import { z } from 'zod';
 import { safeValidateApiResponse } from '../schemas';
 
-
 /**
  * Base URL for direct HTTP calls
  */
@@ -160,11 +159,7 @@ export async function typedApiRequest<T>(
 	// Extract data from API response - handle both formats:
 	// Format 1: { success: boolean, data: T, error? }
 	// Format 2: { success: boolean, ...actualData }
-	if (
-		!rawResponse ||
-		typeof rawResponse !== 'object' ||
-		!('success' in rawResponse)
-	) {
+	if (!rawResponse || typeof rawResponse !== 'object' || !('success' in rawResponse)) {
 		throw new Error('Invalid API response format - expected { success: boolean, ... }');
 	}
 
@@ -175,7 +170,7 @@ export async function typedApiRequest<T>(
 	}
 
 	let dataToValidate;
-	
+
 	// Check if response has nested 'data' property (Format 1)
 	if ('data' in rawResponse) {
 		dataToValidate = (rawResponse as any).data;
@@ -184,16 +179,17 @@ export async function typedApiRequest<T>(
 		// Handle submissions/assignment response format (Format 2)
 		// Backend returns: { success: true, assignmentId: "...", [...submissions] }
 		const responseObj = rawResponse as any;
-		
+
 		// Look for array data in the response - it should be an unnamed array property
 		const responseKeys = Object.keys(responseObj);
-		const arrayKey = responseKeys.find(key => 
-			key !== 'success' && 
-			key !== 'error' && 
-			key !== 'assignmentId' && 
-			Array.isArray(responseObj[key])
+		const arrayKey = responseKeys.find(
+			(key) =>
+				key !== 'success' &&
+				key !== 'error' &&
+				key !== 'assignmentId' &&
+				Array.isArray(responseObj[key])
 		);
-		
+
 		if (arrayKey) {
 			dataToValidate = responseObj[arrayKey];
 			console.debug(`🔧 Using array property '${arrayKey}' from API response`);
@@ -214,7 +210,6 @@ export async function typedApiRequest<T>(
 	// Add detailed logging for debugging validation issues
 	console.debug('Data to validate:', JSON.stringify(dataToValidate, null, 2));
 	console.debug('Schema type:', schema._def.typeName);
-
 
 	const validation = safeValidateApiResponse(schema, dataToValidate);
 

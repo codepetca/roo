@@ -1,27 +1,32 @@
 import type { PageLoad } from './$types';
-import { PUBLIC_USE_EMULATORS, PUBLIC_FUNCTIONS_EMULATOR_URL, PUBLIC_FIREBASE_PROJECT_ID } from '$env/static/public';
+import {
+	PUBLIC_USE_EMULATORS,
+	PUBLIC_FUNCTIONS_EMULATOR_URL,
+	PUBLIC_FIREBASE_PROJECT_ID
+} from '$env/static/public';
 
 // Firebase Functions base URL
-const API_BASE_URL = PUBLIC_USE_EMULATORS === 'true'
-	? PUBLIC_FUNCTIONS_EMULATOR_URL
-	: `https://us-central1-${PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
+const API_BASE_URL =
+	PUBLIC_USE_EMULATORS === 'true'
+		? PUBLIC_FUNCTIONS_EMULATOR_URL
+		: `https://us-central1-${PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
 
-export const load: PageLoad = async ({ fetch, parent, url }) => {
+export const load: PageLoad = async ({ fetch, parent }) => {
 	console.log('📦 Loading teacher dashboard data...');
 
 	// Get placeholder user from parent layout (real user data comes from API)
 	const { user: placeholderUser } = await parent();
-	
+
 	try {
 		// Load dashboard and assignments data in parallel
 		console.log('📡 Calling Firebase Functions for dashboard data...');
 		console.log('🌐 Using API base URL:', API_BASE_URL);
-		
+
 		// Prepare headers for authentication
 		// Note: In browser context, the API client will handle auth tokens automatically
 		// In server context, we'd need to pass cookies, but for now we'll make the calls without auth
 		// and let the client-side API handle authentication separately
-		
+
 		// Load assignments data (no auth required)
 		const assignmentsResponse = await fetch(`${API_BASE_URL}/api/assignments`, {
 			headers: {
@@ -51,10 +56,9 @@ export const load: PageLoad = async ({ fetch, parent, url }) => {
 			recentActivity: [], // Will be loaded client-side
 			user: placeholderUser
 		};
-
 	} catch (error) {
 		console.error('❌ Failed to load dashboard data:', error);
-		
+
 		// Return empty data instead of failing completely
 		return {
 			dashboard: null,
