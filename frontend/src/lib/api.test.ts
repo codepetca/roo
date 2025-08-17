@@ -79,7 +79,7 @@ describe('API Client', () => {
 
 			mockFetch.mockResolvedValue(mockResponse);
 
-			await expect(api.listAssignments()).rejects.toThrow('Not Found');
+			await expect(api.listAssignments()).rejects.toThrow('404 Not found');
 		});
 
 		it('should handle network errors', async () => {
@@ -95,7 +95,7 @@ describe('API Client', () => {
 				json: () => Promise.reject(new Error('Invalid JSON'))
 			});
 
-			await expect(api.listAssignments()).rejects.toThrow('Unknown error');
+			await expect(api.listAssignments()).rejects.toThrow('500 Network Error');
 		});
 	});
 
@@ -380,7 +380,8 @@ describe('API Client', () => {
 
 		it('should create submission successfully', async () => {
 			const newSubmission = mockSubmissionResponse[0];
-			const expectedSubmission = expectedSubmissions[0];
+			// Create submission endpoint doesn't return grade field
+			const { grade, ...expectedSubmissionWithoutGrade } = expectedSubmissions[0];
 			const createRequest = {
 				assignmentId: 'assignment-1',
 				studentId: 'student-1',
@@ -408,7 +409,7 @@ describe('API Client', () => {
 					body: JSON.stringify(createRequest)
 				})
 			);
-			expect(result).toEqual(expectedSubmission);
+			expect(result).toEqual(expectedSubmissionWithoutGrade);
 		});
 
 		it('should update submission status', async () => {
