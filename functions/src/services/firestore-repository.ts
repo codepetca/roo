@@ -7,10 +7,23 @@ import {
   ClassroomInput,
   AssignmentInput,
   SubmissionInput,
-  GradeInput
+  GradeInput,
+  dashboardUserSchema,
+  classroomSchema,
+  assignmentSchema,
+  submissionSchema,
+  gradeSchema,
+  studentEnrollmentSchema
 } from "@shared/schemas/core";
+import { 
+  normalizeWithSchema,
+  safeNormalizeWithSchema,
+  normalizeTimestamps,
+  cleanUndefinedValues
+} from "@shared/utils/normalization";
 import { db, getCurrentTimestamp, FieldValue } from "../config/firebase";
 import * as admin from "firebase-admin";
+import { z } from "zod";
 
 /**
  * Firestore Repository Service
@@ -25,36 +38,7 @@ import * as admin from "firebase-admin";
  * Firestore doesn't accept undefined values, so we need to clean them
  */
 export function cleanForFirestore<T extends Record<string, any>>(obj: T): T {
-  const cleaned = {} as T;
-  
-  for (const key in obj) {
-    const value = obj[key];
-    
-    if (value === undefined) {
-      // Skip undefined values
-      continue;
-    } else if (
-      value !== null && 
-      typeof value === "object" && 
-      !Array.isArray(value) && 
-      !isTimestampOrDate(value)
-    ) {
-      // Recursively clean nested objects (but not Dates or Firestore Timestamps)
-      cleaned[key] = cleanForFirestore(value);
-    } else if (Array.isArray(value)) {
-      // Clean arrays (remove undefined elements)
-      cleaned[key] = value.filter(item => item !== undefined).map(item => 
-        (item !== null && typeof item === "object" && !isTimestampOrDate(item)) 
-          ? cleanForFirestore(item) 
-          : item
-      ) as any;
-    } else {
-      // Keep all other values (including null, which Firestore accepts)
-      cleaned[key] = value;
-    }
-  }
-  
-  return cleaned;
+  return cleanUndefinedValues(obj) as T;
 }
 
 /**
@@ -74,33 +58,25 @@ export function serializeTimestamps<T extends Record<string, any>>(doc: T): T {
     return doc;
   }
 
-  const serialized = { ...doc };
+  // First normalize timestamps to Date objects
+  const normalized = normalizeTimestamps(doc);
+  
+  // Then convert all Date objects to ISO strings
+  const serialized = { ...normalized };
 
   for (const key in serialized) {
     const value = serialized[key] as any;
     
-    // Check for Date objects
+    // Convert Date objects to ISO strings
     if (value instanceof Date) {
       serialized[key] = value.toISOString() as any;
     }
-    // Check if it's an empty object that should be a timestamp (common Firestore issue)
+    // Handle empty timestamp objects (common Firestore issue)
     else if (value && typeof value === 'object' && Object.keys(value).length === 0 && 
              (key === 'createdAt' || key === 'updatedAt' || key === 'gradedAt' || key === 'submittedAt' || key === 'dueDate')) {
       // Empty timestamp object - use current time as fallback
       console.warn(`Empty timestamp object found for ${key}, using fallback`);
       serialized[key] = new Date().toISOString() as any;
-    }
-    // Check for Firestore Timestamp by structure (Admin SDK format)
-    else if (value && typeof value === 'object' && 'seconds' in value && 'nanoseconds' in value) {
-      serialized[key] = new Date((value as any).seconds * 1000).toISOString() as any;
-    }
-    // Check for Firestore Timestamp by structure (Web SDK format)  
-    else if (value && typeof value === 'object' && '_seconds' in value && '_nanoseconds' in value) {
-      serialized[key] = new Date((value as any)._seconds * 1000).toISOString() as any;
-    }
-    // Check if it has toDate method (Firestore Timestamp with methods preserved)
-    else if (value && typeof value === 'object' && typeof (value as any).toDate === "function") {
-      serialized[key] = (value as any).toDate().toISOString() as any;
     }
     // Recursively handle arrays
     else if (Array.isArray(value)) {
@@ -108,15 +84,15 @@ export function serializeTimestamps<T extends Record<string, any>>(doc: T): T {
         (item && typeof item === "object") ? serializeTimestamps(item) : item
       ) as any;
     }
-    // Recursively handle nested objects (but not timestamps)
-    else if (value && typeof value === "object" && 
-             !('seconds' in value) && !('_seconds' in value)) {
+    // Recursively handle nested objects
+    else if (value && typeof value === "object") {
       serialized[key] = serializeTimestamps(value) as any;
     }
   }
 
   return serialized;
 }
+
 
 export class FirestoreRepository {
   // Collection names
@@ -144,7 +120,23 @@ export class FirestoreRepository {
     }
 
     const doc = snapshot.docs[0];
-    return { ...doc.data(), id: doc.id };
+    const rawData = doc.data();
+    if (!rawData) {
+      return null;
+    }
+
+    // Use schema-driven normalization to ensure all expected fields exist
+    try {
+      return normalizeWithSchema(rawData, dashboardUserSchema, doc.id);
+    } catch (error) {
+      console.error("FirestoreRepository: getUserByEmail normalization failed:", {
+        email,
+        error: error instanceof Error ? error.message : error,
+        rawData
+      });
+      // Fallback to basic normalization with ID
+      return serializeTimestamps({ ...rawData, id: doc.id });
+    }
   }
 
   async getUserById(userId: string): Promise<any | null> {
@@ -154,7 +146,23 @@ export class FirestoreRepository {
       return null;
     }
 
-    return { ...doc.data(), id: doc.id };
+    const rawData = doc.data();
+    if (!rawData) {
+      return null;
+    }
+
+    // Use schema-driven normalization to ensure all expected fields exist
+    try {
+      return normalizeWithSchema(rawData, dashboardUserSchema, doc.id);
+    } catch (error) {
+      console.error("FirestoreRepository: getUserById normalization failed:", {
+        userId,
+        error: error instanceof Error ? error.message : error,
+        rawData
+      });
+      // Fallback to basic normalization with ID
+      return serializeTimestamps({ ...rawData, id: doc.id });
+    }
   }
 
   async updateUser(userId: string, updates: Record<string, any>): Promise<void> {

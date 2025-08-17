@@ -10,6 +10,7 @@ import { handleRouteError, sendApiResponse, validateData, getUserFromRequest } f
 import { userDomainSchema } from "../schemas/domain";
 // NOTE: userDomainToDto removed - user DTO transformations no longer needed
 import { db, getCurrentTimestamp } from "../config/firebase";
+import { FirestoreRepository } from "../services/firestore-repository";
 import * as admin from "firebase-admin";
 
 // NOTE: User profile creation is now handled by the 'createProfileForExistingUser' callable function
@@ -38,10 +39,11 @@ export async function getUserProfile(req: Request, res: Response) {
 
     logger.info("Getting user profile", { uid: decodedToken.uid });
 
-    // Get user profile from Firestore
-    const userDoc = await db.collection("users").doc(decodedToken.uid).get();
+    // Use FirestoreRepository for normalized data access
+    const repository = new FirestoreRepository();
+    const userProfile = await repository.getUserById(decodedToken.uid);
     
-    if (!userDoc.exists) {
+    if (!userProfile) {
       logger.warn("User profile not found", { uid: decodedToken.uid });
       return sendApiResponse(
         res,
@@ -51,52 +53,21 @@ export async function getUserProfile(req: Request, res: Response) {
       );
     }
 
-    const userData = userDoc.data();
-    logger.info("Raw user data from Firestore", { 
+    logger.info("Normalized user profile retrieved", { 
       uid: decodedToken.uid, 
-      hasData: !!userData,
-      fields: userData ? Object.keys(userData) : []
+      hasProfile: !!userProfile,
+      fields: userProfile ? Object.keys(userProfile) : []
     });
 
-    // Convert Firestore timestamps to serializable format before validation
-    const { sanitizeDocument } = await import("../config/firebase");
-    const sanitizedData = sanitizeDocument({ ...userData, id: userDoc.id });
-    
-    logger.info("Sanitized user data", { 
-      uid: decodedToken.uid,
-      sanitizedFields: Object.keys(sanitizedData)
+    // Update last login timestamp through repository
+    await repository.updateUser(decodedToken.uid, {
+      lastLogin: getCurrentTimestamp()
     });
 
-    // Construct user profile with all required fields for frontend schema
-    const userProfile = {
-      // Use uid instead of id for frontend compatibility
-      uid: userDoc.id,
-      email: (sanitizedData as any).email || decodedToken.email || "",
-      displayName: (sanitizedData as any).displayName || (sanitizedData as any).email?.split("@")[0] || "User",
-      role: (sanitizedData as any).role || "student",
-      schoolEmail: (sanitizedData as any).schoolEmail || null,
-      classroomIds: (sanitizedData as any).classroomIds || [],
-      totalClassrooms: (sanitizedData as any).totalClassrooms || 0,
-      totalStudents: (sanitizedData as any).totalStudents || 0,
-      isActive: (sanitizedData as any).isActive !== undefined ? (sanitizedData as any).isActive : true,
-      lastLogin: (sanitizedData as any).lastLogin || new Date().toISOString(),
-      createdAt: (sanitizedData as any).createdAt || new Date().toISOString(),
-      updatedAt: (sanitizedData as any).updatedAt || new Date().toISOString(),
-      // Add version fields for frontend compatibility
-      version: (sanitizedData as any).version || 1,
-      isLatest: (sanitizedData as any).isLatest !== undefined ? (sanitizedData as any).isLatest : true
-    };
-
-    // Update last login timestamp
-    await db.collection("users").doc(decodedToken.uid).update({
-      lastLogin: getCurrentTimestamp(),
-      updatedAt: getCurrentTimestamp()
-    });
-
-    // Return user profile with proper wrapper format
+    // Return normalized user profile - repository already handles schema normalization
     sendApiResponse(
       res,
-      userProfile,  // Don't double-wrap - sendApiResponse adds the data wrapper
+      userProfile,  // Repository returns properly normalized data
       true,
       "User profile retrieved successfully"
     );
@@ -104,7 +75,7 @@ export async function getUserProfile(req: Request, res: Response) {
     logger.info("User profile retrieved successfully", { 
       uid: decodedToken.uid,
       role: userProfile.role,
-      hasSchoolEmail: !!(userProfile as any).schoolEmail
+      hasSchoolEmail: !!userProfile.schoolEmail
     });
 
   } catch (error) {

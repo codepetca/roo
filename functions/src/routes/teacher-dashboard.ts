@@ -36,30 +36,30 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
 
     logger.info("Loading teacher dashboard", { teacherId: user.uid });
 
-    // Get or create user profile
+    // Get user profile (normalized by repository)
     logger.info("Dashboard step 1: Getting user profile", { uid: user.uid });
     let userData = await repository.getUserById(user.uid);
     if (!userData) {
-      // Create user profile if it doesn't exist
-      const userDoc = {
-        email: user.email!,
-        displayName: user.displayName || user.email!.split("@")[0],
-        role: "teacher",
-        schoolEmail: undefined, // Will be set during onboarding
-        classroomIds: [],
-        totalClassrooms: 0,
-        totalStudents: 0,
-        isActive: true,
-        createdAt: getCurrentTimestamp(),
-        updatedAt: getCurrentTimestamp()
-      };
-      logger.info("Dashboard step 2: Creating user profile", { userDoc });
-      await db.collection("users").doc(user.uid).set(userDoc);
-      userData = { ...userDoc, id: user.uid };
-      logger.info("Dashboard step 3: User profile created", { userData });
-    } else {
-      logger.info("Dashboard step 2: User profile found", { userData });
+      // If user profile doesn't exist, it should be created through the 
+      // createProfileForExistingUser callable function, not here.
+      // For now, return an error indicating profile setup is needed.
+      logger.warn("Dashboard step 2: User profile not found, profile setup required", { uid: user.uid });
+      return res.status(400).json({
+        success: false,
+        error: "User profile not found",
+        needsProfile: true,
+        message: "Please complete your profile setup first"
+      });
     }
+    logger.info("Dashboard step 2: User profile found (normalized)", { 
+      userData: {
+        id: userData.id,
+        email: userData.email,
+        role: userData.role,
+        hasSchoolEmail: !!userData.schoolEmail,
+        normalizedFields: Object.keys(userData)
+      }
+    });
 
     // Get school email from teacherData if not in main user object
     if (!userData.schoolEmail && userData.teacherData?.boardAccountEmail) {
@@ -70,18 +70,18 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
       });
     }
 
-    // Create dashboard user object with serialized timestamps
+    // Create dashboard user object - repository already provides normalized data
     const dashboardUser: DashboardUser = serializeTimestamps({
-      id: user.uid,
+      id: userData.id,  // Use the ID from normalized data
       email: userData.email,
-      name: userData.displayName || userData.email.split("@")[0],
-      role: userData.role || "teacher",
+      name: userData.displayName,
+      role: userData.role,
       schoolEmail: userData.schoolEmail,
-      classroomIds: userData.classroomIds || [],
-      totalStudents: userData.totalStudents || 0,
-      totalClassrooms: userData.totalClassrooms || 0,
-      createdAt: userData.createdAt || new Date(),
-      updatedAt: userData.updatedAt || new Date()
+      classroomIds: userData.classroomIds,
+      totalStudents: userData.totalStudents,
+      totalClassrooms: userData.totalClassrooms,
+      createdAt: userData.createdAt,
+      updatedAt: userData.updatedAt
     });
 
     // Get teacher's classrooms with assignments

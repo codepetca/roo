@@ -16,6 +16,11 @@ import type {
 	HttpsCallableResult
 } from 'firebase/firestore';
 import { z } from 'zod';
+import { 
+	normalizeWithSchema,
+	safeNormalizeWithSchema,
+	normalizeTimestamps as sharedNormalizeTimestamps
+} from '../../../shared/utils/normalization';
 
 /**
  * Standard API response format from backend endpoints
@@ -86,9 +91,9 @@ export class DataAdapter {
 	}
 
 	/**
-	 * Normalize raw Firestore document data
+	 * Normalize raw Firestore document data with enhanced schema normalization
 	 * @param doc - Firestore document snapshot or mock object
-	 * @param schema - Optional Zod schema for validation
+	 * @param schema - Optional Zod schema for validation and normalization
 	 * @returns Document data with normalized fields and validation
 	 * @throws Error if document doesn't exist or has no data
 	 */
@@ -109,16 +114,27 @@ export class DataAdapter {
 			throw new Error('Document data is null or undefined');
 		}
 
+		// If schema is provided, use shared schema-driven normalization
+		if (schema) {
+			try {
+				return normalizeWithSchema(data, schema, doc.id);
+			} catch (error) {
+				console.error('❌ DataAdapter: Schema-driven normalization failed:', error);
+				// Fallback to manual normalization
+			}
+		}
+
+		// Fallback: Manual normalization for backward compatibility
 		// Add the document ID to the data
 		const dataWithId = { ...data, id: doc.id };
 
-		// Normalize timestamps
-		let normalizedData = this.normalizeTimestamps(dataWithId);
+		// Normalize timestamps using shared utility
+		let normalizedData = sharedNormalizeTimestamps(dataWithId);
 
 		// Apply field mapping transformations
 		normalizedData = this.applyFieldMapping(normalizedData);
 
-		// Validate against schema if provided
+		// Final schema validation without normalization
 		if (schema) {
 			try {
 				return schema.parse(normalizedData);
@@ -313,32 +329,31 @@ export class DataAdapter {
 	 * @returns Object with timestamps converted to dates
 	 */
 	static normalizeTimestamps<T>(obj: any): T {
-		if (!obj || typeof obj !== 'object') {
-			return obj;
-		}
+		// Use shared normalization utility for consistency
+		return sharedNormalizeTimestamps(obj);
+	}
 
-		const normalized: any = { ...obj };
+	/**
+	 * Normalize raw data using Zod schema with enhanced field defaulting
+	 * Solves Firestore's undefined values limitation by adding missing fields
+	 * @param rawData - Raw data (may have missing fields)
+	 * @param schema - Zod schema defining expected structure
+	 * @param docId - Optional document ID to add to the data
+	 * @returns Normalized data with all schema fields present
+	 */
+	static withSchema<T>(rawData: any, schema: z.ZodType<T>, docId?: string): T {
+		return normalizeWithSchema(rawData, schema, docId);
+	}
 
-		// Convert Firestore timestamp objects to dates
-		Object.keys(normalized).forEach((key) => {
-			const value = normalized[key];
-
-			// Check for Firestore timestamp format
-			if (value && typeof value === 'object') {
-				if ('_seconds' in value && '_nanoseconds' in value) {
-					// Firestore timestamp format
-					normalized[key] = new Date(value._seconds * 1000 + value._nanoseconds / 1000000);
-				} else if ('seconds' in value && 'nanoseconds' in value) {
-					// Alternative timestamp format
-					normalized[key] = new Date(value.seconds * 1000 + value.nanoseconds / 1000000);
-				} else if (value.toDate && typeof value.toDate === 'function') {
-					// Firestore Timestamp object
-					normalized[key] = value.toDate();
-				}
-			}
-		});
-
-		return normalized as T;
+	/**
+	 * Safely normalize data with schema, returning null on error
+	 * @param rawData - Raw data to normalize
+	 * @param schema - Zod schema for validation
+	 * @param docId - Optional document ID
+	 * @returns Normalized data or null on error
+	 */
+	static safeWithSchema<T>(rawData: any, schema: z.ZodType<T>, docId?: string): T | null {
+		return safeNormalizeWithSchema(rawData, schema, docId);
 	}
 }
 
@@ -365,5 +380,11 @@ export const adapt = {
 	realtime: <T>(data: any) => DataAdapter.fromRealtimeData<T>(data),
 
 	/** Normalize timestamps in object */
-	timestamps: <T>(obj: any) => DataAdapter.normalizeTimestamps<T>(obj)
+	timestamps: <T>(obj: any) => DataAdapter.normalizeTimestamps<T>(obj),
+
+	/** Normalize raw data with schema-driven field defaulting */
+	schema: <T>(rawData: any, schema: z.ZodType<T>, docId?: string) => DataAdapter.withSchema(rawData, schema, docId),
+
+	/** Safely normalize data with schema, returning null on error */
+	safeSchema: <T>(rawData: any, schema: z.ZodType<T>, docId?: string) => DataAdapter.safeWithSchema(rawData, schema, docId)
 };
