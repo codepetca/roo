@@ -156,7 +156,7 @@ describe('Hierarchical Navigation Data Store', () => {
 		});
 
 		it('should handle assignment selection in specific classroom', () => {
-			dataStore.selectAssignmentInClassroom('assignment-1', 'classroom-1');
+			dataStore.selectAssignmentInClassroom('classroom-1', 'assignment-1');
 
 			expect(dataStore.selectedClassroomId).toBe('classroom-1');
 			expect(dataStore.selectedAssignmentId).toBe('assignment-1');

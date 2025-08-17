@@ -202,14 +202,14 @@ export async function typedApiRequest<T>(
 	}
 
 	// For array endpoints: convert null to empty array
-	if (dataToValidate === null && schema._def.typeName === 'ZodArray') {
+	if (dataToValidate === null && (schema._def as any).typeName === 'ZodArray') {
 		console.debug('🔧 Converting null array response to empty array');
 		dataToValidate = [];
 	}
 
 	// Add detailed logging for debugging validation issues
 	console.debug('Data to validate:', JSON.stringify(dataToValidate, null, 2));
-	console.debug('Schema type:', schema._def.typeName);
+	console.debug('Schema type:', (schema._def as any).typeName);
 
 	const validation = safeValidateApiResponse(schema, dataToValidate);
 
@@ -223,10 +223,10 @@ export async function typedApiRequest<T>(
 		console.error('Detailed error format:', JSON.stringify(validation.error, null, 2));
 
 		// Create more descriptive error message
-		const errorDetails = validation.error.issues
-			? validation.error.issues
+		const errorDetails = (validation.error as any).issues
+			? (validation.error as any).issues
 					.map(
-						(issue) =>
+						(issue: any) =>
 							`Path: ${issue.path.join('.')}, Expected: ${issue.expected}, Received: ${issue.received}, Message: ${issue.message}`
 					)
 					.join('; ')

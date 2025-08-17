@@ -67,6 +67,35 @@ class DataStore {
 			: null
 	);
 
+	// Assignment grouping by classroom for hierarchical navigation
+	assignmentsByClassroom = $derived(() => {
+		const grouped = new Map<string, Assignment[]>();
+
+		// Initialize with empty arrays for all classrooms
+		for (const classroom of this.classrooms) {
+			grouped.set(classroom.id, []);
+		}
+
+		// Group assignments by classroom
+		for (const assignment of this.assignments) {
+			const classroomId = assignment.classroomId;
+			if (!grouped.has(classroomId)) {
+				grouped.set(classroomId, []);
+			}
+			grouped.get(classroomId)!.push(assignment);
+		}
+
+		return grouped;
+	});
+
+	// Assignments for the selected classroom
+	selectedClassroomAssignments = $derived(() => {
+		if (!this.selectedClassroomId) {
+			return [];
+		}
+		return this.assignments.filter((a) => a.classroomId === this.selectedClassroomId);
+	});
+
 	/**
 	 * Set data from SvelteKit load functions
 	 */
@@ -128,6 +157,25 @@ class DataStore {
 			console.log('📝 Selected assignment:', assignment.title || assignment.name);
 		} else {
 			console.warn('⚠️ Assignment not found:', assignmentId);
+		}
+	}
+
+	/**
+	 * Select an assignment within a specific classroom
+	 */
+	selectAssignmentInClassroom(classroomId: string, assignmentId: string): void {
+		// First select the classroom
+		this.selectClassroom(classroomId);
+
+		// Then select the assignment (only if it belongs to the classroom)
+		const assignment = this.assignments.find(
+			(a) => a.id === assignmentId && a.classroomId === classroomId
+		);
+		if (assignment) {
+			this.selectedAssignmentId = assignmentId;
+			console.log('📝 Selected assignment in classroom:', assignment.title || assignment.name);
+		} else {
+			console.warn('⚠️ Assignment not found in classroom:', assignmentId, classroomId);
 		}
 	}
 
@@ -279,6 +327,30 @@ class DataStore {
 	 */
 	getAssignmentDisplayTitle(assignment: Assignment): string {
 		return assignment.title || assignment.name || 'Untitled Assignment';
+	}
+
+	/**
+	 * Get assignment type label for display
+	 */
+	getAssignmentTypeLabel(assignment: Assignment): string {
+		switch (assignment.type) {
+			case 'quiz':
+				return 'Quiz';
+			case 'coding':
+				return 'Coding';
+			case 'project':
+				return 'Project';
+			default:
+				return 'Assignment';
+		}
+	}
+
+	/**
+	 * Check if assignment can be auto-graded
+	 */
+	isAssignmentAutoGradable(assignment: Assignment): boolean {
+		// Only quizzes can be auto-graded in this implementation
+		return assignment.type === 'quiz';
 	}
 }
 

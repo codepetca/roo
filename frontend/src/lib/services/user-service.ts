@@ -1,26 +1,15 @@
 /**
- * User Service - Unified interface for user data operations
+ * User Service - Simplified interface for user data operations
  * Location: frontend/src/lib/services/user-service.ts
  *
- * Provides consistent user data access regardless of source:
+ * Provides user data access via manual refresh pattern:
  * - HTTP API endpoints (profile management)
  * - Firebase Functions Callable (profile creation)
- * - Real-time Firestore listeners (profile updates)
- * - Direct Firestore operations (when needed)
+ * - No real-time listeners (manual refresh only)
  */
 
-import {
-	doc,
-	getDoc,
-	setDoc,
-	onSnapshot,
-	serverTimestamp,
-	type Unsubscribe
-} from 'firebase/firestore';
 import type { User as FirebaseUser } from 'firebase/auth';
-import { firestore } from '../firebase';
-import { apiRequest } from '../api/client';
-import { DataAdapter } from '../data/adapters';
+import { apiRequest, callFunction } from '../api/client';
 import {
 	validateCreateProfileData,
 	userProfileSchema,
@@ -31,11 +20,10 @@ import {
 // UserProfile and CreateProfileData types now imported from validation.ts
 
 /**
- * Unified service for user data operations
+ * Simplified service for user data operations (manual refresh only)
  */
 export class UserService {
 	private static instance: UserService;
-	private listeners: Map<string, Unsubscribe> = new Map();
 
 	static getInstance(): UserService {
 		if (!UserService.instance) {
@@ -54,11 +42,25 @@ export class UserService {
 		try {
 			console.debug('📡 UserService: Fetching profile via API for:', firebaseUser.email);
 
-			// Use raw apiRequest and let DataAdapter handle validation
+			// Direct API call - backend now returns normalized data
 			const response = await apiRequest('/users/profile', { method: 'GET' });
 
-			// DataAdapter handles extraction, normalization, and validation
-			const validatedProfile = DataAdapter.fromApiResponse(response, userProfileSchema);
+			// Extract data from API response wrapper format
+			if (!response || typeof response !== 'object' || !('success' in response)) {
+				throw new Error('Invalid API response format');
+			}
+
+			if (!response.success) {
+				const error = response.error || 'API request failed';
+				throw new Error(error);
+			}
+
+			if (!response.data) {
+				throw new Error('API response missing data field');
+			}
+
+			// Validate with schema - backend should provide normalized data
+			const validatedProfile = userProfileSchema.parse(response.data);
 
 			console.debug(
 				'✅ UserService: Profile fetched and validated successfully:',
@@ -81,30 +83,20 @@ export class UserService {
 		try {
 			// Validate input data
 			const validatedInput = validateCreateProfileData(data);
-			console.debug('🔧 UserService: Creating profile via direct Firestore write:', validatedInput);
+			console.debug('🔧 UserService: Creating profile via Firebase Callable:', validatedInput);
 
-			// Create profile with current timestamp
-			const now = new Date();
-			const profileData: UserProfile = {
-				...validatedInput,
-				email: `${validatedInput.uid}@example.com`, // Generate email if not provided
-				displayName: validatedInput.displayName || 'New User',
-				createdAt: now,
-				updatedAt: now,
-				version: 1,
-				isLatest: true
-			};
+			// Call Firebase Function directly - no DataAdapter needed
+			const result = await callFunction('createProfileForExistingUser', validatedInput);
 
-			// Write to Firestore
-			const docRef = doc(firestore, 'users', validatedInput.uid);
-			await setDoc(docRef, {
-				...profileData,
-				createdAt: serverTimestamp(),
-				updatedAt: serverTimestamp()
-			});
+			// Extract data directly from callable result
+			const profileData = result.data;
 
-			// Validate final profile data
-			const validatedProfile = validateUserProfile(profileData);
+			if (!profileData || !profileData.profile) {
+				throw new Error('Invalid response from profile creation function');
+			}
+
+			// Validate the returned profile
+			const validatedProfile = userProfileSchema.parse(profileData.profile);
 
 			console.debug(
 				'✅ UserService: Profile created and validated successfully:',
@@ -118,84 +110,6 @@ export class UserService {
 	}
 
 	/**
-	 * Get user profile via direct Firestore access
-	 * For cases where API might not be available
-	 * @param uid - User ID
-	 * @returns User profile or null if not found
-	 */
-	async getUserProfileDirect(uid: string): Promise<UserProfile | null> {
-		try {
-			console.debug('📄 UserService: Fetching profile via direct Firestore:', uid);
-
-			const docRef = doc(firestore, 'users', uid);
-			const docSnap = await getDoc(docRef);
-
-			// Check if document exists before processing
-			if (!docSnap.exists()) {
-				console.debug('⚠️ UserService: Profile not found:', uid);
-				return null;
-			}
-
-			// DataAdapter handles normalization and validation
-			const validatedProfile = DataAdapter.fromFirestoreDoc(docSnap, userProfileSchema);
-
-			console.debug('✅ UserService: Profile fetched and validated directly:', validatedProfile);
-			return validatedProfile;
-		} catch (error) {
-			console.error('❌ UserService: Failed to fetch profile directly:', error);
-			throw error;
-		}
-	}
-
-	/**
-	 * Subscribe to real-time user profile updates
-	 * @param uid - User ID
-	 * @param callback - Function called when profile changes
-	 * @returns Unsubscribe function
-	 */
-	subscribeToProfile(uid: string, callback: (profile: UserProfile | null) => void): Unsubscribe {
-		console.debug('🔊 UserService: Starting real-time profile listener:', uid);
-
-		// Unsubscribe from existing listener for this user
-		this.unsubscribeFromProfile(uid);
-
-		const docRef = doc(firestore, 'users', uid);
-
-		const unsubscribe = onSnapshot(
-			docRef,
-			(snapshot) => {
-				try {
-					if (!snapshot.exists()) {
-						console.debug('⚠️ UserService: Profile deleted or not found:', uid);
-						callback(null);
-						return;
-					}
-
-					// DataAdapter handles normalization and validation
-					const validatedProfile = DataAdapter.fromFirestoreDoc(snapshot, userProfileSchema);
-					console.debug(
-						'📨 UserService: Profile updated and validated via listener:',
-						validatedProfile
-					);
-					callback(validatedProfile);
-				} catch (validationError) {
-					console.error('❌ UserService: Real-time profile validation failed:', validationError);
-					callback(null);
-				}
-			},
-			(error) => {
-				console.error('❌ UserService: Profile listener error:', error);
-				callback(null);
-			}
-		);
-
-		// Store unsubscribe function
-		this.listeners.set(`profile-${uid}`, unsubscribe);
-
-		return unsubscribe;
-	}
-
-	/**
 	 * Update school email via API
 	 * @param schoolEmail - New school email
 	 * @returns Updated data
@@ -204,18 +118,28 @@ export class UserService {
 		try {
 			console.debug('📝 UserService: Updating school email via API');
 
-			// Use raw apiRequest and let DataAdapter handle response
+			// Direct API call - backend returns normalized data
 			const response = await apiRequest('/users/school-email', {
 				method: 'PUT',
 				body: JSON.stringify({ schoolEmail }),
 				headers: { 'Content-Type': 'application/json' }
 			});
 
-			// DataAdapter handles extraction without schema (simple data)
-			const result = DataAdapter.fromApiResponse(response);
+			// Extract data from API response wrapper format
+			if (!response || typeof response !== 'object' || !('success' in response)) {
+				throw new Error('Invalid API response format');
+			}
+
+			if (!response.success) {
+				const error = response.error || 'API request failed';
+				throw new Error(error);
+			}
 
 			console.debug('✅ UserService: School email updated successfully');
-			return result;
+			return {
+				success: response.success,
+				schoolEmail: response.schoolEmail || schoolEmail
+			};
 		} catch (error) {
 			console.error('❌ UserService: Failed to update school email:', error);
 			throw error;
@@ -223,75 +147,13 @@ export class UserService {
 	}
 
 	/**
-	 * Unsubscribe from profile updates for a specific user
-	 * @param uid - User ID
-	 */
-	unsubscribeFromProfile(uid: string): void {
-		const key = `profile-${uid}`;
-		const unsubscribe = this.listeners.get(key);
-
-		if (unsubscribe) {
-			console.debug('🔇 UserService: Unsubscribing from profile updates:', uid);
-			unsubscribe();
-			this.listeners.delete(key);
-		}
-	}
-
-	/**
-	 * Unsubscribe from all active listeners
-	 */
-	unsubscribeAll(): void {
-		console.debug('🔇 UserService: Unsubscribing from all listeners:', this.listeners.size);
-
-		this.listeners.forEach((unsubscribe, key) => {
-			console.debug('🔇 UserService: Unsubscribing:', key);
-			unsubscribe();
-		});
-
-		this.listeners.clear();
-	}
-
-	/**
-	 * Get active listener count (for debugging)
-	 */
-	getActiveListenerCount(): number {
-		return this.listeners.size;
-	}
-
-	/**
-	 * Get list of active listener keys (for debugging)
-	 */
-	getActiveListeners(): string[] {
-		return Array.from(this.listeners.keys());
-	}
-
-	/**
-	 * Unified profile fetch with fallback strategies
-	 * Tries API first, falls back to direct Firestore if needed
+	 * Get user profile (API only - no fallback needed since backend is now reliable)
 	 * @param firebaseUser - Firebase user object
 	 * @returns User profile
 	 */
 	async getProfileWithFallback(firebaseUser: FirebaseUser): Promise<UserProfile> {
-		try {
-			// Primary: Try API endpoint
-			return await this.getUserProfile(firebaseUser);
-		} catch (apiError) {
-			console.warn('⚠️ UserService: API failed, trying direct Firestore:', apiError);
-
-			try {
-				// Fallback: Direct Firestore access
-				const profile = await this.getUserProfileDirect(firebaseUser.uid);
-				if (profile) {
-					return profile;
-				}
-				throw new Error('Profile not found in Firestore');
-			} catch (firestoreError) {
-				console.error('❌ UserService: All profile fetch methods failed');
-				throw new Error(
-					`Profile fetch failed: API (${apiError.message}), Firestore (${firestoreError.message})`
-				);
-			}
-		}
+		// With normalized backend, we only need the API endpoint
+		return await this.getUserProfile(firebaseUser);
 	}
 }
 
