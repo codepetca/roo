@@ -67,14 +67,25 @@ export async function getUserProfile(req: Request, res: Response) {
       sanitizedFields: Object.keys(sanitizedData)
     });
 
-    // Parse with domain schema - but we need to handle the sanitized timestamp format
-    // For now, we'll skip validation and return the sanitized data directly
-    // since the timestamps are now in a different format
+    // Construct user profile with all required fields for frontend schema
     const userProfile = {
-      ...sanitizedData,
-      id: userDoc.id,
-      role: (sanitizedData as any).role || "student"
-    } as any;
+      // Use uid instead of id for frontend compatibility
+      uid: userDoc.id,
+      email: (sanitizedData as any).email || decodedToken.email || "",
+      displayName: (sanitizedData as any).displayName || (sanitizedData as any).email?.split("@")[0] || "User",
+      role: (sanitizedData as any).role || "student",
+      schoolEmail: (sanitizedData as any).schoolEmail || null,
+      classroomIds: (sanitizedData as any).classroomIds || [],
+      totalClassrooms: (sanitizedData as any).totalClassrooms || 0,
+      totalStudents: (sanitizedData as any).totalStudents || 0,
+      isActive: (sanitizedData as any).isActive !== undefined ? (sanitizedData as any).isActive : true,
+      lastLogin: (sanitizedData as any).lastLogin || new Date().toISOString(),
+      createdAt: (sanitizedData as any).createdAt || new Date().toISOString(),
+      updatedAt: (sanitizedData as any).updatedAt || new Date().toISOString(),
+      // Add version fields for frontend compatibility
+      version: (sanitizedData as any).version || 1,
+      isLatest: (sanitizedData as any).isLatest !== undefined ? (sanitizedData as any).isLatest : true
+    };
 
     // Update last login timestamp
     await db.collection("users").doc(decodedToken.uid).update({
@@ -85,7 +96,7 @@ export async function getUserProfile(req: Request, res: Response) {
     // Return user profile with proper wrapper format
     sendApiResponse(
       res,
-      { data: userProfile },
+      userProfile,  // Don't double-wrap - sendApiResponse adds the data wrapper
       true,
       "User profile retrieved successfully"
     );

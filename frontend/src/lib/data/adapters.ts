@@ -272,16 +272,36 @@ export class DataAdapter {
 
 		// Map 'id' to 'uid' if 'uid' is missing but 'id' exists
 		if ('id' in mapped && !('uid' in mapped)) {
+			console.debug('🔧 DataAdapter: Mapping id → uid for compatibility');
 			mapped.uid = mapped.id;
+		}
+
+		// Ensure displayName exists (common missing field)
+		if (!('displayName' in mapped) && 'email' in mapped) {
+			console.debug('🔧 DataAdapter: Generating displayName from email');
+			mapped.displayName = mapped.email.split('@')[0];
 		}
 
 		// Add default values for missing versioning fields (for backward compatibility)
 		if (!('version' in mapped)) {
+			console.debug('🔧 DataAdapter: Adding default version = 1');
 			mapped.version = 1;
 		}
 
 		if (!('isLatest' in mapped)) {
+			console.debug('🔧 DataAdapter: Adding default isLatest = true');
 			mapped.isLatest = true;
+		}
+
+		// Ensure timestamps are dates (not strings)
+		if ('createdAt' in mapped && typeof mapped.createdAt === 'string') {
+			mapped.createdAt = new Date(mapped.createdAt);
+		}
+		if ('updatedAt' in mapped && typeof mapped.updatedAt === 'string') {
+			mapped.updatedAt = new Date(mapped.updatedAt);
+		}
+		if ('lastLogin' in mapped && typeof mapped.lastLogin === 'string') {
+			mapped.lastLogin = new Date(mapped.lastLogin);
 		}
 
 		return mapped as T;
