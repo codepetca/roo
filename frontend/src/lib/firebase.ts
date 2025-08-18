@@ -9,6 +9,7 @@ import {
 	connectAuthEmulator,
 	GoogleAuthProvider,
 	signInWithPopup,
+	signInWithCustomToken,
 	signOut as firebaseSignOut,
 	onAuthStateChanged,
 	type Auth,
@@ -149,8 +150,14 @@ export async function signInWithGoogle(): Promise<{ user: User; accessToken: str
 }
 
 /**
+ * Sign in with custom token (for student authentication)
+ * Location: frontend/src/lib/firebase.ts:151
+ */
+export { signInWithCustomToken };
+
+/**
  * Sign out current user
- * Location: frontend/src/lib/firebase.ts:133
+ * Location: frontend/src/lib/firebase.ts:159
  */
 export async function signOut(): Promise<void> {
 	try {

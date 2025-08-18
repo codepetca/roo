@@ -49,6 +49,14 @@ vi.mock('$lib/components/ui', () => ({
 		} catch (e) {
 			return '<button></button>';
 		}
+	}),
+	Badge: vi.fn(({ children, variant }) => {
+		try {
+			const content = typeof children === 'function' ? children() : children || '';
+			return `<span class="badge badge-${variant || 'default'}">${content}</span>`;
+		} catch (e) {
+			return '<span class="badge"></span>';
+		}
 	})
 }));
 
