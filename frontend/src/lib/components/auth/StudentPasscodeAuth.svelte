@@ -238,29 +238,29 @@
 	<!-- Main Login Form - Always Visible -->
 	<div class="space-y-4" data-testid="student-login-form">
 		<div class="text-center">
-			<h3 class="mb-2 text-lg font-medium text-gray-900">Student Login</h3>
-			<p class="text-sm text-gray-600">Enter your email and permanent login code</p>
+
+			
 		</div>
 
 		<div>
 			<label for="email" class="mb-2 block text-sm font-medium text-gray-700">
-				School Email Address
+				School Email
 			</label>
 			<Input
 				id="email"
 				type="email"
 				bind:value={email}
 				data-testid="email-input"
-				placeholder="your.name@schooldomain.edu"
+				placeholder="student_number@gapps.yrdsb.ca"
 				disabled={loading}
 				class="w-full"
 			/>
-			<p class="mt-1 text-xs text-gray-500">The email address registered with your classroom</p>
+			
 		</div>
 
 		<div>
 			<label for="passcode" class="mb-2 block text-sm font-medium text-gray-700">
-				5-Character Login Code
+				Passcode
 			</label>
 			<Input
 				id="passcode"
@@ -273,7 +273,7 @@
 				class="w-full text-center font-mono text-lg tracking-wider uppercase"
 				oninput={(e) => (passcode = e.currentTarget.value.toUpperCase())}
 			/>
-			<p class="mt-1 text-xs text-gray-500">Your permanent login code (like a password)</p>
+			
 		</div>
 
 		<Button
@@ -297,9 +297,9 @@
 						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 					></path>
 				</svg>
-				Signing In...
+				<span class="text-lg font-bold">Signing In...</span>
 			{:else}
-				Sign In
+				<span class="text-lg font-bold">Sign In</span>
 			{/if}
 		</Button>
 
@@ -319,7 +319,7 @@
 					</button>
 				{:else}
 					<div class="mt-3 space-y-3">
-						<p class="text-xs text-gray-500">
+						<p class="text-base text-gray-500 text-lg font-bold">
 							Enter your email above and click below to receive your permanent login code
 						</p>
 						<Button

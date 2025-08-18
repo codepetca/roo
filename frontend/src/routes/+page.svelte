@@ -19,7 +19,7 @@
 </script>
 
 <svelte:head>
-	<title>Roo - AI-Powered Auto-Grading System</title>
+	<title>Roo - AI Grading System</title>
 </svelte:head>
 
 <div class="flex min-h-screen items-center justify-center bg-gray-50">

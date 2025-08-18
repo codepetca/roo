@@ -154,7 +154,7 @@
 	<div class="w-full max-w-md space-y-8">
 		<div class="text-center">
 			<h2 class="mb-2 text-3xl font-extrabold text-gray-900">Welcome to Roo</h2>
-			<p class="text-gray-600">AI-powered auto-grading system for educational assignments</p>
+			<p class="text-gray-600">AI Grading System</p>
 		</div>
 
 		{#if signupSuccess}
@@ -168,11 +168,7 @@
 		{#if authMode === 'select'}
 			<!-- Role Selection -->
 			<div class="space-y-6" data-testid="role-selection">
-				<div class="text-center">
-					<h3 class="mb-4 text-lg font-medium text-gray-900" data-testid="role-selection-title">
-						How would you like to sign in?
-					</h3>
-				</div>
+				
 
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<!-- Teacher Option -->
@@ -202,7 +198,6 @@
 							</div>
 							<div class="ml-4 text-left">
 								<h4 class="text-sm font-medium text-gray-900">Teacher</h4>
-								<p class="text-sm text-gray-500">Google account sign-in</p>
 							</div>
 						</div>
 					</button>
@@ -234,7 +229,6 @@
 							</div>
 							<div class="ml-4 text-left">
 								<h4 class="text-sm font-medium text-gray-900">Student</h4>
-								<p class="text-sm text-gray-500">Login code from teacher</p>
 							</div>
 						</div>
 					</button>
@@ -394,19 +388,7 @@
 					</button>
 				</div>
 				<StudentPasscodeAuth on:success={handleStudentAuthSuccess} />
-				<div class="text-center">
-					<p class="text-sm text-gray-600">
-						Don't have a login code?
-						<button
-							type="button"
-							class="font-medium text-blue-600 transition-colors hover:text-blue-500 focus:underline focus:outline-none"
-							onclick={showStudentSelfRegister}
-						>
-							Get your own passcode
-						</button>
-						or ask your teacher to send you one.
-					</p>
-				</div>
+				
 			</div>
 		{:else if authMode === 'student-self-register'}
 			<!-- Student Self-Registration -->
