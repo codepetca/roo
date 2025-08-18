@@ -100,7 +100,7 @@
 			const { goto } = await import('$app/navigation');
 
 			// Navigate to teacher dashboard (user profile already created in TeacherEmailAuth)
-			await goto('/dashboard/teacher');
+			await goto('/teacher');
 		} catch (error) {
 			console.error('Navigation failed:', error);
 			signupSuccess = false;
@@ -121,7 +121,7 @@
 		const { goto } = await import('$app/navigation');
 
 		// Navigate to student dashboard
-		await goto('/dashboard/student');
+		await goto('/student');
 	}
 
 	async function handleStudentSelfRegisterSuccess(event: CustomEvent) {
@@ -133,7 +133,7 @@
 		const { goto } = await import('$app/navigation');
 
 		// Navigate to student dashboard
-		await goto('/dashboard/student');
+		await goto('/student');
 	}
 </script>
 

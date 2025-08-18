@@ -202,11 +202,11 @@ async function signIn(email: string, password: string): Promise<void> {
 			await goto('/teacher/onboarding');
 		} else {
 			console.log('🎯 Redirecting to role-specific dashboard...');
-			// Redirect to role-specific dashboard to ensure proper authentication
+			// Redirect to clean role-specific routes using (dashboard) route group
 			if (user.role === 'teacher') {
-				await goto('/dashboard/teacher');
+				await goto('/teacher');
 			} else {
-				await goto('/dashboard/student');
+				await goto('/student');
 			}
 		}
 

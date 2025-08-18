@@ -18,12 +18,12 @@ import {
 
 test.describe('Core Authentication Flow', () => {
 	test('should redirect unauthenticated users to login', async ({ page }) => {
-		// Try to access protected dashboard
-		await page.goto('/dashboard');
+		// Try to access protected teacher dashboard
+		await page.goto('/teacher');
 
 		// Should redirect to login with return URL
 		await page.waitForURL(/\/login/, { timeout: 10000 });
-		await expect(page).toHaveURL(/\/login\?redirect=%2Fdashboard/);
+		await expect(page).toHaveURL(/\/login\?redirect=%2Fteacher/);
 
 		// Should show login page with welcome text
 		const hasWelcome = await checkWelcomeText(page);

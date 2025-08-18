@@ -84,9 +84,9 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 	if (validatedUser.role !== 'teacher') {
 		console.log('❌ User is not a teacher, redirecting to appropriate dashboard');
 		if (validatedUser.role === 'student') {
-			throw redirect(302, '/dashboard/student');
+			throw redirect(302, '/student');
 		} else {
-			throw redirect(302, '/dashboard');
+			throw redirect(302, '/login');
 		}
 	}
 
