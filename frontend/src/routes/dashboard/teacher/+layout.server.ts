@@ -52,11 +52,18 @@ async function validateAuthToken(token: string): Promise<{ uid: string; email: s
 export const load: LayoutServerLoad = async ({ cookies, url }) => {
 	console.log('🔐 Secure server-side teacher route access check...');
 
-	// Check for authentication token
-	const authToken = cookies.get('auth-token') || cookies.get('firebase-auth-token');
+	// Check for authentication token with brief retry for race condition handling
+	let authToken = cookies.get('auth-token') || cookies.get('firebase-auth-token');
+	
+	// If no token found, wait briefly and try once more (handles race condition)
+	if (!authToken) {
+		console.log('⏰ No auth token found on first attempt, retrying after brief delay...');
+		await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
+		authToken = cookies.get('auth-token') || cookies.get('firebase-auth-token');
+	}
 
 	if (!authToken) {
-		console.log('❌ No auth token found, redirecting to login');
+		console.log('❌ No auth token found after retry, redirecting to login');
 		const redirectUrl = `/login?redirect=${encodeURIComponent(url.pathname)}`;
 		throw redirect(302, redirectUrl);
 	}

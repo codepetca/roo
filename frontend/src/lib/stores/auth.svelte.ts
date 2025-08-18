@@ -201,9 +201,13 @@ async function signIn(email: string, password: string): Promise<void> {
 			console.log('🎓 Teacher needs to set school email, redirecting to onboarding...');
 			await goto('/teacher/onboarding');
 		} else {
-			console.log('🎯 Redirecting to dashboard...');
-			// Redirect to dashboard
-			await goto('/dashboard');
+			console.log('🎯 Redirecting to role-specific dashboard...');
+			// Redirect to role-specific dashboard to ensure proper authentication
+			if (user.role === 'teacher') {
+				await goto('/dashboard/teacher');
+			} else {
+				await goto('/dashboard/student');
+			}
 		}
 
 		console.log('✅ Sign in process completed successfully');
