@@ -39,7 +39,7 @@ import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getC
 import { getStudentDashboard, getStudentAssignments, getStudentActivity } from "./routes/student-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { getUserProfile, checkUserProfileExists, updateSchoolEmail } from "./routes/users";
-import { deleteUser, setupTeacherProfile, storePasscode, sendPasscodeFirebase, generateAndSendPasscode } from "./routes/auth";
+import { deleteUser, setupTeacherProfile, generateAndSendPasscode } from "./routes/auth";
 import { studentRequestPasscode } from "./routes/auth/student-request-passcode";
 import { debugSheetsPermissions } from "./routes/debug";
 import { getServiceAccountInfo, testSheetAccess } from "./routes/webhook-debug";
@@ -308,12 +308,6 @@ export const api = onRequest(
       }
       if (method === "POST" && path === "/auth/setup-teacher-profile") {
         await setupTeacherProfile(request, response); return;
-      }
-      if (method === "POST" && path === "/auth/store-passcode") {
-        await storePasscode(request, response); return;
-      }
-      if (method === "POST" && path === "/auth/send-passcode-firebase") {
-        await sendPasscodeFirebase(request, response); return;
       }
       if (method === "POST" && path === "/auth/generate-and-send-passcode") {
         await generateAndSendPasscode(request, response); return;

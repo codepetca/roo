@@ -29,17 +29,7 @@ export {
   setupTeacherProfile
 } from "./setup-teacher-profile";
 
-
-// New Firebase-based passcode endpoints
-export {
-  storePasscode
-} from "./store-passcode";
-
-export {
-  sendPasscodeFirebase
-} from "./send-passcode-firebase";
-
-// New simple Brevo-based passcode endpoint
+// Brevo-based passcode endpoint
 export {
   generateAndSendPasscode
 } from "./generate-and-send-passcode";
