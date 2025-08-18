@@ -12,6 +12,14 @@
 	// Set data in store when component mounts
 	onMount(async () => {
 		console.log('📦 Dashboard page mounted, setting data from load functions...');
+		
+		// Log load function data for debugging
+		console.log('📦 Load Function Data:', {
+			user: data.user.email,
+			classroomsFromLoad: data.classrooms?.length || 0,
+			assignmentsFromLoad: data.assignments?.length || 0,
+			hasLoadError: data.error || 'None'
+		});
 
 		// Set the assignments data from load functions (already loaded server-side)
 		dataStore.setData({
@@ -53,6 +61,22 @@
 	let assignments = $derived(dataStore.assignments);
 	let dashboardStats = $derived(dataStore.dashboardStats);
 	// let recentActivity = $derived(dataStore.recentActivity);
+
+	// Debug logging for data store state changes
+	$effect(() => {
+		console.log('🐛 Data Store State Update:', {
+			loading,
+			hasData,
+			classroomsCount: classrooms?.length || 0,
+			assignmentsCount: assignments?.length || 0,
+			teacher: teacher?.email || 'None',
+			error: error || 'None'
+		});
+		
+		if (classrooms?.length > 0) {
+			console.log('🏫 Classrooms Details:', classrooms.map(c => ({ name: c.name, id: c.id })));
+		}
+	});
 
 	// Manual refresh using SvelteKit invalidation
 	async function handleRefresh() {
@@ -130,20 +154,6 @@
 		{actions}
 	/>
 
-	<!-- Load Function Debug Info -->
-	<Card>
-		{#snippet children()}
-			<div class="p-6">
-				<h3 class="mb-4 text-lg font-semibold text-gray-900">📦 Load Function Data</h3>
-				<div class="grid grid-cols-2 gap-4 text-sm">
-					<div><strong>User:</strong> {data.user.email}</div>
-					<div><strong>Classrooms from Load:</strong> {data.classrooms.length}</div>
-					<div><strong>Assignments from Load:</strong> {data.assignments.length}</div>
-					<div><strong>Has Load Error:</strong> {data.error || 'None'}</div>
-				</div>
-			</div>
-		{/snippet}
-	</Card>
 
 	<!-- Error State -->
 	{#if error}
@@ -166,33 +176,6 @@
 		</Alert>
 	{/if}
 
-	<!-- Data Store Debug Information -->
-	<Card>
-		{#snippet children()}
-			<div class="p-6">
-				<h3 class="mb-4 text-lg font-semibold text-gray-900">🐛 Data Store State</h3>
-				<div class="grid grid-cols-2 gap-4 text-sm">
-					<div><strong>Loading:</strong> {loading}</div>
-					<div><strong>Has Data:</strong> {hasData}</div>
-					<div><strong>Classrooms Count:</strong> {classrooms?.length || 0}</div>
-					<div><strong>Assignments Count:</strong> {assignments?.length || 0}</div>
-					<div><strong>Teacher:</strong> {teacher?.email || 'None'}</div>
-					<div><strong>Error:</strong> {error || 'None'}</div>
-				</div>
-
-				{#if classrooms?.length > 0}
-					<div class="mt-4">
-						<strong>Classrooms:</strong>
-						<ul class="list-inside list-disc text-sm text-gray-600">
-							{#each classrooms as classroom (classroom.id)}
-								<li>{classroom.name} ({classroom.id})</li>
-							{/each}
-						</ul>
-					</div>
-				{/if}
-			</div>
-		{/snippet}
-	</Card>
 
 	<!-- Simple Assignments List -->
 	{#if assignments && assignments.length > 0}

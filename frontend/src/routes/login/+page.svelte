@@ -83,7 +83,7 @@
 			const { goto } = await import('$app/navigation');
 
 			// Navigate to teacher dashboard
-			await goto('/dashboard/teacher');
+			await goto('/teacher');
 		} catch (error) {
 			console.error('Profile creation failed:', error);
 			// Show error message but stay on login page
