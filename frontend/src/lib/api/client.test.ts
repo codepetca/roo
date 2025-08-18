@@ -11,7 +11,7 @@ import { typedApiRequest } from './client';
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-// Mock Firebase auth with unified test credentials  
+// Mock Firebase auth with unified test credentials
 vi.mock('../firebase', () => ({
 	firebaseAuth: {
 		currentUser: {

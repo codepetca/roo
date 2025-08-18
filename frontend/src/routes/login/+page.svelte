@@ -19,7 +19,7 @@
 	let successMessage = '';
 
 	function selectTeacher() {
-		authMode = 'teacher-select';
+		authMode = 'teacher-email';
 	}
 
 	function selectStudent() {
@@ -38,13 +38,6 @@
 		authMode = 'teacher-signup';
 	}
 
-	function showStudentSignup() {
-		authMode = 'student-signup';
-	}
-
-	function showStudentSelfRegister() {
-		authMode = 'student-self-register';
-	}
 
 	function backToSelect() {
 		authMode = 'select';
@@ -59,7 +52,7 @@
 	}
 
 	async function handleTeacherGoogleAuthSuccess(event: CustomEvent) {
-		const { user, accessToken, isSignup } = event.detail;
+		const { user, accessToken } = event.detail;
 
 		try {
 			// Store access token for later use with Google APIs
@@ -84,9 +77,7 @@
 				throw error;
 			}
 
-			// Import auth store to trigger refresh
-			const { auth } = await import('$lib/stores/auth.svelte');
-			// Note: refresh method may not exist in new auth structure
+			// Note: auth store refresh may not exist in new auth structure
 
 			// Import goto for navigation
 			const { goto } = await import('$app/navigation');
@@ -102,7 +93,7 @@
 	}
 
 	async function handleTeacherEmailAuthSuccess(event: CustomEvent) {
-		const { user } = event.detail;
+		// User profile already created in TeacherEmailAuth component
 
 		try {
 			// Import goto for navigation
@@ -168,8 +159,6 @@
 		{#if authMode === 'select'}
 			<!-- Role Selection -->
 			<div class="space-y-6" data-testid="role-selection">
-				
-
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					<!-- Teacher Option -->
 					<button
@@ -198,6 +187,7 @@
 							</div>
 							<div class="ml-4 text-left">
 								<h4 class="text-sm font-medium text-gray-900">Teacher</h4>
+								<p class="text-sm text-gray-500">Email sign-in</p>
 							</div>
 						</div>
 					</button>
@@ -251,12 +241,6 @@
 					</button>
 				</div>
 
-				<div class="text-center">
-					<p class="mb-4 text-sm text-gray-600" data-testid="auth-method-prompt">
-						Choose your preferred sign-in method:
-					</p>
-				</div>
-
 				<div class="space-y-3">
 					<!-- Google OAuth Option -->
 					<button
@@ -285,8 +269,7 @@
 								</div>
 							</div>
 							<div class="ml-4">
-								<h4 class="text-sm font-medium text-gray-900">Google Account</h4>
-								<p class="text-sm text-gray-500">Sign in with your Google account</p>
+								<h4 class="text-sm font-medium text-gray-900">Sign in with Google</h4>
 							</div>
 						</div>
 					</button>
@@ -318,9 +301,6 @@
 							</div>
 							<div class="ml-4">
 								<h4 class="text-sm font-medium text-gray-900">Email & Password</h4>
-								<p class="text-sm text-gray-500">
-									Sign in with email and password (ideal for E2E testing)
-								</p>
 							</div>
 						</div>
 					</button>
@@ -362,8 +342,8 @@
 					</h3>
 					<button
 						type="button"
-						onclick={() => (authMode = 'teacher-select')}
-						data-testid="back-to-auth-selection-button"
+						onclick={backToSelect}
+						data-testid="back-to-role-selection-button"
 						class="text-sm text-gray-500 hover:text-gray-700 focus:underline focus:outline-none"
 					>
 						Back
@@ -371,8 +351,21 @@
 				</div>
 				<TeacherEmailAuth
 					on:success={handleTeacherEmailAuthSuccess}
-					on:cancel={() => (authMode = 'teacher-select')}
+					on:cancel={() => (authMode = 'select')}
 				/>
+				<div class="text-center">
+					<p class="text-sm text-gray-600">
+						Or
+						<button
+							type="button"
+							class="font-medium text-blue-600 transition-colors hover:text-blue-500 focus:underline focus:outline-none"
+							onclick={selectTeacherGoogle}
+							data-testid="switch-to-google-auth-button"
+						>
+							sign in with Google
+						</button>
+					</p>
+				</div>
 			</div>
 		{:else if authMode === 'student-login'}
 			<!-- Student Login -->
@@ -388,7 +381,6 @@
 					</button>
 				</div>
 				<StudentPasscodeAuth on:success={handleStudentAuthSuccess} />
-				
 			</div>
 		{:else if authMode === 'student-self-register'}
 			<!-- Student Self-Registration -->

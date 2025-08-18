@@ -58,7 +58,7 @@ describe('Classroom Store', () => {
 			expect(classroomStore.classrooms.length > 0).toBe(false);
 			// In Svelte 5, derived values are calculated from assignments array
 			expect(classroomStore.assignments.length).toBe(0);
-			expect(classroomStore.assignments.filter(a => a.isQuiz).length).toBe(0);
+			expect(classroomStore.assignments.filter((a) => a.isQuiz).length).toBe(0);
 		});
 	});
 
@@ -254,7 +254,7 @@ describe('Classroom Store', () => {
 			mockApi.getClassroomAssignments.mockResolvedValue(mockAssignments);
 
 			// Get the second classroom from the store
-			const classroom2 = classroomStore.classrooms.find(c => c.id === 'classroom-2');
+			const classroom2 = classroomStore.classrooms.find((c) => c.id === 'classroom-2');
 			expect(classroom2).toBeDefined();
 			await classroomStore.selectClassroom(classroom2!);
 
@@ -268,7 +268,7 @@ describe('Classroom Store', () => {
 			mockApi.getClassroomAssignments.mockClear();
 
 			// Get the first classroom and select it again
-			const classroom1 = classroomStore.classrooms.find(c => c.id === 'classroom-1');
+			const classroom1 = classroomStore.classrooms.find((c) => c.id === 'classroom-1');
 			expect(classroom1).toBeDefined();
 			await classroomStore.selectClassroom(classroom1!);
 
@@ -279,7 +279,7 @@ describe('Classroom Store', () => {
 
 		it('should update selectedClassroom derived value', async () => {
 			// Get the second classroom and select it
-			const classroom2 = classroomStore.classrooms.find(c => c.id === 'classroom-2');
+			const classroom2 = classroomStore.classrooms.find((c) => c.id === 'classroom-2');
 			expect(classroom2).toBeDefined();
 			await classroomStore.selectClassroom(classroom2!);
 
@@ -334,7 +334,7 @@ describe('Classroom Store', () => {
 			await classroomStore.selectClassroom(firstClassroom);
 
 			// Quiz count is calculated directly from assignments array
-			const quizCount = classroomStore.assignments.filter(a => a.isQuiz).length;
+			const quizCount = classroomStore.assignments.filter((a) => a.isQuiz).length;
 			expect(quizCount).toBe(2);
 		});
 
@@ -354,7 +354,10 @@ describe('Classroom Store', () => {
 			await classroomStore.selectClassroom(firstClassroom);
 
 			// Total submissions is calculated directly from assignments array
-			const totalSubmissions = classroomStore.assignments.reduce((sum, a) => sum + (a.submissionCount || 0), 0);
+			const totalSubmissions = classroomStore.assignments.reduce(
+				(sum, a) => sum + (a.submissionCount || 0),
+				0
+			);
 			expect(totalSubmissions).toBe(30);
 		});
 
@@ -407,7 +410,10 @@ describe('Classroom Store', () => {
 			await classroomStore.selectClassroom(firstClassroom);
 
 			// Calculate totals directly from assignments array, handling undefined values
-			const totalSubmissions = classroomStore.assignments.reduce((sum, a) => sum + (a.submissionCount || 0), 0);
+			const totalSubmissions = classroomStore.assignments.reduce(
+				(sum, a) => sum + (a.submissionCount || 0),
+				0
+			);
 			const ungradedSubmissions = classroomStore.assignments.reduce((sum, a) => {
 				return sum + ((a.submissionCount || 0) - (a.gradedCount || 0));
 			}, 0);
@@ -602,15 +608,15 @@ describe('Classroom Store', () => {
 			expect(classroomStore.selectedClassroom?.id).toBeUndefined();
 
 			// Rapidly select different classrooms using actual classroom objects
-			const classroom2 = classroomStore.classrooms.find(c => c.id === 'classroom-2')!;
+			const classroom2 = classroomStore.classrooms.find((c) => c.id === 'classroom-2')!;
 			await classroomStore.selectClassroom(classroom2);
 			expect(classroomStore.selectedClassroom?.id).toBe('classroom-2');
 
-			const classroom3 = classroomStore.classrooms.find(c => c.id === 'classroom-3')!;
+			const classroom3 = classroomStore.classrooms.find((c) => c.id === 'classroom-3')!;
 			await classroomStore.selectClassroom(classroom3);
 			expect(classroomStore.selectedClassroom?.id).toBe('classroom-3');
 
-			const classroom1 = classroomStore.classrooms.find(c => c.id === 'classroom-1')!;
+			const classroom1 = classroomStore.classrooms.find((c) => c.id === 'classroom-1')!;
 			await classroomStore.selectClassroom(classroom1);
 			expect(classroomStore.selectedClassroom?.id).toBe('classroom-1');
 			expect(classroomStore.selectedClassroom?.id).toBe('classroom-1');

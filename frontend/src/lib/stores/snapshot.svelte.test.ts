@@ -38,7 +38,7 @@ describe('Snapshot Store', () => {
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		resetAllMocks();
-		
+
 		// Reset schema mock to successful validation by default
 		mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 			success: true,
@@ -72,7 +72,7 @@ describe('Snapshot Store', () => {
 		it('should load valid snapshot file successfully', async () => {
 			const mockSnapshot = createMockClassroomSnapshot();
 			const testFile = createMockFile(JSON.stringify(mockSnapshot));
-			
+
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 				success: true,
 				data: mockSnapshot
@@ -100,7 +100,7 @@ describe('Snapshot Store', () => {
 		it('should handle schema validation failure', async () => {
 			const invalidSnapshot = { invalid: 'data' };
 			const testFile = createMockFile(JSON.stringify(invalidSnapshot));
-			
+
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 				success: false,
 				error: { message: 'Schema validation failed' }
@@ -116,15 +116,17 @@ describe('Snapshot Store', () => {
 		it('should set loading state during file processing', async () => {
 			const mockSnapshot = createMockClassroomSnapshot();
 			const testFile = createMockFile(JSON.stringify(mockSnapshot));
-			
+
 			// Mock slow file reading
 			const originalText = testFile.text;
-			testFile.text = vi.fn().mockImplementation(() => 
-				new Promise(resolve => setTimeout(() => resolve(originalText.call(testFile)), 50))
-			);
+			testFile.text = vi
+				.fn()
+				.mockImplementation(
+					() => new Promise((resolve) => setTimeout(() => resolve(originalText.call(testFile)), 50))
+				);
 
 			const loadPromise = snapshotStore.loadFromFile(testFile);
-			
+
 			// Check loading state is true during processing
 			expect(snapshotStore.loading).toBe(true);
 			expect(snapshotStore.error).toBeNull();
@@ -148,8 +150,11 @@ describe('Snapshot Store', () => {
 	describe('Snapshot Management', () => {
 		it('should preserve previous snapshot when loading new one', async () => {
 			const firstSnapshot = createMockClassroomSnapshot();
-			const secondSnapshot = { ...createMockClassroomSnapshot(), teacher: { ...firstSnapshot.teacher, name: 'Different Teacher' } };
-			
+			const secondSnapshot = {
+				...createMockClassroomSnapshot(),
+				teacher: { ...firstSnapshot.teacher, name: 'Different Teacher' }
+			};
+
 			// Load first snapshot
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 				success: true,
@@ -170,10 +175,10 @@ describe('Snapshot Store', () => {
 
 		it('should clear current snapshot', () => {
 			const mockSnapshot = createMockClassroomSnapshot();
-			
+
 			// Manually set current snapshot (simulating loaded state)
 			snapshotStore.loadFromFile(createMockFile(JSON.stringify(mockSnapshot)));
-			
+
 			snapshotStore.clearSnapshot();
 
 			expect(snapshotStore.currentSnapshot).toBeNull();
@@ -185,7 +190,7 @@ describe('Snapshot Store', () => {
 		it('should reset all snapshot data', () => {
 			// Set some state first
 			snapshotStore.loadFromFile(createMockFile(JSON.stringify(createMockClassroomSnapshot())));
-			
+
 			snapshotStore.resetAll();
 
 			expect(snapshotStore.currentSnapshot).toBeNull();
@@ -200,7 +205,10 @@ describe('Snapshot Store', () => {
 	describe('Diff Generation', () => {
 		it('should generate diff when both snapshots exist', async () => {
 			const firstSnapshot = createMockClassroomSnapshot();
-			const secondSnapshot = { ...createMockClassroomSnapshot(), teacher: { ...firstSnapshot.teacher, name: 'Updated Teacher' } };
+			const secondSnapshot = {
+				...createMockClassroomSnapshot(),
+				teacher: { ...firstSnapshot.teacher, name: 'Updated Teacher' }
+			};
 			const mockDiffResult = { teacher: { name: ['Original Teacher', 'Updated Teacher'] } };
 
 			mockDiffer.diff.mockReturnValue(mockDiffResult);
@@ -238,7 +246,10 @@ describe('Snapshot Store', () => {
 
 		it('should compare snapshots directly', () => {
 			const snapshot1 = createMockClassroomSnapshot();
-			const snapshot2 = { ...createMockClassroomSnapshot(), teacher: { ...snapshot1.teacher, name: 'Different' } };
+			const snapshot2 = {
+				...createMockClassroomSnapshot(),
+				teacher: { ...snapshot1.teacher, name: 'Different' }
+			};
 			const mockDiffResult = { teacher: { name: ['Original', 'Different'] } };
 
 			mockDiffer.diff.mockReturnValue(mockDiffResult);
@@ -253,7 +264,7 @@ describe('Snapshot Store', () => {
 	describe('Validation Utility', () => {
 		it('should validate correct snapshot data', () => {
 			const validSnapshot = createMockClassroomSnapshot();
-			
+
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 				success: true,
 				data: validSnapshot
@@ -268,7 +279,7 @@ describe('Snapshot Store', () => {
 
 		it('should identify invalid snapshot data', () => {
 			const invalidData = { invalid: 'snapshot' };
-			
+
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 				success: false,
 				error: { message: 'Invalid schema' }
@@ -283,7 +294,7 @@ describe('Snapshot Store', () => {
 
 		it('should handle validation exceptions', () => {
 			const invalidData = { test: 'data' };
-			
+
 			mockClassroomSnapshotSchema.safeParse.mockImplementation(() => {
 				throw new Error('Parse error');
 			});
@@ -309,7 +320,7 @@ describe('Snapshot Store', () => {
 
 		it('should reset error state on successful load', async () => {
 			const mockSnapshot = createMockClassroomSnapshot();
-			
+
 			// First, set an error state
 			const errorFile = createMockFile('invalid json');
 			await snapshotStore.loadFromFile(errorFile);

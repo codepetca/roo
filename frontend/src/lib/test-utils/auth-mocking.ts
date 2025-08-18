@@ -24,7 +24,7 @@ export const DEFAULT_MOCK_TEACHER = {
  */
 export const DEFAULT_MOCK_STUDENT = {
 	uid: 'student-test-uid-456',
-	email: 'student@test.com', 
+	email: 'student@test.com',
 	displayName: 'Test Student',
 	getIdToken: vi.fn().mockResolvedValue('test-token-456')
 };

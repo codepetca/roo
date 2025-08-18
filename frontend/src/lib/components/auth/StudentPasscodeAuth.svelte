@@ -237,15 +237,10 @@
 
 	<!-- Main Login Form - Always Visible -->
 	<div class="space-y-4" data-testid="student-login-form">
-		<div class="text-center">
-
-			
-		</div>
+		<div class="text-center"></div>
 
 		<div>
-			<label for="email" class="mb-2 block text-sm font-medium text-gray-700">
-				School Email
-			</label>
+			<label for="email" class="mb-2 block text-sm font-medium text-gray-700"> School Email </label>
 			<Input
 				id="email"
 				type="email"
@@ -255,13 +250,10 @@
 				disabled={loading}
 				class="w-full"
 			/>
-			
 		</div>
 
 		<div>
-			<label for="passcode" class="mb-2 block text-sm font-medium text-gray-700">
-				Passcode
-			</label>
+			<label for="passcode" class="mb-2 block text-sm font-medium text-gray-700"> Passcode </label>
 			<Input
 				id="passcode"
 				type="text"
@@ -273,7 +265,6 @@
 				class="w-full text-center font-mono text-lg tracking-wider uppercase"
 				oninput={(e) => (passcode = e.currentTarget.value.toUpperCase())}
 			/>
-			
 		</div>
 
 		<Button
@@ -319,7 +310,7 @@
 					</button>
 				{:else}
 					<div class="mt-3 space-y-3">
-						<p class="text-base text-gray-500 text-lg font-bold">
+						<p class="text-base text-lg font-bold text-gray-500">
 							Enter your email above and click below to receive your permanent login code
 						</p>
 						<Button

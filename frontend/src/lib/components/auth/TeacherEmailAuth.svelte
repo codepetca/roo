@@ -191,11 +191,6 @@
 		<h2 class="text-center text-2xl font-bold text-gray-900" data-testid="teacher-email-form-title">
 			{mode === 'login' ? 'Teacher Sign In' : 'Create Teacher Account'}
 		</h2>
-		<p class="mt-2 text-center text-sm text-gray-600" data-testid="teacher-email-form-subtitle">
-			{mode === 'login'
-				? 'Sign in with your email and password'
-				: 'Create a new teacher account with school email'}
-		</p>
 	</div>
 
 	{#if error}
