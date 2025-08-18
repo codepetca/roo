@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { api } from '$lib/api';
 	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { auth } from '$lib/stores';
@@ -88,7 +89,7 @@
 			});
 
 			// Deduplicate grades by ID to prevent duplicates
-			const gradeIds = new Set<string>();
+			const gradeIds = new SvelteSet<string>();
 			const uniqueGrades: Grade[] = [];
 			newGrades.forEach((grade) => {
 				if (grade.id && !gradeIds.has(grade.id)) {

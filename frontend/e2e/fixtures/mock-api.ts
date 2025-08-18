@@ -6,7 +6,7 @@
  */
 
 import { Page, Route } from '@playwright/test';
-import { createMockClassroomSnapshot, createMockTeacher } from './test-data';
+import { createMockClassroomSnapshot } from './test-data';
 import type { TeacherDashboard } from '@shared/schemas/core';
 
 export interface MockApiOptions {

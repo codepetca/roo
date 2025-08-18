@@ -11,8 +11,7 @@ import {
 	verifyDashboardState,
 	navigateDashboardSafely,
 	waitForPageReady,
-	debugPage,
-	TestDataHelpers
+	debugPage
 } from './test-helpers';
 
 test.describe('Core Dashboard Data Display', () => {

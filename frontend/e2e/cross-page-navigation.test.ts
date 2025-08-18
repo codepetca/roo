@@ -6,7 +6,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { signInAsTeacher, signInAsStudent, waitForPageReady, debugPage } from './test-helpers';
+import { signInAsTeacher, signInAsStudent, waitForPageReady } from './test-helpers';
 
 test.describe('Cross-page Navigation Tests', () => {
 	test('should complete teacher onboarding journey', async ({ page }) => {
@@ -82,7 +82,6 @@ test.describe('Cross-page Navigation Tests', () => {
 					'text=/view.*assignment/i'
 				];
 
-				let foundAssignmentNav = false;
 				for (const element of assignmentElements) {
 					if (
 						await page
@@ -91,7 +90,6 @@ test.describe('Cross-page Navigation Tests', () => {
 							.catch(() => false)
 					) {
 						console.log(`✓ Step 2: Found assignment navigation: ${element}`);
-						foundAssignmentNav = true;
 						break;
 					}
 				}

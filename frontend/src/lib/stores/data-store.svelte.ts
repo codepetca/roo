@@ -5,6 +5,7 @@
  */
 
 import type { Classroom, Assignment, DashboardUser, Submission, Grade } from '@shared/schemas/core';
+import { SvelteMap } from 'svelte/reactivity';
 
 /**
  * Simple data store with basic reactive arrays
@@ -69,7 +70,7 @@ class DataStore {
 
 	// Assignment grouping by classroom for hierarchical navigation
 	assignmentsByClassroom = $derived(() => {
-		const grouped = new Map<string, Assignment[]>();
+		const grouped = new SvelteMap<string, Assignment[]>();
 
 		// Initialize with empty arrays for all classrooms
 		for (const classroom of this.classrooms) {

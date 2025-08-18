@@ -6,7 +6,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { signInAsTeacher, waitForPageReady, debugPage } from './test-helpers';
+import { signInAsTeacher, waitForPageReady } from './test-helpers';
 
 test.describe('Data Store Tests', () => {
 	test.beforeEach(async ({ page }) => {

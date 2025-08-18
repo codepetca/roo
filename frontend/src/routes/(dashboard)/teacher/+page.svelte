@@ -59,7 +59,6 @@
 	let teacher = $derived(dataStore.currentUser);
 	let classrooms = $derived(dataStore.classrooms);
 	let assignments = $derived(dataStore.assignments);
-	let dashboardStats = $derived(dataStore.dashboardStats);
 	// let recentActivity = $derived(dataStore.recentActivity);
 
 	// Debug logging for data store state changes

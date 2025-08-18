@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { signInAsTeacher, waitForPageReady } from './test-helpers';
+import { signInAsTeacher } from './test-helpers';
 
 test.describe('Dashboard Reactivity Debug', () => {
 	test.beforeEach(async ({ page }) => {

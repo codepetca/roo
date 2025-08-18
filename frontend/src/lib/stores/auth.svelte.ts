@@ -14,7 +14,6 @@ import {
 import { firebaseAuth } from '../firebase';
 import { goto } from '$app/navigation';
 import { browser } from '$app/environment';
-import { API_BASE_URL } from '../api';
 import { userService, type UserProfile, type CreateProfileData } from '../services/user-service';
 
 // User interface for our store

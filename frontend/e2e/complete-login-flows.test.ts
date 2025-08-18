@@ -10,7 +10,6 @@ import {
 	TEST_TEACHER,
 	TEST_STUDENT,
 	waitForPageReady,
-	debugPage,
 	signInAsTeacher
 } from './test-helpers';
 
@@ -56,7 +55,7 @@ test.describe('Complete Authentication Flows', () => {
 		try {
 			await page.waitForURL(/\/(dashboard)/, { timeout: 10000 });
 			console.log('✓ Teacher login successful - redirected to dashboard');
-		} catch (error) {
+		} catch {
 			// Handle potential auth errors gracefully
 			const errorMessage = page.locator('text=/error|invalid|failed|not.*found/i');
 			if (await errorMessage.isVisible({ timeout: 3000 })) {

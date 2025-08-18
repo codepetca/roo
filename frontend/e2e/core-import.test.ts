@@ -11,7 +11,6 @@ import {
 	gotoSnapshotImport,
 	uploadSnapshotFile,
 	waitForImportSuccess,
-	CLASSROOM_SNAPSHOT_PATH,
 	PageElements,
 	debugPage
 } from './test-helpers';
@@ -146,13 +145,6 @@ test.describe('Core Classroom Snapshot Import', () => {
 
 		// Upload file
 		await uploadSnapshotFile(page);
-
-		// Should show some form of progress or feedback
-		const progressIndicators = [
-			'text=/processing|importing|uploading/i',
-			'.progress-bar, .spinner, .loading',
-			'[data-testid*="progress"]'
-		];
 
 		// Wait a bit for progress to show
 		await page.waitForTimeout(2000);

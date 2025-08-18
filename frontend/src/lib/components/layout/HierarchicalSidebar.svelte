@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { Badge, Button } from '$lib/components/ui';
 	import type { Classroom, Assignment } from '@shared/schemas/core';
@@ -14,13 +15,13 @@
 	} = $props();
 
 	// Local state for UI interactions
-	let expandedClassrooms = $state<Set<string>>(new Set());
+	let expandedClassrooms = $state<SvelteSet<string>>(new SvelteSet());
 	let hoveredItem = $state<string | null>(null);
 
 	// Reactive data from store with deduplication
 	let classrooms = $derived(() => {
 		// Deduplicate classrooms by ID to prevent Svelte each key errors
-		const seen = new Set<string>();
+		const seen = new SvelteSet<string>();
 		return dataStore.classrooms.filter((classroom) => {
 			if (seen.has(classroom.id)) {
 				console.warn(`🔧 Duplicate classroom detected and filtered: ${classroom.id}`);
@@ -30,7 +31,6 @@
 			return true;
 		});
 	});
-	let assignments = $derived(dataStore.assignments);
 	let selectedClassroomId = $derived(dataStore.selectedClassroomId);
 	let selectedAssignmentId = $derived(dataStore.selectedAssignmentId);
 	let loading = $derived(dataStore.loading);
@@ -42,7 +42,7 @@
 
 	// Toggle classroom expansion
 	function toggleClassroomExpansion(classroomId: string) {
-		const newExpanded = new Set(expandedClassrooms);
+		const newExpanded = new SvelteSet(expandedClassrooms);
 		if (newExpanded.has(classroomId)) {
 			newExpanded.delete(classroomId);
 		} else {

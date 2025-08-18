@@ -91,7 +91,7 @@
 		}
 	}
 
-	async function handleTeacherEmailAuthSuccess(event: CustomEvent) {
+	async function handleTeacherEmailAuthSuccess(_event: CustomEvent) {
 		// User profile already created in TeacherEmailAuth component
 
 		try {
@@ -112,9 +112,7 @@
 
 		console.log('Student authentication successful', { user, isNewUser });
 
-		// Import auth store to trigger refresh
-		const { auth } = await import('$lib/stores/auth.svelte');
-		// Note: refresh method may not exist in new auth structure
+		// Note: auth store refresh may not exist in new auth structure
 
 		// Import goto for navigation
 		const { goto } = await import('$app/navigation');
