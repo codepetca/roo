@@ -6,12 +6,7 @@
  */
 
 import { test, expect } from '@playwright/test';
-import {
-	TEST_TEACHER,
-	TEST_STUDENT,
-	waitForPageReady,
-	signInAsTeacher
-} from './test-helpers';
+import { TEST_TEACHER, TEST_STUDENT, waitForPageReady, signInAsTeacher } from './test-helpers';
 
 test.describe('Complete Authentication Flows', () => {
 	test.beforeEach(async ({ page }) => {

@@ -14,7 +14,7 @@ import {
 import { firebaseAuth } from '../firebase';
 import { goto } from '$app/navigation';
 import { browser } from '$app/environment';
-import { userService, type UserProfile, type CreateProfileData } from '../services/user-service';
+import { userService, type CreateProfileData } from '../services/user-service';
 
 // User interface for our store
 interface AuthUser {
@@ -47,6 +47,36 @@ async function setAuthCookie(user: User | null) {
 	} catch (err) {
 		console.error('Failed to set auth cookie:', err);
 	}
+}
+
+/**
+ * Wait for Firebase Auth state to be fully ready for API calls
+ * Ensures that currentUser is available and can generate valid tokens
+ */
+async function waitForAuthStateReady(user: User, maxWaitMs = 5000): Promise<boolean> {
+	console.log('⏳ Waiting for auth state to be ready for API calls...');
+
+	const startTime = Date.now();
+
+	while (Date.now() - startTime < maxWaitMs) {
+		// Check if Firebase Auth current user matches our user and can generate tokens
+		if (firebaseAuth.currentUser?.uid === user.uid) {
+			try {
+				// Test token generation to ensure it's working
+				await firebaseAuth.currentUser.getIdToken(false);
+				console.log('✅ Auth state is ready - tokens can be generated');
+				return true;
+			} catch (tokenError) {
+				console.debug('⏳ Auth state not ready yet - token generation failed:', tokenError);
+			}
+		}
+
+		// Wait a bit before checking again
+		await new Promise((resolve) => setTimeout(resolve, 100));
+	}
+
+	console.warn('⚠️ Auth state readiness timeout after', maxWaitMs, 'ms');
+	return false;
 }
 
 // Note: ensureUserProfile function removed as it's not currently used
@@ -176,33 +206,48 @@ async function signIn(email: string, password: string): Promise<void> {
 			email: result.user.email
 		});
 
+		// Wait for auth state to be ready before making API calls
+		console.log('⏳ Waiting for auth state to stabilize...');
+		const authReady = await waitForAuthStateReady(result.user);
+
+		if (!authReady) {
+			console.error('❌ Auth state failed to stabilize within timeout');
+			error = 'Authentication timeout. Please try signing in again.';
+			return;
+		}
+
 		await setAuthCookie(result.user);
 		console.log('🍪 Auth cookie set successfully');
 
 		// Get user profile from Firestore (includes role)
-		console.log('📡 Fetching user profile after sign in...');
-		user = await getUserProfile(result.user);
+		// Note: We rely on onAuthStateChanged to set the user state, but we need the profile
+		// for immediate routing decisions
+		console.log('📡 Fetching user profile for routing decisions...');
+		const userProfile = await getUserProfile(result.user);
 
-		if (!user) {
+		if (!userProfile) {
 			console.error('❌ User profile not found after sign in');
 			error = 'User profile not found. Please contact support.';
 			return;
 		}
 
 		console.log('✅ User profile loaded successfully:', {
-			uid: user.uid,
-			role: user.role,
-			hasSchoolEmail: !!user.schoolEmail
+			uid: userProfile.uid,
+			role: userProfile.role,
+			hasSchoolEmail: !!userProfile.schoolEmail
 		});
 
+		// Set the user state immediately for routing (onAuthStateChanged will also set it)
+		user = userProfile;
+
 		// Check if teacher needs to set school email
-		if (user.role === 'teacher' && !user.schoolEmail) {
+		if (userProfile.role === 'teacher' && !userProfile.schoolEmail) {
 			console.log('🎓 Teacher needs to set school email, redirecting to onboarding...');
 			await goto('/teacher/onboarding');
 		} else {
 			console.log('🎯 Redirecting to role-specific dashboard...');
 			// Redirect to clean role-specific routes using (dashboard) route group
-			if (user.role === 'teacher') {
+			if (userProfile.role === 'teacher') {
 				await goto('/teacher');
 			} else {
 				await goto('/student');

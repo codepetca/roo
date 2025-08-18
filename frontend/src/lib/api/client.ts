@@ -27,26 +27,41 @@ export const API_BASE_URL =
 
 /**
  * Get the current user's Firebase ID token for API authentication
+ * Includes retry mechanism to handle race conditions during sign-in
  */
-async function getAuthToken(): Promise<string | null> {
-	if (!firebaseAuth.currentUser) {
-		console.warn('⚠️ No authenticated user found for API request');
-		return null;
-	}
+async function getAuthToken(maxRetries = 3): Promise<string | null> {
+	for (let attempt = 1; attempt <= maxRetries; attempt++) {
+		if (!firebaseAuth.currentUser) {
+			if (attempt < maxRetries) {
+				console.debug(`⏳ No authenticated user on attempt ${attempt}, retrying...`);
+				await new Promise((resolve) => setTimeout(resolve, 100 * attempt)); // Exponential backoff
+				continue;
+			}
+			console.warn('⚠️ No authenticated user found for API request after all retries');
+			return null;
+		}
 
-	try {
-		// Force refresh token to ensure it's not expired
-		const token = await firebaseAuth.currentUser.getIdToken(true);
-		console.debug('✅ Auth token obtained for API request', {
-			uid: firebaseAuth.currentUser.uid,
-			email: firebaseAuth.currentUser.email,
-			tokenLength: token.length
-		});
-		return token;
-	} catch (error) {
-		console.error('❌ Failed to get auth token:', error);
-		return null;
+		try {
+			// Force refresh token to ensure it's not expired
+			const token = await firebaseAuth.currentUser.getIdToken(true);
+			console.debug('✅ Auth token obtained for API request', {
+				uid: firebaseAuth.currentUser.uid,
+				email: firebaseAuth.currentUser.email,
+				tokenLength: token.length,
+				attempt
+			});
+			return token;
+		} catch (error) {
+			if (attempt < maxRetries) {
+				console.debug(`⏳ Failed to get auth token on attempt ${attempt}, retrying:`, error);
+				await new Promise((resolve) => setTimeout(resolve, 100 * attempt)); // Exponential backoff
+				continue;
+			}
+			console.error('❌ Failed to get auth token after all retries:', error);
+			return null;
+		}
 	}
+	return null;
 }
 
 /**

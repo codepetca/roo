@@ -64,9 +64,7 @@ import {
 } from '@shared/schemas/core';
 
 // Import snapshot schemas
-import {
-	type ClassroomSnapshot
-} from '@shared/schemas/classroom-snapshot';
+import { type ClassroomSnapshot } from '@shared/schemas/classroom-snapshot';
 
 /**
  * Type-safe API methods with runtime validation
