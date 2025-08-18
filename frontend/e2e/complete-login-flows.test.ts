@@ -33,20 +33,11 @@ test.describe('Complete Authentication Flows', () => {
 	test('should complete teacher email login flow', async ({ page }) => {
 		console.log('Testing teacher email login flow...');
 
-		// Select teacher role
+		// Select teacher role - goes directly to email form
 		await page.getByTestId('select-teacher-button').click();
 		await page.waitForTimeout(1000);
 
-		// Should show teacher auth method selection
-		await expect(page.getByTestId('teacher-auth-selection')).toBeVisible();
-
-		// Select email authentication
-		const emailButton = page.getByTestId('select-email-auth-button');
-		await emailButton.waitFor({ timeout: 5000 });
-		await emailButton.click();
-		await page.waitForTimeout(1000);
-
-		// Should show teacher email auth form
+		// Should show teacher email auth form directly (no intermediate page)
 		await expect(page.getByTestId('teacher-email-auth')).toBeVisible();
 
 		// Fill in teacher credentials
@@ -162,19 +153,11 @@ test.describe('Complete Authentication Flows', () => {
 	test('should handle invalid login credentials', async ({ page }) => {
 		console.log('Testing invalid credentials handling...');
 
-		// Select teacher and email auth
+		// Select teacher - goes directly to email auth
 		await page.getByTestId('select-teacher-button').click();
 		await page.waitForTimeout(500);
 
-		// Should show auth method selection
-		await expect(page.getByTestId('teacher-auth-selection')).toBeVisible();
-
-		const emailButton = page.getByTestId('select-email-auth-button');
-		await emailButton.waitFor({ timeout: 5000 });
-		await emailButton.click();
-		await page.waitForTimeout(500);
-
-		// Should show email auth form
+		// Should show email auth form directly
 		await expect(page.getByTestId('teacher-email-auth')).toBeVisible();
 
 		// Fill invalid credentials
@@ -280,15 +263,9 @@ test.describe('Complete Authentication Flows', () => {
 		});
 
 		try {
-			// Select teacher and attempt login
+			// Select teacher - goes directly to email form
 			await page.getByTestId('select-teacher-button').click();
 			await page.waitForTimeout(1000);
-
-			const emailButton = page.getByTestId('select-email-auth-button');
-			if (await emailButton.isVisible({ timeout: 3000 })) {
-				await emailButton.click();
-				await page.waitForTimeout(1000);
-			}
 
 			// Fill credentials
 			const emailInput = page.getByPlaceholder(/email/i).first();
@@ -357,15 +334,9 @@ test.describe('Complete Authentication Flows', () => {
 	test('should provide password reset functionality', async ({ page }) => {
 		console.log('Testing password reset functionality...');
 
-		// Select teacher and email auth
+		// Select teacher - goes directly to email auth
 		await page.getByTestId('select-teacher-button').click();
 		await page.waitForTimeout(500);
-
-		const emailButton = page.getByTestId('select-email-auth-button');
-		if (await emailButton.isVisible({ timeout: 3000 })) {
-			await emailButton.click();
-			await page.waitForTimeout(500);
-		}
 
 		// Look for forgot password link
 		const forgotPasswordElements = [

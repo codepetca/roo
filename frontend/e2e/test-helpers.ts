@@ -689,17 +689,17 @@ export async function signInAsTeacher(page: Page) {
 		});
 		await waitForPageReady(page);
 
-		// Select email authentication method with retry logic and fallbacks
-		console.log('Selecting email auth...');
-		await clickElementSafely(page, '[data-testid="select-email-auth-button"]', {
-			fallbackSelectors: [
-				'button:has-text("Email")',
-				'[data-auth-method="email"]',
-				'button[aria-label*="Email"]',
-				'.email-auth-button'
-			]
-		});
-		await waitForPageReady(page);
+		// Now we should be directly on the email authentication form
+		console.log('Verifying email auth form is visible...');
+		
+		// Wait for the email auth form to be visible
+		const emailAuthVisible = await page.waitForSelector('[data-testid="teacher-email-auth"]', { 
+			timeout: 5000 
+		}).catch(() => null);
+		
+		if (!emailAuthVisible) {
+			throw new Error('Email authentication form not found after teacher selection');
+		}
 
 		// Fill in credentials with better error handling
 		console.log('Filling credentials...');

@@ -7,6 +7,39 @@
 
 import { z } from 'zod';
 
+// Helper for date/timestamp handling - flexible parsing for various Firebase formats
+const dateTimeSchema = z.union([
+	// ISO datetime string
+	z.string().datetime().transform(val => new Date(val)),
+	// Firebase Timestamp object (admin SDK)
+	z.object({
+		_seconds: z.number(),
+		_nanoseconds: z.number()
+	}).transform(val => new Date(val._seconds * 1000 + val._nanoseconds / 1000000)),
+	// Firebase Timestamp object (client SDK)
+	z.object({
+		seconds: z.number(),
+		nanoseconds: z.number()
+	}).transform(val => new Date(val.seconds * 1000 + val.nanoseconds / 1000000)),
+	// Raw timestamp number (milliseconds)
+	z.number().transform(val => new Date(val)),
+	// Date object (already parsed)
+	z.date(),
+	// Empty object (API returning {}) - default to current date
+	z.object({}).transform(() => new Date()),
+	// null or undefined - default to current date
+	z.null().transform(() => new Date()),
+	z.undefined().transform(() => new Date()),
+	// String that can be parsed as date
+	z.string().transform(val => {
+		const date = new Date(val);
+		if (isNaN(date.getTime())) {
+			throw new Error(`Invalid date string: ${val}`);
+		}
+		return date;
+	})
+]).transform(val => val instanceof Date ? val : val);
+
 /**
  * User profile schema for validation
  */
@@ -20,9 +53,9 @@ export const userProfileSchema = z.object({
 	totalClassrooms: z.number().min(0).optional(),
 	totalStudents: z.number().min(0).optional(),
 	isActive: z.boolean().optional(),
-	lastLogin: z.date().optional(),
-	createdAt: z.date(),
-	updatedAt: z.date(),
+	lastLogin: dateTimeSchema.optional(),
+	createdAt: dateTimeSchema,
+	updatedAt: dateTimeSchema,
 	version: z.number().min(1),
 	isLatest: z.boolean()
 });

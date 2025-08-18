@@ -86,7 +86,7 @@ test.describe('Core Authentication Flow', () => {
 		await page.goto('/login');
 		await waitForPageReady(page);
 
-		// Step 1: Select teacher role with improved error handling and fallback selectors
+		// Step 1: Select teacher role - should go directly to email form
 		try {
 			await clickElementSafely(page, PageElements.teacherButton, {
 				fallbackSelectors: [
@@ -97,53 +97,11 @@ test.describe('Core Authentication Flow', () => {
 			});
 			await waitForPageReady(page);
 
-			// Should show authentication method selection page (flexible check)
-			const authSelectionSelectors = [
-				'[data-testid="teacher-auth-selection"]',
-				'text=/how.*would.*you.*like.*to.*sign.*in/i',
-				'text=/choose.*authentication.*method/i',
-				PageElements.googleButton,
-				PageElements.emailButton
-			];
-
-			let foundAuthSelection = false;
-			for (const selector of authSelectionSelectors) {
-				if (
-					await page
-						.locator(selector)
-						.isVisible({ timeout: 3000 })
-						.catch(() => false)
-				) {
-					console.log(`✓ Found auth selection: ${selector}`);
-					foundAuthSelection = true;
-					break;
-				}
-			}
-
-			if (!foundAuthSelection) {
-				throw new Error('Could not find authentication method selection');
-			}
-
-			// Should show both Google and Email auth options
-			await expect(page.locator(PageElements.googleButton)).toBeVisible({ timeout: 8000 });
-			await expect(page.locator(PageElements.emailButton)).toBeVisible({ timeout: 8000 });
-
-			// Step 2: Select email authentication with improved handling
-			await clickElementSafely(page, PageElements.emailButton, {
-				fallbackSelectors: [
-					'button:has-text("Email")',
-					'[data-auth-method="email"]',
-					'button[aria-label*="Email"]'
-				]
-			});
-			await waitForPageReady(page);
-
-			// Should show email auth form component (flexible selectors)
+			// Should now show email auth form directly (no intermediate page)
 			const emailFormSelectors = [
-				'[data-testid="teacher-email-auth-form"]',
 				'[data-testid="teacher-email-auth"]',
-				'form[data-auth-type="email"]',
-				'text=/sign.*in.*with.*email/i'
+				'[data-testid="teacher-email-signin-title"]',
+				'text=/teacher.*email.*sign.*in/i'
 			];
 
 			let foundEmailForm = false;
@@ -161,7 +119,7 @@ test.describe('Core Authentication Flow', () => {
 			}
 
 			if (!foundEmailForm) {
-				throw new Error('Email auth form not found');
+				throw new Error('Direct email auth form not found after teacher selection');
 			}
 
 			// Should show email and password inputs - use flexible selectors
@@ -247,12 +205,12 @@ test.describe('Core Authentication Flow', () => {
 			await page.goto('/login');
 			await waitForPageReady(page);
 
-			// Navigate to email form
+			// Navigate directly to email form (no intermediate step)
 			await clickElementSafely(page, PageElements.teacherButton);
 			await waitForPageReady(page);
-
-			await clickElementSafely(page, PageElements.emailButton);
-			await waitForPageReady(page);
+			
+			// Verify we're on the email auth form
+			await page.waitForSelector('[data-testid="teacher-email-auth"]', { timeout: 5000 });
 
 			// Fill invalid credentials using proper test IDs
 			const emailInput = await waitForElementSafely(page, '[data-testid="email-input"]', {
