@@ -59,10 +59,10 @@ describe("Classroom Snapshot Import Integration", () => {
 
     it("should have anonymized teacher data", () => {
       expect(mockSnapshotData.teacher).toEqual({
-        name: "Test Teacher",
+        name: "Teacher Demo",
         isTeacher: true,
-        displayName: "Test Teacher",
-        email: "test.codepet@gmail.com"
+        displayName: "Teacher Demo",
+        email: "teacher@schoolemail.com"
       });
     });
 

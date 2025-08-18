@@ -6,8 +6,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fetch from 'node-fetch';
 
-// Use emulator URLs for testing
-const BASE_URL = process.env.FUNCTIONS_EMULATOR_URL || 'http://localhost:5001/roo-app-3d24e/us-central1/api';
+// Use staging Firebase Functions for testing (no emulator complexity needed)
+const BASE_URL = process.env.FUNCTIONS_URL || 'https://us-central1-roo-app-3d24e.cloudfunctions.net/api';
 
 describe('Auth Endpoints Integration', () => {
   // Test data

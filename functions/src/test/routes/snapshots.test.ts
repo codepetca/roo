@@ -191,7 +191,7 @@ describe("validateSnapshot endpoint", () => {
   it("should reject invalid JSON data", async () => {
     (getUserFromRequest as any).mockResolvedValue({
       uid: "teacher123",
-      email: "test.codepet@gmail.com",
+      email: "teacher@schoolemail.com",
       role: "teacher"
     });
 
@@ -209,7 +209,7 @@ describe("validateSnapshot endpoint", () => {
   it("should reject snapshot without classrooms", async () => {
     (getUserFromRequest as any).mockResolvedValue({
       uid: "teacher123",
-      email: "test.codepet@gmail.com", 
+      email: "teacher@schoolemail.com", 
       role: "teacher"
     });
 
@@ -227,7 +227,7 @@ describe("validateSnapshot endpoint", () => {
   it("should reject snapshot without teacher info", async () => {
     (getUserFromRequest as any).mockResolvedValue({
       uid: "teacher123",
-      email: "test.codepet@gmail.com",
+      email: "teacher@schoolemail.com",
       role: "teacher"
     });
 
@@ -249,7 +249,7 @@ describe("validateSnapshot endpoint", () => {
       role: "teacher"
     });
 
-    mockRequest.body = mockSnapshotData; // Has test.codepet@gmail.com
+    mockRequest.body = mockSnapshotData; // Has teacher@schoolemail.com
 
     await validateSnapshotInline(mockRequest as Request, mockResponse as Response);
 
@@ -257,7 +257,7 @@ describe("validateSnapshot endpoint", () => {
     expect(mockJson).toHaveBeenCalledWith({
       success: false,
       error: "Snapshot teacher email does not match authenticated user",
-      details: "Expected: different@teacher.com, Found: test.codepet@gmail.com"
+      details: "Expected: different@teacher.com, Found: teacher@schoolemail.com"
     });
   });
 
@@ -265,7 +265,7 @@ describe("validateSnapshot endpoint", () => {
     // Mock teacher user that matches the mock data
     (getUserFromRequest as any).mockResolvedValue({
       uid: "teacher123",
-      email: "test.codepet@gmail.com", // Matches mock data
+      email: "teacher@schoolemail.com", // Matches mock data
       role: "teacher"
     });
 
@@ -318,7 +318,7 @@ describe("validateSnapshot endpoint", () => {
     expect(mockSnapshotData).toHaveProperty('classrooms');
     expect(mockSnapshotData).toHaveProperty('globalStats');
     
-    expect(mockSnapshotData.teacher.email).toBe('test.codepet@gmail.com');
+    expect(mockSnapshotData.teacher.email).toBe('teacher@schoolemail.com');
     expect(Array.isArray(mockSnapshotData.classrooms)).toBe(true);
     expect(mockSnapshotData.classrooms.length).toBeGreaterThan(0);
     
