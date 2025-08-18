@@ -208,7 +208,7 @@ test.describe('Core Authentication Flow', () => {
 			// Navigate directly to email form (no intermediate step)
 			await clickElementSafely(page, PageElements.teacherButton);
 			await waitForPageReady(page);
-			
+
 			// Verify we're on the email auth form
 			await page.waitForSelector('[data-testid="teacher-email-auth"]', { timeout: 5000 });
 

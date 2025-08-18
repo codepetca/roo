@@ -38,7 +38,6 @@
 		authMode = 'teacher-signup';
 	}
 
-
 	function backToSelect() {
 		authMode = 'select';
 		signupSuccess = false;

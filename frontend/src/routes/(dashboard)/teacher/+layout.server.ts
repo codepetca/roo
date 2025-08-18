@@ -16,15 +16,17 @@ const API_BASE_URL =
  * Validate Firebase auth token against backend API
  * This ensures proper token verification using Firebase Admin SDK
  */
-async function validateAuthToken(token: string): Promise<{ uid: string; email: string; role: string; displayName?: string } | null> {
+async function validateAuthToken(
+	token: string
+): Promise<{ uid: string; email: string; role: string; displayName?: string } | null> {
 	try {
 		console.log('🔐 Validating auth token with backend API...');
-		
+
 		// Call backend API to validate token (uses Firebase Admin SDK)
 		const response = await fetch(`${API_BASE_URL}/api/users/profile`, {
 			method: 'GET',
 			headers: {
-				'Authorization': `Bearer ${token}`,
+				Authorization: `Bearer ${token}`,
 				'Content-Type': 'application/json'
 			}
 		});
@@ -35,9 +37,13 @@ async function validateAuthToken(token: string): Promise<{ uid: string; email: s
 		}
 
 		const result = await response.json();
-		
+
 		if (result.success && result.data) {
-			console.log('✅ Token validation successful:', { uid: result.data.uid, email: result.data.email, role: result.data.role });
+			console.log('✅ Token validation successful:', {
+				uid: result.data.uid,
+				email: result.data.email,
+				role: result.data.role
+			});
 			return result.data;
 		} else {
 			console.log('❌ Token validation returned unsuccessful result:', result);
@@ -54,11 +60,11 @@ export const load: LayoutServerLoad = async ({ cookies, url }) => {
 
 	// Check for authentication token with brief retry for race condition handling
 	let authToken = cookies.get('auth-token') || cookies.get('firebase-auth-token');
-	
+
 	// If no token found, wait briefly and try once more (handles race condition)
 	if (!authToken) {
 		console.log('⏰ No auth token found on first attempt, retrying after brief delay...');
-		await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
+		await new Promise((resolve) => setTimeout(resolve, 50)); // 50ms delay
 		authToken = cookies.get('auth-token') || cookies.get('firebase-auth-token');
 	}
 

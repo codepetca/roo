@@ -12,7 +12,7 @@
 	// Set data in store when component mounts
 	onMount(async () => {
 		console.log('📦 Dashboard page mounted, setting data from load functions...');
-		
+
 		// Log load function data for debugging
 		console.log('📦 Load Function Data:', {
 			user: data.user.email,
@@ -72,9 +72,12 @@
 			teacher: teacher?.email || 'None',
 			error: error || 'None'
 		});
-		
+
 		if (classrooms?.length > 0) {
-			console.log('🏫 Classrooms Details:', classrooms.map(c => ({ name: c.name, id: c.id })));
+			console.log(
+				'🏫 Classrooms Details:',
+				classrooms.map((c) => ({ name: c.name, id: c.id }))
+			);
 		}
 	});
 
@@ -154,7 +157,6 @@
 		{actions}
 	/>
 
-
 	<!-- Error State -->
 	{#if error}
 		<Alert
@@ -175,7 +177,6 @@
 			{/snippet}
 		</Alert>
 	{/if}
-
 
 	<!-- Simple Assignments List -->
 	{#if assignments && assignments.length > 0}

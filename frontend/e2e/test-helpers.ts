@@ -691,12 +691,14 @@ export async function signInAsTeacher(page: Page) {
 
 		// Now we should be directly on the email authentication form
 		console.log('Verifying email auth form is visible...');
-		
+
 		// Wait for the email auth form to be visible
-		const emailAuthVisible = await page.waitForSelector('[data-testid="teacher-email-auth"]', { 
-			timeout: 5000 
-		}).catch(() => null);
-		
+		const emailAuthVisible = await page
+			.waitForSelector('[data-testid="teacher-email-auth"]', {
+				timeout: 5000
+			})
+			.catch(() => null);
+
 		if (!emailAuthVisible) {
 			throw new Error('Email authentication form not found after teacher selection');
 		}
