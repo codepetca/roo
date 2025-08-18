@@ -381,7 +381,7 @@ describe('API Client', () => {
 		it('should create submission successfully', async () => {
 			const newSubmission = mockSubmissionResponse[0];
 			// Create submission endpoint doesn't return grade field
-			const { grade, ...expectedSubmissionWithoutGrade } = expectedSubmissions[0];
+			const { grade: _grade, ...expectedSubmissionWithoutGrade } = expectedSubmissions[0];
 			const createRequest = {
 				assignmentId: 'assignment-1',
 				studentId: 'student-1',

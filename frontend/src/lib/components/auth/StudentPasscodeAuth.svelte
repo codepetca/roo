@@ -123,7 +123,7 @@
 					try {
 						await signOut(firebaseAuth);
 						console.log('Previous Firebase Auth user signed out');
-					} catch (err) {
+					} catch {
 						console.log('No previous Firebase Auth user to sign out');
 					}
 

@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { appState } from '$lib/stores';
 	import { api } from '$lib/api';
-	import { Card, Button, Alert, Badge } from '$lib/components/ui';
+	import { Card, Button, Alert } from '$lib/components/ui';
 	import { PageHeader } from '$lib/components/dashboard';
 	import ClassroomSnapshotUploader from '$lib/components/snapshot/ClassroomSnapshotUploader.svelte';
 	import SnapshotPreview from '$lib/components/snapshot/SnapshotPreview.svelte';

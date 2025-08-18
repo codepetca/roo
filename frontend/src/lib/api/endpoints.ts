@@ -8,21 +8,14 @@
  */
 
 import { z } from 'zod';
-import { typedApiRequest, callFunction, apiRequest } from './client';
+import { typedApiRequest, callFunction } from './client';
 import {
 	// Legacy schemas (keeping for backward compatibility)
 	answerKeyResponseSchema,
 	healthCheckResponseSchema,
 	submissionResponseSchema,
 	gradeResponseSchema,
-	// New wrapper schemas for API responses
-	assignmentListResponseSchema,
-	submissionListResponseSchema,
-	gradeListResponseSchema,
-	assignmentResponseWrapperSchema,
-	submissionResponseWrapperSchema,
-	gradeResponseWrapperSchema,
-	healthCheckWrapperSchema,
+	// New wrapper schemas for API responses (unused schemas removed for cleaner imports)
 	type GradeQuizRequest,
 	type GradeCodeRequest,
 	type GradingResultResponse,
@@ -50,7 +43,6 @@ import {
 
 // Import new core schemas - using TypeScript source files to avoid CommonJS issues
 import {
-	dashboardUserSchema,
 	teacherDashboardSchema,
 	studentDashboardSchema,
 	classroomSchema,
@@ -73,7 +65,6 @@ import {
 
 // Import snapshot schemas
 import {
-	classroomSnapshotSchema,
 	type ClassroomSnapshot
 } from '@shared/schemas/classroom-snapshot';
 

@@ -12,7 +12,6 @@ import type {
 	Submission,
 	Grade,
 	StudentEnrollment,
-	TeacherDashboard,
 	AssignmentWithStats,
 	DashboardUser
 } from '@shared/schemas/core';

@@ -24,12 +24,10 @@ vi.mock('firebase/auth', () => ({
 }));
 
 describe('StudentAuth Svelte 5 Reactivity', () => {
-	let component: any;
 	let container: HTMLElement;
 
 	beforeEach(() => {
 		const result = render(StudentAuth);
-		component = result.component;
 		container = result.container;
 	});
 
