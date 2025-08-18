@@ -8,8 +8,6 @@ import {
 	mockData,
 	createMockClassroomSnapshot,
 	createMockFile,
-	createInvalidMockFile,
-	createMockDiffData,
 	resetAllMocks
 } from '../test-utils/mock-data';
 import type { ClassroomSnapshot } from '@shared/schemas/classroom-snapshot';
@@ -34,666 +32,299 @@ vi.mock('@shared/schemas/classroom-snapshot', () => ({
 	classroomSnapshotSchema: mockClassroomSnapshotSchema
 }));
 
-// Mock FileReader
-const mockFileReader = {
-	addEventListener: vi.fn(),
-	readAsText: vi.fn(),
-	result: '',
-	onload: null as any,
-	onerror: null as any
-};
-
-Object.defineProperty(global, 'FileReader', {
-	value: vi.fn(() => mockFileReader),
-	writable: true
-});
-
-// Mock crypto.randomUUID
-Object.defineProperty(global, 'crypto', {
-	value: {
-		randomUUID: vi.fn(() => 'test-uuid-123')
-	},
-	writable: true
-});
-
 describe('Snapshot Store', () => {
 	let snapshotStore: (typeof import('./snapshot.svelte'))['snapshotStore'];
 
 	beforeEach(async () => {
+		vi.clearAllMocks();
 		resetAllMocks();
-		vi.resetModules();
-
-		// Reset FileReader mock
-		mockFileReader.addEventListener = vi.fn();
-		mockFileReader.readAsText = vi.fn();
-		mockFileReader.result = '';
-		mockFileReader.onload = null;
-		mockFileReader.onerror = null;
+		
+		// Reset schema mock to successful validation by default
+		mockClassroomSnapshotSchema.safeParse.mockReturnValue({
+			success: true,
+			data: createMockClassroomSnapshot()
+		});
 
 		// Import store after mocks are set up
 		const storeModule = await import('./snapshot.svelte');
 		snapshotStore = storeModule.snapshotStore;
+
+		// Reset store state
+		snapshotStore.resetAll();
 	});
 
 	afterEach(() => {
-		resetAllMocks();
+		vi.clearAllMocks();
 	});
 
 	describe('Initial State', () => {
 		it('should have correct initial state', () => {
 			expect(snapshotStore.currentSnapshot).toBeNull();
 			expect(snapshotStore.previousSnapshot).toBeNull();
-			expect(snapshotStore.importFile).toBeNull();
-			expect(snapshotStore.uploadProgress).toBe(0);
-			expect(snapshotStore.importing).toBe(false);
-			expect(snapshotStore.validating).toBe(false);
-			expect(snapshotStore.error).toBeNull();
-			expect(snapshotStore.importHistory).toEqual([]);
-			expect(snapshotStore.loadingHistory).toBe(false);
 			expect(snapshotStore.diffData).toBeNull();
-			expect(snapshotStore.showDiff).toBe(false);
+			expect(snapshotStore.loading).toBe(false);
+			expect(snapshotStore.error).toBeNull();
+			expect(snapshotStore.uploadProgress).toBe(0);
 		});
 	});
 
-	describe('File Upload Management', () => {
-		it('should set import file correctly', () => {
-			const testFile = createMockFile();
-
-			snapshotStore.setImportFile(testFile);
-
-			expect(snapshotStore.importFile).toBe(testFile);
-			expect(snapshotStore.error).toBeNull();
-			expect(snapshotStore.uploadProgress).toBe(0);
-		});
-
-		it('should clear import state', () => {
-			// First set some state
-			snapshotStore.setImportFile(createMockFile());
-
-			snapshotStore.clearImport();
-
-			expect(snapshotStore.currentSnapshot).toBeNull();
-			expect(snapshotStore.previousSnapshot).toBeNull();
-			expect(snapshotStore.importFile).toBeNull();
-			expect(snapshotStore.uploadProgress).toBe(0);
-			expect(snapshotStore.importing).toBe(false);
-			expect(snapshotStore.validating).toBe(false);
-			expect(snapshotStore.error).toBeNull();
-			expect(snapshotStore.diffData).toBeNull();
-			expect(snapshotStore.showDiff).toBe(false);
-		});
-
-		it('should clear error state', () => {
-			// Manually set error state for testing
-			const storeInternal = snapshotStore as any;
-			storeInternal.error = 'Test error';
-
-			snapshotStore.clearError();
-
-			expect(snapshotStore.error).toBeNull();
-		});
-	});
-
-	describe('File Validation', () => {
-		it('should validate file successfully', async () => {
-			const testFile = createMockFile();
+	describe('File Loading', () => {
+		it('should load valid snapshot file successfully', async () => {
 			const mockSnapshot = createMockClassroomSnapshot();
-
-			snapshotStore.setImportFile(testFile);
-
-			// Mock FileReader success
-			mockFileReader.addEventListener = vi.fn((event, callback) => {
-				if (event === 'load') {
-					mockFileReader.result = JSON.stringify(mockSnapshot);
-					setTimeout(() => callback({ target: { result: JSON.stringify(mockSnapshot) } }), 0);
-				}
-			});
-
-			// Mock schema validation success
+			const testFile = createMockFile(JSON.stringify(mockSnapshot));
+			
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 				success: true,
 				data: mockSnapshot
 			});
 
-			const result = await snapshotStore.validateImportFile();
+			await snapshotStore.loadFromFile(testFile);
 
-			expect(result).toBe(true);
 			expect(snapshotStore.currentSnapshot).toEqual(mockSnapshot);
-			expect(snapshotStore.uploadProgress).toBe(100);
 			expect(snapshotStore.error).toBeNull();
-			expect(snapshotStore.validating).toBe(false);
-		});
-
-		it('should handle file validation failure - no file', async () => {
-			const result = await snapshotStore.validateImportFile();
-
-			expect(result).toBe(false);
-			expect(snapshotStore.error).toBe('No file selected');
-			expect(snapshotStore.currentSnapshot).toBeNull();
+			expect(snapshotStore.loading).toBe(false);
+			expect(snapshotStore.uploadProgress).toBe(100);
 		});
 
 		it('should handle invalid JSON format', async () => {
-			const invalidFile = createInvalidMockFile();
-			snapshotStore.setImportFile(invalidFile);
+			const invalidFile = createMockFile('{ invalid json }');
 
-			// Mock FileReader success but with invalid JSON
-			mockFileReader.addEventListener = vi.fn((event, callback) => {
-				if (event === 'load') {
-					mockFileReader.result = '{ invalid json }';
-					setTimeout(() => callback({ target: { result: '{ invalid json }' } }), 0);
-				}
-			});
+			await snapshotStore.loadFromFile(invalidFile);
 
-			const result = await snapshotStore.validateImportFile();
-
-			expect(result).toBe(false);
-			expect(snapshotStore.error).toBe('Invalid JSON file format');
-			expect(snapshotStore.validating).toBe(false);
+			expect(snapshotStore.currentSnapshot).toBeNull();
+			expect(snapshotStore.error).toBeTruthy(); // JSON parse error message may vary
+			expect(snapshotStore.loading).toBe(false);
+			expect(snapshotStore.uploadProgress).toBe(0);
 		});
 
 		it('should handle schema validation failure', async () => {
-			const testFile = createMockFile();
-			snapshotStore.setImportFile(testFile);
-
-			// Mock FileReader success
-			mockFileReader.addEventListener = vi.fn((event, callback) => {
-				if (event === 'load') {
-					mockFileReader.result = JSON.stringify({ invalid: 'data' });
-					setTimeout(
-						() => callback({ target: { result: JSON.stringify({ invalid: 'data' }) } }),
-						0
-					);
-				}
-			});
-
-			// Mock schema validation failure
+			const invalidSnapshot = { invalid: 'data' };
+			const testFile = createMockFile(JSON.stringify(invalidSnapshot));
+			
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 				success: false,
-				error: {
-					issues: [{ message: 'Missing required field: teacher' }]
-				}
+				error: { message: 'Schema validation failed' }
 			});
 
-			const result = await snapshotStore.validateImportFile();
+			await snapshotStore.loadFromFile(testFile);
 
-			expect(result).toBe(false);
-			expect(snapshotStore.error).toBe('Schema validation failed: Missing required field: teacher');
-			expect(snapshotStore.validating).toBe(false);
+			expect(snapshotStore.currentSnapshot).toBeNull();
+			expect(snapshotStore.error).toContain('Invalid snapshot format');
+			expect(snapshotStore.loading).toBe(false);
 		});
 
-		it('should handle file reading errors', async () => {
-			const testFile = createMockFile();
-			snapshotStore.setImportFile(testFile);
+		it('should set loading state during file processing', async () => {
+			const mockSnapshot = createMockClassroomSnapshot();
+			const testFile = createMockFile(JSON.stringify(mockSnapshot));
+			
+			// Mock slow file reading
+			const originalText = testFile.text;
+			testFile.text = vi.fn().mockImplementation(() => 
+				new Promise(resolve => setTimeout(() => resolve(originalText.call(testFile)), 50))
+			);
 
-			// Mock FileReader error
-			mockFileReader.addEventListener = vi.fn((event, callback) => {
-				if (event === 'error') {
-					setTimeout(() => callback(new Error('File read error')), 0);
-				}
-			});
+			const loadPromise = snapshotStore.loadFromFile(testFile);
+			
+			// Check loading state is true during processing
+			expect(snapshotStore.loading).toBe(true);
+			expect(snapshotStore.error).toBeNull();
 
-			const result = await snapshotStore.validateImportFile();
+			await loadPromise;
 
-			expect(result).toBe(false);
-			expect(snapshotStore.error).toBe('Failed to validate file');
-			expect(snapshotStore.validating).toBe(false);
+			expect(snapshotStore.loading).toBe(false);
 		});
 
-		it('should set validating state during validation', async () => {
-			const testFile = createMockFile();
-			snapshotStore.setImportFile(testFile);
+		it('should update upload progress during file processing', async () => {
+			const mockSnapshot = createMockClassroomSnapshot();
+			const testFile = createMockFile(JSON.stringify(mockSnapshot));
 
-			// Mock slow FileReader
-			let resolveFileReader: () => void;
-			mockFileReader.addEventListener = vi.fn((event, callback) => {
-				if (event === 'load') {
-					return new Promise<void>((resolve) => {
-						resolveFileReader = resolve;
-					}).then(() => {
-						mockFileReader.result = JSON.stringify(mockData.snapshot);
-						callback({ target: { result: JSON.stringify(mockData.snapshot) } });
-					});
-				}
-			});
+			await snapshotStore.loadFromFile(testFile);
 
+			// Progress should reach 100% on successful load
+			expect(snapshotStore.uploadProgress).toBe(100);
+		});
+	});
+
+	describe('Snapshot Management', () => {
+		it('should preserve previous snapshot when loading new one', async () => {
+			const firstSnapshot = createMockClassroomSnapshot();
+			const secondSnapshot = { ...createMockClassroomSnapshot(), teacher: { ...firstSnapshot.teacher, name: 'Different Teacher' } };
+			
+			// Load first snapshot
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 				success: true,
-				data: mockData.snapshot
+				data: firstSnapshot
 			});
+			await snapshotStore.loadFromFile(createMockFile(JSON.stringify(firstSnapshot)));
 
-			// Start validation
-			const validationPromise = snapshotStore.validateImportFile();
+			// Load second snapshot
+			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
+				success: true,
+				data: secondSnapshot
+			});
+			await snapshotStore.loadFromFile(createMockFile(JSON.stringify(secondSnapshot)));
 
-			// Check validating state
-			expect(snapshotStore.validating).toBe(true);
+			expect(snapshotStore.previousSnapshot).toEqual(firstSnapshot);
+			expect(snapshotStore.currentSnapshot).toEqual(secondSnapshot);
+		});
 
-			// Complete validation
-			resolveFileReader!();
-			await validationPromise;
+		it('should clear current snapshot', () => {
+			const mockSnapshot = createMockClassroomSnapshot();
+			
+			// Manually set current snapshot (simulating loaded state)
+			snapshotStore.loadFromFile(createMockFile(JSON.stringify(mockSnapshot)));
+			
+			snapshotStore.clearSnapshot();
 
-			expect(snapshotStore.validating).toBe(false);
+			expect(snapshotStore.currentSnapshot).toBeNull();
+			expect(snapshotStore.diffData).toBeNull();
+			expect(snapshotStore.error).toBeNull();
+			expect(snapshotStore.uploadProgress).toBe(0);
+		});
+
+		it('should reset all snapshot data', () => {
+			// Set some state first
+			snapshotStore.loadFromFile(createMockFile(JSON.stringify(createMockClassroomSnapshot())));
+			
+			snapshotStore.resetAll();
+
+			expect(snapshotStore.currentSnapshot).toBeNull();
+			expect(snapshotStore.previousSnapshot).toBeNull();
+			expect(snapshotStore.diffData).toBeNull();
+			expect(snapshotStore.error).toBeNull();
+			expect(snapshotStore.uploadProgress).toBe(0);
+			expect(snapshotStore.loading).toBe(false);
 		});
 	});
 
 	describe('Diff Generation', () => {
 		it('should generate diff when both snapshots exist', async () => {
-			const currentSnapshot = createMockClassroomSnapshot();
-			const previousSnapshot = createMockClassroomSnapshot();
-			const mockDiffResult = createMockDiffData();
+			const firstSnapshot = createMockClassroomSnapshot();
+			const secondSnapshot = { ...createMockClassroomSnapshot(), teacher: { ...firstSnapshot.teacher, name: 'Updated Teacher' } };
+			const mockDiffResult = { teacher: { name: ['Original Teacher', 'Updated Teacher'] } };
 
-			// Set up snapshots
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = currentSnapshot;
-			storeInternal.previousSnapshot = previousSnapshot;
-
-			// Mock jsondiffpatch
 			mockDiffer.diff.mockReturnValue(mockDiffResult);
 
-			await snapshotStore.generateDiff();
-
-			expect(mockCreate).toHaveBeenCalledWith({
-				objectHash: expect.any(Function),
-				arrays: { detectMove: true }
+			// Load first snapshot
+			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
+				success: true,
+				data: firstSnapshot
 			});
-			expect(mockDiffer.diff).toHaveBeenCalledWith(previousSnapshot, currentSnapshot);
+			await snapshotStore.loadFromFile(createMockFile(JSON.stringify(firstSnapshot)));
+
+			// Load second snapshot (should generate diff)
+			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
+				success: true,
+				data: secondSnapshot
+			});
+			await snapshotStore.loadFromFile(createMockFile(JSON.stringify(secondSnapshot)));
+
+			expect(mockDiffer.diff).toHaveBeenCalledWith(firstSnapshot, secondSnapshot);
 			expect(snapshotStore.diffData).toEqual(mockDiffResult);
-			expect(snapshotStore.showDiff).toBe(true);
 		});
 
-		it('should not generate diff when current snapshot is missing', async () => {
-			const previousSnapshot = createMockClassroomSnapshot();
+		it('should not generate diff when no previous snapshot exists', async () => {
+			const mockSnapshot = createMockClassroomSnapshot();
 
-			// Set up only previous snapshot
-			const storeInternal = snapshotStore as any;
-			storeInternal.previousSnapshot = previousSnapshot;
-
-			await snapshotStore.generateDiff();
+			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
+				success: true,
+				data: mockSnapshot
+			});
+			await snapshotStore.loadFromFile(createMockFile(JSON.stringify(mockSnapshot)));
 
 			expect(mockDiffer.diff).not.toHaveBeenCalled();
 			expect(snapshotStore.diffData).toBeNull();
-			expect(snapshotStore.showDiff).toBe(false);
 		});
 
-		it('should not generate diff when previous snapshot is missing', async () => {
-			const currentSnapshot = createMockClassroomSnapshot();
+		it('should compare snapshots directly', () => {
+			const snapshot1 = createMockClassroomSnapshot();
+			const snapshot2 = { ...createMockClassroomSnapshot(), teacher: { ...snapshot1.teacher, name: 'Different' } };
+			const mockDiffResult = { teacher: { name: ['Original', 'Different'] } };
 
-			// Set up only current snapshot
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = currentSnapshot;
+			mockDiffer.diff.mockReturnValue(mockDiffResult);
 
-			await snapshotStore.generateDiff();
+			const result = snapshotStore.compareSnapshots(snapshot1, snapshot2);
 
-			expect(mockDiffer.diff).not.toHaveBeenCalled();
-			expect(snapshotStore.diffData).toBeNull();
-			expect(snapshotStore.showDiff).toBe(false);
-		});
-
-		it('should handle diff generation errors', async () => {
-			const currentSnapshot = createMockClassroomSnapshot();
-			const previousSnapshot = createMockClassroomSnapshot();
-
-			// Set up snapshots
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = currentSnapshot;
-			storeInternal.previousSnapshot = previousSnapshot;
-
-			// Mock jsondiffpatch error
-			mockDiffer.diff.mockImplementation(() => {
-				throw new Error('Diff generation failed');
-			});
-
-			await snapshotStore.generateDiff();
-
-			expect(snapshotStore.error).toBe('Failed to generate diff');
-			expect(snapshotStore.diffData).toBeNull();
+			expect(mockDiffer.diff).toHaveBeenCalledWith(snapshot1, snapshot2);
+			expect(result).toEqual(mockDiffResult);
 		});
 	});
 
-	describe('Snapshot Import', () => {
-		it('should import snapshot successfully', async () => {
-			const testSnapshot = createMockClassroomSnapshot();
-
-			// Set up snapshot
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = testSnapshot;
-
-			const result = await snapshotStore.importSnapshot();
-
-			expect(result.success).toBe(true);
-			expect(result.snapshotId).toBe('test-uuid-123');
-			expect(result.message).toBe('Snapshot imported successfully');
-			expect(snapshotStore.importing).toBe(false);
-
-			// Check history was updated
-			expect(snapshotStore.importHistory).toHaveLength(1);
-			const historyEntry = snapshotStore.importHistory[0];
-			expect(historyEntry.id).toBe('test-uuid-123');
-			expect(historyEntry.source).toBe(testSnapshot.snapshotMetadata.source);
-			expect(historyEntry.classroomCount).toBe(testSnapshot.classrooms.length);
-		});
-
-		it('should handle import without snapshot', async () => {
-			const result = await snapshotStore.importSnapshot();
-
-			expect(result.success).toBe(false);
-			expect(result.message).toBe('No validated snapshot to import');
-			expect(snapshotStore.importing).toBe(false);
-		});
-
-		it('should handle import simulation failure', async () => {
-			const testSnapshot = createMockClassroomSnapshot();
-
-			// Set up snapshot
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = testSnapshot;
-
-			// Mock Math.random to always trigger simulated failure
-			const originalMathRandom = Math.random;
-			Math.random = vi.fn(() => 0.05); // Less than 0.1 threshold
-
-			const result = await snapshotStore.importSnapshot();
-
-			expect(result.success).toBe(false);
-			expect(result.message).toBe('Import failed (simulated error)');
-			expect(snapshotStore.error).toBe('Import failed (simulated error)');
-			expect(snapshotStore.importing).toBe(false);
-
-			// Restore Math.random
-			Math.random = originalMathRandom;
-		});
-
-		it('should set importing state during import', async () => {
-			const testSnapshot = createMockClassroomSnapshot();
-
-			// Set up snapshot
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = testSnapshot;
-
-			// Mock Math.random to avoid random failures
-			Math.random = vi.fn(() => 0.95);
-
-			// Start import
-			const importPromise = snapshotStore.importSnapshot();
-
-			// Check importing state (may be brief due to simulation)
-			// Note: Due to async nature and setTimeout, this test may be flaky
-			// In real scenarios, this would be more reliable with actual API calls
-
-			const result = await importPromise;
-
-			expect(result.success).toBe(true);
-			expect(snapshotStore.importing).toBe(false);
-		});
-
-		it('should update previous snapshot after successful import', async () => {
-			const testSnapshot = createMockClassroomSnapshot();
-
-			// Set up snapshot
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = testSnapshot;
-
-			// Mock Math.random for success
-			Math.random = vi.fn(() => 0.95);
-
-			await snapshotStore.importSnapshot();
-
-			expect(snapshotStore.previousSnapshot).toEqual(testSnapshot);
-		});
-
-		it('should track hasChanges in history entry', async () => {
-			const testSnapshot = createMockClassroomSnapshot();
-			const mockDiffResult = createMockDiffData();
-
-			// Set up snapshot and diff
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = testSnapshot;
-			storeInternal.diffData = mockDiffResult;
-
-			Math.random = vi.fn(() => 0.95);
-
-			await snapshotStore.importSnapshot();
-
-			expect(snapshotStore.importHistory[0].hasChanges).toBe(true);
-		});
-
-		it('should track no changes when diff is null', async () => {
-			const testSnapshot = createMockClassroomSnapshot();
-
-			// Set up snapshot without diff
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = testSnapshot;
-			storeInternal.diffData = null;
-
-			Math.random = vi.fn(() => 0.95);
-
-			await snapshotStore.importSnapshot();
-
-			expect(snapshotStore.importHistory[0].hasChanges).toBe(false);
-		});
-	});
-
-	describe('Import History', () => {
-		it('should load empty import history', async () => {
-			await snapshotStore.loadImportHistory();
-
-			expect(snapshotStore.importHistory).toEqual([]);
-			expect(snapshotStore.loadingHistory).toBe(false);
-			expect(snapshotStore.error).toBeNull();
-		});
-
-		it('should set loading state during history load', async () => {
-			// Since loadImportHistory is currently mocked, we test the loading state pattern
-			const loadPromise = snapshotStore.loadImportHistory();
-
-			// Due to the mock implementation, loading state may be brief
-			await loadPromise;
-
-			expect(snapshotStore.loadingHistory).toBe(false);
-		});
-
-		it('should handle history loading errors', async () => {
-			// Override the store method to simulate error
-			const originalMethod = snapshotStore.loadImportHistory;
-			(snapshotStore as any).loadImportHistory = async () => {
-				const storeInternal = snapshotStore as any;
-				storeInternal.loadingHistory = true;
-				try {
-					throw new Error('History load failed');
-				} catch (error) {
-					storeInternal.error = (error as Error).message;
-				} finally {
-					storeInternal.loadingHistory = false;
-				}
-			};
-
-			await snapshotStore.loadImportHistory();
-
-			expect(snapshotStore.error).toBe('History load failed');
-			expect(snapshotStore.loadingHistory).toBe(false);
-
-			// Restore original method
-			(snapshotStore as any).loadImportHistory = originalMethod;
-		});
-	});
-
-	describe('Edge Cases and Error Handling', () => {
-		it('should handle very large snapshot files', async () => {
-			const largeSnapshot = createMockClassroomSnapshot();
-			// Add many classrooms to make it large
-			largeSnapshot.classrooms = Array.from(
-				{ length: 1000 },
-				(_, i) => mockData.classroom // This would create a large dataset
-			);
-
-			const largeFile = createMockFile(JSON.stringify(largeSnapshot), 'large-snapshot.json');
-			snapshotStore.setImportFile(largeFile);
-
-			// Mock FileReader for large file
-			mockFileReader.addEventListener = vi.fn((event, callback) => {
-				if (event === 'load') {
-					mockFileReader.result = JSON.stringify(largeSnapshot);
-					setTimeout(() => callback({ target: { result: JSON.stringify(largeSnapshot) } }), 0);
-				}
-			});
-
+	describe('Validation Utility', () => {
+		it('should validate correct snapshot data', () => {
+			const validSnapshot = createMockClassroomSnapshot();
+			
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 				success: true,
-				data: largeSnapshot
+				data: validSnapshot
 			});
 
-			const result = await snapshotStore.validateImportFile();
+			const result = snapshotStore.validateSnapshot(validSnapshot);
 
-			expect(result).toBe(true);
-			expect(snapshotStore.currentSnapshot?.classrooms).toHaveLength(1000);
+			expect(result.isValid).toBe(true);
+			expect(result.snapshot).toEqual(validSnapshot);
+			expect(result.error).toBeUndefined();
 		});
 
-		it('should handle concurrent validation attempts', async () => {
-			const testFile = createMockFile();
-			snapshotStore.setImportFile(testFile);
-
-			// Mock FileReader
-			mockFileReader.addEventListener = vi.fn((event, callback) => {
-				if (event === 'load') {
-					mockFileReader.result = JSON.stringify(mockData.snapshot);
-					setTimeout(() => callback({ target: { result: JSON.stringify(mockData.snapshot) } }), 10);
-				}
-			});
-
+		it('should identify invalid snapshot data', () => {
+			const invalidData = { invalid: 'snapshot' };
+			
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
-				success: true,
-				data: mockData.snapshot
+				success: false,
+				error: { message: 'Invalid schema' }
 			});
 
-			// Start multiple validations
-			const promise1 = snapshotStore.validateImportFile();
-			const promise2 = snapshotStore.validateImportFile();
-			const promise3 = snapshotStore.validateImportFile();
+			const result = snapshotStore.validateSnapshot(invalidData);
 
-			const results = await Promise.all([promise1, promise2, promise3]);
-
-			// All should succeed, but validation should only happen once
-			expect(results).toEqual([true, true, true]);
-			expect(snapshotStore.currentSnapshot).toEqual(mockData.snapshot);
+			expect(result.isValid).toBe(false);
+			expect(result.error).toBe('Invalid schema');
+			expect(result.snapshot).toBeUndefined();
 		});
 
-		it('should handle malformed diff data gracefully', async () => {
-			const currentSnapshot = createMockClassroomSnapshot();
-			const previousSnapshot = createMockClassroomSnapshot();
+		it('should handle validation exceptions', () => {
+			const invalidData = { test: 'data' };
+			
+			mockClassroomSnapshotSchema.safeParse.mockImplementation(() => {
+				throw new Error('Parse error');
+			});
 
-			// Set up snapshots
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = currentSnapshot;
-			storeInternal.previousSnapshot = previousSnapshot;
+			const result = snapshotStore.validateSnapshot(invalidData);
 
-			// Mock jsondiffpatch to return malformed data
-			mockDiffer.diff.mockReturnValue(null);
-
-			await snapshotStore.generateDiff();
-
-			expect(snapshotStore.diffData).toBeNull();
-			expect(snapshotStore.showDiff).toBe(true); // Still shows even with null diff
-		});
-
-		it('should handle import with missing snapshot metadata', async () => {
-			const testSnapshot = createMockClassroomSnapshot();
-			delete (testSnapshot as any).snapshotMetadata;
-
-			// Set up snapshot
-			const storeInternal = snapshotStore as any;
-			storeInternal.currentSnapshot = testSnapshot;
-
-			Math.random = vi.fn(() => 0.95);
-
-			// Should handle gracefully even with missing metadata
-			const result = await snapshotStore.importSnapshot();
-
-			expect(result.success).toBe(true);
+			expect(result.isValid).toBe(false);
+			expect(result.error).toBe('Parse error');
 		});
 	});
 
-	describe('Integration Tests', () => {
-		it('should handle complete upload-to-import workflow', async () => {
-			const testSnapshot = createMockClassroomSnapshot();
-			const testFile = createMockFile(JSON.stringify(testSnapshot));
+	describe('Error Handling', () => {
+		it('should handle file reading errors gracefully', async () => {
+			const errorFile = createMockFile('valid json');
+			errorFile.text = vi.fn().mockRejectedValue(new Error('File read error'));
 
-			// Step 1: Set file
-			snapshotStore.setImportFile(testFile);
-			expect(snapshotStore.importFile).toBe(testFile);
+			await snapshotStore.loadFromFile(errorFile);
 
-			// Step 2: Validate file
-			mockFileReader.addEventListener = vi.fn((event, callback) => {
-				if (event === 'load') {
-					mockFileReader.result = JSON.stringify(testSnapshot);
-					setTimeout(() => callback({ target: { result: JSON.stringify(testSnapshot) } }), 0);
-				}
-			});
-
-			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
-				success: true,
-				data: testSnapshot
-			});
-
-			const validationResult = await snapshotStore.validateImportFile();
-			expect(validationResult).toBe(true);
-			expect(snapshotStore.currentSnapshot).toEqual(testSnapshot);
-
-			// Step 3: Generate diff (no previous snapshot, so no diff)
-			await snapshotStore.generateDiff();
-			expect(snapshotStore.diffData).toBeNull();
-
-			// Step 4: Import
-			Math.random = vi.fn(() => 0.95);
-			const importResult = await snapshotStore.importSnapshot();
-			expect(importResult.success).toBe(true);
-
-			// Verify final state
-			expect(snapshotStore.previousSnapshot).toEqual(testSnapshot);
-			expect(snapshotStore.importHistory).toHaveLength(1);
-			expect(snapshotStore.importing).toBe(false);
+			expect(snapshotStore.error).toBe('File read error'); // Error matches the thrown error message
+			expect(snapshotStore.loading).toBe(false);
+			expect(snapshotStore.currentSnapshot).toBeNull();
 		});
 
-		it('should handle workflow with errors at each step', async () => {
-			// Step 1: File validation error
-			snapshotStore.setImportFile(createInvalidMockFile());
-
-			mockFileReader.addEventListener = vi.fn((event, callback) => {
-				if (event === 'load') {
-					mockFileReader.result = '{ invalid json }';
-					setTimeout(() => callback({ target: { result: '{ invalid json }' } }), 0);
-				}
-			});
-
-			let result = await snapshotStore.validateImportFile();
-			expect(result).toBe(false);
+		it('should reset error state on successful load', async () => {
+			const mockSnapshot = createMockClassroomSnapshot();
+			
+			// First, set an error state
+			const errorFile = createMockFile('invalid json');
+			await snapshotStore.loadFromFile(errorFile);
 			expect(snapshotStore.error).toBeTruthy();
 
-			// Step 2: Clear error and try valid file
-			snapshotStore.clearError();
-			const testSnapshot = createMockClassroomSnapshot();
-			const validFile = createMockFile(JSON.stringify(testSnapshot));
-			snapshotStore.setImportFile(validFile);
-
-			mockFileReader.addEventListener = vi.fn((event, callback) => {
-				if (event === 'load') {
-					mockFileReader.result = JSON.stringify(testSnapshot);
-					setTimeout(() => callback({ target: { result: JSON.stringify(testSnapshot) } }), 0);
-				}
-			});
-
+			// Then load a valid file
 			mockClassroomSnapshotSchema.safeParse.mockReturnValue({
 				success: true,
-				data: testSnapshot
+				data: mockSnapshot
 			});
+			const validFile = createMockFile(JSON.stringify(mockSnapshot));
+			await snapshotStore.loadFromFile(validFile);
 
-			result = await snapshotStore.validateImportFile();
-			expect(result).toBe(true);
 			expect(snapshotStore.error).toBeNull();
-
-			// Step 3: Simulate import failure
-			Math.random = vi.fn(() => 0.05); // Force failure
-			const importResult = await snapshotStore.importSnapshot();
-			expect(importResult.success).toBe(false);
-			expect(snapshotStore.error).toBeTruthy();
+			expect(snapshotStore.currentSnapshot).toEqual(mockSnapshot);
 		});
 	});
 });
