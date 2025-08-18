@@ -39,7 +39,7 @@ import { getTeacherDashboard, getTeacherClassroomsBasic, getClassroomStats, getC
 import { getStudentDashboard, getStudentAssignments, getStudentActivity } from "./routes/student-dashboard";
 import { handleClassroomSyncWebhook, getWebhookStatus } from "./routes/webhooks";
 import { getUserProfile, checkUserProfileExists, updateSchoolEmail } from "./routes/users";
-import { sendPasscode, verifyPasscode, resetStudentAuth, deleteUser, setupTeacherProfile, storeGmailToken, storePasscode, sendPasscodeFirebase, generateAndSendPasscode } from "./routes/auth";
+import { deleteUser, setupTeacherProfile, storePasscode, sendPasscodeFirebase, generateAndSendPasscode } from "./routes/auth";
 import { studentRequestPasscode } from "./routes/auth/student-request-passcode";
 import { debugSheetsPermissions } from "./routes/debug";
 import { getServiceAccountInfo, testSheetAccess } from "./routes/webhook-debug";
@@ -303,23 +303,11 @@ export const api = onRequest(
         (request as RequestWithParams).params = { uid };
         await deleteUser(request, response); return;
       }
-      if (method === "POST" && path === "/auth/send-passcode") {
-        await sendPasscode(request, response); return;
-      }
-      if (method === "POST" && path === "/auth/verify-passcode") {
-        await verifyPasscode(request, response); return;
-      }
       if (method === "POST" && path === "/auth/student-request-passcode") {
         await studentRequestPasscode(request, response); return;
       }
-      if (method === "POST" && path === "/auth/reset-student") {
-        await resetStudentAuth(request, response); return;
-      }
       if (method === "POST" && path === "/auth/setup-teacher-profile") {
         await setupTeacherProfile(request, response); return;
-      }
-      if (method === "POST" && path === "/auth/store-gmail-token") {
-        await storeGmailToken(request, response); return;
       }
       if (method === "POST" && path === "/auth/store-passcode") {
         await storePasscode(request, response); return;

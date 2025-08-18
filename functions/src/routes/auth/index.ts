@@ -16,12 +16,8 @@ export {
   getCurrentUser
 } from "./session";
 
-// Student passcode authentication
-export {
-  sendPasscode,
-  verifyPasscode,
-  resetStudentAuth
-} from "./passcode";
+// Student passcode authentication is now handled by student-request-passcode.ts
+// Legacy Gmail-based verify/reset endpoints removed
 
 // User deletion (for testing)
 export {
@@ -33,10 +29,6 @@ export {
   setupTeacherProfile
 } from "./setup-teacher-profile";
 
-// Gmail token storage (for email sending) - DEPRECATED
-export {
-  storeGmailToken
-} from "./store-gmail-token";
 
 // New Firebase-based passcode endpoints
 export {

@@ -220,10 +220,8 @@ export const userDomainSchema = baseDocumentSchema.extend({
   totalStudents: z.number().int().min(0).default(0), // Cached count for teachers
   isActive: z.boolean().default(true),
   lastLogin: firebaseTimestampSchema.optional(),
-  // Gmail integration fields
-  gmailAccessToken: z.string().optional(), // OAuth access token for Gmail sending
-  gmailTokenExpiresAt: z.date().optional(), // Token expiration timestamp
-  gmailTokenUpdatedAt: firebaseTimestampSchema.optional() // When token was last updated
+  // Email integration now handled by Brevo service
+  // Gmail fields removed - no longer needed
 });
 
 export type UserDomain = z.infer<typeof userDomainSchema>;
