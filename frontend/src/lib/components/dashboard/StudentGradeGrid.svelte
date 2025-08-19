@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { dataStore } from '$lib/stores/data-store.svelte';
-	import { Badge, Button } from '$lib/components/ui';
+	import { Badge } from '$lib/components/ui';
 	import type { Grade } from '@shared/schemas/core';
 
 	// Get reactive data from store
@@ -12,7 +12,7 @@
 	$effect(() => {
 		const classroomId = dataStore.selectedClassroomId;
 		const viewMode = dataStore.viewMode;
-		
+
 		console.log('🔄 StudentGradeGrid effect triggered:', {
 			classroomId,
 			viewMode,
@@ -80,12 +80,6 @@
 		console.log('📱 Grade cell clicked:', { studentId, assignmentId });
 		// TODO: Implement navigation to grading interface
 	}
-
-	// Export grades functionality
-	function exportGrades() {
-		console.log('📄 Exporting grades...');
-		// TODO: Implement CSV export
-	}
 </script>
 
 <div class="flex h-full flex-col">
@@ -113,25 +107,6 @@
 			</div>
 		</div>
 	{:else}
-		<!-- Grade Grid Header -->
-		<div class="border-b border-gray-200 bg-white px-6 py-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<h2 class="text-xl font-semibold text-gray-900">Grade Grid</h2>
-					<p class="mt-1 text-sm text-gray-600">
-						{selectedClassroom.name} • {gradeGridData.students?.length || 0} students • {gradeGridData.assignments?.length || 0} assignments
-					</p>
-				</div>
-				<div class="flex space-x-2">
-					<Button variant="secondary" onclick={exportGrades}>
-						{#snippet children()}
-							📄 Export CSV
-						{/snippet}
-					</Button>
-				</div>
-			</div>
-		</div>
-
 		<!-- Grade Grid Table -->
 		<div class="flex-1 overflow-auto">
 			{#if loadingGridData}
@@ -169,23 +144,23 @@
 				<div class="overflow-x-auto">
 					<table class="min-w-full divide-y divide-gray-200">
 						<!-- Table Header -->
-						<thead class="bg-gray-50 sticky top-0 z-10">
+						<thead class="sticky top-0 z-10 bg-gray-50">
 							<tr>
 								<!-- Student Name Column -->
 								<th
-									class="sticky left-0 z-20 bg-gray-50 px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase border-r border-gray-300"
+									class="sticky left-0 z-20 border-r border-gray-300 bg-gray-50 px-3 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 								>
 									Student
 								</th>
 								<!-- Assignment Columns -->
 								{#each gradeGridData.assignments || [] as assignment (assignment.id)}
 									<th
-										class="px-3 py-3 text-center text-xs font-medium tracking-wider text-gray-500 uppercase min-w-24 max-w-32"
+										class="max-w-32 min-w-24 px-2 py-2 text-center text-xs font-medium tracking-wider text-gray-500 uppercase"
 									>
 										<div class="truncate" title={assignment.title || assignment.name}>
 											{assignment.title || assignment.name || 'Untitled'}
 										</div>
-										<div class="text-xs text-gray-400 mt-1">
+										<div class="mt-1 text-xs text-gray-400">
 											{assignment.type === 'quiz' ? 'Quiz' : 'Assignment'}
 										</div>
 									</th>
@@ -199,26 +174,11 @@
 								<tr class="hover:bg-gray-50">
 									<!-- Student Name Cell (Sticky) -->
 									<td
-										class="sticky left-0 z-10 bg-white px-6 py-4 whitespace-nowrap border-r border-gray-300"
+										class="sticky left-0 z-10 border-r border-gray-300 bg-white px-3 py-2 whitespace-nowrap"
 									>
-										<div class="flex items-center">
-											<div class="h-8 w-8 flex-shrink-0">
-												<div
-													class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200"
-												>
-													<span class="text-xs font-medium text-gray-700">
-														{student.name
-															.split(' ')
-															.map((n) => n[0])
-															.join('')
-															.toUpperCase()}
-													</span>
-												</div>
-											</div>
-											<div class="ml-3">
-												<div class="text-sm font-medium text-gray-900">{student.name}</div>
-												<div class="text-xs text-gray-500">{student.email}</div>
-											</div>
+										<div class="flex items-center gap-2">
+											<span class="text-sm font-medium text-gray-900">{student.name}</span>
+											<span class="text-xs text-gray-400">({student.email.split('@')[0]})</span>
 										</div>
 									</td>
 
@@ -226,7 +186,7 @@
 									{#each gradeGridData.assignments || [] as assignment (assignment.id)}
 										{@const grade = getGrade(student.id, assignment.id)}
 										<td
-											class="px-3 py-4 text-center cursor-pointer transition-colors {getGradeBackground(
+											class="cursor-pointer px-2 py-1 text-center transition-colors {getGradeBackground(
 												grade
 											)} hover:bg-opacity-80"
 											onclick={() => handleCellClick(student.id, assignment.id)}
@@ -234,11 +194,6 @@
 											<div class="text-sm font-medium {getGradeColor(grade)}">
 												{formatGrade(grade)}
 											</div>
-											{#if grade && grade.percentage !== undefined}
-												<div class="text-xs text-gray-500 mt-1">
-													{grade.percentage}%
-												</div>
-											{/if}
 										</td>
 									{/each}
 								</tr>
@@ -257,15 +212,15 @@
 		scrollbar-width: thin;
 		scrollbar-color: #cbd5e0 #f7fafc;
 	}
-	
+
 	.overflow-x-auto::-webkit-scrollbar {
 		height: 8px;
 	}
-	
+
 	.overflow-x-auto::-webkit-scrollbar-track {
 		background: #f7fafc;
 	}
-	
+
 	.overflow-x-auto::-webkit-scrollbar-thumb {
 		background-color: #cbd5e0;
 		border-radius: 4px;

@@ -102,58 +102,6 @@
 			</div>
 		</div>
 	{:else}
-		<!-- Assignment Header -->
-		<div class="border-b border-gray-200 bg-white px-6 py-4">
-			<div class="flex items-center justify-between">
-				<div>
-					<h2 class="text-xl font-semibold text-gray-900">
-						{selectedAssignment.title || selectedAssignment.name || 'Untitled Assignment'}
-					</h2>
-					<p class="mt-1 text-sm text-gray-600">
-						{selectedClassroom.name} • {selectedAssignment.type || 'Assignment'} • Max Score: {selectedAssignment.maxScore ||
-							selectedAssignment.maxPoints ||
-							0} points
-					</p>
-				</div>
-				<div class="flex space-x-2">
-					<Button variant="secondary">
-						{#snippet children()}
-							Export Grades
-						{/snippet}
-					</Button>
-					<Button variant="primary">
-						{#snippet children()}
-							Grade All
-						{/snippet}
-					</Button>
-				</div>
-			</div>
-		</div>
-
-		<!-- Statistics Cards -->
-		<div class="grid grid-cols-5 gap-4 border-b border-gray-200 bg-gray-50 px-6 py-4">
-			<div class="text-center">
-				<div class="text-2xl font-bold text-gray-900">{stats.total}</div>
-				<div class="text-xs tracking-wider text-gray-600 uppercase">Total Students</div>
-			</div>
-			<div class="text-center">
-				<div class="text-2xl font-bold text-blue-600">{stats.submitted}</div>
-				<div class="text-xs tracking-wider text-gray-600 uppercase">Submitted</div>
-			</div>
-			<div class="text-center">
-				<div class="text-2xl font-bold text-green-600">{stats.graded}</div>
-				<div class="text-xs tracking-wider text-gray-600 uppercase">Graded</div>
-			</div>
-			<div class="text-center">
-				<div class="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-				<div class="text-xs tracking-wider text-gray-600 uppercase">Pending Review</div>
-			</div>
-			<div class="text-center">
-				<div class="text-2xl font-bold text-purple-600">{stats.averageGrade}%</div>
-				<div class="text-xs tracking-wider text-gray-600 uppercase">Average Grade</div>
-			</div>
-		</div>
-
 		<!-- Student Table -->
 		<div class="flex-1 overflow-auto">
 			{#if loadingStudentProgress}

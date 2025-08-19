@@ -35,18 +35,17 @@
 	});
 </script>
 
-<div class="relative border-b border-gray-200 bg-white px-6 py-4">
+<div class="relative border-b border-gray-200 bg-white px-6 py-2">
 	<div class="flex items-center justify-between">
 		<!-- Classroom Info -->
 		<div class="flex items-center space-x-4">
 			<div>
-
 				{#if loading}
 					<div class="mt-1 h-8 w-48 animate-pulse rounded bg-gray-200"></div>
 				{:else if selectedClassroom}
 					<button
 						onclick={toggleDropdown}
-						class="mt-1 flex items-center space-x-2 rounded-lg px-3 py-2 text-left transition-colors hover:bg-gray-50"
+						class="mt-1 flex items-center space-x-2 rounded-lg px-3 py-1 text-left transition-colors hover:bg-gray-50"
 						class:bg-gray-50={isDropdownOpen}
 					>
 						<div>
@@ -128,7 +127,8 @@
 			{#if selectedClassroom}
 				<div class="flex items-center space-x-1 rounded-lg border border-gray-200 bg-white p-1">
 					<button
-						class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {viewMode === 'assignment'
+						class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {viewMode ===
+						'assignment'
 							? 'bg-blue-100 text-blue-700'
 							: 'text-gray-700 hover:bg-gray-100'}"
 						onclick={() => setViewMode('assignment')}
@@ -149,13 +149,13 @@
 			<!-- Quick Action Buttons -->
 			<div class="flex items-center space-x-2">
 				<button
-					class="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+					class="rounded-lg px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
 					onclick={() => (window.location.href = '/teacher/data-import')}
 				>
 					Import Data
 				</button>
 				<button
-					class="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+					class="rounded-lg px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
 					onclick={() => dataStore.setLoading(true)}
 					disabled={loading}
 				>

@@ -16,7 +16,7 @@
 <AuthGuard requiredRole="teacher">
 	{#snippet children()}
 		<!-- Three-panel layout: Full viewport height, no padding needed at this level -->
-		<div class="flex h-[calc(100vh-4rem)] flex-col">
+		<div class="flex h-[calc(100vh-3rem)] flex-col">
 			<!-- Child pages will implement the three-panel structure -->
 			{@render children?.()}
 		</div>

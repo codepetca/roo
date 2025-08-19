@@ -81,14 +81,8 @@
 
 <div class="flex h-full w-80 flex-col border-r border-gray-200 bg-gray-50">
 	<!-- Header -->
-	<div class="border-b border-gray-200 bg-white px-4 py-3">
+	<div class="border-b border-gray-200 bg-white px-4 py-2">
 		<h3 class="text-sm font-semibold tracking-wider text-gray-900 uppercase">Assignments</h3>
-		{#if selectedClassroomId && Array.isArray(assignments) && assignments.length > 0}
-			<p class="mt-1 text-xs text-gray-600">
-				{assignments.length} total ({groupedAssignments?.quizzes?.length || 0} quizzes, {groupedAssignments
-					?.assignments?.length || 0} assignments)
-			</p>
-		{/if}
 	</div>
 
 	<!-- Assignment List -->
@@ -138,70 +132,53 @@
 						/>
 					</svg>
 					<p class="mt-2 text-sm text-gray-600">No assignments in this classroom</p>
-					<button
-						class="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-						onclick={() => console.log('Create assignment')}
-					>
-						Create First Assignment
-					</button>
 				</div>
 			</div>
 		{:else}
-			<div class="space-y-4 p-3">
+			<div>
 				<!-- Quizzes Section -->
 				{#if groupedAssignments?.quizzes?.length > 0}
 					<div>
-						<h4 class="mb-2 px-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+						<h4
+							class="mb-1 bg-gray-100 px-3 py-1 text-xs font-bold tracking-wider text-gray-800 uppercase"
+						>
 							Quizzes ({groupedAssignments.quizzes.length})
 						</h4>
-						<div class="space-y-2">
+						<div>
 							{#each groupedAssignments.quizzes as assignment (assignment.id)}
 								<button
 									onclick={() => selectAssignment(assignment.id)}
-									class="w-full rounded-lg border bg-white p-3 text-left transition-all hover:shadow-sm"
-									class:border-blue-500={assignment.id === selectedAssignmentId}
+									class="w-full border-b border-gray-200 bg-white py-2 text-left transition-all hover:bg-gray-50"
 									class:bg-blue-50={assignment.id === selectedAssignmentId}
-									class:border-gray-200={assignment.id !== selectedAssignmentId}
+									class:border-blue-500={assignment.id === selectedAssignmentId}
 								>
-									<div class="flex items-start justify-between">
-										<div class="min-w-0 flex-1">
-											<div class="flex items-center space-x-2">
-												<svg
-													class="h-4 w-4 flex-shrink-0 text-gray-400"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke="currentColor"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d={getAssignmentIcon(assignment.type)}
-													/>
-												</svg>
-												<h5 class="truncate text-sm font-medium text-gray-900">
-													{assignment.title || assignment.name || 'Untitled Quiz'}
-												</h5>
-											</div>
-											<div class="mt-1 flex items-center space-x-2 text-xs text-gray-600">
-												<span>Max: {assignment.maxScore || assignment.maxPoints || 0} pts</span>
-												{#if assignment.dueDate}
-													<span>•</span>
-													<span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
-												{/if}
-											</div>
+									<div class="min-w-0 flex-1 px-3">
+										<div class="flex items-center space-x-2">
+											<svg
+												class="h-4 w-4 flex-shrink-0 text-gray-400"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d={getAssignmentIcon(assignment.type)}
+												/>
+											</svg>
+											<h5 class="truncate text-sm font-medium text-gray-900">
+												{assignment.title || assignment.name || 'Untitled Quiz'}
+											</h5>
 										</div>
-										<Badge variant="info" size="sm">
-											{#snippet children()}
-												Quiz
-											{/snippet}
-										</Badge>
+										<div class="mt-1 flex items-center space-x-2 text-xs text-gray-600">
+											<span>Max: {assignment.maxScore || assignment.maxPoints || 0} pts</span>
+											{#if assignment.dueDate}
+												<span>•</span>
+												<span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+											{/if}
+										</div>
 									</div>
-									{#if assignment.id === selectedAssignmentId}
-										<div class="mt-2 flex items-center justify-between text-xs">
-											<span class="font-medium text-blue-600">Currently viewing</span>
-										</div>
-									{/if}
 								</button>
 							{/each}
 						</div>
@@ -211,57 +188,46 @@
 				<!-- Regular Assignments Section -->
 				{#if groupedAssignments?.assignments?.length > 0}
 					<div>
-						<h4 class="mb-2 px-2 text-xs font-semibold tracking-wider text-gray-500 uppercase">
+						<h4
+							class="mb-1 bg-gray-100 px-3 py-1 text-xs font-bold tracking-wider text-gray-800 uppercase"
+						>
 							Assignments ({groupedAssignments?.assignments?.length || 0})
 						</h4>
-						<div class="space-y-2">
+						<div>
 							{#each groupedAssignments?.assignments || [] as assignment (assignment.id)}
 								<button
 									onclick={() => selectAssignment(assignment.id)}
-									class="w-full rounded-lg border bg-white p-3 text-left transition-all hover:shadow-sm"
-									class:border-blue-500={assignment.id === selectedAssignmentId}
+									class="w-full border-b border-gray-200 bg-white py-2 text-left transition-all hover:bg-gray-50"
 									class:bg-blue-50={assignment.id === selectedAssignmentId}
-									class:border-gray-200={assignment.id !== selectedAssignmentId}
+									class:border-blue-500={assignment.id === selectedAssignmentId}
 								>
-									<div class="flex items-start justify-between">
-										<div class="min-w-0 flex-1">
-											<div class="flex items-center space-x-2">
-												<svg
-													class="h-4 w-4 flex-shrink-0 text-gray-400"
-													fill="none"
-													viewBox="0 0 24 24"
-													stroke="currentColor"
-												>
-													<path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d={getAssignmentIcon(assignment.type)}
-													/>
-												</svg>
-												<h5 class="truncate text-sm font-medium text-gray-900">
-													{assignment.title || assignment.name || 'Untitled Assignment'}
-												</h5>
-											</div>
-											<div class="mt-1 flex items-center space-x-2 text-xs text-gray-600">
-												<span>Max: {assignment.maxScore || assignment.maxPoints || 0} pts</span>
-												{#if assignment.dueDate}
-													<span>•</span>
-													<span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
-												{/if}
-											</div>
+									<div class="min-w-0 flex-1 px-3">
+										<div class="flex items-center space-x-2">
+											<svg
+												class="h-4 w-4 flex-shrink-0 text-gray-400"
+												fill="none"
+												viewBox="0 0 24 24"
+												stroke="currentColor"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d={getAssignmentIcon(assignment.type)}
+												/>
+											</svg>
+											<h5 class="truncate text-sm font-medium text-gray-900">
+												{assignment.title || assignment.name || 'Untitled Assignment'}
+											</h5>
 										</div>
-										<Badge variant="secondary" size="sm">
-											{#snippet children()}
-												{assignment.type || 'Assignment'}
-											{/snippet}
-										</Badge>
+										<div class="mt-1 flex items-center space-x-2 text-xs text-gray-600">
+											<span>Max: {assignment.maxScore || assignment.maxPoints || 0} pts</span>
+											{#if assignment.dueDate}
+												<span>•</span>
+												<span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+											{/if}
+										</div>
 									</div>
-									{#if assignment.id === selectedAssignmentId}
-										<div class="mt-2 flex items-center justify-between text-xs">
-											<span class="font-medium text-blue-600">Currently viewing</span>
-										</div>
-									{/if}
 								</button>
 							{/each}
 						</div>
@@ -269,16 +235,5 @@
 				{/if}
 			</div>
 		{/if}
-	</div>
-
-	<!-- Footer Actions -->
-	<div class="border-t border-gray-200 bg-white p-3">
-		<button
-			class="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-			disabled={!selectedClassroomId}
-			onclick={() => console.log('Create new assignment')}
-		>
-			+ New Assignment
-		</button>
 	</div>
 </div>

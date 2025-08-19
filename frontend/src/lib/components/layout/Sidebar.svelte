@@ -34,7 +34,7 @@
 </script>
 
 <aside
-	class="h-[calc(100vh-4rem)] w-64 overflow-y-auto border-r border-gray-200 bg-white shadow-sm"
+	class="h-[calc(100vh-3rem)] w-64 overflow-y-auto border-r border-gray-200 bg-white shadow-sm"
 >
 	<div class="flex h-full flex-col">
 		<!-- Header -->
