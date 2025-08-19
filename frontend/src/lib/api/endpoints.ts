@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod';
-import { typedApiRequest, callFunction } from './client';
+import { typedApiRequest, callFunction, apiRequest } from './client';
 import {
 	// Legacy schemas (keeping for backward compatibility)
 	answerKeyResponseSchema,
@@ -121,7 +121,7 @@ export const api = {
 				assignmentBaseSchema.extend({
 					submissions: z.array(
 						submissionSchema.extend({
-							grade: gradeSchema.nullable()
+							grade: gradeSchema.optional()
 						})
 					),
 					recentSubmissions: z.array(submissionSchema)
@@ -176,7 +176,7 @@ export const api = {
 			{},
 			z.array(
 				submissionSchema.extend({
-					grade: gradeSchema.nullable()
+					grade: gradeSchema.optional()
 				})
 			)
 		);
@@ -187,7 +187,7 @@ export const api = {
 			`/submissions/${submissionId}`,
 			{},
 			submissionSchema.extend({
-				grade: gradeSchema.nullable()
+				grade: gradeSchema.optional()
 			})
 		);
 	},
@@ -712,6 +712,11 @@ export const api = {
 		console.log('🔍 Calling getTeacherDashboard API...');
 
 		try {
+			// First, let's see what the raw API returns without Zod validation
+			const rawResult = await apiRequest('/teacher/dashboard', {});
+			console.log('🔍 DASHBOARD RAW RESULT (no Zod):', rawResult);
+			
+			// Now do the normal validated request
 			const result = await typedApiRequest('/teacher/dashboard', {}, teacherDashboardSchema);
 			console.log('✅ getTeacherDashboard succeeded:', result);
 			return result;
@@ -765,7 +770,7 @@ export const api = {
 				assignmentBaseSchema.extend({
 					submissions: z.array(
 						submissionSchema.extend({
-							grade: gradeSchema.nullable()
+							grade: gradeSchema.optional()
 						})
 					),
 					recentSubmissions: z.array(submissionSchema)

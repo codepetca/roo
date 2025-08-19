@@ -4,8 +4,9 @@
  * Location: frontend/src/lib/stores/data-store.svelte.ts
  */
 
-import type { Classroom, Assignment, DashboardUser, Submission, Grade } from '@shared/schemas/core';
+import type { Classroom, Assignment, DashboardUser, Submission, Grade, SubmissionWithGrade } from '@shared/schemas/core';
 import { SvelteMap } from 'svelte/reactivity';
+import { api } from '$lib/api/endpoints';
 
 /**
  * Simple data store with basic reactive arrays
@@ -32,6 +33,10 @@ class DataStore {
 			details: any;
 		}>
 	>([]);
+
+	// Submission caching for selected assignments
+	submissionsCache = $state(new Map<string, SubmissionWithGrade[]>());
+	loadingSubmissions = $state<boolean>(false);
 
 	// Computed dashboard statistics
 	dashboardStats = $derived({
@@ -89,12 +94,76 @@ class DataStore {
 		return grouped;
 	});
 
-	// Assignments for the selected classroom
-	selectedClassroomAssignments = $derived(() => {
+	// Assignments for the selected classroom - use nested classroom data
+	selectedClassroomAssignments = $derived.by(() => {
 		if (!this.selectedClassroomId) {
+			console.log('📋 No selectedClassroomId, returning empty array');
 			return [];
 		}
-		return this.assignments.filter((a) => a.classroomId === this.selectedClassroomId);
+		
+		// Find the selected classroom and return its nested assignments
+		const classroom = this.classrooms.find(c => c.id === this.selectedClassroomId);
+		console.log('📋 selectedClassroomAssignments debug:', {
+			selectedClassroomId: this.selectedClassroomId,
+			classroom: classroom ? { id: classroom.id, name: classroom.name } : 'not found',
+			hasAssignments: classroom && 'assignments' in classroom,
+			assignmentsType: classroom?.assignments ? typeof classroom.assignments : 'no assignments property',
+			assignmentsLength: Array.isArray(classroom?.assignments) ? classroom.assignments.length : 'not array',
+			assignmentsValue: classroom?.assignments
+		});
+		
+		return classroom?.assignments || [];
+	});
+
+	// Current submissions for selected assignment
+	currentSubmissions = $derived(
+		this.submissionsCache.get(this.selectedAssignmentId || '') || []
+	);
+
+	// Loading state for student progress
+	loadingStudentProgress = $derived(this.loadingSubmissions);
+
+	// Student progress combining enrollments and submissions
+	studentProgress = $derived.by(() => {
+		if (!this.selectedAssignmentId || !this.selectedClassroomId) {
+			console.log('📊 StudentProgress: No assignment or classroom selected');
+			return [];
+		}
+
+		const submissions = this.submissionsCache.get(this.selectedAssignmentId) || [];
+		console.log('📊 StudentProgress:', {
+			selectedAssignmentId: this.selectedAssignmentId,
+			cacheHasSubmissions: this.submissionsCache.has(this.selectedAssignmentId),
+			submissionsCount: submissions.length,
+			loadingSubmissions: this.loadingSubmissions
+		});
+
+		if (submissions.length === 0 && !this.loadingSubmissions) {
+			console.log('📊 StudentProgress: No submissions found and not loading');
+			return [];
+		}
+
+		const studentMap = new Map();
+
+		// Build student progress from submissions
+		submissions.forEach(sub => {
+			studentMap.set(sub.studentId, {
+				studentId: sub.studentId,
+				studentName: sub.studentName,
+				studentEmail: sub.studentEmail,
+				submission: sub,
+				submittedAt: sub.submittedAt,
+				status: sub.status || 'submitted',
+				score: sub.grade?.score,
+				maxScore: sub.grade?.maxScore || this.selectedAssignment?.maxScore,
+				percentage: sub.grade?.percentage,
+				feedback: sub.grade?.feedback
+			});
+		});
+
+		const result = Array.from(studentMap.values());
+		console.log('📊 StudentProgress result:', result.length, 'students');
+		return result;
 	});
 
 	/**
@@ -187,6 +256,45 @@ class DataStore {
 		this.selectedClassroomId = null;
 		this.selectedAssignmentId = null;
 		console.log('🔄 Cleared all selections');
+	}
+
+	/**
+	 * Fetch submissions for a specific assignment
+	 */
+	async fetchSubmissionsForAssignment(assignmentId: string): Promise<void> {
+		// Skip if already cached
+		if (this.submissionsCache.has(assignmentId)) {
+			console.log('📡 Submissions already cached for:', assignmentId);
+			return;
+		}
+
+		console.log('📡 Fetching submissions for assignment:', assignmentId);
+		this.loadingSubmissions = true;
+		this.error = null; // Clear any previous errors
+
+		try {
+			const submissions = await api.getSubmissionsByAssignment(assignmentId);
+			
+			// Ensure reactivity by creating a new Map
+			const newCache = new Map(this.submissionsCache);
+			newCache.set(assignmentId, submissions);
+			this.submissionsCache = newCache;
+			
+			console.log('✅ Submissions loaded and cached:', {
+				assignmentId,
+				submissionsCount: submissions.length,
+				cacheSize: this.submissionsCache.size,
+				firstSubmission: submissions[0] ? {
+					studentName: submissions[0].studentName,
+					status: submissions[0].status
+				} : 'none'
+			});
+		} catch (error) {
+			console.error('❌ Failed to fetch submissions:', error);
+			this.setError('Failed to load submissions');
+		} finally {
+			this.loadingSubmissions = false;
+		}
 	}
 
 	/**

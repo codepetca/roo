@@ -190,6 +190,16 @@ export async function typedApiRequest<T>(
 	if ('data' in rawResponse) {
 		dataToValidate = (rawResponse as any).data;
 		console.debug('🔧 Using nested data property from API response');
+		
+		// Special logging for dashboard endpoint IMMEDIATELY after extraction
+		if (endpoint.includes('teacher/dashboard')) {
+			console.log('🔍 DASHBOARD API DEBUG - Raw API Response:');
+			console.log('Full rawResponse:', rawResponse);
+			console.log('Extracted data field:', dataToValidate);
+			if (dataToValidate && typeof dataToValidate === 'object') {
+				console.log('Keys in extracted data:', Object.keys(dataToValidate));
+			}
+		}
 	} else {
 		// Handle submissions/assignment response format (Format 2)
 		// Backend returns: { success: true, assignmentId: "...", [...submissions] }
@@ -225,8 +235,34 @@ export async function typedApiRequest<T>(
 	// Add detailed logging for debugging validation issues
 	console.debug('Data to validate:', JSON.stringify(dataToValidate, null, 2));
 	console.debug('Schema type:', (schema._def as any).typeName);
+	
+	// Special debug logging for dashboard endpoint
+	if (endpoint.includes('teacher/dashboard')) {
+		console.log('🔍 DASHBOARD API DEBUG - Before Validation:');
+		console.log('Raw dataToValidate:', dataToValidate);
+		if (dataToValidate && typeof dataToValidate === 'object') {
+			console.log('Has teacher?', 'teacher' in dataToValidate);
+			console.log('Has classrooms?', 'classrooms' in dataToValidate);
+			console.log('Classrooms value:', (dataToValidate as any).classrooms);
+			console.log('Classrooms length:', Array.isArray((dataToValidate as any).classrooms) ? (dataToValidate as any).classrooms.length : 'not an array');
+			if ((dataToValidate as any).classrooms && (dataToValidate as any).classrooms.length > 0) {
+				console.log('First classroom:', (dataToValidate as any).classrooms[0]);
+			}
+		}
+	}
 
 	const validation = safeValidateApiResponse(schema, dataToValidate);
+	
+	// Log result after validation for dashboard
+	if (endpoint.includes('teacher/dashboard')) {
+		console.log('🔍 DASHBOARD API DEBUG - After Validation:');
+		console.log('Validation success?', validation.success);
+		if (validation.success && validation.data) {
+			console.log('Validated data:', validation.data);
+			console.log('Validated classrooms:', (validation.data as any).classrooms);
+			console.log('Validated classrooms length:', Array.isArray((validation.data as any).classrooms) ? (validation.data as any).classrooms.length : 'not an array');
+		}
+	}
 
 	if (!validation.success) {
 		console.error('🚨 API RESPONSE VALIDATION FAILED 🚨');
