@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { Badge } from '$lib/components/ui';
+	import { getSortIcon, getSortDescription } from '$lib/utils/sorting';
 	import type { Assignment } from '@shared/schemas/core';
 
 	// Get reactive data from store
@@ -8,6 +9,7 @@
 	let selectedAssignmentId = $derived(dataStore.selectedAssignmentId);
 	let assignments = $derived(dataStore.selectedClassroomAssignments);
 	let loading = $derived(dataStore.loading);
+	let sortField = $derived(dataStore.assignmentSortField);
 
 	// Debug logging for assignment sidebar
 	$effect(() => {
@@ -59,6 +61,10 @@
 		dataStore.selectAssignment(assignmentId);
 	}
 
+	function handleSortToggle() {
+		dataStore.toggleAssignmentSort();
+	}
+
 	function getAssignmentIcon(type: string) {
 		switch (type) {
 			case 'quiz':
@@ -81,8 +87,20 @@
 
 <div class="flex h-full w-80 flex-col border-r border-gray-200 bg-gray-50">
 	<!-- Header -->
-	<div class="border-b border-gray-200 bg-white px-4 py-2">
-		<h3 class="text-sm font-semibold tracking-wider text-gray-900 uppercase">Assessments</h3>
+	<div class="border-b border-gray-200 bg-white">
+		<button
+			onclick={handleSortToggle}
+			class="w-full px-4 py-2 text-left transition-colors hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:outline-none focus:ring-inset"
+			title={getSortDescription(sortField)}
+		>
+			<div class="flex items-center justify-between">
+				<h3 class="text-sm font-semibold tracking-wider text-gray-900 uppercase">Assessments</h3>
+				<span class="ml-2 text-xs text-gray-500">
+					{sortField === 'date' ? '📅' : '🔤'}
+					{getSortIcon(true, 'asc')}
+				</span>
+			</div>
+		</button>
 	</div>
 
 	<!-- Assignment List -->

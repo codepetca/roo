@@ -88,7 +88,6 @@
 						{/snippet}
 					</Badge>
 
-
 					{#if selectedClassroom.ungradedSubmissions && selectedClassroom.ungradedSubmissions > 0}
 						<Badge variant="warning">
 							{#snippet children()}

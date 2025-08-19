@@ -14,6 +14,15 @@ import type {
 } from '@shared/schemas/core';
 import { SvelteMap } from 'svelte/reactivity';
 import { api } from '$lib/api/endpoints';
+import {
+	sortAssignments,
+	sortStudentProgress,
+	type AssignmentSortField,
+	type StudentSortField,
+	type SortDirection,
+	getNextSortDirection,
+	getNextAssignmentSortField
+} from '$lib/utils/sorting';
 
 /**
  * Simple data store with basic reactive arrays
@@ -82,6 +91,11 @@ class DataStore {
 	// View mode state
 	viewMode = $state<'assignment' | 'grid'>('assignment');
 
+	// Sorting state
+	assignmentSortField = $state<AssignmentSortField>('date');
+	studentSortField = $state<StudentSortField>('name');
+	studentSortDirection = $state<SortDirection>('asc');
+
 	selectedClassroom = $derived(
 		this.selectedClassroomId
 			? (this.classrooms.find((c) => c.id === this.selectedClassroomId) ?? null)
@@ -115,7 +129,7 @@ class DataStore {
 		return grouped;
 	});
 
-	// Assignments for the selected classroom - use nested classroom data
+	// Assignments for the selected classroom - use nested classroom data with sorting
 	selectedClassroomAssignments = $derived.by(() => {
 		if (!this.selectedClassroomId) {
 			console.log('📋 No selectedClassroomId, returning empty array');
@@ -124,20 +138,17 @@ class DataStore {
 
 		// Find the selected classroom and return its nested assignments
 		const classroom = this.classrooms.find((c) => c.id === this.selectedClassroomId);
+		const assignments = classroom?.assignments || [];
+
 		console.log('📋 selectedClassroomAssignments debug:', {
 			selectedClassroomId: this.selectedClassroomId,
 			classroom: classroom ? { id: classroom.id, name: classroom.name } : 'not found',
-			hasAssignments: classroom && 'assignments' in classroom,
-			assignmentsType: classroom?.assignments
-				? typeof classroom.assignments
-				: 'no assignments property',
-			assignmentsLength: Array.isArray(classroom?.assignments)
-				? classroom.assignments.length
-				: 'not array',
-			assignmentsValue: classroom?.assignments
+			assignmentsCount: assignments.length,
+			sortField: this.assignmentSortField
 		});
 
-		return classroom?.assignments || [];
+		// Apply sorting
+		return sortAssignments(assignments, this.assignmentSortField, 'asc');
 	});
 
 	// Current submissions for selected assignment
@@ -185,8 +196,16 @@ class DataStore {
 		});
 
 		const result = Array.from(studentMap.values());
-		console.log('📊 StudentProgress result:', result.length, 'students');
-		return result;
+		console.log('📊 StudentProgress result before sorting:', result.length, 'students');
+
+		// Apply sorting
+		const sortedResult = sortStudentProgress(
+			result,
+			this.studentSortField,
+			this.studentSortDirection
+		);
+		console.log('📊 StudentProgress sorted by:', this.studentSortField, this.studentSortDirection);
+		return sortedResult;
 	});
 
 	// Getter for grid data (replaces computed property)
@@ -690,6 +709,46 @@ class DataStore {
 	isAssignmentAutoGradable(assignment: Assignment): boolean {
 		// Only quizzes can be auto-graded in this implementation
 		return assignment.type === 'quiz';
+	}
+
+	/**
+	 * Toggle assignment sort field (date ↔ title)
+	 */
+	toggleAssignmentSort(): void {
+		this.assignmentSortField = getNextAssignmentSortField(this.assignmentSortField);
+		console.log('🔄 Assignment sort toggled to:', this.assignmentSortField);
+	}
+
+	/**
+	 * Set student sort field and direction
+	 */
+	setStudentSort(field: StudentSortField, direction?: SortDirection): void {
+		this.studentSortField = field;
+
+		if (field === 'name') {
+			// Name sorting is always ascending
+			this.studentSortDirection = 'asc';
+		} else if (direction !== undefined) {
+			this.studentSortDirection = direction;
+		} else {
+			// Toggle direction for other fields
+			this.studentSortDirection = getNextSortDirection(this.studentSortDirection);
+		}
+
+		console.log('🔄 Student sort set to:', this.studentSortField, this.studentSortDirection);
+	}
+
+	/**
+	 * Toggle student sort direction (for sortable fields)
+	 */
+	toggleStudentSort(field: StudentSortField): void {
+		if (this.studentSortField === field && field !== 'name') {
+			// Same field, toggle direction (except for name which is always ascending)
+			this.studentSortDirection = getNextSortDirection(this.studentSortDirection);
+		} else {
+			// Different field, set it with appropriate initial direction
+			this.setStudentSort(field);
+		}
 	}
 }
 

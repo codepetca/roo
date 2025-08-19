@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { Badge, Button, Card } from '$lib/components/ui';
+	import { getSortIcon, getSortDescription } from '$lib/utils/sorting';
 	import type { Assignment } from '@shared/schemas/core';
+	import type { StudentSortField } from '$lib/utils/sorting';
 
 	// Get reactive data from store
 	let selectedAssignment = $derived(dataStore.selectedAssignment);
@@ -11,6 +13,10 @@
 	// Use real student progress data from store
 	let studentProgress = $derived(dataStore.studentProgress);
 	let loadingStudentProgress = $derived(dataStore.loadingStudentProgress);
+
+	// Sorting state
+	let sortField = $derived(dataStore.studentSortField);
+	let sortDirection = $derived(dataStore.studentSortDirection);
 
 	// Calculate statistics from real student progress data
 	let stats = $derived(() => {
@@ -75,6 +81,10 @@
 		console.log('View submission:', student.studentName);
 		// TODO: Implement submission viewer
 	}
+
+	function handleSort(field: StudentSortField) {
+		dataStore.toggleStudentSort(field);
+	}
 </script>
 
 <div class="flex h-full flex-col">
@@ -117,25 +127,53 @@
 				<table class="min-w-full divide-y divide-gray-200">
 					<thead class="bg-gray-50">
 						<tr>
-							<th
-								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-							>
-								Student
+							<th class="px-6 py-3">
+								<button
+									onclick={() => handleSort('name')}
+									class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
+									title={getSortDescription('name')}
+								>
+									<span>Student</span>
+									<span class="text-xs">
+										{getSortIcon(sortField === 'name', sortDirection)}
+									</span>
+								</button>
 							</th>
-							<th
-								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-							>
-								Status
+							<th class="px-6 py-3">
+								<button
+									onclick={() => handleSort('status')}
+									class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
+									title={getSortDescription('status')}
+								>
+									<span>Status</span>
+									<span class="text-xs">
+										{getSortIcon(sortField === 'status', sortDirection)}
+									</span>
+								</button>
 							</th>
-							<th
-								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-							>
-								Submitted
+							<th class="px-6 py-3">
+								<button
+									onclick={() => handleSort('submitted')}
+									class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
+									title={getSortDescription('submitted', sortDirection)}
+								>
+									<span>Submitted</span>
+									<span class="text-xs">
+										{getSortIcon(sortField === 'submitted', sortDirection)}
+									</span>
+								</button>
 							</th>
-							<th
-								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-							>
-								Grade
+							<th class="px-6 py-3">
+								<button
+									onclick={() => handleSort('grade')}
+									class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
+									title={getSortDescription('grade', sortDirection)}
+								>
+									<span>Grade</span>
+									<span class="text-xs">
+										{getSortIcon(sortField === 'grade', sortDirection)}
+									</span>
+								</button>
 							</th>
 							<th
 								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
