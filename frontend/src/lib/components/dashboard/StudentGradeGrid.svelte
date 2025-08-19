@@ -158,7 +158,7 @@
 							<tr>
 								<!-- Student Name Column -->
 								<th
-									class="sticky left-0 z-20 border-r border-gray-300 bg-gray-50 px-3 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+									class="sticky left-0 z-20 w-80 border-r border-gray-300 bg-gray-50 px-3 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 								>
 									Student
 								</th>
@@ -184,7 +184,7 @@
 								<tr class="hover:bg-gray-50">
 									<!-- Student Name Cell (Sticky) -->
 									<td
-										class="sticky left-0 z-10 border-r border-gray-300 bg-white px-3 py-2 whitespace-nowrap"
+										class="sticky left-0 z-10 w-80 border-r border-gray-300 bg-white px-3 py-2 whitespace-nowrap"
 									>
 										<div class="flex items-center gap-2">
 											<!-- Small Avatar Circle -->

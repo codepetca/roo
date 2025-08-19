@@ -35,7 +35,7 @@
 	});
 </script>
 
-<div class="relative border-b border-gray-200 bg-white px-6 py-1">
+<div class="relative border-b border-gray-200 bg-white px-4 py-1">
 	<div class="flex items-center justify-between">
 		<!-- Left Section: Classroom Info and Stats -->
 		<div class="flex items-center space-x-4">
@@ -45,17 +45,15 @@
 				{:else if selectedClassroom}
 					<button
 						onclick={toggleDropdown}
-						class="mt-1 flex items-center space-x-2 rounded-lg bg-blue-100 px-3 py-1 text-left transition-colors hover:bg-blue-200"
+						class="mt-1 flex w-72 items-center justify-between rounded-lg bg-blue-100 px-4 py-2 text-left transition-colors hover:bg-blue-200"
 						class:bg-blue-200={isDropdownOpen}
 					>
-						<div>
-							<h2 class="text-lg font-semibold text-blue-700">
-								{selectedClassroom.name}
-							</h2>
-						</div>
+						<h2 class="text-lg font-semibold text-blue-700">
+							{selectedClassroom.name}
+						</h2>
 						<!-- Dropdown arrow -->
 						<svg
-							class="h-5 w-5 text-blue-500 transition-transform"
+							class="h-5 w-5 flex-shrink-0 text-blue-500 transition-transform"
 							class:rotate-180={isDropdownOpen}
 							fill="none"
 							viewBox="0 0 24 24"
@@ -119,7 +117,7 @@
 							: 'text-gray-700 hover:bg-gray-100'}"
 						onclick={() => setViewMode('assignment')}
 					>
-						📝 Assignments
+						📝 Assessments
 					</button>
 					<button
 						class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {viewMode === 'grid'
@@ -127,7 +125,7 @@
 							: 'text-gray-700 hover:bg-gray-100'}"
 						onclick={() => setViewMode('grid')}
 					>
-						📊 Grade Grid
+						👥 Students
 					</button>
 				</div>
 			</div>
@@ -162,7 +160,7 @@
 	<!-- Dropdown Menu -->
 	{#if isDropdownOpen && classrooms.length > 0}
 		<div
-			class="absolute top-full left-6 z-50 mt-1 w-96 rounded-lg border border-gray-200 bg-white shadow-lg"
+			class="absolute top-full left-4 z-50 mt-1 w-72 rounded-lg border border-gray-200 bg-white shadow-lg"
 		>
 			<div class="max-h-96 overflow-y-auto p-2">
 				{#each classrooms as classroom (classroom.id)}
