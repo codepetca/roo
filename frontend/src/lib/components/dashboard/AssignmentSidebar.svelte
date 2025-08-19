@@ -82,7 +82,7 @@
 <div class="flex h-full w-80 flex-col border-r border-gray-200 bg-gray-50">
 	<!-- Header -->
 	<div class="border-b border-gray-200 bg-white px-4 py-2">
-		<h3 class="text-sm font-semibold tracking-wider text-gray-900 uppercase">Assignments</h3>
+		<h3 class="text-sm font-semibold tracking-wider text-gray-900 uppercase">Assessments</h3>
 	</div>
 
 	<!-- Assignment List -->
