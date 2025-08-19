@@ -4,7 +4,14 @@
  * Location: frontend/src/lib/stores/data-store.svelte.ts
  */
 
-import type { Classroom, Assignment, DashboardUser, Submission, Grade, SubmissionWithGrade } from '@shared/schemas/core';
+import type {
+	Classroom,
+	Assignment,
+	DashboardUser,
+	Submission,
+	Grade,
+	SubmissionWithGrade
+} from '@shared/schemas/core';
 import { SvelteMap } from 'svelte/reactivity';
 import { api } from '$lib/api/endpoints';
 
@@ -37,6 +44,17 @@ class DataStore {
 	// Submission caching for selected assignments
 	submissionsCache = $state(new Map<string, SubmissionWithGrade[]>());
 	loadingSubmissions = $state<boolean>(false);
+	
+	// Grade grid caching for classroom view
+	gradeGridCache = $state(new Map<string, Map<string, Map<string, Grade | null>>>());
+	loadingGridData = $state<boolean>(false);
+	
+	// Manual grid data state (replacing computed property)
+	_gradeGridData = $state<{
+		students: Array<{ id: string; name: string; email: string }>;
+		assignments: any[];
+		grades: Map<string, Map<string, any>>;
+	}>({ students: [], assignments: [], grades: new Map() });
 
 	// Computed dashboard statistics
 	dashboardStats = $derived({
@@ -60,6 +78,9 @@ class DataStore {
 	// Selected entities state
 	selectedClassroomId = $state<string | null>(null);
 	selectedAssignmentId = $state<string | null>(null);
+	
+	// View mode state
+	viewMode = $state<'assignment' | 'grid'>('assignment');
 
 	selectedClassroom = $derived(
 		this.selectedClassroomId
@@ -100,25 +121,27 @@ class DataStore {
 			console.log('📋 No selectedClassroomId, returning empty array');
 			return [];
 		}
-		
+
 		// Find the selected classroom and return its nested assignments
-		const classroom = this.classrooms.find(c => c.id === this.selectedClassroomId);
+		const classroom = this.classrooms.find((c) => c.id === this.selectedClassroomId);
 		console.log('📋 selectedClassroomAssignments debug:', {
 			selectedClassroomId: this.selectedClassroomId,
 			classroom: classroom ? { id: classroom.id, name: classroom.name } : 'not found',
 			hasAssignments: classroom && 'assignments' in classroom,
-			assignmentsType: classroom?.assignments ? typeof classroom.assignments : 'no assignments property',
-			assignmentsLength: Array.isArray(classroom?.assignments) ? classroom.assignments.length : 'not array',
+			assignmentsType: classroom?.assignments
+				? typeof classroom.assignments
+				: 'no assignments property',
+			assignmentsLength: Array.isArray(classroom?.assignments)
+				? classroom.assignments.length
+				: 'not array',
 			assignmentsValue: classroom?.assignments
 		});
-		
+
 		return classroom?.assignments || [];
 	});
 
 	// Current submissions for selected assignment
-	currentSubmissions = $derived(
-		this.submissionsCache.get(this.selectedAssignmentId || '') || []
-	);
+	currentSubmissions = $derived(this.submissionsCache.get(this.selectedAssignmentId || '') || []);
 
 	// Loading state for student progress
 	loadingStudentProgress = $derived(this.loadingSubmissions);
@@ -146,7 +169,7 @@ class DataStore {
 		const studentMap = new Map();
 
 		// Build student progress from submissions
-		submissions.forEach(sub => {
+		submissions.forEach((sub) => {
 			studentMap.set(sub.studentId, {
 				studentId: sub.studentId,
 				studentName: sub.studentName,
@@ -165,6 +188,11 @@ class DataStore {
 		console.log('📊 StudentProgress result:', result.length, 'students');
 		return result;
 	});
+
+	// Getter for grid data (replaces computed property)
+	get gradeGridData() {
+		return this._gradeGridData;
+	}
 
 	/**
 	 * Set data from SvelteKit load functions
@@ -259,6 +287,19 @@ class DataStore {
 	}
 
 	/**
+	 * Set view mode
+	 */
+	setViewMode(mode: 'assignment' | 'grid'): void {
+		this.viewMode = mode;
+		console.log('👁️ View mode changed to:', mode);
+		
+		// Store preference in localStorage
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('teacherDashboardViewMode', mode);
+		}
+	}
+
+	/**
 	 * Fetch submissions for a specific assignment
 	 */
 	async fetchSubmissionsForAssignment(assignmentId: string): Promise<void> {
@@ -274,20 +315,22 @@ class DataStore {
 
 		try {
 			const submissions = await api.getSubmissionsByAssignment(assignmentId);
-			
+
 			// Ensure reactivity by creating a new Map
 			const newCache = new Map(this.submissionsCache);
 			newCache.set(assignmentId, submissions);
 			this.submissionsCache = newCache;
-			
+
 			console.log('✅ Submissions loaded and cached:', {
 				assignmentId,
 				submissionsCount: submissions.length,
 				cacheSize: this.submissionsCache.size,
-				firstSubmission: submissions[0] ? {
-					studentName: submissions[0].studentName,
-					status: submissions[0].status
-				} : 'none'
+				firstSubmission: submissions[0]
+					? {
+							studentName: submissions[0].studentName,
+							status: submissions[0].status
+						}
+					: 'none'
 			});
 		} catch (error) {
 			console.error('❌ Failed to fetch submissions:', error);
@@ -295,6 +338,166 @@ class DataStore {
 		} finally {
 			this.loadingSubmissions = false;
 		}
+	}
+
+	/**
+	 * Fetch all submissions for all assignments in a classroom (for grid view)
+	 */
+	async fetchAllSubmissionsForClassroom(classroomId: string): Promise<void> {
+		const classroom = this.classrooms.find((c) => c.id === classroomId);
+		
+		// Get assignments directly from classroom data or from the general assignment list
+		let assignments = [];
+		if (classroom && 'assignments' in classroom && Array.isArray(classroom.assignments)) {
+			assignments = classroom.assignments;
+		} else {
+			// Fallback to filtering from the general assignments array
+			assignments = this.assignments.filter((a) => a.classroomId === classroomId);
+		}
+
+		console.log('📋 Debug fetchAllSubmissionsForClassroom:', {
+			classroomId,
+			classroom: classroom ? { id: classroom.id, name: classroom.name } : 'not found',
+			assignmentsFromClassroom: classroom && 'assignments' in classroom ? classroom.assignments?.length : 'none',
+			assignmentsFromFilter: this.assignments.filter((a) => a.classroomId === classroomId).length,
+			assignmentsCount: assignments.length,
+			selectedClassroomAssignments: this.selectedClassroomAssignments.length
+		});
+
+		if (!classroom) {
+			console.log('📋 No classroom found for grid data:', classroomId);
+			this.loadingGridData = false;
+			return;
+		}
+
+		if (assignments.length === 0) {
+			console.log('📋 No assignments found for classroom grid data');
+			this.loadingGridData = false;
+			return;
+		}
+
+		console.log('📋 Fetching all submissions for classroom grid view:', {
+			classroomId,
+			assignmentsCount: assignments.length
+		});
+
+		this.loadingGridData = true;
+		this.error = null;
+
+		try {
+			// Fetch submissions for all assignments in parallel
+			const fetchPromises = assignments.map(async (assignment) => {
+				// Skip if already cached
+				if (!this.submissionsCache.has(assignment.id)) {
+					console.log('📡 Fetching submissions for assignment:', assignment.id, assignment.title || assignment.name);
+					const submissions = await api.getSubmissionsByAssignment(assignment.id);
+					return { assignmentId: assignment.id, submissions };
+				}
+				console.log('📡 Using cached submissions for assignment:', assignment.id);
+				return { assignmentId: assignment.id, submissions: this.submissionsCache.get(assignment.id)! };
+			});
+
+			const results = await Promise.all(fetchPromises);
+
+			// Update cache with new data
+			const newCache = new Map(this.submissionsCache);
+			results.forEach(({ assignmentId, submissions }) => {
+				newCache.set(assignmentId, submissions);
+			});
+			this.submissionsCache = newCache;
+
+			console.log('✅ All submissions loaded for classroom grid:', {
+				classroomId,
+				totalCacheSize: this.submissionsCache.size,
+				totalSubmissions: results.reduce((sum, r) => sum + r.submissions.length, 0)
+			});
+			
+			// Update grid data after loading submissions
+			console.log('🔄 Updating grid data after submissions loaded...');
+			this.updateGridData();
+		} catch (error) {
+			console.error('❌ Failed to fetch classroom submissions:', error);
+			this.setError('Failed to load grade grid data');
+		} finally {
+			this.loadingGridData = false;
+		}
+	}
+
+	/**
+	 * Update grid data based on current classroom and submissions
+	 */
+	updateGridData(): void {
+		console.log('📋 Updating grid data:', {
+			selectedClassroomId: this.selectedClassroomId,
+			viewMode: this.viewMode,
+			shouldUpdate: this.selectedClassroomId && this.viewMode === 'grid',
+			assignmentsTotal: this.assignments.length,
+			cacheSize: this.submissionsCache.size
+		});
+
+		// Only update grid data if we have a selected classroom and are in grid mode
+		if (!this.selectedClassroomId) {
+			console.log('📋 GridData: Not updating - no classroom selected');
+			this._gradeGridData = { students: [], assignments: [], grades: new Map() };
+			return;
+		}
+
+		// Get assignments for the selected classroom
+		const assignments = this.assignments.filter((a) => a.classroomId === this.selectedClassroomId);
+		
+		console.log('📋 GridData: Assignments for classroom:', {
+			classroomId: this.selectedClassroomId,
+			totalAssignments: this.assignments.length,
+			filteredAssignments: assignments.length,
+			firstAssignment: assignments[0] ? { id: assignments[0].id, title: assignments[0].title } : 'none'
+		});
+		
+		if (assignments.length === 0) {
+			console.log('📋 GridData: No assignments found for classroom');
+			this._gradeGridData = { students: [], assignments: [], grades: new Map() };
+			return;
+		}
+
+		// Extract students and build grade matrix from cached submissions
+		const studentMap = new Map();
+		const gradeMatrix = new Map();
+
+		assignments.forEach((assignment) => {
+			const submissions = this.submissionsCache.get(assignment.id) || [];
+			console.log(`📋 GridData: Processing assignment ${assignment.id}, submissions: ${submissions.length}`);
+			
+			submissions.forEach((sub) => {
+				// Add student if not already added
+				if (!studentMap.has(sub.studentId)) {
+					studentMap.set(sub.studentId, {
+						id: sub.studentId,
+						name: sub.studentName,
+						email: sub.studentEmail
+					});
+				}
+
+				// Add grade to matrix
+				if (!gradeMatrix.has(sub.studentId)) {
+					gradeMatrix.set(sub.studentId, new Map());
+				}
+				gradeMatrix.get(sub.studentId)!.set(assignment.id, sub.grade || null);
+			});
+		});
+
+		const result = {
+			students: Array.from(studentMap.values()),
+			assignments: assignments,
+			grades: gradeMatrix
+		};
+
+		console.log('📋 GridData update result:', {
+			studentsCount: result.students.length,
+			assignmentsCount: result.assignments.length,
+			gradeMatrixSize: result.grades.size,
+			firstStudent: result.students[0] ? { id: result.students[0].id, name: result.students[0].name } : 'none'
+		});
+
+		this._gradeGridData = result;
 	}
 
 	/**
@@ -318,6 +521,19 @@ class DataStore {
 	setLoading(loading: boolean): void {
 		this.loading = loading;
 		if (loading) this.error = null;
+	}
+
+	/**
+	 * Initialize view mode from localStorage
+	 */
+	initializeViewMode(): void {
+		if (typeof localStorage !== 'undefined') {
+			const savedViewMode = localStorage.getItem('teacherDashboardViewMode');
+			if (savedViewMode === 'grid' || savedViewMode === 'assignment') {
+				this.viewMode = savedViewMode;
+				console.log('📁 Loaded view mode from localStorage:', savedViewMode);
+			}
+		}
 	}
 
 	/**

@@ -7,6 +7,7 @@
 	let selectedClassroom = $derived(dataStore.selectedClassroom);
 	let selectedClassroomId = $derived(dataStore.selectedClassroomId);
 	let loading = $derived(dataStore.loading);
+	let viewMode = $derived(dataStore.viewMode);
 
 	// Dropdown state
 	let isDropdownOpen = $state(false);
@@ -22,6 +23,10 @@
 		}
 	}
 
+	function setViewMode(mode: 'assignment' | 'grid') {
+		dataStore.setViewMode(mode);
+	}
+
 	// Auto-select first classroom if none selected
 	$effect(() => {
 		if (!selectedClassroomId && classrooms.length > 0) {
@@ -35,9 +40,7 @@
 		<!-- Classroom Info -->
 		<div class="flex items-center space-x-4">
 			<div>
-				<label class="block text-xs font-medium tracking-wider text-gray-500 uppercase">
-					Current Classroom
-				</label>
+
 				{#if loading}
 					<div class="mt-1 h-8 w-48 animate-pulse rounded bg-gray-200"></div>
 				{:else if selectedClassroom}
@@ -119,21 +122,46 @@
 			{/if}
 		</div>
 
-		<!-- Quick Actions -->
-		<div class="flex items-center space-x-2">
-			<button
-				class="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-				onclick={() => (window.location.href = '/teacher/data-import')}
-			>
-				Import Data
-			</button>
-			<button
-				class="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-				onclick={() => dataStore.setLoading(true)}
-				disabled={loading}
-			>
-				{loading ? 'Refreshing...' : 'Refresh'}
-			</button>
+		<!-- View Toggle & Quick Actions -->
+		<div class="flex items-center space-x-4">
+			<!-- View Mode Toggle -->
+			{#if selectedClassroom}
+				<div class="flex items-center space-x-1 rounded-lg border border-gray-200 bg-white p-1">
+					<button
+						class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {viewMode === 'assignment'
+							? 'bg-blue-100 text-blue-700'
+							: 'text-gray-700 hover:bg-gray-100'}"
+						onclick={() => setViewMode('assignment')}
+					>
+						📝 Assignments
+					</button>
+					<button
+						class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {viewMode === 'grid'
+							? 'bg-blue-100 text-blue-700'
+							: 'text-gray-700 hover:bg-gray-100'}"
+						onclick={() => setViewMode('grid')}
+					>
+						📊 Grade Grid
+					</button>
+				</div>
+			{/if}
+
+			<!-- Quick Action Buttons -->
+			<div class="flex items-center space-x-2">
+				<button
+					class="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+					onclick={() => (window.location.href = '/teacher/data-import')}
+				>
+					Import Data
+				</button>
+				<button
+					class="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+					onclick={() => dataStore.setLoading(true)}
+					disabled={loading}
+				>
+					{loading ? 'Refreshing...' : 'Refresh'}
+				</button>
+			</div>
 		</div>
 	</div>
 

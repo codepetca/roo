@@ -4,7 +4,7 @@
 	import AuthGuard from '$lib/components/auth/AuthGuard.svelte';
 
 	let { children, data }: { children?: Snippet; data: LayoutData } = $props();
-	
+
 	// children is used in the {@render children?.()} below
 
 	// Defense-in-depth: Server-side auth (via +layout.server.ts) + client-side auth guard

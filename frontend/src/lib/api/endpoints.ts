@@ -715,7 +715,7 @@ export const api = {
 			// First, let's see what the raw API returns without Zod validation
 			const rawResult = await apiRequest('/teacher/dashboard', {});
 			console.log('🔍 DASHBOARD RAW RESULT (no Zod):', rawResult);
-			
+
 			// Now do the normal validated request
 			const result = await typedApiRequest('/teacher/dashboard', {}, teacherDashboardSchema);
 			console.log('✅ getTeacherDashboard succeeded:', result);

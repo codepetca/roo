@@ -15,14 +15,16 @@
 			selectedClassroomId,
 			selectedAssignmentId,
 			assignmentsCount: assignments?.length || 0,
-			assignments: Array.isArray(assignments) ? assignments.map(a => ({ 
-				id: a.id, 
-				title: a.title, 
-				name: a.name,
-				displayTitle: a.title || a.name || 'Untitled',
-				type: a.type,
-				allKeys: Object.keys(a)
-			})) : 'not an array',
+			assignments: Array.isArray(assignments)
+				? assignments.map((a) => ({
+						id: a.id,
+						title: a.title,
+						name: a.name,
+						displayTitle: a.title || a.name || 'Untitled',
+						type: a.type,
+						allKeys: Object.keys(a)
+					}))
+				: 'not an array',
 			assignmentsType: typeof assignments,
 			assignmentsValue: assignments,
 			loading
@@ -37,15 +39,19 @@
 		}
 		const quizzes = assignments.filter((a) => a.type === 'quiz');
 		const regularAssignments = assignments.filter((a) => a.type !== 'quiz');
-		
+
 		console.log('📋 GroupedAssignments:', {
 			totalAssignments: assignments.length,
 			quizzesCount: quizzes.length,
 			regularAssignmentsCount: regularAssignments.length,
-			quizzes: quizzes.map(q => ({ id: q.id, title: q.title || q.name, type: q.type })),
-			regularAssignments: regularAssignments.map(a => ({ id: a.id, title: a.title || a.name, type: a.type }))
+			quizzes: quizzes.map((q) => ({ id: q.id, title: q.title || q.name, type: q.type })),
+			regularAssignments: regularAssignments.map((a) => ({
+				id: a.id,
+				title: a.title || a.name,
+				type: a.type
+			}))
 		});
-		
+
 		return { quizzes, assignments: regularAssignments };
 	});
 
@@ -79,7 +85,8 @@
 		<h3 class="text-sm font-semibold tracking-wider text-gray-900 uppercase">Assignments</h3>
 		{#if selectedClassroomId && Array.isArray(assignments) && assignments.length > 0}
 			<p class="mt-1 text-xs text-gray-600">
-				{assignments.length} total ({groupedAssignments?.quizzes?.length || 0} quizzes, {groupedAssignments?.assignments?.length || 0} assignments)
+				{assignments.length} total ({groupedAssignments?.quizzes?.length || 0} quizzes, {groupedAssignments
+					?.assignments?.length || 0} assignments)
 			</p>
 		{/if}
 	</div>

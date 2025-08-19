@@ -190,7 +190,7 @@ export async function typedApiRequest<T>(
 	if ('data' in rawResponse) {
 		dataToValidate = (rawResponse as any).data;
 		console.debug('🔧 Using nested data property from API response');
-		
+
 		// Special logging for dashboard endpoint IMMEDIATELY after extraction
 		if (endpoint.includes('teacher/dashboard')) {
 			console.log('🔍 DASHBOARD API DEBUG - Raw API Response:');
@@ -235,7 +235,7 @@ export async function typedApiRequest<T>(
 	// Add detailed logging for debugging validation issues
 	console.debug('Data to validate:', JSON.stringify(dataToValidate, null, 2));
 	console.debug('Schema type:', (schema._def as any).typeName);
-	
+
 	// Special debug logging for dashboard endpoint
 	if (endpoint.includes('teacher/dashboard')) {
 		console.log('🔍 DASHBOARD API DEBUG - Before Validation:');
@@ -244,7 +244,12 @@ export async function typedApiRequest<T>(
 			console.log('Has teacher?', 'teacher' in dataToValidate);
 			console.log('Has classrooms?', 'classrooms' in dataToValidate);
 			console.log('Classrooms value:', (dataToValidate as any).classrooms);
-			console.log('Classrooms length:', Array.isArray((dataToValidate as any).classrooms) ? (dataToValidate as any).classrooms.length : 'not an array');
+			console.log(
+				'Classrooms length:',
+				Array.isArray((dataToValidate as any).classrooms)
+					? (dataToValidate as any).classrooms.length
+					: 'not an array'
+			);
 			if ((dataToValidate as any).classrooms && (dataToValidate as any).classrooms.length > 0) {
 				console.log('First classroom:', (dataToValidate as any).classrooms[0]);
 			}
@@ -252,7 +257,7 @@ export async function typedApiRequest<T>(
 	}
 
 	const validation = safeValidateApiResponse(schema, dataToValidate);
-	
+
 	// Log result after validation for dashboard
 	if (endpoint.includes('teacher/dashboard')) {
 		console.log('🔍 DASHBOARD API DEBUG - After Validation:');
@@ -260,7 +265,12 @@ export async function typedApiRequest<T>(
 		if (validation.success && validation.data) {
 			console.log('Validated data:', validation.data);
 			console.log('Validated classrooms:', (validation.data as any).classrooms);
-			console.log('Validated classrooms length:', Array.isArray((validation.data as any).classrooms) ? (validation.data as any).classrooms.length : 'not an array');
+			console.log(
+				'Validated classrooms length:',
+				Array.isArray((validation.data as any).classrooms)
+					? (validation.data as any).classrooms.length
+					: 'not an array'
+			);
 		}
 	}
 

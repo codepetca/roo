@@ -9,17 +9,9 @@
 		const userRole = auth.user?.role;
 
 		if (userRole === 'teacher') {
-			return [
-				{ href: '/dashboard/teacher', label: 'Overview' },
-				{ href: '/dashboard/teacher/assignments', label: 'Assignments' },
-				{ href: '/dashboard/teacher/grades', label: 'Grades' },
-				{ href: '/teacher/onboarding', label: 'Sheet Setup' }
-			];
+			return [{ href: '/teacher/onboarding', label: 'Sheet Setup' }];
 		} else {
-			return [
-				{ href: '/dashboard/student', label: 'Overview' },
-				{ href: '/dashboard/student/grades', label: 'My Grades' }
-			];
+			return [];
 		}
 	});
 

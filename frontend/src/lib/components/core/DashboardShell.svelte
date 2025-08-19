@@ -11,12 +11,8 @@
 	// Get current page title
 	let pageTitle = $derived.by(() => {
 		const path = $page.url.pathname;
-		if (path.endsWith('/teacher') || path.endsWith('/student')) {
-			return 'Overview';
-		} else if (path.includes('/assignments')) {
-			return 'Assignments';
-		} else if (path.includes('/grades')) {
-			return auth.user?.role === 'teacher' ? 'Grades' : 'My Grades';
+		if (path.includes('/onboarding')) {
+			return 'Sheet Setup';
 		}
 		return 'Dashboard';
 	});

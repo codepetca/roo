@@ -6,12 +6,16 @@
 	import ClassroomSelector from '$lib/components/dashboard/ClassroomSelector.svelte';
 	import AssignmentSidebar from '$lib/components/dashboard/AssignmentSidebar.svelte';
 	import StudentProgressGrid from '$lib/components/dashboard/StudentProgressGrid.svelte';
+	import StudentGradeGrid from '$lib/components/dashboard/StudentGradeGrid.svelte';
 
 	let { data }: { data: PageData } = $props();
 
 	// Set data in store when component mounts
 	onMount(async () => {
 		console.log('📦 Dashboard page mounted, setting data from load functions...');
+		
+		// Initialize view mode from localStorage
+		dataStore.initializeViewMode();
 
 		// Log load function data for debugging
 		console.log('📦 Load Function Data:', {
@@ -36,8 +40,8 @@
 			console.log('✅ Dashboard data loaded client-side:', dashboardData);
 
 			// Extract all assignments into flat array for compatibility
-			const allAssignments = (dashboardData.classrooms || []).flatMap(classroom => 
-				classroom.assignments || []
+			const allAssignments = (dashboardData.classrooms || []).flatMap(
+				(classroom) => classroom.assignments || []
 			);
 			console.log('📝 Extracted assignments from classrooms:', allAssignments.length);
 
@@ -69,6 +73,7 @@
 	// loading is used by child components that receive it via context or props
 	let loading = $derived(dataStore.loading); // eslint-disable-line @typescript-eslint/no-unused-vars
 	let error = $derived(dataStore.error || (data.error ? data.error : null));
+	let viewMode = $derived(dataStore.viewMode);
 
 	// Reactive effect to auto-fetch submissions when assignment is selected
 	$effect(() => {
@@ -92,21 +97,29 @@
 	});
 </script>
 
-<!-- Three-panel layout structure -->
+<!-- Dynamic layout structure based on view mode -->
 <div class="flex h-full flex-col">
-	<!-- Top: Classroom Selector -->
+	<!-- Top: Classroom Selector (always visible) -->
 	<ClassroomSelector />
 
-	<!-- Main Content Area -->
-	<div class="flex flex-1 overflow-hidden">
-		<!-- Left: Assignment Sidebar -->
-		<AssignmentSidebar />
-
-		<!-- Right: Student Progress Grid -->
+	<!-- Main Content Area - Different layouts based on view mode -->
+	{#if viewMode === 'grid'}
+		<!-- Two-panel layout for Grade Grid View -->
 		<div class="flex-1 overflow-hidden">
-			<StudentProgressGrid />
+			<StudentGradeGrid />
 		</div>
-	</div>
+	{:else}
+		<!-- Three-panel layout for Assignment View -->
+		<div class="flex flex-1 overflow-hidden">
+			<!-- Left: Assignment Sidebar -->
+			<AssignmentSidebar />
+
+			<!-- Right: Student Progress Grid -->
+			<div class="flex-1 overflow-hidden">
+				<StudentProgressGrid />
+			</div>
+		</div>
+	{/if}
 
 	<!-- Error Display (floating) -->
 	{#if error}
