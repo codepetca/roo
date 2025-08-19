@@ -271,12 +271,12 @@ export const api = {
 		);
 	},
 
-	async gradeCode(data: GradeCodeRequest): Promise<{
+	async gradeAssignment(data: GradeCodeRequest): Promise<{
 		gradeId: string;
 		grading: GradingResultResponse;
 	}> {
 		return typedApiRequest(
-			'/grade-code',
+			'/grade-assignment',
 			{
 				method: 'POST',
 				body: JSON.stringify(data)
@@ -299,6 +299,15 @@ export const api = {
 				})
 			})
 		);
+	},
+
+	// Backward compatibility - deprecated, use gradeAssignment instead
+	async gradeCode(data: GradeCodeRequest): Promise<{
+		gradeId: string;
+		grading: GradingResultResponse;
+	}> {
+		console.warn('gradeCode is deprecated, use gradeAssignment instead');
+		return this.gradeAssignment(data);
 	},
 
 	// Google Sheets Integration

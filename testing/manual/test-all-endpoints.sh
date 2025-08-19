@@ -117,8 +117,8 @@ response=$(curl -s -X POST "$BASE_URL/grade-quiz" \
 echo "   Result: $response"
 
 echo ""
-echo "15. Grade Code (renamed from grade-submission):"
-response=$(curl -s -X POST "$BASE_URL/grade-code" \
+echo "15. Grade Assignment (universal assignment grading):"
+response=$(curl -s -X POST "$BASE_URL/grade-assignment" \
   -H "Content-Type: application/json" \
   -d '{
     "submissionId": "test_code_1",
@@ -134,11 +134,11 @@ echo "✅ TEST COMPLETE!"
 echo "=================="
 echo ""
 echo "Summary:"
-echo "- If you see 'ENDPOINT_NOT_FOUND' for grade-quiz or grade-code, there's still a routing issue"
+echo "- If you see 'ENDPOINT_NOT_FOUND' for grade-quiz or grade-assignment, there's still a routing issue"
 echo "- If you see 'ERROR' responses, check the Firebase logs for details"
 echo "- Working endpoints should return success: true or specific data"
 echo ""
 echo "Next steps:"
-echo "1. Fix any routing issues for grade-quiz and grade-code"
+echo "1. Fix any routing issues for grade-quiz and grade-assignment"
 echo "2. Test end-to-end grading with real Karel quiz data"
 echo "3. Proceed with automation pipeline"

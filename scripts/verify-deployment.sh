@@ -113,10 +113,10 @@ test_endpoint "POST" "/grade-quiz" \
     "200" \
     "Grade quiz"
 
-test_endpoint "POST" "/grade-code" \
+test_endpoint "POST" "/grade-assignment" \
     '{"submissionId":"test","submissionText":"code","assignmentTitle":"Test","maxPoints":10}' \
     "200" \
-    "Grade code"
+    "Grade assignment"
 
 echo ""
 echo "📁 DATA ENDPOINTS"

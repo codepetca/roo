@@ -206,9 +206,9 @@ export async function gradeQuiz(req: Request, res: Response) {
 }
 
 /**
- * Grade a single coding assignment with generous mode
+ * Grade a single assignment (any type) with AI feedback
  * Location: functions/src/routes/grading.ts:95
- * Route: POST /grade-code
+ * Route: POST /grade-assignment
  */
 export async function gradeCode(req: Request, res: Response) {
   try {

@@ -32,7 +32,7 @@ export async function getApiStatus(req: Request, res: Response) {
         "POST /sheets/answer-key": "Get answer key for a quiz form",
         "POST /grade-quiz-test": "Grade a quiz submission (test mode - no sheet updates)",
         "POST /grade-quiz": "Grade a quiz submission using answer key",
-        "POST /grade-code": "Grade a single coding assignment with generous mode",
+        "POST /grade-assignment": "Grade any type of assignment with AI feedback",
         "GET /grades/assignment/{id}": "Get all grades for an assignment",
         "GET /grades/submission/{id}": "Get grade for a specific submission",
         "GET /grades/ungraded": "Get all ungraded submissions from Firestore",

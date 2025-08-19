@@ -137,7 +137,7 @@ export const api = onRequest(
       if (method === "POST" && path === "/grade-quiz") {
         await gradeQuiz(request, response); return;
       }
-      if (method === "POST" && path === "/grade-code") {
+      if (method === "POST" && path === "/grade-assignment") {
         await gradeCode(request, response); return;
       }
 
