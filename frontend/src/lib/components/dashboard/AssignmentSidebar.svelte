@@ -148,9 +148,11 @@
 							{#each groupedAssignments.quizzes as assignment (assignment.id)}
 								<button
 									onclick={() => selectAssignment(assignment.id)}
-									class="w-full border-b border-gray-200 bg-white py-2 text-left transition-all hover:bg-gray-50"
-									class:bg-blue-50={assignment.id === selectedAssignmentId}
-									class:border-blue-500={assignment.id === selectedAssignmentId}
+									class="w-full border-b border-gray-200 py-2 text-left transition-all"
+									class:bg-blue-200={assignment.id === selectedAssignmentId}
+									class:bg-white={assignment.id !== selectedAssignmentId}
+									class:hover:bg-gray-50={assignment.id !== selectedAssignmentId}
+									class:hover:bg-blue-300={assignment.id === selectedAssignmentId}
 								>
 									<div class="min-w-0 flex-1 px-3">
 										<div class="flex items-center space-x-2">
@@ -197,9 +199,11 @@
 							{#each groupedAssignments?.assignments || [] as assignment (assignment.id)}
 								<button
 									onclick={() => selectAssignment(assignment.id)}
-									class="w-full border-b border-gray-200 bg-white py-2 text-left transition-all hover:bg-gray-50"
-									class:bg-blue-50={assignment.id === selectedAssignmentId}
-									class:border-blue-500={assignment.id === selectedAssignmentId}
+									class="w-full border-b border-gray-200 py-2 text-left transition-all"
+									class:bg-blue-200={assignment.id === selectedAssignmentId}
+									class:bg-white={assignment.id !== selectedAssignmentId}
+									class:hover:bg-gray-50={assignment.id !== selectedAssignmentId}
+									class:hover:bg-blue-300={assignment.id === selectedAssignmentId}
 								>
 									<div class="min-w-0 flex-1 px-3">
 										<div class="flex items-center space-x-2">
