@@ -44,11 +44,11 @@ class DataStore {
 	// Submission caching for selected assignments
 	submissionsCache = $state(new Map<string, SubmissionWithGrade[]>());
 	loadingSubmissions = $state<boolean>(false);
-	
+
 	// Grade grid caching for classroom view
 	gradeGridCache = $state(new Map<string, Map<string, Map<string, Grade | null>>>());
 	loadingGridData = $state<boolean>(false);
-	
+
 	// Manual grid data state (replacing computed property)
 	_gradeGridData = $state<{
 		students: Array<{ id: string; name: string; email: string }>;
@@ -78,7 +78,7 @@ class DataStore {
 	// Selected entities state
 	selectedClassroomId = $state<string | null>(null);
 	selectedAssignmentId = $state<string | null>(null);
-	
+
 	// View mode state
 	viewMode = $state<'assignment' | 'grid'>('assignment');
 
@@ -292,7 +292,7 @@ class DataStore {
 	setViewMode(mode: 'assignment' | 'grid'): void {
 		this.viewMode = mode;
 		console.log('👁️ View mode changed to:', mode);
-		
+
 		// Store preference in localStorage
 		if (typeof localStorage !== 'undefined') {
 			localStorage.setItem('teacherDashboardViewMode', mode);
@@ -345,7 +345,7 @@ class DataStore {
 	 */
 	async fetchAllSubmissionsForClassroom(classroomId: string): Promise<void> {
 		const classroom = this.classrooms.find((c) => c.id === classroomId);
-		
+
 		// Get assignments directly from classroom data or from the general assignment list
 		let assignments = [];
 		if (classroom && 'assignments' in classroom && Array.isArray(classroom.assignments)) {
@@ -358,7 +358,8 @@ class DataStore {
 		console.log('📋 Debug fetchAllSubmissionsForClassroom:', {
 			classroomId,
 			classroom: classroom ? { id: classroom.id, name: classroom.name } : 'not found',
-			assignmentsFromClassroom: classroom && 'assignments' in classroom ? classroom.assignments?.length : 'none',
+			assignmentsFromClassroom:
+				classroom && 'assignments' in classroom ? classroom.assignments?.length : 'none',
 			assignmentsFromFilter: this.assignments.filter((a) => a.classroomId === classroomId).length,
 			assignmentsCount: assignments.length,
 			selectedClassroomAssignments: this.selectedClassroomAssignments.length
@@ -389,12 +390,19 @@ class DataStore {
 			const fetchPromises = assignments.map(async (assignment) => {
 				// Skip if already cached
 				if (!this.submissionsCache.has(assignment.id)) {
-					console.log('📡 Fetching submissions for assignment:', assignment.id, assignment.title || assignment.name);
+					console.log(
+						'📡 Fetching submissions for assignment:',
+						assignment.id,
+						assignment.title || assignment.name
+					);
 					const submissions = await api.getSubmissionsByAssignment(assignment.id);
 					return { assignmentId: assignment.id, submissions };
 				}
 				console.log('📡 Using cached submissions for assignment:', assignment.id);
-				return { assignmentId: assignment.id, submissions: this.submissionsCache.get(assignment.id)! };
+				return {
+					assignmentId: assignment.id,
+					submissions: this.submissionsCache.get(assignment.id)!
+				};
 			});
 
 			const results = await Promise.all(fetchPromises);
@@ -411,7 +419,7 @@ class DataStore {
 				totalCacheSize: this.submissionsCache.size,
 				totalSubmissions: results.reduce((sum, r) => sum + r.submissions.length, 0)
 			});
-			
+
 			// Update grid data after loading submissions
 			console.log('🔄 Updating grid data after submissions loaded...');
 			this.updateGridData();
@@ -444,14 +452,16 @@ class DataStore {
 
 		// Get assignments for the selected classroom
 		const assignments = this.assignments.filter((a) => a.classroomId === this.selectedClassroomId);
-		
+
 		console.log('📋 GridData: Assignments for classroom:', {
 			classroomId: this.selectedClassroomId,
 			totalAssignments: this.assignments.length,
 			filteredAssignments: assignments.length,
-			firstAssignment: assignments[0] ? { id: assignments[0].id, title: assignments[0].title } : 'none'
+			firstAssignment: assignments[0]
+				? { id: assignments[0].id, title: assignments[0].title }
+				: 'none'
 		});
-		
+
 		if (assignments.length === 0) {
 			console.log('📋 GridData: No assignments found for classroom');
 			this._gradeGridData = { students: [], assignments: [], grades: new Map() };
@@ -464,8 +474,10 @@ class DataStore {
 
 		assignments.forEach((assignment) => {
 			const submissions = this.submissionsCache.get(assignment.id) || [];
-			console.log(`📋 GridData: Processing assignment ${assignment.id}, submissions: ${submissions.length}`);
-			
+			console.log(
+				`📋 GridData: Processing assignment ${assignment.id}, submissions: ${submissions.length}`
+			);
+
 			submissions.forEach((sub) => {
 				// Add student if not already added
 				if (!studentMap.has(sub.studentId)) {
@@ -494,7 +506,9 @@ class DataStore {
 			studentsCount: result.students.length,
 			assignmentsCount: result.assignments.length,
 			gradeMatrixSize: result.grades.size,
-			firstStudent: result.students[0] ? { id: result.students[0].id, name: result.students[0].name } : 'none'
+			firstStudent: result.students[0]
+				? { id: result.students[0].id, name: result.students[0].name }
+				: 'none'
 		});
 
 		this._gradeGridData = result;

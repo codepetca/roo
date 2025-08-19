@@ -75,6 +75,16 @@
 		return 'bg-red-50';
 	}
 
+	// Helper function to get initials from name
+	function getInitials(name: string): string {
+		return name
+			.split(' ')
+			.map((part) => part.charAt(0))
+			.join('')
+			.substring(0, 2)
+			.toUpperCase();
+	}
+
 	// Handle cell click to navigate to specific student-assignment combination
 	function handleCellClick(studentId: string, assignmentId: string) {
 		console.log('📱 Grade cell clicked:', { studentId, assignmentId });
@@ -177,6 +187,13 @@
 										class="sticky left-0 z-10 border-r border-gray-300 bg-white px-3 py-2 whitespace-nowrap"
 									>
 										<div class="flex items-center gap-2">
+											<!-- Small Avatar Circle -->
+											<div
+												class="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-700"
+												title={student.name}
+											>
+												{getInitials(student.name)}
+											</div>
 											<span class="text-sm font-medium text-gray-900">{student.name}</span>
 											<span class="text-xs text-gray-400">({student.email.split('@')[0]})</span>
 										</div>

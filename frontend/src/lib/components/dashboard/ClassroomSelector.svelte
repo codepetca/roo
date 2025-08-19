@@ -35,9 +35,9 @@
 	});
 </script>
 
-<div class="relative border-b border-gray-200 bg-white px-6 py-2">
+<div class="relative border-b border-gray-200 bg-white px-6 py-1">
 	<div class="flex items-center justify-between">
-		<!-- Classroom Info -->
+		<!-- Left Section: Classroom Info and Stats -->
 		<div class="flex items-center space-x-4">
 			<div>
 				{#if loading}
@@ -45,20 +45,17 @@
 				{:else if selectedClassroom}
 					<button
 						onclick={toggleDropdown}
-						class="mt-1 flex items-center space-x-2 rounded-lg px-3 py-1 text-left transition-colors hover:bg-gray-50"
-						class:bg-gray-50={isDropdownOpen}
+						class="mt-1 flex items-center space-x-2 rounded-lg bg-blue-100 px-3 py-1 text-left transition-colors hover:bg-blue-200"
+						class:bg-blue-200={isDropdownOpen}
 					>
 						<div>
-							<h2 class="text-lg font-semibold text-gray-900">
+							<h2 class="text-lg font-semibold text-blue-700">
 								{selectedClassroom.name}
 							</h2>
-							<p class="text-sm text-gray-600">
-								{selectedClassroom.section ? `Section ${selectedClassroom.section}` : 'No section'}
-							</p>
 						</div>
 						<!-- Dropdown arrow -->
 						<svg
-							class="h-5 w-5 text-gray-400 transition-transform"
+							class="h-5 w-5 text-blue-500 transition-transform"
 							class:rotate-180={isDropdownOpen}
 							fill="none"
 							viewBox="0 0 24 24"
@@ -121,11 +118,10 @@
 			{/if}
 		</div>
 
-		<!-- View Toggle & Quick Actions -->
-		<div class="flex items-center space-x-4">
-			<!-- View Mode Toggle -->
-			{#if selectedClassroom}
-				<div class="flex items-center space-x-1 rounded-lg border border-gray-200 bg-white p-1">
+		<!-- Center Section: View Mode Toggle -->
+		{#if selectedClassroom}
+			<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+				<div class="flex items-center space-x-1 rounded-lg bg-white p-1">
 					<button
 						class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {viewMode ===
 						'assignment'
@@ -144,24 +140,32 @@
 						📊 Grade Grid
 					</button>
 				</div>
-			{/if}
-
-			<!-- Quick Action Buttons -->
-			<div class="flex items-center space-x-2">
-				<button
-					class="rounded-lg px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
-					onclick={() => (window.location.href = '/teacher/data-import')}
-				>
-					Import Data
-				</button>
-				<button
-					class="rounded-lg px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
-					onclick={() => dataStore.setLoading(true)}
-					disabled={loading}
-				>
-					{loading ? 'Refreshing...' : 'Refresh'}
-				</button>
 			</div>
+		{/if}
+
+		<!-- Right Section: Refresh Button -->
+		<div class="flex items-center">
+			<button
+				class="rounded-lg p-2 text-gray-700 transition-colors hover:bg-gray-50"
+				onclick={() => dataStore.setLoading(true)}
+				disabled={loading}
+				title={loading ? 'Refreshing...' : 'Refresh'}
+			>
+				<svg
+					class="h-4 w-4 transition-transform"
+					class:animate-spin={loading}
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+					/>
+				</svg>
+			</button>
 		</div>
 	</div>
 
@@ -174,7 +178,7 @@
 				{#each classrooms as classroom (classroom.id)}
 					<button
 						onclick={() => selectClassroom(classroom.id)}
-						class="w-full rounded-lg p-3 text-left transition-colors hover:bg-gray-50"
+						class="w-full rounded-lg p-3 text-left transition-colors hover:bg-blue-50"
 						class:bg-blue-50={classroom.id === selectedClassroomId}
 						class:border-blue-200={classroom.id === selectedClassroomId}
 						class:border={classroom.id === selectedClassroomId}
@@ -183,7 +187,6 @@
 							<div>
 								<div class="font-medium text-gray-900">{classroom.name}</div>
 								<div class="text-sm text-gray-600">
-									{classroom.section ? `Section ${classroom.section}` : ''} •
 									{classroom.studentCount || 0} students •
 									{classroom.assignmentCount || 0} assignments
 								</div>

@@ -25,7 +25,7 @@
 <AuthGuard>
 	<div class="min-h-screen bg-gray-50">
 		<Navigation />
-		<main class="pt-12">
+		<main class="pt-10">
 			{@render children?.()}
 		</main>
 	</div>

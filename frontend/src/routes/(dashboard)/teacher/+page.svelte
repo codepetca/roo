@@ -13,7 +13,7 @@
 	// Set data in store when component mounts
 	onMount(async () => {
 		console.log('📦 Dashboard page mounted, setting data from load functions...');
-		
+
 		// Initialize view mode from localStorage
 		dataStore.initializeViewMode();
 
