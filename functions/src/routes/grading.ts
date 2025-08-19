@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { z } from "zod";
 import { 
   testGradingRequestSchema,
   gradeQuizTestSchema,
@@ -6,6 +7,12 @@ import {
   gradeCodeRequestSchema
 } from "../schemas";
 import { handleRouteError, validateData, sendApiResponse } from "../middleware/validation";
+
+// Schema for Grade All request
+const gradeAllRequestSchema = z.object({
+  classroomId: z.string().min(1, "Classroom ID is required"),
+  assignmentIds: z.array(z.string()).optional()
+});
 
 /**
  * Test AI grading with sample text (development endpoint)
@@ -266,6 +273,162 @@ export async function gradeCode(req: Request, res: Response) {
       grading: result
     }, true, "Code assignment graded successfully");
 
+  } catch (error) {
+    handleRouteError(error, req, res);
+  }
+}
+
+/**
+ * Grade all ungraded assignments in a classroom with AI feedback
+ * Location: functions/src/routes/grading.ts:275
+ * Route: POST /grade-all-assignments
+ */
+export async function gradeAllAssignments(req: Request, res: Response) {
+  try {
+    const validatedData = validateData(gradeAllRequestSchema, req.body);
+    
+    const { createFirestoreRepository } = await import("../services/firestore-repository");
+    const { createGeminiService } = await import("../services/gemini");
+    const { createFirestoreGradeService } = await import("../services/firestore");
+    
+    const repository = createFirestoreRepository();
+    const geminiApiKey = req.app.locals.geminiApiKey;
+    const geminiService = createGeminiService(geminiApiKey);
+    const firestoreService = createFirestoreGradeService();
+    
+    console.log(`🤖 Starting Grade All for classroom: ${validatedData.classroomId}`);
+    
+    // Get all ungraded submissions for this classroom
+    const submissions = await repository.getUngradedSubmissions(
+      validatedData.classroomId,
+      validatedData.assignmentIds
+    );
+    
+    console.log(`📝 Found ${submissions.length} ungraded submissions`);
+    
+    if (submissions.length === 0) {
+      return sendApiResponse(res, {
+        totalSubmissions: 0,
+        gradedCount: 0,
+        failedCount: 0,
+        results: []
+      }, true, "No ungraded submissions found");
+    }
+    
+    // Get assignments data for grading context
+    const assignmentIds = [...new Set(submissions.map(s => s.assignmentId))];
+    const assignments = await Promise.all(
+      assignmentIds.map(id => repository.getAssignment(id))
+    );
+    const assignmentMap = assignments.reduce((map, assignment) => {
+      if (assignment) map[assignment.id] = assignment;
+      return map;
+    }, {} as Record<string, any>);
+    
+    // Process submissions in batches to respect rate limits
+    const BATCH_SIZE = 5;
+    const successful: any[] = [];
+    const failed: any[] = [];
+    
+    for (let i = 0; i < submissions.length; i += BATCH_SIZE) {
+      const batch = submissions.slice(i, i + BATCH_SIZE);
+      console.log(`🔄 Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(submissions.length/BATCH_SIZE)}`);
+      
+      // Process batch in parallel
+      const batchPromises = batch.map(async (submission) => {
+        try {
+          const assignment = assignmentMap[submission.assignmentId];
+          if (!assignment) {
+            throw new Error(`Assignment not found: ${submission.assignmentId}`);
+          }
+          
+          // Determine if this is a code assignment
+          const isCodeAssignment = assignment.type === 'coding' || assignment.isQuiz === false;
+          
+          // Use appropriate prompt template
+          const { GRADING_PROMPTS } = await import("../services/gemini");
+          const promptTemplate = isCodeAssignment ? GRADING_PROMPTS.generousCode : GRADING_PROMPTS.default;
+          
+          // Prepare grading request
+          const gradingRequest = {
+            submissionId: submission.id,
+            assignmentId: submission.assignmentId,
+            title: assignment.title || assignment.name || 'Assignment',
+            description: assignment.description || '',
+            maxPoints: assignment.maxScore || 100,
+            criteria: isCodeAssignment ? ["Understanding", "Logic", "Implementation"] : ["Content", "Organization", "Analysis"],
+            submission: submission.content || 'No content provided',
+            promptTemplate
+          };
+          
+          // Grade with AI
+          const gradingResult = await geminiService.gradeSubmission(gradingRequest);
+          
+          // Save grade to Firestore
+          const gradeId = await firestoreService.saveGrade({
+            submissionId: submission.id,
+            assignmentId: submission.assignmentId,
+            studentId: submission.studentId,
+            studentName: submission.studentName,
+            score: gradingResult.score,
+            maxPoints: assignment.maxScore || 100,
+            feedback: gradingResult.feedback,
+            gradedBy: "ai",
+            criteriaScores: gradingResult.criteriaScores,
+            metadata: {
+              batchGraded: true,
+              gradingMode: 'bulk',
+              isCodeAssignment
+            }
+          });
+          
+          return {
+            submissionId: submission.id,
+            gradeId,
+            score: gradingResult.score,
+            maxScore: assignment.maxScore || 100,
+            feedback: gradingResult.feedback
+          };
+          
+        } catch (error) {
+          console.error(`❌ Failed to grade submission ${submission.id}:`, error);
+          return {
+            submissionId: submission.id,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          };
+        }
+      });
+      
+      const batchResults = await Promise.allSettled(batchPromises);
+      
+      // Categorize results
+      batchResults.forEach((result) => {
+        if (result.status === 'fulfilled' && !result.value.error) {
+          successful.push(result.value);
+        } else {
+          failed.push({
+            submissionId: result.status === 'fulfilled' ? result.value.submissionId : 'unknown',
+            error: result.status === 'fulfilled' ? result.value.error : 'Promise rejected'
+          });
+        }
+      });
+      
+      // Small delay between batches to be nice to the AI service
+      if (i + BATCH_SIZE < submissions.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    
+    console.log(`✅ Grade All completed: ${successful.length} successful, ${failed.length} failed`);
+    
+    sendApiResponse(res, {
+      totalSubmissions: submissions.length,
+      gradedCount: successful.length,
+      failedCount: failed.length,
+      results: successful,
+      failures: failed.length > 0 ? failed : undefined
+    }, true, `Graded ${successful.length} of ${submissions.length} submissions successfully`);
+    
   } catch (error) {
     handleRouteError(error, req, res);
   }

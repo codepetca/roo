@@ -27,7 +27,7 @@ if (getApps().length === 0) {
 // Route handlers
 import { getApiStatus, testGeminiConnection, testSheetsConnection } from "./routes/health";
 import { createAssignment, listAssignments, testFirestoreWrite, testFirestoreRead } from "./routes/assignments";
-import { testGrading, gradeQuiz, gradeQuizTest, gradeCode } from "./routes/grading";
+import { testGrading, gradeQuiz, gradeQuizTest, gradeCode, gradeAllAssignments } from "./routes/grading";
 import { getSheetsAssignments, getSheetsSubmissions, getAllSubmissions, getUngradedSubmissions, getAnswerKey, listSheetNames } from "./routes/sheets";
 import { getGradesByAssignment, getGradeBySubmission, getUngradedSubmissions as getFirestoreUngradedSubmissions, createSubmission, getSubmissionsByAssignment, getSubmissionById, updateSubmissionStatus } from "./routes/grades";
 import { syncAssignments, syncSubmissions, syncAllData } from "./routes/sync";
@@ -139,6 +139,9 @@ export const api = onRequest(
       }
       if (method === "POST" && path === "/grade-assignment") {
         await gradeCode(request, response); return;
+      }
+      if (method === "POST" && path === "/grade-all-assignments") {
+        await gradeAllAssignments(request, response); return;
       }
 
       // Sheets integration routes

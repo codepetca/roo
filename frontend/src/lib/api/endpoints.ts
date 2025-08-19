@@ -310,6 +310,54 @@ export const api = {
 		return this.gradeAssignment(data);
 	},
 
+	// Grade All Assignments
+	async gradeAllAssignments(data: { classroomId: string; assignmentIds?: string[] }): Promise<{
+		totalSubmissions: number;
+		gradedCount: number;
+		failedCount: number;
+		results: Array<{
+			submissionId: string;
+			gradeId: string;
+			score: number;
+			maxScore: number;
+			feedback: string;
+		}>;
+		failures?: Array<{
+			submissionId: string;
+			error: string;
+		}>;
+	}> {
+		return typedApiRequest(
+			'/grade-all-assignments',
+			{
+				method: 'POST',
+				body: JSON.stringify(data)
+			},
+			z.object({
+				totalSubmissions: z.number(),
+				gradedCount: z.number(),
+				failedCount: z.number(),
+				results: z.array(
+					z.object({
+						submissionId: z.string(),
+						gradeId: z.string(),
+						score: z.number(),
+						maxScore: z.number(),
+						feedback: z.string()
+					})
+				),
+				failures: z
+					.array(
+						z.object({
+							submissionId: z.string(),
+							error: z.string()
+						})
+					)
+					.optional()
+			})
+		);
+	},
+
 	// Google Sheets Integration
 	async getSheetsSubmissions(data: GetSheetsSubmissionsRequest): Promise<SubmissionResponse[]> {
 		return typedApiRequest(

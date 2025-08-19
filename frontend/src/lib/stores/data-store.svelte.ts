@@ -41,6 +41,14 @@ class DataStore {
 	loading = $state<boolean>(false);
 	error = $state<string | null>(null);
 
+	// Grade All functionality
+	gradingInProgress = $state<boolean>(false);
+	gradingProgress = $state<{ current: number; total: number; status: string }>({
+		current: 0,
+		total: 0,
+		status: ''
+	});
+
 	// Recent activity
 	recentActivity = $state<
 		Array<{
@@ -768,6 +776,59 @@ class DataStore {
 		if (this.viewMode === 'grid' && this.selectedClassroomId) {
 			this.updateGridData();
 		}
+	}
+
+	/**
+	 * Grade all ungraded assignments in a classroom
+	 */
+	async gradeAllAssignments(classroomId: string) {
+		if (this.gradingInProgress) {
+			console.warn('Grading already in progress');
+			return;
+		}
+
+		console.log('🤖 Starting Grade All for classroom:', classroomId);
+		this.gradingInProgress = true;
+		this.gradingProgress = { current: 0, total: 0, status: 'Initializing...' };
+
+		try {
+			// Call the API endpoint (will be implemented next)
+			const result = await api.gradeAllAssignments({ classroomId });
+			
+			this.gradingProgress = { 
+				current: result.gradedCount, 
+				total: result.totalSubmissions,
+				status: `Completed: ${result.gradedCount}/${result.totalSubmissions} graded successfully`
+			};
+
+			// Refresh submissions and grades to show new data
+			await this.refreshData();
+
+			console.log('✅ Grade All completed:', result);
+			
+			// Show success message
+			this.error = null;
+			
+		} catch (error) {
+			console.error('❌ Grade All failed:', error);
+			this.error = error instanceof Error ? error.message : 'Failed to grade assignments';
+			this.gradingProgress = { current: 0, total: 0, status: 'Failed' };
+		} finally {
+			this.gradingInProgress = false;
+			// Clear progress after a delay to let users see the final status
+			setTimeout(() => {
+				this.gradingProgress = { current: 0, total: 0, status: '' };
+			}, 3000);
+		}
+	}
+
+	/**
+	 * Refresh all data (convenience method)
+	 */
+	private async refreshData() {
+		// This will trigger re-fetching of submissions and grades
+		// The existing effect in the main dashboard will handle this
+		this.setLoading(true);
 	}
 }
 
