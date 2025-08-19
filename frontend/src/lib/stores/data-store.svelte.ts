@@ -515,8 +515,22 @@ class DataStore {
 			});
 		});
 
+		// Sort students using the existing sorting logic
+		const unsortedStudents = Array.from(studentMap.values());
+		const studentsForSorting = unsortedStudents.map(student => ({
+			studentId: student.id,
+			studentName: student.name,
+			studentEmail: student.email,
+			status: 'unknown', // Default status for grid sorting
+		}));
+		
+		const sortedStudentData = sortStudentProgress(studentsForSorting, this.studentSortField, this.studentSortDirection);
+		const sortedStudents = sortedStudentData.map(studentData => 
+			unsortedStudents.find(s => s.id === studentData.studentId)!
+		);
+
 		const result = {
-			students: Array.from(studentMap.values()),
+			students: sortedStudents,
 			assignments: assignments,
 			grades: gradeMatrix
 		};
@@ -748,6 +762,11 @@ class DataStore {
 		} else {
 			// Different field, set it with appropriate initial direction
 			this.setStudentSort(field);
+		}
+		
+		// Update grid data to reflect new sorting
+		if (this.viewMode === 'grid' && this.selectedClassroomId) {
+			this.updateGridData();
 		}
 	}
 }

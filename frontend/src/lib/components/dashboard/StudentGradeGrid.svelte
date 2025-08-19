@@ -2,11 +2,16 @@
 	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { Badge } from '$lib/components/ui';
 	import type { Grade } from '@shared/schemas/core';
+	import { getSortIcon, type StudentSortField } from '$lib/utils/sorting';
 
 	// Get reactive data from store
 	let selectedClassroom = $derived(dataStore.selectedClassroom);
 	let gradeGridData = $derived(dataStore.gradeGridData);
 	let loadingGridData = $derived(dataStore.loadingGridData);
+
+	// Sorting state
+	let studentSortField = $derived(dataStore.studentSortField);
+	let studentSortDirection = $derived(dataStore.studentSortDirection);
 
 	// Reactive effect to fetch grid data when classroom changes
 	$effect(() => {
@@ -90,6 +95,12 @@
 		console.log('📱 Grade cell clicked:', { studentId, assignmentId });
 		// TODO: Implement navigation to grading interface
 	}
+
+	// Handle student header sort toggle
+	function handleStudentHeaderSort() {
+		console.log('🔄 Student header clicked, toggling sort');
+		dataStore.toggleStudentSort('name');
+	}
 </script>
 
 <div class="flex h-full flex-col">
@@ -118,7 +129,7 @@
 		</div>
 	{:else}
 		<!-- Grade Grid Table -->
-		<div class="flex-1 overflow-auto">
+		<div class="flex-1 overflow-hidden flex flex-col">
 			{#if loadingGridData}
 				<div class="flex h-full items-center justify-center">
 					<div class="text-center">
@@ -151,16 +162,22 @@
 					</div>
 				</div>
 			{:else}
-				<div class="overflow-x-auto">
-					<table class="min-w-full divide-y divide-gray-200">
+				<div class="overflow-auto">
+					<table class="min-w-full divide-y divide-gray-200 relative">
 						<!-- Table Header -->
-						<thead class="sticky top-0 z-10 bg-gray-50">
+						<thead class="sticky top-0 z-20 bg-gray-50 shadow-sm">
 							<tr>
 								<!-- Student Name Column -->
 								<th
-									class="sticky left-0 z-20 w-80 border-r border-gray-300 bg-gray-50 px-3 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+									class="student-header sticky top-0 left-0 z-50 w-80 border-r border-gray-300 bg-gray-50 px-3 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase cursor-pointer hover:bg-gray-100 transition-colors"
+									onclick={handleStudentHeaderSort}
 								>
-									Student
+									<div class="flex items-center justify-between">
+										<span>Student</span>
+										<span class="ml-1 text-gray-400">
+											{getSortIcon(studentSortField === 'name', studentSortDirection)}
+										</span>
+									</div>
 								</th>
 								<!-- Assignment Columns -->
 								{#each gradeGridData.assignments || [] as assignment (assignment.id)}
@@ -181,10 +198,10 @@
 						<!-- Table Body -->
 						<tbody class="divide-y divide-gray-200 bg-white">
 							{#each gradeGridData.students || [] as student (student.id)}
-								<tr class="hover:bg-gray-50">
+								<tr class="hover:bg-gray-50 group">
 									<!-- Student Name Cell (Sticky) -->
 									<td
-										class="sticky left-0 z-10 w-80 border-r border-gray-300 bg-white px-3 py-2 whitespace-nowrap"
+										class="student-cell sticky left-0 z-10 w-80 border-r border-gray-300 bg-white px-3 py-2 whitespace-nowrap group-hover:bg-gray-50"
 									>
 										<div class="flex items-center gap-2">
 											<!-- Small Avatar Circle -->
@@ -225,21 +242,44 @@
 
 <style>
 	/* Ensure proper table scrolling with sticky elements */
-	.overflow-x-auto {
+	.overflow-auto {
 		scrollbar-width: thin;
 		scrollbar-color: #cbd5e0 #f7fafc;
 	}
 
-	.overflow-x-auto::-webkit-scrollbar {
+	.overflow-auto::-webkit-scrollbar {
+		width: 8px;
 		height: 8px;
 	}
 
-	.overflow-x-auto::-webkit-scrollbar-track {
+	.overflow-auto::-webkit-scrollbar-track {
 		background: #f7fafc;
 	}
 
-	.overflow-x-auto::-webkit-scrollbar-thumb {
+	.overflow-auto::-webkit-scrollbar-thumb {
 		background-color: #cbd5e0;
 		border-radius: 4px;
+	}
+
+	.overflow-auto::-webkit-scrollbar-corner {
+		background: #f7fafc;
+	}
+
+	/* Add subtle shadow under sticky header when scrolling */
+	thead.sticky {
+		box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+	}
+
+	/* Force proper z-index stacking for sticky elements */
+	thead th.student-header {
+		position: sticky !important;
+		z-index: 100 !important;
+		background-color: rgb(249, 250, 251) !important; /* bg-gray-50 */
+	}
+
+	tbody td.student-cell {
+		position: sticky !important;
+		z-index: 50 !important;
+		background-color: white !important;
 	}
 </style>
