@@ -114,7 +114,7 @@ describe('snapshotToCore transformation', () => {
 
     // Check teacher transformation
     expect(result.teacher.email).toBe('teacher@school.edu');
-    expect(result.teacher.name).toBe('Test Teacher');
+    expect(result.teacher.displayName).toBe('Test Teacher');
     expect(result.teacher.role).toBe('teacher');
 
     // Check classroom transformation

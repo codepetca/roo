@@ -36,17 +36,21 @@
 		return { total, submitted, graded, pending, averageGrade };
 	});
 
-	function getStatusBadge(status: string) {
-		switch (status) {
-			case 'graded':
-				return { variant: 'success' as const, text: 'Graded', icon: '✓' };
-			case 'submitted':
-				return { variant: 'warning' as const, text: 'Pending Review', icon: '⏳' };
-			case 'not_submitted':
-				return { variant: 'secondary' as const, text: 'Not Submitted', icon: '—' };
-			default:
-				return { variant: 'secondary' as const, text: 'Unknown', icon: '?' };
+	/**
+	 * Truncate AI feedback for display in the comments column
+	 */
+	function truncateComment(comment: string | undefined, maxLength = 50): string {
+		if (!comment || comment.trim() === '') {
+			return '—';
 		}
+		return comment.length > maxLength ? comment.slice(0, maxLength) + '...' : comment;
+	}
+
+	/**
+	 * Get full AI feedback text for tooltip
+	 */
+	function getFullComment(student: any): string {
+		return student.feedback || student.grade?.feedback || 'No feedback available';
 	}
 
 	// Define the student progress type for function parameters
@@ -141,18 +145,6 @@
 							</th>
 							<th class="px-6 py-3">
 								<button
-									onclick={() => handleSort('status')}
-									class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
-									title={getSortDescription('status')}
-								>
-									<span>Status</span>
-									<span class="text-xs">
-										{getSortIcon(sortField === 'status', sortDirection)}
-									</span>
-								</button>
-							</th>
-							<th class="px-6 py-3">
-								<button
 									onclick={() => handleSort('submitted')}
 									class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
 									title={getSortDescription('submitted', sortDirection)}
@@ -177,6 +169,12 @@
 							</th>
 							<th
 								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+								title="AI-generated feedback and comments"
+							>
+								AI Comments
+							</th>
+							<th
+								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 							>
 								Actions
 							</th>
@@ -184,7 +182,6 @@
 					</thead>
 					<tbody class="divide-y divide-gray-200 bg-white">
 						{#each studentProgress as student (student.studentId)}
-							{@const statusBadge = getStatusBadge(student.status)}
 							<tr class="hover:bg-gray-50">
 								<td class="px-6 py-4 whitespace-nowrap">
 									<div class="flex items-center">
@@ -207,12 +204,11 @@
 										</div>
 									</div>
 								</td>
-								<td class="px-6 py-4 whitespace-nowrap">
-									<Badge variant={statusBadge.variant}>
-										{#snippet children()}
-											{statusBadge.icon} {statusBadge.text}
-										{/snippet}
-									</Badge>
+								<td
+									class="px-6 py-4 text-sm whitespace-nowrap text-gray-900"
+									title={getFullComment(student)}
+								>
+									{truncateComment(student.feedback)}
 								</td>
 								<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
 									{formatDate(student.submittedAt)}

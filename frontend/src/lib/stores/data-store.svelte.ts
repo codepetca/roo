@@ -525,16 +525,20 @@ class DataStore {
 
 		// Sort students using the existing sorting logic
 		const unsortedStudents = Array.from(studentMap.values());
-		const studentsForSorting = unsortedStudents.map(student => ({
+		const studentsForSorting = unsortedStudents.map((student) => ({
 			studentId: student.id,
 			studentName: student.name,
 			studentEmail: student.email,
-			status: 'unknown', // Default status for grid sorting
+			status: 'unknown' // Default status for grid sorting
 		}));
-		
-		const sortedStudentData = sortStudentProgress(studentsForSorting, this.studentSortField, this.studentSortDirection);
-		const sortedStudents = sortedStudentData.map(studentData => 
-			unsortedStudents.find(s => s.id === studentData.studentId)!
+
+		const sortedStudentData = sortStudentProgress(
+			studentsForSorting,
+			this.studentSortField,
+			this.studentSortDirection
+		);
+		const sortedStudents = sortedStudentData.map(
+			(studentData) => unsortedStudents.find((s) => s.id === studentData.studentId)!
 		);
 
 		const result = {
@@ -771,7 +775,7 @@ class DataStore {
 			// Different field, set it with appropriate initial direction
 			this.setStudentSort(field);
 		}
-		
+
 		// Update grid data to reflect new sorting
 		if (this.viewMode === 'grid' && this.selectedClassroomId) {
 			this.updateGridData();
@@ -792,23 +796,33 @@ class DataStore {
 		this.gradingProgress = { current: 0, total: 0, status: 'Initializing...' };
 
 		try {
-			// Call the API endpoint (will be implemented next)
+			// Call the API endpoint
 			const result = await api.gradeAllAssignments({ classroomId });
-			
-			this.gradingProgress = { 
-				current: result.gradedCount, 
+
+			// Update progress with final results
+			const statusMessage =
+				result.failedCount > 0
+					? `Completed: ${result.gradedCount}/${result.totalSubmissions} graded successfully (${result.failedCount} failed)`
+					: `Completed: ${result.gradedCount}/${result.totalSubmissions} graded successfully`;
+
+			this.gradingProgress = {
+				current: result.gradedCount,
 				total: result.totalSubmissions,
-				status: `Completed: ${result.gradedCount}/${result.totalSubmissions} graded successfully`
+				status: statusMessage
 			};
 
 			// Refresh submissions and grades to show new data
 			await this.refreshData();
 
 			console.log('✅ Grade All completed:', result);
-			
-			// Show success message
-			this.error = null;
-			
+
+			// Handle partial failures
+			if (result.failedCount > 0 && result.failures) {
+				console.warn(`⚠️ Some grades failed:`, result.failures);
+				this.error = `Successfully graded ${result.gradedCount} submissions, but ${result.failedCount} failed. Check console for details.`;
+			} else {
+				this.error = null;
+			}
 		} catch (error) {
 			console.error('❌ Grade All failed:', error);
 			this.error = error instanceof Error ? error.message : 'Failed to grade assignments';
@@ -816,6 +830,53 @@ class DataStore {
 		} finally {
 			this.gradingInProgress = false;
 			// Clear progress after a delay to let users see the final status
+			setTimeout(() => {
+				this.gradingProgress = { current: 0, total: 0, status: '' };
+			}, 3000);
+		}
+	}
+
+	/**
+	 * Retry failed grading for specific submissions
+	 */
+	async retryFailedGrades(classroomId: string, submissionIds: string[]) {
+		if (this.gradingInProgress) {
+			console.warn('Grading already in progress');
+			return;
+		}
+
+		console.log('🔄 Retrying failed grades for submissions:', submissionIds);
+		this.gradingInProgress = true;
+		this.gradingProgress = {
+			current: 0,
+			total: submissionIds.length,
+			status: 'Retrying failed grades...'
+		};
+
+		try {
+			// For now, retry by calling the same endpoint but this could be optimized
+			// to only retry specific submissions
+			const result = await api.gradeAllAssignments({ classroomId });
+
+			this.gradingProgress = {
+				current: result.gradedCount,
+				total: result.totalSubmissions,
+				status: `Retry completed: ${result.gradedCount} graded, ${result.failedCount} still failed`
+			};
+
+			await this.refreshData();
+
+			if (result.failedCount > 0) {
+				this.error = `Retry completed, but ${result.failedCount} submissions still failed.`;
+			} else {
+				this.error = null;
+			}
+		} catch (error) {
+			console.error('❌ Retry failed:', error);
+			this.error = error instanceof Error ? error.message : 'Retry operation failed';
+			this.gradingProgress = { current: 0, total: submissionIds.length, status: 'Retry failed' };
+		} finally {
+			this.gradingInProgress = false;
 			setTimeout(() => {
 				this.gradingProgress = { current: 0, total: 0, status: '' };
 			}, 3000);

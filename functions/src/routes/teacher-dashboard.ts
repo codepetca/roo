@@ -74,7 +74,7 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
     const dashboardUser: DashboardUser = serializeTimestamps({
       id: userData.id,  // Use the ID from normalized data
       email: userData.email,
-      name: userData.displayName,
+      displayName: userData.displayName,
       role: userData.role,
       schoolEmail: userData.schoolEmail,
       classroomIds: userData.classroomIds,
@@ -189,7 +189,7 @@ export async function getTeacherDashboard(req: Request, res: Response): Promise<
       teacher: {
         id: dashboardUser.id,
         email: dashboardUser.email,
-        name: dashboardUser.name,
+        displayName: dashboardUser.displayName,
         role: dashboardUser.role,
         createdAt: dashboardUser.createdAt,
         updatedAt: dashboardUser.updatedAt

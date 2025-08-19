@@ -287,11 +287,11 @@ export async function gradeAllAssignments(req: Request, res: Response) {
   try {
     const validatedData = validateData(gradeAllRequestSchema, req.body);
     
-    const { createFirestoreRepository } = await import("../services/firestore-repository");
+    const { FirestoreRepository } = await import("../services/firestore-repository");
     const { createGeminiService } = await import("../services/gemini");
     const { createFirestoreGradeService } = await import("../services/firestore");
     
-    const repository = createFirestoreRepository();
+    const repository = new FirestoreRepository();
     const geminiApiKey = req.app.locals.geminiApiKey;
     const geminiService = createGeminiService(geminiApiKey);
     const firestoreService = createFirestoreGradeService();
@@ -300,8 +300,7 @@ export async function gradeAllAssignments(req: Request, res: Response) {
     
     // Get all ungraded submissions for this classroom
     const submissions = await repository.getUngradedSubmissions(
-      validatedData.classroomId,
-      validatedData.assignmentIds
+      validatedData.classroomId
     );
     
     console.log(`📝 Found ${submissions.length} ungraded submissions`);
@@ -376,7 +375,6 @@ export async function gradeAllAssignments(req: Request, res: Response) {
             gradedBy: "ai",
             criteriaScores: gradingResult.criteriaScores,
             metadata: {
-              batchGraded: true,
               gradingMode: 'bulk',
               isCodeAssignment
             }

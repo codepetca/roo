@@ -130,7 +130,7 @@ function transformTeacher(
   
   return {
     email: teacherProfile.email,
-    name: teacherProfile.name,
+    displayName: teacherProfile.name,
     role: 'teacher' as const,
     schoolEmail,
     classroomIds

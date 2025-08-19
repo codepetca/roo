@@ -129,7 +129,7 @@
 		</div>
 	{:else}
 		<!-- Grade Grid Table -->
-		<div class="flex-1 overflow-hidden flex flex-col">
+		<div class="flex flex-1 flex-col overflow-hidden">
 			{#if loadingGridData}
 				<div class="flex h-full items-center justify-center">
 					<div class="text-center">
@@ -163,13 +163,13 @@
 				</div>
 			{:else}
 				<div class="overflow-auto">
-					<table class="min-w-full divide-y divide-gray-200 relative">
+					<table class="relative min-w-full divide-y divide-gray-200">
 						<!-- Table Header -->
 						<thead class="sticky top-0 z-20 bg-gray-50 shadow-sm">
 							<tr>
 								<!-- Student Name Column -->
 								<th
-									class="student-header sticky top-0 left-0 z-50 w-80 border-r border-gray-300 bg-gray-50 px-3 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase cursor-pointer hover:bg-gray-100 transition-colors"
+									class="student-header sticky top-0 left-0 z-50 w-80 cursor-pointer border-r border-gray-300 bg-gray-50 px-3 py-2 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:bg-gray-100"
 									onclick={handleStudentHeaderSort}
 								>
 									<div class="flex items-center justify-between">
@@ -198,7 +198,7 @@
 						<!-- Table Body -->
 						<tbody class="divide-y divide-gray-200 bg-white">
 							{#each gradeGridData.students || [] as student (student.id)}
-								<tr class="hover:bg-gray-50 group">
+								<tr class="group hover:bg-gray-50">
 									<!-- Student Name Cell (Sticky) -->
 									<td
 										class="student-cell sticky left-0 z-10 w-80 border-r border-gray-300 bg-white px-3 py-2 whitespace-nowrap group-hover:bg-gray-50"

@@ -55,7 +55,7 @@ const baseEntitySchema = z.object({
  */
 export const dashboardUserSchema = baseEntitySchema.extend({
   email: z.string().email(),
-  name: z.string().min(1),
+  displayName: z.string().min(1),
   role: z.enum(['teacher', 'student', 'admin']),
   
   // School board email for classroom ownership (different from sign-in email)

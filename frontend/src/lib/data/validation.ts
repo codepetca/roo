@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { dashboardUserSchema } from '@shared/schemas/core';
 
 // Helper for date/timestamp handling - flexible parsing for various Firebase formats
 const dateTimeSchema = z
@@ -50,24 +51,9 @@ const dateTimeSchema = z
 	.transform((val) => (val instanceof Date ? val : val));
 
 /**
- * User profile schema for validation
+ * User profile schema for validation - using shared backend schema for consistency
  */
-export const userProfileSchema = z.object({
-	uid: z.string().min(1),
-	email: z.string().email(),
-	displayName: z.string().min(1),
-	role: z.enum(['teacher', 'student']),
-	schoolEmail: z.string().email().optional().nullable(),
-	classroomIds: z.array(z.string()).optional(),
-	totalClassrooms: z.number().min(0).optional(),
-	totalStudents: z.number().min(0).optional(),
-	isActive: z.boolean().optional(),
-	lastLogin: dateTimeSchema.optional(),
-	createdAt: dateTimeSchema,
-	updatedAt: dateTimeSchema,
-	version: z.number().min(1),
-	isLatest: z.boolean()
-});
+export const userProfileSchema = dashboardUserSchema;
 
 export type UserProfile = z.infer<typeof userProfileSchema>;
 

@@ -138,15 +138,28 @@
 			<!-- Grade All Button (only in assessments mode) -->
 			{#if selectedClassroom && viewMode === 'assignment'}
 				<button
-					class="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+					class="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
 					onclick={() => dataStore.gradeAllAssignments(selectedClassroom.id)}
 					disabled={gradingInProgress || loading}
-					title={gradingInProgress ? gradingProgress.status || 'Grading in progress...' : 'Grade all ungraded assignments in this classroom'}
+					title={gradingInProgress
+						? gradingProgress.status || 'Grading in progress...'
+						: 'Grade all ungraded assignments in this classroom'}
 				>
 					{#if gradingInProgress}
 						<svg class="mr-1 inline h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							<circle
+								class="opacity-25"
+								cx="12"
+								cy="12"
+								r="10"
+								stroke="currentColor"
+								stroke-width="4"
+							></circle>
+							<path
+								class="opacity-75"
+								fill="currentColor"
+								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+							></path>
 						</svg>
 						{#if gradingProgress.total > 0}
 							{gradingProgress.current}/{gradingProgress.total}
@@ -158,7 +171,7 @@
 					{/if}
 				</button>
 			{/if}
-			
+
 			<button
 				class="rounded-lg p-2 text-gray-700 transition-colors hover:bg-gray-50"
 				onclick={() => dataStore.setLoading(true)}
