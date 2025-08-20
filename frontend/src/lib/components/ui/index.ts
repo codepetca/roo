@@ -4,3 +4,4 @@ export { default as Badge } from './Badge.svelte';
 export { default as Alert } from './Alert.svelte';
 export { default as Input } from './Input.svelte';
 export { default as LoadingSpinner } from './LoadingSpinner.svelte';
+export { default as Tooltip } from './Tooltip.svelte';
