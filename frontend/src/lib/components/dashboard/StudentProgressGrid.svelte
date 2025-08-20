@@ -150,7 +150,7 @@
 				<!-- Responsive CSS Grid Layout (2:1:1:2:4:1 ratio) -->
 				<div class="min-w-full bg-white">
 					<!-- Grid Header -->
-					<div class="grid grid-cols-[2fr_1fr_1fr_2fr_4fr_1fr] gap-4 border-b border-gray-200 bg-gray-50 px-6 py-3">
+					<div class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 bg-gray-50 px-6 py-3">
 						<div class="min-w-0">
 							<button
 								onclick={() => handleSort('name')}
@@ -200,7 +200,7 @@
 
 					<!-- Grid Rows -->
 					{#each studentProgress as student (student.studentId)}
-						<div class="grid grid-cols-[2fr_1fr_1fr_2fr_4fr_1fr] gap-4 border-b border-gray-200 px-6 py-4 hover:bg-gray-50">
+						<div class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 px-6 py-4 hover:bg-gray-50">
 							<!-- Student Column (2fr) -->
 							<div class="min-w-0 flex items-center">
 								<div class="h-10 w-10 flex-shrink-0">
