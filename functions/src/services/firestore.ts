@@ -238,10 +238,102 @@ export class FirestoreGradeService {
         .orderBy("submittedAt", "desc")
         .get();
 
-      return submissionsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as SubmissionData[];
+      // Extract submissions data with proper typing
+      const submissions = submissionsSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data
+        };
+      });
+
+      // Get all gradeIds from submissions that have them
+      const gradeIds = submissions
+        .map(sub => (sub as any).gradeId as string)
+        .filter(Boolean);
+
+      logger.info("Grade IDs to fetch", {
+        assignmentId,
+        gradeIds: gradeIds.slice(0, 10), // Show first 10 for debugging
+        totalGradeIds: gradeIds.length,
+        sampleSubmissionData: submissions.slice(0, 2).map(s => ({
+          id: s.id,
+          gradeId: (s as any).gradeId,
+          status: (s as any).status
+        }))
+      });
+
+      // If there are grades to fetch, batch fetch them
+      if (gradeIds.length > 0) {
+        // Firestore 'in' queries are limited to 10 items, so we need to batch
+        const gradeMap = new Map<string, any>();
+        
+        // Process in chunks of 10
+        for (let i = 0; i < gradeIds.length; i += 10) {
+          const batch = gradeIds.slice(i, i + 10);
+          logger.info("Fetching grades batch", {
+            assignmentId,
+            batch,
+            batchSize: batch.length
+          });
+          
+          // Try without isLatest filter first to see if grades exist at all
+          const gradesSnapshot = await db.collection("grades")
+            .where(admin.firestore.FieldPath.documentId(), "in", batch)
+            .get();
+          
+          logger.info("Grades query result", {
+            assignmentId,
+            requestedIds: batch,
+            foundCount: gradesSnapshot.docs.length,
+            foundIds: gradesSnapshot.docs.map(doc => doc.id)
+          });
+          
+          // Add to map with data transformation for compatibility
+          gradesSnapshot.docs.forEach(doc => {
+            const gradeData = doc.data();
+            
+            // Transform grade data to match expected schema
+            const transformedGrade = {
+              id: doc.id,
+              ...gradeData,
+              // Handle maxPoints vs maxScore compatibility
+              maxScore: gradeData.maxScore || gradeData.maxPoints || 100,
+              // Calculate percentage if missing
+              percentage: gradeData.percentage || 
+                         (gradeData.score && (gradeData.maxScore || gradeData.maxPoints)) 
+                           ? Math.round((gradeData.score / (gradeData.maxScore || gradeData.maxPoints)) * 100)
+                           : 0,
+              // Add missing required fields with defaults
+              classroomId: gradeData.classroomId || gradeData.assignmentId?.split('_assignment_')[0] || '',
+              submissionVersionGraded: gradeData.submissionVersionGraded || 1
+            };
+            
+            gradeMap.set(doc.id, transformedGrade);
+          });
+        }
+
+        // Populate grade data on submissions
+        const result = submissions.map(sub => ({
+          ...sub,
+          grade: (sub as any).gradeId ? gradeMap.get((sub as any).gradeId as string) : undefined
+        })) as SubmissionData[];
+        
+        // Debug logging
+        logger.info("Submissions with grades populated", {
+          assignmentId,
+          submissionsTotal: result.length,
+          submissionsWithGradeId: result.filter(s => (s as any).gradeId).length,
+          submissionsWithGrade: result.filter(s => s.grade).length,
+          gradeMapSize: gradeMap.size,
+          sampleGrade: result.find(s => s.grade)?.grade
+        });
+        
+        return result;
+      }
+
+      // No grades to fetch, return submissions as-is
+      return submissions as SubmissionData[];
     } catch (error) {
       logger.error("Error fetching submissions by assignment ID", { assignmentId, error });
       throw error;
