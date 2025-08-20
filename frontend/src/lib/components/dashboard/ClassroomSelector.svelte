@@ -1,6 +1,13 @@
 <script lang="ts">
 	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { Badge } from '$lib/components/ui';
+	type UserRole = 'teacher' | 'student';
+
+	let {
+		role = 'teacher'
+	}: {
+		role?: UserRole;
+	} = $props();
 
 	// Get reactive data from store
 	let classrooms = $derived(dataStore.classrooms);
@@ -84,12 +91,12 @@
 								<svg class="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
 									<path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" />
 								</svg>
-								{selectedClassroom.studentCount || 0} Students
+								{role === 'teacher' ? `${selectedClassroom.studentCount || 0} Students` : selectedClassroom.name}
 							</div>
 						{/snippet}
 					</Badge>
 
-					{#if selectedClassroom.ungradedSubmissions && selectedClassroom.ungradedSubmissions > 0}
+					{#if role === 'teacher' && selectedClassroom.ungradedSubmissions && selectedClassroom.ungradedSubmissions > 0}
 						<Badge variant="warning">
 							{#snippet children()}
 								<div class="flex items-center">
@@ -104,13 +111,24 @@
 								</div>
 							{/snippet}
 						</Badge>
+					{:else if role === 'student' && selectedClassroom.assignmentCount}
+						<Badge variant="info">
+							{#snippet children()}
+								<div class="flex items-center">
+									<svg class="mr-1 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+										<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+									</svg>
+									{selectedClassroom.assignmentCount} Assignments
+								</div>
+							{/snippet}
+						</Badge>
 					{/if}
 				</div>
 			{/if}
 		</div>
 
 		<!-- Center Section: View Mode Toggle -->
-		{#if selectedClassroom}
+		{#if selectedClassroom && role === 'teacher'}
 			<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
 				<div class="flex items-center space-x-1 rounded-lg bg-white p-1">
 					<button
@@ -132,12 +150,34 @@
 					</button>
 				</div>
 			</div>
+		{:else if selectedClassroom && role === 'student'}
+			<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+				<div class="flex items-center space-x-1 rounded-lg bg-white p-1">
+					<button
+						class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {viewMode ===
+						'assignment'
+							? 'bg-blue-100 text-blue-700'
+							: 'text-gray-700 hover:bg-gray-100'}"
+						onclick={() => setViewMode('assignment')}
+					>
+						📝 Assignments
+					</button>
+					<button
+						class="rounded-md px-3 py-1.5 text-sm font-medium transition-colors {viewMode === 'grid'
+							? 'bg-blue-100 text-blue-700'
+							: 'text-gray-700 hover:bg-gray-100'}"
+						onclick={() => setViewMode('grid')}
+					>
+						📊 My Grades
+					</button>
+				</div>
+			</div>
 		{/if}
 
-		<!-- Right Section: Grade All + Refresh Button -->
+		<!-- Right Section: Role-specific Actions -->
 		<div class="flex items-center space-x-2">
-			<!-- Grade All Button (only in assessments mode with assignment selected) -->
-			{#if selectedClassroom && selectedAssignmentId && viewMode === 'assignment'}
+			<!-- Grade All Button (only for teachers in assessments mode with assignment selected) -->
+			{#if role === 'teacher' && selectedClassroom && selectedAssignmentId && viewMode === 'assignment'}
 				<button
 					class="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
 					onclick={() => dataStore.gradeAllAssignments(selectedAssignmentId)}
@@ -171,6 +211,14 @@
 						🤖 Grade All
 					{/if}
 				</button>
+			{:else if role === 'student' && selectedClassroom}
+				<!-- Student-specific action - View Progress -->
+				<button
+					class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+					title="View your progress in this classroom"
+				>
+					📊 View Progress
+				</button>
 			{/if}
 
 		</div>
@@ -194,8 +242,12 @@
 							<div>
 								<div class="font-medium text-gray-900">{classroom.name}</div>
 								<div class="text-sm text-gray-600">
-									{classroom.studentCount || 0} students •
-									{classroom.assignmentCount || 0} assignments
+									{#if role === 'teacher'}
+										{classroom.studentCount || 0} students •
+										{classroom.assignmentCount || 0} assignments
+									{:else}
+										{classroom.assignmentCount || 0} assignments
+									{/if}
 								</div>
 							</div>
 							{#if classroom.id === selectedClassroomId}

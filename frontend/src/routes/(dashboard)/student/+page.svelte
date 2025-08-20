@@ -1,31 +1,46 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { auth } from '$lib/stores';
+	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { api } from '$lib/api';
+	import DashboardLayout from '$lib/components/layout/DashboardLayout.svelte';
+	import ClassroomSelector from '$lib/components/dashboard/ClassroomSelector.svelte';
+	import BaseAssignmentSidebar from '$lib/components/dashboard/BaseAssignmentSidebar.svelte';
+	import StudentAssignmentDetail from '$lib/components/dashboard/StudentAssignmentDetail.svelte';
 	import StatsGrid from '$lib/components/core/StatsGrid.svelte';
 	import { PageHeader } from '$lib/components/dashboard';
 	import { Alert, Button } from '$lib/components/ui';
-	import type { Assignment, Grade } from '@shared/schemas/core';
+	import type { Assignment, Grade, Classroom, StudentDashboard } from '@shared/schemas/core';
 
 	// State using Svelte 5 runes
-	let myGrades = $state<Grade[]>([]);
-	let assignments = $state<Assignment[]>([]);
+	let dashboardData = $state<StudentDashboard | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
+	let viewMode = $state<'assignment' | 'grid'>('assignment');
+	let selectedClassroomId = $state<string | null>(null);
+	let selectedAssignmentId = $state<string | null>(null);
 
-	// Student-specific derived statistics
-	let totalGrades = $derived(myGrades.length);
-	let averageScore = $derived(
-		myGrades.length === 0
-			? 0
-			: Math.round(
-					myGrades.reduce((sum, grade) => {
-						return sum + (grade.score / grade.maxScore) * 100;
-					}, 0) / myGrades.length
-				)
+	// Derived state
+	let selectedClassroom = $derived(
+		dashboardData?.classrooms.find(c => c.classroom.id === selectedClassroomId)?.classroom
 	);
-	let completedAssignments = $derived(myGrades.length);
-	let totalAssignments = $derived(assignments.length);
+	let selectedClassroomData = $derived(
+		dashboardData?.classrooms.find(c => c.classroom.id === selectedClassroomId)
+	);
+	let assignments = $derived(selectedClassroomData?.assignments || []);
+	let myGrades = $derived(selectedClassroomData?.grades || []);
+	let selectedAssignment = $derived(
+		assignments.find(a => a.id === selectedAssignmentId)
+	);
+	let selectedAssignmentGrade = $derived(
+		myGrades.find(g => g.assignmentId === selectedAssignmentId)
+	);
+
+	// Student-specific derived statistics  
+	let totalGrades = $derived(dashboardData?.overallStats.completedAssignments || 0);
+	let averageScore = $derived(Math.round(dashboardData?.overallStats.averageGrade || 0));
+	let completedAssignments = $derived(dashboardData?.overallStats.completedAssignments || 0);
+	let totalAssignments = $derived(dashboardData?.overallStats.totalAssignments || 0);
 
 	// Transform stats for StatsGrid component
 	let statsData = $derived(() => [
@@ -81,6 +96,46 @@
 		return 'F';
 	}
 
+	// Simple student data store integration
+	function selectClassroom(classroomId: string) {
+		selectedClassroomId = classroomId;
+		selectedAssignmentId = null; // Clear assignment selection when changing classrooms
+		// Update the main data store for ClassroomSelector compatibility
+		if (dashboardData) {
+			dataStore.setData({
+				classrooms: dashboardData.classrooms.map(c => c.classroom),
+				assignments: selectedClassroomData?.assignments || []
+			});
+			dataStore.selectClassroom(classroomId);
+		}
+	}
+
+	function selectAssignment(assignmentId: string) {
+		selectedAssignmentId = assignmentId;
+		// Update the main data store for consistency
+		dataStore.selectAssignment(assignmentId);
+	}
+
+	function toggleSort() {
+		dataStore.toggleAssignmentSort();
+	}
+
+	function setViewMode(mode: 'assignment' | 'grid') {
+		viewMode = mode;
+		// Update the main data store so ClassroomSelector can reflect the change
+		if (dataStore.setViewMode) {
+			dataStore.setViewMode(mode);
+		}
+	}
+
+	// Sync view mode changes from ClassroomSelector back to local state
+	$effect(() => {
+		const storeViewMode = dataStore.viewMode;
+		if (storeViewMode && storeViewMode !== viewMode) {
+			viewMode = storeViewMode;
+		}
+	});
+
 	async function loadStudentDashboardData() {
 		try {
 			loading = true;
@@ -88,70 +143,34 @@
 
 			console.log('🔍 Loading student dashboard data...');
 
-			// Use the dedicated student dashboard endpoint
-			try {
-				const dashboardData = await api.getStudentDashboard();
-				console.log('✅ Loaded student dashboard data:', dashboardData);
+			dashboardData = await api.getStudentDashboard();
+			console.log('✅ Loaded student dashboard data:', dashboardData);
 
-				// Extract data from the structured dashboard response
-				const allAssignments: Assignment[] = [];
-				const allGrades: Grade[] = [];
-
-				// Process each classroom's data
-				dashboardData.classrooms.forEach((classroomData) => {
-					// Add assignments from this classroom
-					allAssignments.push(...classroomData.assignments);
-					// Add grades from this classroom
-					allGrades.push(...classroomData.grades);
+			// Initialize the main data store with student data for shared component compatibility
+			if (dashboardData.classrooms.length > 0) {
+				dataStore.setData({
+					classrooms: dashboardData.classrooms.map(c => c.classroom),
+					assignments: [],
+					user: {
+						id: auth.user?.uid || '',
+						email: auth.user?.email || '',
+						displayName: auth.user?.displayName || auth.user?.email || '',
+						role: 'student' as const,
+						classroomIds: dashboardData.classrooms.map(c => c.classroom.id),
+						totalStudents: 0,
+						totalClassrooms: dashboardData.classrooms.length
+					}
 				});
 
-				assignments = allAssignments;
-				myGrades = allGrades;
-
-				console.log(`✅ Processed ${assignments.length} assignments and ${myGrades.length} grades`);
-			} catch (dashboardError) {
-				console.warn(
-					'⚠️ Student dashboard API not available, falling back to individual endpoints:',
-					dashboardError
-				);
-
-				// Fallback: try to load individual data (for backward compatibility)
-				try {
-					myGrades = await api.getMyGrades();
-					console.log(`✅ Loaded ${myGrades.length} grades via fallback`);
-				} catch (gradesError) {
-					console.warn('⚠️ Could not load grades:', gradesError);
-					myGrades = [];
-				}
-
-				// Try to load assignments (may not be accessible to students)
-				try {
-					assignments = await api.listAssignments();
-					console.log(`✅ Loaded ${assignments.length} assignments via fallback`);
-				} catch (assignmentError) {
-					console.warn('⚠️ Could not load assignments:', assignmentError);
-					assignments = [];
+				// Auto-select first classroom if none selected
+				if (!selectedClassroomId) {
+					selectClassroom(dashboardData.classrooms[0].classroom.id);
 				}
 			}
 
-			// If student has no assignments or grades, that's expected for new/unenrolled students
-			if (assignments.length === 0 && myGrades.length === 0) {
-				console.log('ℹ️ Student appears to have no assignments or grades - showing empty state');
-			}
 		} catch (err: unknown) {
 			console.error('❌ Failed to load student dashboard data:', err);
-
-			// Set fallback empty states
-			assignments = [];
-			myGrades = [];
-
-			// Only show user-facing error for unexpected failures, not validation issues
-			if (err instanceof Error && err.message.includes('validation failed')) {
-				console.warn('🔍 API validation error detected - this should be fixed on the backend');
-				error = 'Unable to load dashboard data. Please check the console for details.';
-			} else {
-				error = (err as Error)?.message || 'Failed to load dashboard data';
-			}
+			error = (err as Error)?.message || 'Failed to load dashboard data';
 		} finally {
 			loading = false;
 		}
@@ -160,288 +179,137 @@
 	onMount(() => {
 		loadStudentDashboardData();
 	});
+
+	// Auto-select first assignment when classroom changes
+	$effect(() => {
+		if (assignments.length > 0 && !selectedAssignmentId) {
+			selectedAssignmentId = assignments[0].id;
+		}
+	});
+
+	// Sync classroom selection from dataStore back to local state
+	$effect(() => {
+		const storeSelectedClassroomId = dataStore.selectedClassroomId;
+		if (storeSelectedClassroomId && storeSelectedClassroomId !== selectedClassroomId) {
+			selectedClassroomId = storeSelectedClassroomId;
+			selectedAssignmentId = null; // Reset assignment selection
+		}
+	});
+
+	// Sync assignment selection from dataStore back to local state  
+	$effect(() => {
+		const storeSelectedAssignmentId = dataStore.selectedAssignmentId;
+		if (storeSelectedAssignmentId && storeSelectedAssignmentId !== selectedAssignmentId) {
+			selectedAssignmentId = storeSelectedAssignmentId;
+		}
+	});
 </script>
 
-{#snippet actions()}
-	<div class="flex gap-2">
-		<Button variant="secondary" onclick={loadStudentDashboardData} disabled={loading}>
-			{#snippet children()}
-				Refresh
-			{/snippet}
-		</Button>
-	</div>
-{/snippet}
+<DashboardLayout {viewMode} {error}>
+	{#snippet topComponent()}
+		{#if dashboardData}
+			<ClassroomSelector role="student" />
+		{/if}
+	{/snippet}
 
-<div class="space-y-6">
-	<!-- Page Header -->
-	<PageHeader
-		title="Student Dashboard"
-		description="Welcome back, {auth.user?.email?.split('@')[0] ||
-			'Student'}! Track your grades and view assignment feedback."
-		{actions}
-	/>
+	{#snippet sidebarComponent()}
+		{#if viewMode === 'assignment' && selectedClassroom}
+			<BaseAssignmentSidebar
+				{assignments}
+				{selectedAssignmentId}
+				onSelect={selectAssignment}
+				sortField="date"
+				onSortToggle={toggleSort}
+				{loading}
+				role="student"
+			>
+				{#snippet customAssignmentContent(assignment)}
+					{@const hasGrade = myGrades.some(g => g.assignmentId === assignment.id)}
+					{#if hasGrade}
+						<span class="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-800">
+							✓ Graded
+						</span>
+					{:else}
+						<span class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-800">
+							Pending
+						</span>
+					{/if}
+				{/snippet}
+			</BaseAssignmentSidebar>
+		{/if}
+	{/snippet}
 
-	{#if error}
-		<Alert
-			variant="error"
-			title="Error loading dashboard"
-			dismissible
-			onDismiss={() => (error = null)}
-		>
-			{#snippet children()}
-				{error}
-				<div class="mt-3">
-					<Button variant="secondary" size="sm" onclick={loadStudentDashboardData}>
+	{#snippet mainComponent()}
+		{#if viewMode === 'grid'}
+			<!-- Student Grades Grid View -->
+			<div class="flex-1 overflow-auto p-6">
+				<h2 class="text-lg font-semibold mb-4">All My Grades</h2>
+				{#if !loading && dashboardData}
+					<StatsGrid stats={statsData} />
+				{/if}
+			</div>
+		{:else if selectedAssignment}
+			<!-- Assignment Detail View -->
+			<StudentAssignmentDetail
+				assignment={selectedAssignment}
+				grade={selectedAssignmentGrade}
+				{loading}
+			>
+				{#snippet actions()}
+					<div class="flex gap-2">
+						<Button variant="outline" onclick={loadStudentDashboardData} disabled={loading}>
+							{#snippet children()}
+								{#if loading}
+									<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+										<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+										<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+									</svg>
+									Refreshing...
+								{:else}
+									<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+									</svg>
+									Refresh
+								{/if}
+							{/snippet}
+						</Button>
+					</div>
+				{/snippet}
+			</StudentAssignmentDetail>
+		{:else}
+			<!-- Overview when no assignment selected -->
+			<div class="flex-1 overflow-auto p-6">
+				<PageHeader
+					title="Student Dashboard"
+					description="Welcome back, {auth.user?.email?.split('@')[0] || 'Student'}! Select a classroom and assignment to view detailed feedback."
+				/>
+
+				{#if error}
+					<Alert variant="error" title="Error loading dashboard" dismissible onDismiss={() => (error = null)}>
 						{#snippet children()}
-							Try Again
+							{error}
+							<div class="mt-3">
+								<Button variant="secondary" size="sm" onclick={loadStudentDashboardData}>
+									{#snippet children()}
+										Try Again
+									{/snippet}
+								</Button>
+							</div>
 						{/snippet}
-					</Button>
-				</div>
-			{/snippet}
-		</Alert>
-	{:else if loading}
-		<!-- Loading State -->
-		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-			{#each Array.from({ length: 4 }, (_, i) => i) as i (i)}
-				<div class="animate-pulse rounded-lg bg-white p-6 shadow-sm">
-					<div class="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
-					<div class="h-8 w-1/2 rounded bg-gray-200"></div>
-				</div>
-			{/each}
-		</div>
-	{:else}
-		<!-- Quick Stats Cards -->
-		<StatsGrid stats={statsData} />
-
-		<!-- Recent Activity -->
-		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-			<!-- Recent Grades -->
-			<div class="rounded-lg bg-white shadow">
-				<div class="border-b border-gray-200 p-6">
-					<h3 class="text-lg font-semibold text-gray-900">Recent Grades</h3>
-				</div>
-				<div class="p-6">
-					{#if recentGrades.length === 0}
-						<div class="py-8 text-center">
-							<div
-								class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100"
-							>
-								<svg
-									class="h-6 w-6 text-gray-400"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-									/>
-								</svg>
+					</Alert>
+				{:else if loading}
+					<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+						{#each Array.from({ length: 4 }, (_, i) => i) as i (i)}
+							<div class="animate-pulse rounded-lg bg-white p-6 shadow-sm">
+								<div class="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
+								<div class="h-8 w-1/2 rounded bg-gray-200"></div>
 							</div>
-							<h4 class="mb-2 text-sm font-medium text-gray-900">No grades yet</h4>
-							<p class="text-sm text-gray-500">
-								Grades will appear here once your assignments have been evaluated.
-							</p>
-						</div>
-					{:else}
-						<div class="space-y-4">
-							{#each recentGrades as grade, index (`recent-grade-${index}-${grade.assignmentId || 'unknown'}-${grade.studentId || 'unknown'}`)}
-								{@const percentage = Math.round((grade.score / grade.maxScore) * 100)}
-								{@const letterGrade = getLetterGrade(percentage)}
-								<div class="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-									<div class="flex items-center space-x-3">
-										<div
-											class="rounded-lg p-2 {percentage >= 90
-												? 'bg-green-100 text-green-600'
-												: percentage >= 80
-													? 'bg-blue-100 text-blue-600'
-													: percentage >= 70
-														? 'bg-yellow-100 text-yellow-600'
-														: 'bg-red-100 text-red-600'}"
-										>
-											<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-												/>
-											</svg>
-										</div>
-										<div>
-											<p class="font-medium text-gray-900">Assignment {grade.assignmentId}</p>
-											<p class="text-sm text-gray-500">
-												{grade.score}/{grade.maxScore} • {percentage}%
-											</p>
-										</div>
-									</div>
-									<span
-										class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium {percentage >=
-										90
-											? 'bg-green-100 text-green-800'
-											: percentage >= 80
-												? 'bg-blue-100 text-blue-800'
-												: percentage >= 70
-													? 'bg-yellow-100 text-yellow-800'
-													: percentage >= 60
-														? 'bg-orange-100 text-orange-800'
-														: 'bg-red-100 text-red-800'}"
-									>
-										{letterGrade}
-									</span>
-								</div>
-							{/each}
-						</div>
-						{#if myGrades.length > 5}
-							<div class="mt-4 text-center">
-								<a
-									href="/dashboard/student/grades"
-									class="text-sm font-medium text-blue-600 hover:text-blue-700"
-								>
-									View all grades ({myGrades.length})
-								</a>
-							</div>
-						{/if}
-					{/if}
-				</div>
-			</div>
-
-			<!-- Available Assignments -->
-			<div class="rounded-lg bg-white shadow">
-				<div class="border-b border-gray-200 p-6">
-					<h3 class="text-lg font-semibold text-gray-900">Available Assignments</h3>
-				</div>
-				<div class="p-6">
-					{#if assignments.length === 0}
-						<div class="py-8 text-center">
-							<div
-								class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-gray-100"
-							>
-								<svg
-									class="h-6 w-6 text-gray-400"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-									/>
-								</svg>
-							</div>
-							<h4 class="mb-2 text-sm font-medium text-gray-900">No assignments yet</h4>
-							<p class="text-sm text-gray-500">
-								You don't have access to any assignments yet. Check with your teacher or wait to be
-								enrolled in a class.
-							</p>
-						</div>
-					{:else}
-						<div class="space-y-4">
-							{#each assignments.slice(0, 5) as assignment, index (`assignment-${index}-${assignment.id}`)}
-								{@const hasGrade = myGrades.some((g) => g.assignmentId === assignment.id)}
-								<div class="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-									<div class="flex items-center space-x-3">
-										<div
-											class="p-2 {assignment.type === 'quiz'
-												? 'bg-green-100 text-green-600'
-												: 'bg-blue-100 text-blue-600'} rounded-lg"
-										>
-											<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d={assignment.type === 'quiz'
-														? 'M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2M9 5a2 2 0 012 2v6a2 2 0 01-2 2M9 5V3a2 2 0 012-2h4a2 2 0 012 2v2M9 13h6m-3-3v3'
-														: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'}
-												/>
-											</svg>
-										</div>
-										<div>
-											<p class="font-medium text-gray-900">{assignment.title || assignment.name}</p>
-											<p class="text-sm text-gray-500">
-												{assignment.type === 'quiz' ? 'Quiz' : 'Assignment'} • {assignment.maxScore}
-												points
-											</p>
-										</div>
-									</div>
-									<div class="flex items-center space-x-2">
-										{#if hasGrade}
-											<span
-												class="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800"
-											>
-												Completed
-											</span>
-										{:else}
-											<span
-												class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-800"
-											>
-												Pending
-											</span>
-										{/if}
-									</div>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-			</div>
-		</div>
-
-		<!-- Quick Actions -->
-		<div class="rounded-lg bg-white p-6 shadow">
-			<h3 class="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h3>
-			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-				<a
-					href="/dashboard/student/grades"
-					class="flex items-center rounded-lg bg-blue-50 p-4 transition-colors hover:bg-blue-100"
-				>
-					<svg
-						class="mr-3 h-8 w-8 text-blue-600"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-						/>
-					</svg>
-					<div>
-						<p class="font-medium text-gray-900">View All Grades</p>
-						<p class="text-sm text-gray-600">See your complete grade history</p>
+						{/each}
 					</div>
-				</a>
-
-				<button
-					onclick={loadStudentDashboardData}
-					class="flex items-center rounded-lg bg-gray-50 p-4 transition-colors hover:bg-gray-100"
-				>
-					<svg
-						class="mr-3 h-8 w-8 text-gray-600"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-						/>
-					</svg>
-					<div>
-						<p class="font-medium text-gray-900">Refresh Data</p>
-						<p class="text-sm text-gray-600">Update your grades and assignments</p>
-					</div>
-				</button>
+				{:else if dashboardData}
+					<StatsGrid stats={statsData} />
+				{/if}
 			</div>
-		</div>
-	{/if}
-</div>
+		{/if}
+	{/snippet}
+</DashboardLayout>
