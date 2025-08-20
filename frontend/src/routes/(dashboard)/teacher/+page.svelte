@@ -88,11 +88,13 @@
 			loadingSubmissions: dataStore.loadingSubmissions
 		});
 
-		if (assignmentId && classroomId && !dataStore.submissionsCache.has(assignmentId)) {
+		if (assignmentId && classroomId && !dataStore.submissionsCache.has(assignmentId) && !dataStore.loadingSubmissions && !dataStore.failedSubmissionRequests.has(assignmentId)) {
 			console.log('🔄 Assignment selected, fetching submissions:', assignmentId);
 			dataStore.fetchSubmissionsForAssignment(assignmentId);
 		} else if (assignmentId && dataStore.submissionsCache.has(assignmentId)) {
 			console.log('✅ Submissions already cached for assignment:', assignmentId);
+		} else if (assignmentId && dataStore.failedSubmissionRequests.has(assignmentId)) {
+			console.log('⚠️ Assignment has failed requests, skipping fetch:', assignmentId);
 		}
 	});
 </script>

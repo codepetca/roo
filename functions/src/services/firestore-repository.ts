@@ -649,6 +649,20 @@ export class FirestoreRepository {
     return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Submission));
   }
 
+
+  /**
+   * Get ALL submissions for an assignment (including already graded ones)
+   * Used for smart Grade All functionality that can re-grade changed submissions
+   */
+  async getAllSubmissionsByAssignment(assignmentId: string): Promise<Submission[]> {
+    const query = db.collection(this.collections.submissions)
+      .where("assignmentId", "==", assignmentId)
+      .where("isLatest", "==", true);
+
+    const snapshot = await query.orderBy("submittedAt", "asc").get();
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Submission));
+  }
+
   async getRecentActivity(
     classroomId: string,
     limitCount: number = 10

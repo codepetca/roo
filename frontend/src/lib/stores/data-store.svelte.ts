@@ -61,6 +61,7 @@ class DataStore {
 	// Submission caching for selected assignments
 	submissionsCache = $state(new Map<string, SubmissionWithGrade[]>());
 	loadingSubmissions = $state<boolean>(false);
+	failedSubmissionRequests = $state<Set<string>>(new Set());
 
 	// Grade grid caching for classroom view
 	gradeGridCache = $state(new Map<string, Map<string, Map<string, Grade | null>>>());
@@ -336,6 +337,12 @@ class DataStore {
 			return;
 		}
 
+		// Check if this request has already failed
+		if (this.failedSubmissionRequests.has(assignmentId)) {
+			console.log('⚠️ Skipping submission fetch for assignment that already failed:', assignmentId);
+			return;
+		}
+
 		console.log('📡 Fetching submissions for assignment:', assignmentId);
 		this.loadingSubmissions = true;
 		this.error = null; // Clear any previous errors
@@ -361,6 +368,10 @@ class DataStore {
 			});
 		} catch (error) {
 			console.error('❌ Failed to fetch submissions:', error);
+			// Add to failed requests to prevent infinite retries
+			const newFailedSet = new Set(this.failedSubmissionRequests);
+			newFailedSet.add(assignmentId);
+			this.failedSubmissionRequests = newFailedSet;
 			this.setError('Failed to load submissions');
 		} finally {
 			this.loadingSubmissions = false;
@@ -783,21 +794,21 @@ class DataStore {
 	}
 
 	/**
-	 * Grade all ungraded assignments in a classroom
+	 * Grade all ungraded submissions for a specific assignment
 	 */
-	async gradeAllAssignments(classroomId: string) {
+	async gradeAllAssignments(assignmentId: string) {
 		if (this.gradingInProgress) {
 			console.warn('Grading already in progress');
 			return;
 		}
 
-		console.log('🤖 Starting Grade All for classroom:', classroomId);
+		console.log('🤖 Starting Grade All for assignment:', assignmentId);
 		this.gradingInProgress = true;
 		this.gradingProgress = { current: 0, total: 0, status: 'Initializing...' };
 
 		try {
 			// Call the API endpoint
-			const result = await api.gradeAllAssignments({ classroomId });
+			const result = await api.gradeAllAssignments({ assignmentId });
 
 			// Update progress with final results
 			const statusMessage =
@@ -811,8 +822,47 @@ class DataStore {
 				status: statusMessage
 			};
 
-			// Refresh submissions and grades to show new data
-			await this.refreshData();
+			// Update the cached submissions with the new grades for reactivity
+			if (result.results && result.results.length > 0) {
+				const currentSubmissions = this.submissionsCache.get(assignmentId) || [];
+				
+				// Create a map of grades by submissionId for quick lookup
+				const gradesMap = new Map(
+					result.results.map(r => [r.submissionId, {
+						id: r.gradeId,
+						score: r.score,
+						maxScore: r.maxScore,
+						feedback: r.feedback,
+						percentage: Math.round((r.score / r.maxScore) * 100),
+						gradedAt: new Date(),
+						gradedBy: 'ai'
+					}])
+				);
+				
+				// Update each submission with its grade
+				const updatedSubmissions = currentSubmissions.map(sub => {
+					const grade = gradesMap.get(sub.id);
+					if (grade) {
+						return {
+							...sub,
+							grade,
+							status: 'graded' as const
+						};
+					}
+					return sub;
+				});
+				
+				// Update the cache - this triggers reactivity!
+				const newCache = new Map(this.submissionsCache);
+				newCache.set(assignmentId, updatedSubmissions);
+				this.submissionsCache = newCache;
+				
+				console.log('📊 Updated submissions cache with grades:', {
+					assignmentId,
+					totalSubmissions: updatedSubmissions.length,
+					gradedCount: updatedSubmissions.filter(s => s.status === 'graded').length
+				});
+			}
 
 			console.log('✅ Grade All completed:', result);
 
@@ -839,7 +889,7 @@ class DataStore {
 	/**
 	 * Retry failed grading for specific submissions
 	 */
-	async retryFailedGrades(classroomId: string, submissionIds: string[]) {
+	async retryFailedGrades(assignmentId: string, submissionIds: string[]) {
 		if (this.gradingInProgress) {
 			console.warn('Grading already in progress');
 			return;
@@ -856,7 +906,7 @@ class DataStore {
 		try {
 			// For now, retry by calling the same endpoint but this could be optimized
 			// to only retry specific submissions
-			const result = await api.gradeAllAssignments({ classroomId });
+			const result = await api.gradeAllAssignments({ assignmentId });
 
 			this.gradingProgress = {
 				current: result.gradedCount,
@@ -864,7 +914,41 @@ class DataStore {
 				status: `Retry completed: ${result.gradedCount} graded, ${result.failedCount} still failed`
 			};
 
-			await this.refreshData();
+			// Update the cached submissions with the new grades for reactivity
+			if (result.results && result.results.length > 0) {
+				const currentSubmissions = this.submissionsCache.get(assignmentId) || [];
+				
+				// Create a map of grades by submissionId for quick lookup
+				const gradesMap = new Map(
+					result.results.map(r => [r.submissionId, {
+						id: r.gradeId,
+						score: r.score,
+						maxScore: r.maxScore,
+						feedback: r.feedback,
+						percentage: Math.round((r.score / r.maxScore) * 100),
+						gradedAt: new Date(),
+						gradedBy: 'ai'
+					}])
+				);
+				
+				// Update each submission with its grade
+				const updatedSubmissions = currentSubmissions.map(sub => {
+					const grade = gradesMap.get(sub.id);
+					if (grade) {
+						return {
+							...sub,
+							grade,
+							status: 'graded' as const
+						};
+					}
+					return sub;
+				});
+				
+				// Update the cache - this triggers reactivity!
+				const newCache = new Map(this.submissionsCache);
+				newCache.set(assignmentId, updatedSubmissions);
+				this.submissionsCache = newCache;
+			}
 
 			if (result.failedCount > 0) {
 				this.error = `Retry completed, but ${result.failedCount} submissions still failed.`;
@@ -884,12 +968,31 @@ class DataStore {
 	}
 
 	/**
-	 * Refresh all data (convenience method)
+	 * Refresh all data (deprecated - using reactive updates instead)
 	 */
 	private async refreshData() {
-		// This will trigger re-fetching of submissions and grades
-		// The existing effect in the main dashboard will handle this
-		this.setLoading(true);
+		// No longer needed - we update the cache directly for reactivity
+		console.log('refreshData called but using reactive updates instead');
+	}
+
+	/**
+	 * Clear all cached data and failed requests
+	 */
+	clearCache() {
+		this.submissionsCache.clear();
+		this.gradeGridCache.clear();
+		this.failedSubmissionRequests.clear();
+		console.log('🧹 All caches cleared');
+	}
+
+	/**
+	 * Clear failed request tracking for a specific assignment
+	 */
+	clearFailedRequest(assignmentId: string) {
+		const newFailedSet = new Set(this.failedSubmissionRequests);
+		newFailedSet.delete(assignmentId);
+		this.failedSubmissionRequests = newFailedSet;
+		console.log('🔄 Cleared failed request for assignment:', assignmentId);
 	}
 }
 

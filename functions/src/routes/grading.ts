@@ -10,8 +10,7 @@ import { handleRouteError, validateData, sendApiResponse } from "../middleware/v
 
 // Schema for Grade All request
 const gradeAllRequestSchema = z.object({
-  classroomId: z.string().min(1, "Classroom ID is required"),
-  assignmentIds: z.array(z.string()).optional()
+  assignmentId: z.string().min(1, "Assignment ID is required")
 });
 
 /**
@@ -279,7 +278,7 @@ export async function gradeCode(req: Request, res: Response) {
 }
 
 /**
- * Grade all ungraded assignments in a classroom with AI feedback
+ * Grade all ungraded submissions for a specific assignment with AI feedback
  * Location: functions/src/routes/grading.ts:275
  * Route: POST /grade-all-assignments
  */
@@ -296,105 +295,198 @@ export async function gradeAllAssignments(req: Request, res: Response) {
     const geminiService = createGeminiService(geminiApiKey);
     const firestoreService = createFirestoreGradeService();
     
-    console.log(`🤖 Starting Grade All for classroom: ${validatedData.classroomId}`);
+    console.log(`🤖 Starting Smart Grade All for assignment: ${validatedData.assignmentId}`);
     
-    // Get all ungraded submissions for this classroom
-    const submissions = await repository.getUngradedSubmissions(
-      validatedData.classroomId
+    // Get ALL submissions for this assignment (including already graded ones)
+    const allSubmissions = await repository.getAllSubmissionsByAssignment(
+      validatedData.assignmentId
     );
     
-    console.log(`📝 Found ${submissions.length} ungraded submissions`);
+    console.log(`📝 Found ${allSubmissions.length} total submissions`);
     
-    if (submissions.length === 0) {
+    if (allSubmissions.length === 0) {
       return sendApiResponse(res, {
         totalSubmissions: 0,
         gradedCount: 0,
         failedCount: 0,
+        skippedCount: 0,
         results: []
-      }, true, "No ungraded submissions found");
+      }, true, "No submissions found for this assignment");
+    }
+
+    // Smart filtering: determine which submissions need grading
+    const submissionsToGrade = [];
+    const skippedSubmissions = [];
+    
+    for (const submission of allSubmissions) {
+      // Always grade if never graded before
+      if (submission.status === "submitted" || submission.status === "draft") {
+        submissionsToGrade.push(submission);
+        console.log(`📝 Will grade: ${submission.studentName} (never graded)`);
+        continue;
+      }
+      
+      // For already graded submissions, check if content has changed
+      if (submission.status === "graded") {
+        try {
+          // Get the latest grade for this submission
+          const grades = await repository.getGradesByClassroom(submission.classroomId);
+          const submissionGrade = grades.find(g => g.submissionId === submission.id);
+          
+          if (!submissionGrade) {
+            // No grade found but status says graded - treat as ungraded
+            submissionsToGrade.push(submission);
+            console.log(`📝 Will grade: ${submission.studentName} (grade missing)`);
+            continue;
+          }
+          
+          // Compare timestamps: if submission updated after grade, re-grade
+          const submissionUpdated = new Date(submission.updatedAt);
+          const gradeCreated = new Date(submissionGrade.gradedAt);
+          
+          if (submissionUpdated > gradeCreated) {
+            submissionsToGrade.push(submission);
+            console.log(`📝 Will re-grade: ${submission.studentName} (content changed since last grade)`);
+          } else {
+            skippedSubmissions.push(submission);
+            console.log(`⏭️ Skipping: ${submission.studentName} (no changes since last grade)`);
+          }
+        } catch (error) {
+          // If we can't determine grade status, err on the side of grading
+          submissionsToGrade.push(submission);
+          console.log(`📝 Will grade: ${submission.studentName} (error checking grade status)`);
+        }
+      } else {
+        // Unknown status - grade it
+        submissionsToGrade.push(submission);
+        console.log(`📝 Will grade: ${submission.studentName} (unknown status: ${submission.status})`);
+      }
     }
     
-    // Get assignments data for grading context
-    const assignmentIds = [...new Set(submissions.map(s => s.assignmentId))];
-    const assignments = await Promise.all(
-      assignmentIds.map(id => repository.getAssignment(id))
-    );
-    const assignmentMap = assignments.reduce((map, assignment) => {
-      if (assignment) map[assignment.id] = assignment;
-      return map;
-    }, {} as Record<string, any>);
+    console.log(`🎯 Smart filtering result: ${submissionsToGrade.length} to grade, ${skippedSubmissions.length} skipped`);
+    
+    if (submissionsToGrade.length === 0) {
+      return sendApiResponse(res, {
+        totalSubmissions: allSubmissions.length,
+        gradedCount: 0,
+        failedCount: 0,
+        skippedCount: skippedSubmissions.length,
+        results: []
+      }, true, `All ${allSubmissions.length} submissions are already up-to-date`);
+    }
+    
+    // Continue with the submissions that need grading
+    const submissions = submissionsToGrade;
+    
+    // Get assignment data for grading context
+    const assignment = await repository.getAssignment(validatedData.assignmentId);
+    if (!assignment) {
+      return sendApiResponse(res, null, false, `Assignment not found: ${validatedData.assignmentId}`);
+    }
     
     // Process submissions in batches to respect rate limits
-    const BATCH_SIZE = 5;
+    // Reduce batch size for better rate limit management
+    const BATCH_SIZE = 3;
     const successful: any[] = [];
     const failed: any[] = [];
+    
+    // Add small delay between batches to avoid overwhelming the API
+    const BATCH_DELAY_MS = 2000; // 2 seconds between batches
     
     for (let i = 0; i < submissions.length; i += BATCH_SIZE) {
       const batch = submissions.slice(i, i + BATCH_SIZE);
       console.log(`🔄 Processing batch ${Math.floor(i/BATCH_SIZE) + 1}/${Math.ceil(submissions.length/BATCH_SIZE)}`);
       
+      // Add delay between batches (except for first batch)
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY_MS));
+      }
+      
       // Process batch in parallel
       const batchPromises = batch.map(async (submission) => {
-        try {
-          const assignment = assignmentMap[submission.assignmentId];
-          if (!assignment) {
-            throw new Error(`Assignment not found: ${submission.assignmentId}`);
-          }
-          
-          // Determine if this is a code assignment
-          const isCodeAssignment = assignment.type === 'coding' || assignment.isQuiz === false;
-          
-          // Use appropriate prompt template
-          const { GRADING_PROMPTS } = await import("../services/gemini");
-          const promptTemplate = isCodeAssignment ? GRADING_PROMPTS.generousCode : GRADING_PROMPTS.default;
-          
-          // Prepare grading request
-          const gradingRequest = {
-            submissionId: submission.id,
-            assignmentId: submission.assignmentId,
-            title: assignment.title || assignment.name || 'Assignment',
-            description: assignment.description || '',
-            maxPoints: assignment.maxScore || 100,
-            criteria: isCodeAssignment ? ["Understanding", "Logic", "Implementation"] : ["Content", "Organization", "Analysis"],
-            submission: submission.content || 'No content provided',
-            promptTemplate
-          };
-          
-          // Grade with AI
-          const gradingResult = await geminiService.gradeSubmission(gradingRequest);
-          
-          // Save grade to Firestore
-          const gradeId = await firestoreService.saveGrade({
-            submissionId: submission.id,
-            assignmentId: submission.assignmentId,
-            studentId: submission.studentId,
-            studentName: submission.studentName,
-            score: gradingResult.score,
-            maxPoints: assignment.maxScore || 100,
-            feedback: gradingResult.feedback,
-            gradedBy: "ai",
-            criteriaScores: gradingResult.criteriaScores,
-            metadata: {
-              gradingMode: 'bulk',
-              isCodeAssignment
+        // Retry logic for API failures
+        const MAX_RETRIES = 2;
+        const RETRY_DELAY_MS = 1000; // 1 second between retries
+        
+        for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+          try {
+            // Determine if this is a code assignment
+            const isCodeAssignment = assignment.type === 'coding' || assignment.isQuiz === false;
+            
+            // Use appropriate prompt template
+            const { GRADING_PROMPTS } = await import("../services/gemini");
+            const promptTemplate = isCodeAssignment ? GRADING_PROMPTS.generousCode : GRADING_PROMPTS.default;
+            
+            // Prepare grading request
+            const gradingRequest = {
+              submissionId: submission.id,
+              assignmentId: submission.assignmentId,
+              title: assignment.title || assignment.name || 'Assignment',
+              description: assignment.description || '',
+              maxPoints: assignment.maxScore || 100,
+              criteria: isCodeAssignment ? ["Understanding", "Logic", "Implementation"] : ["Content", "Organization", "Analysis"],
+              submission: submission.content || 'No content provided',
+              promptTemplate
+            };
+            
+            // Grade with AI
+            const gradingResult = await geminiService.gradeSubmission(gradingRequest);
+            
+            // Save grade to Firestore
+            const gradeId = await firestoreService.saveGrade({
+              submissionId: submission.id,
+              assignmentId: submission.assignmentId,
+              studentId: submission.studentId,
+              studentName: submission.studentName,
+              score: gradingResult.score,
+              maxPoints: assignment.maxScore || 100,
+              feedback: gradingResult.feedback,
+              gradedBy: "ai",
+              criteriaScores: gradingResult.criteriaScores,
+              metadata: {
+                gradingMode: 'bulk',
+                isCodeAssignment
+              }
+            });
+            
+            return {
+              submissionId: submission.id,
+              gradeId,
+              score: gradingResult.score,
+              maxScore: assignment.maxScore || 100,
+              feedback: gradingResult.feedback,
+              attempt
+            };
+            
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.error(`❌ Attempt ${attempt}/${MAX_RETRIES + 1} failed for submission ${submission.id}:`, errorMessage);
+            
+            // Check if this is a retryable error
+            const isRetryable = errorMessage.includes('Rate limit exceeded') || 
+                               errorMessage.includes('API key expired') ||
+                               errorMessage.includes('500') ||
+                               errorMessage.includes('timeout');
+            
+            // If this is the last attempt or not retryable, return the error
+            if (attempt > MAX_RETRIES || !isRetryable) {
+              return {
+                submissionId: submission.id,
+                error: errorMessage,
+                attempts: attempt
+              };
             }
-          });
-          
-          return {
-            submissionId: submission.id,
-            gradeId,
-            score: gradingResult.score,
-            maxScore: assignment.maxScore || 100,
-            feedback: gradingResult.feedback
-          };
-          
-        } catch (error) {
-          console.error(`❌ Failed to grade submission ${submission.id}:`, error);
-          return {
-            submissionId: submission.id,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          };
+            
+            // Wait before retrying
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * attempt));
+          }
         }
+        
+        // This should never be reached, but just in case
+        return {
+          submissionId: submission.id,
+          error: 'Maximum retries exceeded'
+        };
       });
       
       const batchResults = await Promise.allSettled(batchPromises);
@@ -417,15 +509,16 @@ export async function gradeAllAssignments(req: Request, res: Response) {
       }
     }
     
-    console.log(`✅ Grade All completed: ${successful.length} successful, ${failed.length} failed`);
+    console.log(`✅ Smart Grade All completed: ${successful.length} successful, ${failed.length} failed, ${skippedSubmissions.length} skipped`);
     
     sendApiResponse(res, {
-      totalSubmissions: submissions.length,
+      totalSubmissions: allSubmissions.length,
       gradedCount: successful.length,
       failedCount: failed.length,
+      skippedCount: skippedSubmissions.length,
       results: successful,
       failures: failed.length > 0 ? failed : undefined
-    }, true, `Graded ${successful.length} of ${submissions.length} submissions successfully`);
+    }, true, `Smart Grade All completed: ${successful.length} graded, ${skippedSubmissions.length} skipped (${allSubmissions.length} total)`);
     
   } catch (error) {
     handleRouteError(error, req, res);

@@ -69,7 +69,7 @@ export async function testGeminiConnection(req: Request, res: Response) {
     res.json({
       success: isConnected,
       message: isConnected ? "Gemini API is working" : "Gemini API connection failed",
-      service: "gemini-1.5-flash"
+      service: "gemini-2.0-flash-lite"
     });
   } catch (error) {
     res.status(500).json({

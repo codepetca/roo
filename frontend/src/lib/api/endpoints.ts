@@ -311,10 +311,11 @@ export const api = {
 	},
 
 	// Grade All Assignments
-	async gradeAllAssignments(data: { classroomId: string; assignmentIds?: string[] }): Promise<{
+	async gradeAllAssignments(data: { assignmentId: string }): Promise<{
 		totalSubmissions: number;
 		gradedCount: number;
 		failedCount: number;
+		skippedCount: number;
 		results: Array<{
 			submissionId: string;
 			gradeId: string;
@@ -337,6 +338,7 @@ export const api = {
 				totalSubmissions: z.number(),
 				gradedCount: z.number(),
 				failedCount: z.number(),
+				skippedCount: z.number(),
 				results: z.array(
 					z.object({
 						submissionId: z.string(),

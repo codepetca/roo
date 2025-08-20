@@ -179,7 +179,7 @@ export const api = onRequest(
         response.json({
           success: isConnected,
           message: isConnected ? "Gemini API is working" : "Gemini API connection failed",
-          service: "gemini-1.5-flash"
+          service: "gemini-2.0-flash-lite"
         });
       } catch (error) {
         response.status(500).json({

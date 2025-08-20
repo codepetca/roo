@@ -6,6 +6,7 @@
 	let classrooms = $derived(dataStore.classrooms);
 	let selectedClassroom = $derived(dataStore.selectedClassroom);
 	let selectedClassroomId = $derived(dataStore.selectedClassroomId);
+	let selectedAssignmentId = $derived(dataStore.selectedAssignmentId);
 	let loading = $derived(dataStore.loading);
 	let viewMode = $derived(dataStore.viewMode);
 	let gradingInProgress = $derived(dataStore.gradingInProgress);
@@ -135,15 +136,15 @@
 
 		<!-- Right Section: Grade All + Refresh Button -->
 		<div class="flex items-center space-x-2">
-			<!-- Grade All Button (only in assessments mode) -->
-			{#if selectedClassroom && viewMode === 'assignment'}
+			<!-- Grade All Button (only in assessments mode with assignment selected) -->
+			{#if selectedClassroom && selectedAssignmentId && viewMode === 'assignment'}
 				<button
 					class="rounded-lg bg-green-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-					onclick={() => dataStore.gradeAllAssignments(selectedClassroom.id)}
+					onclick={() => dataStore.gradeAllAssignments(selectedAssignmentId)}
 					disabled={gradingInProgress || loading}
 					title={gradingInProgress
 						? gradingProgress.status || 'Grading in progress...'
-						: 'Grade all ungraded assignments in this classroom'}
+						: 'Grade all ungraded submissions for this assignment'}
 				>
 					{#if gradingInProgress}
 						<svg class="mr-1 inline h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24">
@@ -172,27 +173,6 @@
 				</button>
 			{/if}
 
-			<button
-				class="rounded-lg p-2 text-gray-700 transition-colors hover:bg-gray-50"
-				onclick={() => dataStore.setLoading(true)}
-				disabled={loading}
-				title={loading ? 'Refreshing...' : 'Refresh'}
-			>
-				<svg
-					class="h-4 w-4 transition-transform"
-					class:animate-spin={loading}
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-					/>
-				</svg>
-			</button>
 		</div>
 	</div>
 

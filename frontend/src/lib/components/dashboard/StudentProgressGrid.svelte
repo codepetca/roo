@@ -39,7 +39,7 @@
 	/**
 	 * Truncate AI feedback for display in the comments column
 	 */
-	function truncateComment(comment: string | undefined, maxLength = 50): string {
+	function truncateComment(comment: string | undefined, maxLength = 120): string {
 		if (!comment || comment.trim() === '') {
 			return '—';
 		}
@@ -76,14 +76,33 @@
 		});
 	}
 
+	// Manual grade state management
+	let manualGrades = $state<Map<string, string>>(new Map());
+
 	function gradeStudent(student: StudentProgressItem) {
 		console.log('Grade student:', student.studentName);
 		// TODO: Implement grading modal/navigation
 	}
 
-	function viewSubmission(student: StudentProgressItem) {
-		console.log('View submission:', student.studentName);
-		// TODO: Implement submission viewer
+	async function handleManualGradeInput(studentId: string, value: string) {
+		// Update the reactive map with new value
+		const newGrades = new Map(manualGrades);
+		if (value.trim() === '') {
+			newGrades.delete(studentId);
+			// TODO: Delete manual grade from backend
+			console.log('Removing manual grade for student:', studentId);
+		} else {
+			newGrades.set(studentId, value);
+			// Auto-save to backend when value is valid
+			if (!isNaN(Number(value))) {
+				console.log('Auto-saving manual grade:', {
+					studentId,
+					grade: value
+				});
+				// TODO: Implement API call to save manual grade
+			}
+		}
+		manualGrades = newGrades;
 	}
 
 	function handleSort(field: StudentSortField) {
@@ -128,143 +147,144 @@
 					</div>
 				</div>
 			{:else}
-				<table class="min-w-full divide-y divide-gray-200">
-					<thead class="bg-gray-50">
-						<tr>
-							<th class="px-6 py-3">
-								<button
-									onclick={() => handleSort('name')}
-									class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
-									title={getSortDescription('name')}
-								>
-									<span>Student</span>
-									<span class="text-xs">
-										{getSortIcon(sortField === 'name', sortDirection)}
-									</span>
-								</button>
-							</th>
-							<th class="px-6 py-3">
-								<button
-									onclick={() => handleSort('submitted')}
-									class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
-									title={getSortDescription('submitted', sortDirection)}
-								>
-									<span>Submitted</span>
-									<span class="text-xs">
-										{getSortIcon(sortField === 'submitted', sortDirection)}
-									</span>
-								</button>
-							</th>
-							<th class="px-6 py-3">
-								<button
-									onclick={() => handleSort('grade')}
-									class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
-									title={getSortDescription('grade', sortDirection)}
-								>
-									<span>Grade</span>
-									<span class="text-xs">
-										{getSortIcon(sortField === 'grade', sortDirection)}
-									</span>
-								</button>
-							</th>
-							<th
-								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-								title="AI-generated feedback and comments"
+				<!-- Responsive CSS Grid Layout (2:1:1:2:4:1 ratio) -->
+				<div class="min-w-full bg-white">
+					<!-- Grid Header -->
+					<div class="grid grid-cols-[2fr_1fr_1fr_2fr_4fr_1fr] gap-4 border-b border-gray-200 bg-gray-50 px-6 py-3">
+						<div class="min-w-0">
+							<button
+								onclick={() => handleSort('name')}
+								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
+								title={getSortDescription('name')}
 							>
-								AI Comments
-							</th>
-							<th
-								class="px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+								<span>Student</span>
+								<span class="text-xs">
+									{getSortIcon(sortField === 'name', sortDirection)}
+								</span>
+							</button>
+						</div>
+						<div class="min-w-0">
+							<button
+								onclick={() => handleSort('submitted')}
+								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
+								title={getSortDescription('submitted', sortDirection)}
 							>
-								Actions
-							</th>
-						</tr>
-					</thead>
-					<tbody class="divide-y divide-gray-200 bg-white">
-						{#each studentProgress as student (student.studentId)}
-							<tr class="hover:bg-gray-50">
-								<td class="px-6 py-4 whitespace-nowrap">
-									<div class="flex items-center">
-										<div class="h-10 w-10 flex-shrink-0">
-											<div
-												class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200"
-											>
-												<span class="text-sm font-medium text-gray-700">
-													{student.studentName
-														.split(' ')
-														.map((n) => n[0])
-														.join('')
-														.toUpperCase()}
-												</span>
-											</div>
-										</div>
-										<div class="ml-4">
-											<div class="text-sm font-medium text-gray-900">{student.studentName}</div>
-											<div class="text-sm text-gray-500">{student.studentEmail}</div>
-										</div>
+								<span>Submitted</span>
+								<span class="text-xs">
+									{getSortIcon(sortField === 'submitted', sortDirection)}
+								</span>
+							</button>
+						</div>
+						<div class="min-w-0">
+							<button
+								onclick={() => handleSort('grade')}
+								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
+								title={getSortDescription('grade', sortDirection)}
+							>
+								<span>Grade</span>
+								<span class="text-xs">
+									{getSortIcon(sortField === 'grade', sortDirection)}
+								</span>
+							</button>
+						</div>
+						<div class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+							Manual Grade
+						</div>
+						<div class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase" title="AI-generated feedback and comments">
+							AI Comments
+						</div>
+						<div class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+							Actions
+						</div>
+					</div>
+
+					<!-- Grid Rows -->
+					{#each studentProgress as student (student.studentId)}
+						<div class="grid grid-cols-[2fr_1fr_1fr_2fr_4fr_1fr] gap-4 border-b border-gray-200 px-6 py-4 hover:bg-gray-50">
+							<!-- Student Column (2fr) -->
+							<div class="min-w-0 flex items-center">
+								<div class="h-10 w-10 flex-shrink-0">
+									<div class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200">
+										<span class="text-sm font-medium text-gray-700">
+											{student.studentName
+												.split(' ')
+												.map((n) => n[0])
+												.join('')
+												.toUpperCase()}
+										</span>
 									</div>
-								</td>
-								<td
-									class="px-6 py-4 text-sm whitespace-nowrap text-gray-900"
-									title={getFullComment(student)}
-								>
-									{truncateComment(student.feedback)}
-								</td>
-								<td class="px-6 py-4 text-sm whitespace-nowrap text-gray-900">
-									{formatDate(student.submittedAt)}
-								</td>
-								<td class="px-6 py-4 whitespace-nowrap">
-									{#if student.score !== undefined && student.maxScore !== undefined}
-										<div class="flex items-center space-x-2">
-											<span class="text-sm font-medium text-gray-900">
-												{student.score}/{student.maxScore}
-											</span>
-											<Badge
-												variant={student.percentage >= 80
-													? 'success'
-													: student.percentage >= 60
-														? 'warning'
-														: 'error'}
-												size="sm"
-											>
-												{#snippet children()}
-													{student.percentage}%
-												{/snippet}
-											</Badge>
-										</div>
-									{:else}
-										<span class="text-sm text-gray-400">—</span>
-									{/if}
-								</td>
-								<td class="px-6 py-4 text-sm font-medium whitespace-nowrap">
-									<div class="flex space-x-2">
-										{#if student.status === 'submitted'}
-											<Button variant="primary" size="sm" onclick={() => gradeStudent(student)}>
-												{#snippet children()}
-													Grade
-												{/snippet}
-											</Button>
-										{/if}
-										{#if student.status !== 'not_submitted'}
-											<Button variant="outline" size="sm" onclick={() => viewSubmission(student)}>
-												{#snippet children()}
-													View
-												{/snippet}
-											</Button>
-										{/if}
-										{#if student.status === 'graded'}
-											<Button variant="outline" size="sm" onclick={() => gradeStudent(student)}>
-												{#snippet children()}
-													Edit Grade
-												{/snippet}
-											</Button>
-										{/if}
+								</div>
+								<div class="ml-4 min-w-0 flex-1">
+									<div class="text-sm font-medium text-gray-900 truncate">{student.studentName}</div>
+									<div class="text-sm text-gray-500 truncate">{student.studentEmail.split('@')[0]}</div>
+								</div>
+							</div>
+
+							<!-- Submitted Column (1fr) -->
+							<div class="min-w-0 flex items-center text-sm text-gray-900">
+								<span class="truncate">{formatDate(student.submittedAt)}</span>
+							</div>
+
+							<!-- Grade Column (1fr) -->
+							<div class="min-w-0 flex items-center">
+								{#if student.score !== undefined && student.maxScore !== undefined}
+									<div class="flex items-center space-x-2">
+										<span class="text-sm font-medium text-gray-900">
+											{student.score}/{student.maxScore}
+										</span>
+										<Badge
+											variant={student.percentage >= 80
+												? 'success'
+												: student.percentage >= 60
+													? 'warning'
+													: 'error'}
+											size="sm"
+										>
+											{#snippet children()}
+												{student.percentage}%
+											{/snippet}
+										</Badge>
 									</div>
-								</td>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
+								{:else}
+									<span class="text-sm text-gray-400">—</span>
+								{/if}
+							</div>
+
+							<!-- Manual Grade Column (2fr) -->
+							<div class="min-w-0 flex items-center">
+								<div class="flex items-center space-x-2 w-full">
+									<input 
+										type="number" 
+										min="0" 
+										max={student.maxScore || 100}
+										class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+										value={manualGrades.get(student.studentId) || ''}
+										oninput={(e) => handleManualGradeInput(student.studentId, e.target.value)}
+										title="Enter manual grade (auto-saves)"
+									/>
+									<span class="text-xs text-gray-500">/{student.maxScore || 100}</span>
+								</div>
+							</div>
+
+							<!-- AI Comments Column (4fr) -->
+							<div 
+								class="min-w-0 flex items-center text-sm text-gray-900"
+								title={getFullComment(student)}
+							>
+								<span class="break-words">{truncateComment(student.feedback, 120)}</span>
+							</div>
+
+							<!-- Actions Column (1fr) - Moved to end -->
+							<div class="min-w-0 flex items-center">
+								<Button variant="primary" size="sm" onclick={() => gradeStudent(student)}>
+									{#snippet children()}
+										Grade
+									{/snippet}
+								</Button>
+							</div>
+						</div>
+					{/each}
+				</div>
 			{/if}
 		</div>
 	{/if}

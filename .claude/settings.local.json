@@ -28,7 +28,9 @@
       "Bash(firebase deploy:*)",
       "Bash(npm test)",
       "Bash(git fetch:*)",
-      "mcp__firebase__firestore_list_collections"
+      "mcp__firebase__firestore_list_collections",
+      "mcp__context7__get-library-docs",
+      "WebFetch(domain:ai.google.dev)"
     ],
     "deny": []
   },

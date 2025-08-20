@@ -7,11 +7,59 @@
  * @patterns In-memory rate limiting, sliding window algorithm
  */
 
-// Rate limiting configuration
-export const RATE_LIMIT = {
-  maxRequests: 15,
-  windowMs: 60 * 1000, // 1 minute
+// Rate limiting configuration for Gemini 2.0 Flash-Lite
+// Based on official Google documentation: https://ai.google.dev/gemini-api/docs/rate-limits
+export const GEMINI_RATE_LIMITS = {
+  // Free Tier
+  FREE: {
+    maxRequests: 30,
+    windowMs: 60 * 1000, // 1 minute
+  },
+  // Tier 1 (billing enabled)
+  TIER_1: {
+    maxRequests: 3600, // 90% of 4,000 RPM for safety margin
+    windowMs: 60 * 1000,
+  },
+  // Tier 2 ($250+ spend)
+  TIER_2: {
+    maxRequests: 9000, // 90% of 10,000 RPM for safety margin  
+    windowMs: 60 * 1000,
+  },
+  // Tier 3 ($1,000+ spend)
+  TIER_3: {
+    maxRequests: 27000, // 90% of 30,000 RPM for safety margin
+    windowMs: 60 * 1000,
+  }
 };
+
+// Default rate limit (assumes Tier 1 - billing enabled)
+export const RATE_LIMIT = GEMINI_RATE_LIMITS.TIER_1;
+
+/**
+ * Detect billing tier based on environment and configuration
+ * In production, this could check actual Google Cloud billing API
+ */
+export function detectBillingTier(): keyof typeof GEMINI_RATE_LIMITS {
+  // Check if we're in production with billing enabled
+  const isProduction = process.env.NODE_ENV === 'production';
+  const hasBilling = process.env.GOOGLE_CLOUD_PROJECT !== undefined;
+  
+  if (!isProduction || !hasBilling) {
+    return 'FREE';
+  }
+  
+  // In production, default to TIER_1 (billing enabled)
+  // TODO: Could enhance this to check actual spending levels
+  return 'TIER_1';
+}
+
+/**
+ * Get appropriate rate limits based on billing tier
+ */
+export function getRateLimitsForTier() {
+  const tier = detectBillingTier();
+  return GEMINI_RATE_LIMITS[tier];
+}
 
 /**
  * In-memory rate limiter using sliding window algorithm
@@ -19,6 +67,7 @@ export const RATE_LIMIT = {
  */
 export class RateLimiter {
   private requests: Map<string, number[]> = new Map();
+  private currentLimits = getRateLimitsForTier();
 
   /**
    * Check if a request can be made for the given key
@@ -28,12 +77,15 @@ export class RateLimiter {
     const now = Date.now();
     const userRequests = this.requests.get(key) || [];
     
+    // Refresh limits in case billing tier changed
+    this.currentLimits = getRateLimitsForTier();
+    
     // Remove old requests outside the window
     const validRequests = userRequests.filter(
-      timestamp => now - timestamp < RATE_LIMIT.windowMs
+      timestamp => now - timestamp < this.currentLimits.windowMs
     );
     
-    if (validRequests.length >= RATE_LIMIT.maxRequests) {
+    if (validRequests.length >= this.currentLimits.maxRequests) {
       return false;
     }
     
@@ -51,10 +103,12 @@ export class RateLimiter {
   getRemainingRequests(key: string): number {
     const now = Date.now();
     const userRequests = this.requests.get(key) || [];
+    this.currentLimits = getRateLimitsForTier();
+    
     const validRequests = userRequests.filter(
-      timestamp => now - timestamp < RATE_LIMIT.windowMs
+      timestamp => now - timestamp < this.currentLimits.windowMs
     );
-    return Math.max(0, RATE_LIMIT.maxRequests - validRequests.length);
+    return Math.max(0, this.currentLimits.maxRequests - validRequests.length);
   }
 
   /**
@@ -70,10 +124,26 @@ export class RateLimiter {
   getCurrentRequestCount(key: string): number {
     const now = Date.now();
     const userRequests = this.requests.get(key) || [];
+    this.currentLimits = getRateLimitsForTier();
+    
     const validRequests = userRequests.filter(
-      timestamp => now - timestamp < RATE_LIMIT.windowMs
+      timestamp => now - timestamp < this.currentLimits.windowMs
     );
     return validRequests.length;
+  }
+
+  /**
+   * Get current rate limit configuration
+   */
+  getCurrentLimits() {
+    return getRateLimitsForTier();
+  }
+
+  /**
+   * Get current billing tier
+   */
+  getBillingTier() {
+    return detectBillingTier();
   }
 }
 
