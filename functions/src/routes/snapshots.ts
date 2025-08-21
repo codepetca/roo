@@ -6,6 +6,7 @@ import { getUserFromRequest } from "../middleware/validation";
 import { classroomSnapshotSchema } from "@shared/schemas/classroom-snapshot";
 import { z } from "zod";
 import { db } from "../config/firebase";
+import { areSnapshotsContentEqual } from "@shared/utils/snapshot-normalization";
 
 /**
  * Snapshot Import API Routes
@@ -162,6 +163,58 @@ export async function importSnapshot(req: Request, res: Response): Promise<Respo
       snapshotId: `${user.uid}_${Date.now()}`
     });
 
+    // OPTIMIZATION: Fast-skip if content is identical to last import
+    try {
+      const lastSnapshot = await repository.getCompressedSnapshot(user.uid);
+      if (lastSnapshot) {
+        const contentIdentical = areSnapshotsContentEqual(snapshot, lastSnapshot);
+        
+        if (contentIdentical) {
+          logger.info("Identical content detected - skipping processing", { 
+            teacherEmail: user.email 
+          });
+          
+          // Return successful import with complete zero stats
+          return res.status(200).json({
+            success: true,
+            message: "No changes detected - snapshot already up to date",
+            data: {
+              snapshotId: `${user.uid}_${Date.now()}`,
+              stats: {
+                classroomsCreated: 0,
+                classroomsUpdated: 0,
+                assignmentsCreated: 0,
+                assignmentsUpdated: 0,
+                submissionsCreated: 0,
+                submissionsVersioned: 0,
+                gradesPreserved: 0,
+                gradesCreated: 0,
+                enrollmentsCreated: 0,
+                enrollmentsUpdated: 0,
+                enrollmentsArchived: 0
+              },
+              processingTime: 0,
+              summary: "No changes detected - all data is already up to date"
+            }
+          });
+        } else {
+          logger.info("Content differences detected - proceeding with full processing", {
+            teacherEmail: user.email
+          });
+        }
+      } else {
+        logger.info("No previous import found - proceeding with first import", {
+          teacherEmail: user.email
+        });
+      }
+    } catch (error) {
+      logger.warn("Failed to compare with last snapshot - proceeding with full processing", {
+        teacherEmail: user.email,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      // Continue with full processing on error
+    }
+
     // Process the snapshot
     const processingResult = await snapshotProcessor.processSnapshot(snapshot);
     
@@ -171,6 +224,20 @@ export async function importSnapshot(req: Request, res: Response): Promise<Respo
         stats: processingResult.stats,
         processingTime: processingResult.processingTime
       });
+
+      // Save compressed snapshot for future diff comparison
+      try {
+        await repository.saveCompressedSnapshot(user.uid, snapshot);
+        logger.info("Compressed snapshot saved for future comparison", {
+          teacherEmail: user.email
+        });
+      } catch (error) {
+        logger.warn("Failed to save compressed snapshot - diff comparison may show false positives", {
+          teacherEmail: user.email,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        // Don't fail the import if compression save fails
+      }
 
       return res.status(200).json({
         success: true,
@@ -244,6 +311,42 @@ export async function generateSnapshotDiff(req: Request, res: Response): Promise
       });
     }
     
+    logger.info("Generating snapshot diff", { teacherEmail: user.email });
+
+    // FIRST: Check if content is identical to last import using compressed comparison
+    try {
+      const lastSnapshot = await repository.getCompressedSnapshot(user.uid);
+      if (lastSnapshot) {
+        const contentIdentical = areSnapshotsContentEqual(snapshot, lastSnapshot);
+        
+        if (contentIdentical) {
+          logger.info("Identical content detected - no changes", { 
+            teacherEmail: user.email 
+          });
+          
+          // Return empty diff to indicate no changes
+          return res.status(200).json({
+            success: true,
+            data: {} // Empty data indicates no changes detected
+          });
+        } else {
+          logger.info("Content differences detected - proceeding with entity diff", {
+            teacherEmail: user.email
+          });
+        }
+      } else {
+        logger.info("No previous import found - proceeding with first import logic", {
+          teacherEmail: user.email
+        });
+      }
+    } catch (error) {
+      logger.warn("Failed to compare with last snapshot - proceeding with entity diff", {
+        teacherEmail: user.email,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      // Continue with entity-based comparison on error
+    }
+    
     // Get existing user data
     const userData = await repository.getUserById(user.uid);
     if (!userData) {
@@ -265,26 +368,75 @@ export async function generateSnapshotDiff(req: Request, res: Response): Promise
       });
     }
 
-    // Get existing classrooms for comparison
+    // Get existing data for proper entity-based comparison
     const existingClassrooms = await repository.getClassroomsByTeacher(user.email!);
     
-    // Simple diff calculation
+    // Build sets of external IDs for comparison
+    const existingClassroomIds = new Set(existingClassrooms.map(c => c.externalId).filter(id => id));
+    const newClassroomIds = new Set((snapshot.classrooms || []).map((c: any) => c.id));
+    
+    // Get existing assignments for comparison
+    const existingAssignments = [];
+    for (const classroom of existingClassrooms) {
+      const classroomAssignments = await repository.getAssignmentsByClassroom(classroom.id);
+      existingAssignments.push(...classroomAssignments);
+    }
+    const existingAssignmentIds = new Set(existingAssignments.map(a => a.externalId).filter(id => id));
+    
+    // Collect all assignment IDs from snapshot
+    const newAssignmentIds = new Set();
+    for (const classroom of snapshot.classrooms || []) {
+      for (const assignment of classroom.assignments || []) {
+        newAssignmentIds.add(assignment.id);
+      }
+    }
+    
+    // Calculate actual entity differences
+    const newClassrooms = [...newClassroomIds].filter(id => !existingClassroomIds.has(id as string));
+    const newAssignments = [...newAssignmentIds].filter(id => !existingAssignmentIds.has(id as string));
+    
+    // Count new submissions (simplified - just count from snapshot for new assignments)
+    let newSubmissionCount = 0;
+    for (const classroom of snapshot.classrooms || []) {
+      for (const assignment of classroom.assignments || []) {
+        if (newAssignments.includes(assignment.id as string)) {
+          newSubmissionCount += (assignment.submissionStats?.submitted || 0);
+        }
+      }
+    }
+
+    // Only show changes if there are actual new entities
+    const hasRealChanges = newClassrooms.length > 0 || newAssignments.length > 0 || newSubmissionCount > 0;
+    
+    if (!hasRealChanges) {
+      // No real changes detected
+      return res.status(200).json({
+        success: true,
+        data: {}
+      });
+    }
+
+    // Entity-based diff with actual changes
     const diff = {
       hasExistingData: true,
       isFirstImport: false,
       existing: {
-        classroomCount: existingClassrooms.length
+        classroomCount: existingClassrooms.length,
+        assignmentCount: existingAssignments.length
       },
       new: {
         classroomCount: snapshot.classrooms?.length || 0,
-        totalAssignments: snapshot.globalStats?.totalAssignments || 0,
-        totalSubmissions: snapshot.globalStats?.totalSubmissions || 0
+        assignmentCount: newAssignmentIds.size,
+        submissionCount: newSubmissionCount
       },
       changes: {
-        newClassrooms: Math.max(0, (snapshot.classrooms?.length || 0) - existingClassrooms.length)
+        newClassrooms: newClassrooms.length,
+        newAssignments: newAssignments.length,
+        newSubmissions: newSubmissionCount
       }
     };
 
+    // Only return diff if there are meaningful changes
     return res.status(200).json({
       success: true,
       data: diff

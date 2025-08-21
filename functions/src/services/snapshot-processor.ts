@@ -205,10 +205,17 @@ export class SnapshotProcessor {
   private async getExistingAssignments(classroomIds: string[]): Promise<Assignment[]> {
     const assignments: Assignment[] = [];
     
+    console.log(`[SNAPSHOT DEBUG] Loading assignments for ${classroomIds.length} classrooms:`, classroomIds);
+    
     for (const classroomId of classroomIds) {
       const classroomAssignments = await this.repository.getAssignmentsByClassroom(classroomId);
+      console.log(`[SNAPSHOT DEBUG] Classroom ${classroomId}: found ${classroomAssignments.length} assignments`);
       assignments.push(...classroomAssignments);
     }
+
+    console.log(`[SNAPSHOT DEBUG] Total existing assignments loaded: ${assignments.length}`);
+    console.log(`[SNAPSHOT DEBUG] Sample assignment externalIds:`, 
+      assignments.slice(0, 5).map(a => a.externalId));
 
     return assignments;
   }
@@ -274,6 +281,12 @@ export class SnapshotProcessor {
         // Batch create assignments
         this.repository.batchCreate("assignments", mergeResult.toCreate.assignments as any[])
           .then(() => {
+            console.log(`[STATS DEBUG] Assignments to CREATE: ${mergeResult.toCreate.assignments.length}`);
+            console.log(`[STATS DEBUG] Sample assignments being created:`, 
+              mergeResult.toCreate.assignments.slice(0, 3).map(a => ({ 
+                externalId: a.externalId, 
+                title: a.title 
+              })));
             result.stats.assignmentsCreated = mergeResult.toCreate.assignments.length;
           }),
         
@@ -329,6 +342,13 @@ export class SnapshotProcessor {
         // Batch update assignments
         this.repository.batchUpdate("assignments", assignmentUpdates)
           .then(() => {
+            console.log(`[STATS DEBUG] Assignments to UPDATE: ${assignmentUpdates.length}`);
+            console.log(`[STATS DEBUG] Sample assignments being updated:`, 
+              assignmentUpdates.slice(0, 3).map(u => ({ 
+                id: u.id, 
+                externalId: u.data.externalId,
+                title: u.data.title 
+              })));
             result.stats.assignmentsUpdated = assignmentUpdates.length;
           }),
         

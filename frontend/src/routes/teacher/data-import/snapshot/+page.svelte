@@ -27,6 +27,7 @@
 		// Generate diff if we have existing data
 		try {
 			diffData = await api.generateSnapshotDiff(snapshot);
+			// diffData will be empty object {} for no changes, which SnapshotDiffViewer handles properly
 		} catch (err) {
 			console.error('Failed to generate diff:', err);
 			// Non-critical error, continue without diff

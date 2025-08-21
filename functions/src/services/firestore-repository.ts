@@ -24,6 +24,9 @@ import {
 import { db, getCurrentTimestamp, FieldValue } from "../config/firebase";
 import * as admin from "firebase-admin";
 import { z } from "zod";
+import * as zlib from "zlib";
+import { ClassroomSnapshot } from "@shared/schemas/classroom-snapshot";
+import { normalizeSnapshotForComparison, createStableJsonString } from "@shared/utils/snapshot-normalization";
 
 /**
  * Firestore Repository Service
@@ -102,7 +105,8 @@ export class FirestoreRepository {
     assignments: "assignments",
     submissions: "submissions",
     grades: "grades",
-    enrollments: "enrollments"
+    enrollments: "enrollments",
+    teacherImports: "teacher_imports"
   };
 
   // ============================================
@@ -818,5 +822,119 @@ export class FirestoreRepository {
      .slice(0, limit);
 
     return combined;
+  }
+
+  // ============================================
+  // Teacher Import Snapshot Operations
+  // ============================================
+
+  /**
+   * Save a compressed normalized snapshot for a teacher
+   * Used for import difference detection to avoid false positives
+   */
+  async saveCompressedSnapshot(teacherId: string, snapshot: ClassroomSnapshot): Promise<void> {
+    try {
+      // Normalize snapshot to remove volatile timestamps
+      const normalized = normalizeSnapshotForComparison(snapshot);
+      
+      // Create stable JSON string and compress
+      const jsonString = createStableJsonString(normalized);
+      const originalSize = Buffer.byteLength(jsonString, 'utf8');
+      const compressed = zlib.gzipSync(jsonString);
+      const compressedSize = compressed.length;
+      
+      // Get teacher email for reference
+      const teacher = await this.getUserById(teacherId);
+      const teacherEmail = teacher?.email || 'unknown';
+      
+      // Save to dedicated teacher_imports collection
+      const importData = {
+        teacherId,
+        teacherEmail,
+        compressedSnapshot: compressed.toString('base64'),
+        originalSize,
+        compressedSize,
+        compressionRatio: Number(((originalSize - compressedSize) / originalSize).toFixed(3)),
+        lastImportedAt: getCurrentTimestamp(),
+        updatedAt: getCurrentTimestamp()
+      };
+      
+      await db.collection(this.collections.teacherImports)
+        .doc(teacherId)
+        .set(cleanForFirestore(importData));
+        
+      console.log(`Compressed snapshot saved for teacher ${teacherEmail}: ${originalSize} -> ${compressedSize} bytes (${importData.compressionRatio * 100}% savings)`);
+    } catch (error) {
+      console.error('Failed to save compressed snapshot:', error);
+      throw new Error(`Failed to save compressed snapshot: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Get and decompress a teacher's last imported snapshot
+   * Returns the normalized snapshot for comparison, or null if not found
+   */
+  async getCompressedSnapshot(teacherId: string): Promise<ClassroomSnapshot | null> {
+    try {
+      const doc = await db.collection(this.collections.teacherImports)
+        .doc(teacherId)
+        .get();
+        
+      if (!doc.exists) {
+        return null;
+      }
+      
+      const data = doc.data();
+      if (!data?.compressedSnapshot) {
+        return null;
+      }
+      
+      // Decompress the stored snapshot
+      const compressedBuffer = Buffer.from(data.compressedSnapshot, 'base64');
+      const decompressed = zlib.gunzipSync(compressedBuffer);
+      const jsonString = decompressed.toString('utf8');
+      
+      return JSON.parse(jsonString) as ClassroomSnapshot;
+    } catch (error) {
+      console.error('Failed to get compressed snapshot:', error);
+      // Return null instead of throwing to allow graceful fallback
+      return null;
+    }
+  }
+
+  /**
+   * Get teacher import metadata without decompressing the snapshot
+   * Useful for debugging and monitoring storage usage
+   */
+  async getImportMetadata(teacherId: string): Promise<{
+    originalSize: number;
+    compressedSize: number;
+    compressionRatio: number;
+    lastImportedAt: Date;
+  } | null> {
+    try {
+      const doc = await db.collection(this.collections.teacherImports)
+        .doc(teacherId)
+        .get();
+        
+      if (!doc.exists) {
+        return null;
+      }
+      
+      const data = doc.data();
+      if (!data) {
+        return null;
+      }
+      
+      return {
+        originalSize: data.originalSize || 0,
+        compressedSize: data.compressedSize || 0,
+        compressionRatio: data.compressionRatio || 0,
+        lastImportedAt: data.lastImportedAt?.toDate() || new Date()
+      };
+    } catch (error) {
+      console.error('Failed to get import metadata:', error);
+      return null;
+    }
   }
 }

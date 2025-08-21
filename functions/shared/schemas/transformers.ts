@@ -419,6 +419,26 @@ export function mergeSnapshotWithExisting(
   const existingAssignments = new Map(existing.assignments.map(a => [a.externalId, a]));
   console.log(`[MERGE DEBUG] existingAssignments map created with ${existingAssignments.size} entries`);
   
+  // Create fallback matching maps for assignments with different externalIds
+  const existingAssignmentsByTitle = new Map(
+    existing.assignments.map(a => [`${a.classroomId}_${a.title}`, a])
+  );
+  console.log(`[MERGE DEBUG] Created fallback title-based matching map with ${existingAssignmentsByTitle.size} entries`);
+  
+  // Create additional fallback maps for more robust matching
+  const existingAssignmentsByTitleOnly = new Map(
+    existing.assignments.map(a => [a.title, a])
+  );
+  console.log(`[MERGE DEBUG] Created fallback title-only matching map with ${existingAssignmentsByTitleOnly.size} entries`);
+  
+  // Debug: Check for assignments missing externalId
+  const missingExternalId = existing.assignments.filter(a => !a.externalId);
+  console.log(`[MERGE DEBUG] Assignments missing externalId: ${missingExternalId.length}`);
+  if (missingExternalId.length > 0) {
+    console.log(`[MERGE DEBUG] Sample missing externalId assignments:`, 
+      missingExternalId.slice(0, 3).map(a => ({ id: a.id, title: a.title })));
+  }
+  
   const existingSubmissions = new Map(existing.submissions.map(s => [
     `${s.classroomId}_${s.assignmentId}_${s.studentId}`,
     s
@@ -457,23 +477,53 @@ export function mergeSnapshotWithExisting(
   
   for (const assignment of snapshot.assignments) {
     const externalId = assignment.externalId!;
-    const existing = existingAssignments.get(externalId);
+    let existingAssignment = existingAssignments.get(externalId);
     
     console.log(`[MERGE DEBUG] Assignment ${assignment.title}:`);
     console.log(`[MERGE DEBUG]   externalId: ${externalId}`);
-    console.log(`[MERGE DEBUG]   existing found: ${!!existing}`);
-    if (existing) {
-      console.log(`[MERGE DEBUG]   existing.externalId: ${existing.externalId}`);
+    console.log(`[MERGE DEBUG]   existing found by externalId: ${!!existingAssignment}`);
+    
+    // If not found by externalId, try fallback matching strategies
+    if (!existingAssignment) {
+      // Strategy 1: Match by title + classroom
+      const titleKey = `${assignment.classroomId}_${assignment.title}`;
+      existingAssignment = existingAssignmentsByTitle.get(titleKey);
+      console.log(`[MERGE DEBUG]   fallback match by title+classroom found: ${!!existingAssignment}`);
+      
+      // Strategy 2: If still not found, try matching by title only (within same classroom)
+      if (!existingAssignment) {
+        const candidatesByTitle = existing.assignments.filter(a => 
+          a.title === assignment.title && a.classroomId === assignment.classroomId
+        );
+        if (candidatesByTitle.length === 1) {
+          existingAssignment = candidatesByTitle[0];
+          console.log(`[MERGE DEBUG]   fallback match by title-only found: ${!!existingAssignment}`);
+        } else if (candidatesByTitle.length > 1) {
+          console.log(`[MERGE DEBUG]   multiple title matches found (${candidatesByTitle.length}), skipping fallback`);
+        }
+      }
+      
+      if (existingAssignment) {
+        console.log(`[MERGE DEBUG]   fallback matched assignment externalId: ${existingAssignment.externalId}`);
+      }
     }
     
-    if (existing) {
+    if (existingAssignment) {
       // Update existing assignment
       console.log(`[MERGE DEBUG]   -> Updating existing assignment`);
+      
+      // OPTIMIZATION: If matched by fallback (title), update external ID for future matching
+      const matchedByFallback = existingAssignment.externalId !== externalId;
+      if (matchedByFallback) {
+        console.log(`[MERGE DEBUG]   -> Updating external ID from ${existingAssignment.externalId} to ${externalId}`);
+      }
+      
       result.toUpdate.assignments.push({
-        ...existing,
+        ...existingAssignment,
         ...assignment,
-        id: existing.id,
-        createdAt: existing.createdAt,
+        id: existingAssignment.id,
+        externalId: externalId, // Ensure external ID is updated for future matching
+        createdAt: existingAssignment.createdAt,
         updatedAt: new Date()
       } as Assignment);
     } else {

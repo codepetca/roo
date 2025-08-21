@@ -724,15 +724,15 @@ export const api = {
 	},
 
 	async generateSnapshotDiff(snapshot: ClassroomSnapshot): Promise<{
-		hasExistingData: boolean;
-		isFirstImport: boolean;
+		hasExistingData?: boolean;
+		isFirstImport?: boolean;
 		existing?: {
 			classroomCount: number;
 		};
-		new: {
+		new?: {
 			classroomCount: number;
-			totalAssignments: number;
-			totalSubmissions: number;
+			assignmentCount: number;
+			submissionCount: number;
 		};
 		changes?: {
 			newClassrooms: number;
@@ -745,8 +745,8 @@ export const api = {
 				body: JSON.stringify(snapshot)
 			},
 			z.object({
-				hasExistingData: z.boolean(),
-				isFirstImport: z.boolean(),
+				hasExistingData: z.boolean().optional(),
+				isFirstImport: z.boolean().optional(),
 				existing: z
 					.object({
 						classroomCount: z.number()
@@ -754,9 +754,9 @@ export const api = {
 					.optional(),
 				new: z.object({
 					classroomCount: z.number(),
-					totalAssignments: z.number(),
-					totalSubmissions: z.number()
-				}),
+					assignmentCount: z.number(),
+					submissionCount: z.number()
+				}).optional(),
 				changes: z
 					.object({
 						newClassrooms: z.number()
