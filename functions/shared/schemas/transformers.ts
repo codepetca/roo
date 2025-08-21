@@ -411,7 +411,14 @@ export function mergeSnapshotWithExisting(
 
   // Create maps for efficient lookups
   const existingClassrooms = new Map(existing.classrooms.map(c => [c.externalId, c]));
+  
+  console.log(`[MERGE DEBUG] Creating existingAssignments map from ${existing.assignments.length} assignments:`);
+  existing.assignments.forEach((a, index) => {
+    console.log(`[MERGE DEBUG]   Assignment ${index}: id=${a.id}, externalId=${a.externalId}, title=${a.title}`);
+  });
   const existingAssignments = new Map(existing.assignments.map(a => [a.externalId, a]));
+  console.log(`[MERGE DEBUG] existingAssignments map created with ${existingAssignments.size} entries`);
+  
   const existingSubmissions = new Map(existing.submissions.map(s => [
     `${s.classroomId}_${s.assignmentId}_${s.studentId}`,
     s
@@ -445,10 +452,23 @@ export function mergeSnapshotWithExisting(
   }
 
   // Process assignments
+  console.log(`[MERGE DEBUG] Processing ${snapshot.assignments.length} assignments from snapshot`);
+  console.log(`[MERGE DEBUG] Existing assignments map has ${existingAssignments.size} entries`);
+  
   for (const assignment of snapshot.assignments) {
-    const existing = existingAssignments.get(assignment.externalId!);
+    const externalId = assignment.externalId!;
+    const existing = existingAssignments.get(externalId);
+    
+    console.log(`[MERGE DEBUG] Assignment ${assignment.title}:`);
+    console.log(`[MERGE DEBUG]   externalId: ${externalId}`);
+    console.log(`[MERGE DEBUG]   existing found: ${!!existing}`);
+    if (existing) {
+      console.log(`[MERGE DEBUG]   existing.externalId: ${existing.externalId}`);
+    }
+    
     if (existing) {
       // Update existing assignment
+      console.log(`[MERGE DEBUG]   -> Updating existing assignment`);
       result.toUpdate.assignments.push({
         ...existing,
         ...assignment,
@@ -458,6 +478,7 @@ export function mergeSnapshotWithExisting(
       } as Assignment);
     } else {
       // Create new assignment
+      console.log(`[MERGE DEBUG]   -> Creating new assignment`);
       const classroomId = assignment.classroomId;
       result.toCreate.assignments.push({
         ...assignment,

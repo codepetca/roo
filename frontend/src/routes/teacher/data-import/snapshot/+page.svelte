@@ -67,7 +67,7 @@
 
 	// Go to dashboard
 	function goToDashboard() {
-		goto('/dashboard/teacher');
+		goto('/teacher');
 	}
 
 	// Go back to data import options
