@@ -10,7 +10,8 @@ import type {
 	DashboardUser,
 	Submission,
 	Grade,
-	SubmissionWithGrade
+	SubmissionWithGrade,
+	StudentEnrollment
 } from '@shared/schemas/core';
 import { SvelteMap } from 'svelte/reactivity';
 import { api } from '$lib/api/endpoints';
@@ -60,6 +61,7 @@ class DataStore {
 
 	// Submission caching for selected assignments
 	submissionsCache = $state(new Map<string, SubmissionWithGrade[]>());
+	enrollmentCache = $state(new Map<string, StudentEnrollment[]>());
 	loadingSubmissions = $state<boolean>(false);
 	failedSubmissionRequests = $state<Set<string>>(new Set());
 
@@ -174,38 +176,63 @@ class DataStore {
 		}
 
 		const submissions = this.submissionsCache.get(this.selectedAssignmentId) || [];
+		const enrollments = this.enrollmentCache.get(this.selectedClassroomId) || [];
+
 		console.log('📊 StudentProgress:', {
 			selectedAssignmentId: this.selectedAssignmentId,
-			cacheHasSubmissions: this.submissionsCache.has(this.selectedAssignmentId),
+			selectedClassroomId: this.selectedClassroomId,
 			submissionsCount: submissions.length,
+			enrollmentsCount: enrollments.length,
 			loadingSubmissions: this.loadingSubmissions
 		});
 
-		if (submissions.length === 0 && !this.loadingSubmissions) {
-			console.log('📊 StudentProgress: No submissions found and not loading');
+		// If no enrollments and not loading, return empty (nothing to display)
+		if (enrollments.length === 0 && !this.loadingSubmissions) {
+			console.log('📊 StudentProgress: No enrollments found');
 			return [];
 		}
 
 		const studentMap = new Map();
 
-		// Build student progress from submissions
-		submissions.forEach((sub) => {
-			studentMap.set(sub.studentId, {
-				studentId: sub.studentId,
-				studentName: sub.studentName,
-				studentEmail: sub.studentEmail,
-				submission: sub,
-				submittedAt: sub.submittedAt,
-				status: sub.status || 'submitted',
-				score: sub.grade?.score,
-				maxScore: sub.grade?.maxScore || this.selectedAssignment?.maxScore,
-				percentage: sub.grade?.percentage,
-				feedback: sub.grade?.feedback
+		// Start with ALL enrolled students
+		enrollments.forEach((enrollment) => {
+			studentMap.set(enrollment.studentId, {
+				studentId: enrollment.studentId,
+				studentName: enrollment.name,
+				studentEmail: enrollment.email,
+				submission: null,
+				submittedAt: null,
+				status: 'not_submitted' as const,
+				score: undefined,
+				maxScore: this.selectedAssignment?.maxScore,
+				percentage: undefined,
+				feedback: undefined
 			});
 		});
 
+		// Overlay submission data where it exists
+		submissions.forEach((sub) => {
+			if (studentMap.has(sub.studentId)) {
+				const existing = studentMap.get(sub.studentId);
+				studentMap.set(sub.studentId, {
+					...existing,
+					submission: sub,
+					submittedAt: sub.submittedAt,
+					status: sub.status || 'submitted',
+					score: sub.grade?.score,
+					maxScore: sub.grade?.maxScore || this.selectedAssignment?.maxScore,
+					percentage: sub.grade?.percentage,
+					feedback: sub.grade?.feedback
+				});
+			}
+		});
+
 		const result = Array.from(studentMap.values());
-		console.log('📊 StudentProgress result before sorting:', result.length, 'students');
+		console.log('📊 StudentProgress result before sorting:', {
+			total: result.length,
+			withSubmissions: result.filter((s) => s.status !== 'not_submitted').length,
+			withoutSubmissions: result.filter((s) => s.status === 'not_submitted').length
+		});
 
 		// Apply sorting
 		const sortedResult = sortStudentProgress(
@@ -348,23 +375,25 @@ class DataStore {
 		this.error = null; // Clear any previous errors
 
 		try {
-			const submissions = await api.getSubmissionsByAssignment(assignmentId);
+			const response = await api.getSubmissionsByAssignment(assignmentId);
 
-			// Ensure reactivity by creating a new Map
+			// Cache the submissions (maintain backward compatibility)
 			const newCache = new Map(this.submissionsCache);
-			newCache.set(assignmentId, submissions);
+			newCache.set(assignmentId, response.submissions);
 			this.submissionsCache = newCache;
 
-			console.log('✅ Submissions loaded and cached:', {
+			// Cache enrollment data for this assignment's classroom
+			const newEnrollmentCache = new Map(this.enrollmentCache);
+			newEnrollmentCache.set(response.classroomId, response.enrollments);
+			this.enrollmentCache = newEnrollmentCache;
+
+			console.log('✅ Submissions and enrollments loaded:', {
 				assignmentId,
-				submissionsCount: submissions.length,
-				cacheSize: this.submissionsCache.size,
-				firstSubmission: submissions[0]
-					? {
-							studentName: submissions[0].studentName,
-							status: submissions[0].status
-						}
-					: 'none'
+				classroomId: response.classroomId,
+				submissionsCount: response.submissions.length,
+				enrollmentsCount: response.enrollments.length,
+				submissionRate: response.stats.submissionRate,
+				cacheSize: this.submissionsCache.size
 			});
 		} catch (error) {
 			console.error('❌ Failed to fetch submissions:', error);
@@ -825,22 +854,25 @@ class DataStore {
 			// Update the cached submissions with the new grades for reactivity
 			if (result.results && result.results.length > 0) {
 				const currentSubmissions = this.submissionsCache.get(assignmentId) || [];
-				
+
 				// Create a map of grades by submissionId for quick lookup
 				const gradesMap = new Map(
-					result.results.map(r => [r.submissionId, {
-						id: r.gradeId,
-						score: r.score,
-						maxScore: r.maxScore,
-						feedback: r.feedback,
-						percentage: Math.round((r.score / r.maxScore) * 100),
-						gradedAt: new Date(),
-						gradedBy: 'ai'
-					}])
+					result.results.map((r) => [
+						r.submissionId,
+						{
+							id: r.gradeId,
+							score: r.score,
+							maxScore: r.maxScore,
+							feedback: r.feedback,
+							percentage: Math.round((r.score / r.maxScore) * 100),
+							gradedAt: new Date(),
+							gradedBy: 'ai'
+						}
+					])
 				);
-				
+
 				// Update each submission with its grade
-				const updatedSubmissions = currentSubmissions.map(sub => {
+				const updatedSubmissions = currentSubmissions.map((sub) => {
 					const grade = gradesMap.get(sub.id);
 					if (grade) {
 						return {
@@ -851,16 +883,16 @@ class DataStore {
 					}
 					return sub;
 				});
-				
+
 				// Update the cache - this triggers reactivity!
 				const newCache = new Map(this.submissionsCache);
 				newCache.set(assignmentId, updatedSubmissions);
 				this.submissionsCache = newCache;
-				
+
 				console.log('📊 Updated submissions cache with grades:', {
 					assignmentId,
 					totalSubmissions: updatedSubmissions.length,
-					gradedCount: updatedSubmissions.filter(s => s.status === 'graded').length
+					gradedCount: updatedSubmissions.filter((s) => s.status === 'graded').length
 				});
 			}
 
@@ -917,22 +949,25 @@ class DataStore {
 			// Update the cached submissions with the new grades for reactivity
 			if (result.results && result.results.length > 0) {
 				const currentSubmissions = this.submissionsCache.get(assignmentId) || [];
-				
+
 				// Create a map of grades by submissionId for quick lookup
 				const gradesMap = new Map(
-					result.results.map(r => [r.submissionId, {
-						id: r.gradeId,
-						score: r.score,
-						maxScore: r.maxScore,
-						feedback: r.feedback,
-						percentage: Math.round((r.score / r.maxScore) * 100),
-						gradedAt: new Date(),
-						gradedBy: 'ai'
-					}])
+					result.results.map((r) => [
+						r.submissionId,
+						{
+							id: r.gradeId,
+							score: r.score,
+							maxScore: r.maxScore,
+							feedback: r.feedback,
+							percentage: Math.round((r.score / r.maxScore) * 100),
+							gradedAt: new Date(),
+							gradedBy: 'ai'
+						}
+					])
 				);
-				
+
 				// Update each submission with its grade
-				const updatedSubmissions = currentSubmissions.map(sub => {
+				const updatedSubmissions = currentSubmissions.map((sub) => {
 					const grade = gradesMap.get(sub.id);
 					if (grade) {
 						return {
@@ -943,7 +978,7 @@ class DataStore {
 					}
 					return sub;
 				});
-				
+
 				// Update the cache - this triggers reactivity!
 				const newCache = new Map(this.submissionsCache);
 				newCache.set(assignmentId, updatedSubmissions);

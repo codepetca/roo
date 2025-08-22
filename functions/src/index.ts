@@ -95,6 +95,7 @@ export const api = onRequest(
       const { method, path } = request;
       
       // Note: Auth signup removed - using Firebase Auth SDK directly in frontend
+      // Force deployment: includes enrollment fix for assignments view
       
       // Health check routes
       if (method === "GET" && path === "/") {
@@ -262,6 +263,13 @@ export const api = onRequest(
       }
       if (method === "GET" && path === "/student/activity") {
         await getStudentActivity(request, response); return;
+      }
+
+      // Submission routes
+      if (method === "GET" && path.startsWith("/submissions/assignment/")) {
+        const assignmentId = path.split("/submissions/assignment/")[1];
+        (request as RequestWithParams).params = { assignmentId };
+        await getSubmissionsByAssignment(request, response); return;
       }
 
       // Firestore Grade Management Routes

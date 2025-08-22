@@ -2244,18 +2244,7 @@
 					"feedback": "",
 					"studentId": "999000000000000000001",
 					"studentEmail": "student@test.com",
-					"score": 92,
-					"draftGrade": 92,
 					"late": false,
-					"gradedAt": "2025-08-19T14:30:00.000Z",
-					"grade": {
-						"feedback": "Great work on the project reflection! You showed good understanding of the concepts and clear self-reflection on your learning progress.",
-						"score": 92,
-						"gradedBy": "ai",
-						"maxScore": 100,
-						"gradedAt": "2025-08-19T14:30:00.000Z",
-						"percentage": 92
-					},
 					"studentName": "Student Test",
 					"studentWork": "1. This course has been really engaging! I especially enjoyed learning about object-oriented programming and working on the game projects. The hands-on approach helped me understand abstract concepts better. 2. The most challenging part was debugging complex code, but it taught me patience and systematic problem-solving. 3. I'm proud of my final game project - it incorporates multiple programming concepts we learned. 4. I'd like to continue exploring game development and learn more about advanced algorithms in the future.",
 					"alternateLink": "https://classroom.example.com/placeholder",
@@ -2279,8 +2268,8 @@
 					],
 					"submittedAt": "2025-08-18T12:45:00.000Z",
 					"assignmentName": "Project and Course Reflection",
-					"status": "graded",
-					"updatedAt": "2025-08-19T14:30:00.000Z",
+					"status": "submitted",
+					"updatedAt": "2025-08-18T12:45:00.000Z",
 					"attachments": []
 				},
 				{
@@ -25723,18 +25712,7 @@
 					"feedback": "",
 					"studentId": "999000000000000000001",
 					"studentEmail": "student@test.com",
-					"score": 95,
-					"draftGrade": 95,
 					"late": false,
-					"gradedAt": "2025-08-10T16:45:00.000Z",
-					"grade": {
-						"feedback": "Good choice! The reasoning shows you understand mobile technology trends among students.",
-						"score": 95,
-						"gradedBy": "manual",
-						"maxScore": 100,
-						"gradedAt": "2025-08-10T16:45:00.000Z",
-						"percentage": 95
-					},
 					"studentName": "Student Test",
 					"studentWork": "Selected: iPhone\n\nI chose iPhone because it integrates well with the MacBooks we use for development, has excellent build quality, and the iOS development tools are comprehensive for learning mobile app development. The ecosystem makes it easier to test apps across devices.",
 					"alternateLink": "https://classroom.example.com/placeholder",
@@ -25758,8 +25736,8 @@
 					],
 					"submittedAt": "2025-08-10T16:15:00.000Z",
 					"assignmentName": "What phone do you use?",
-					"status": "graded",
-					"updatedAt": "2025-08-10T16:45:00.000Z",
+					"status": "submitted",
+					"updatedAt": "2025-08-10T16:15:00.000Z",
 					"attachments": []
 				},
 				{

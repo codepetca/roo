@@ -170,15 +170,33 @@ export const api = {
 		);
 	},
 
-	async getSubmissionsByAssignment(assignmentId: string): Promise<SubmissionWithGrade[]> {
+	async getSubmissionsByAssignment(assignmentId: string): Promise<{
+		submissions: SubmissionWithGrade[];
+		enrollments: StudentEnrollment[];
+		classroomId: string;
+		stats: {
+			totalSubmissions: number;
+			totalEnrolled: number;
+			submissionRate: number;
+		};
+	}> {
 		return typedApiRequest(
 			`/submissions/assignment/${assignmentId}`,
 			{},
-			z.array(
-				submissionSchema.extend({
-					grade: gradeSchema.optional()
+			z.object({
+				submissions: z.array(
+					submissionSchema.extend({
+						grade: gradeSchema.optional()
+					})
+				),
+				enrollments: z.array(studentEnrollmentSchema),
+				classroomId: z.string(),
+				stats: z.object({
+					totalSubmissions: z.number(),
+					totalEnrolled: z.number(),
+					submissionRate: z.number()
 				})
-			)
+			})
 		);
 	},
 

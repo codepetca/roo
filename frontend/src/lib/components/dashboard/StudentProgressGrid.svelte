@@ -20,10 +20,11 @@
 
 	// Calculate statistics from real student progress data
 	let stats = $derived(() => {
-		const total = studentProgress.length;
+		const total = studentProgress.length; // Total enrolled students
 		const submitted = studentProgress.filter((s) => s.status !== 'not_submitted').length;
 		const graded = studentProgress.filter((s) => s.status === 'graded').length;
 		const pending = studentProgress.filter((s) => s.status === 'submitted').length;
+		const notSubmitted = studentProgress.filter((s) => s.status === 'not_submitted').length;
 		const averageGrade =
 			graded > 0
 				? Math.round(
@@ -33,7 +34,7 @@
 					)
 				: 0;
 
-		return { total, submitted, graded, pending, averageGrade };
+		return { total, submitted, graded, pending, notSubmitted, averageGrade };
 	});
 
 	/**
@@ -221,8 +222,12 @@
 							</div>
 
 							<!-- Submitted Column (1fr) -->
-							<div class="min-w-0 flex items-center text-sm text-gray-900">
-								<span class="truncate">{formatDate(student.submittedAt)}</span>
+							<div class="min-w-0 flex items-center text-sm">
+								{#if student.status === 'not_submitted'}
+									<span class="text-gray-400 italic">Not Submitted</span>
+								{:else}
+									<span class="text-gray-900 truncate">{formatDate(student.submittedAt)}</span>
+								{/if}
 							</div>
 
 							<!-- Grade Column (1fr) -->
@@ -268,10 +273,14 @@
 
 							<!-- AI Comments Column (4fr) -->
 							<div 
-								class="min-w-0 flex items-center text-sm text-gray-900"
+								class="min-w-0 flex items-center text-sm"
 								title={getFullComment(student)}
 							>
-								<span class="break-words">{truncateComment(student.feedback, 120)}</span>
+								{#if student.status === 'not_submitted'}
+									<span class="text-gray-400 italic">No submission</span>
+								{:else}
+									<span class="text-gray-900 break-words">{truncateComment(student.feedback, 120)}</span>
+								{/if}
 							</div>
 
 							<!-- Actions Column (1fr) - Moved to end -->

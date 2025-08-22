@@ -1,3 +1,21 @@
+/**
+ * Student Test User Creation Script
+ * 
+ * Creates a test student user account with the following credentials:
+ * - Email: student@test.com (for login)
+ * - School Email: student@schoolemail.com (for classroom enrollment matching)
+ * - Passcode: 12345 (for passcode authentication)
+ * - Role: student
+ * 
+ * Usage:
+ *   cd functions
+ *   node create-student-test-user.js
+ * 
+ * Prerequisites:
+ *   - Firebase service account file: roo-app-3d24e-service-account.json
+ *   - Proper Firebase project permissions
+ */
+
 const admin = require('firebase-admin');
 const serviceAccount = require('./roo-app-3d24e-service-account.json');
 
@@ -26,8 +44,9 @@ async function createStudentTestUser() {
       const existingDoc = existingUsersQuery.docs[0];
       console.log('User already exists, updating passcode...');
       
-      // Update existing user with passcode
+      // Update existing user with passcode and school email
       await existingDoc.ref.update({
+        schoolEmail: 'student@schoolemail.com', // Ensure school email is set
         passcode: {
           value: '12345',
           createdAt: new Date(),
@@ -48,6 +67,7 @@ async function createStudentTestUser() {
       name: 'Test Student',
       displayName: 'Test Student',
       role: 'student',
+      schoolEmail: 'student@schoolemail.com', // School email for classroom enrollment matching
       passcode: {
         value: '12345',
         createdAt: new Date(),
@@ -97,6 +117,7 @@ async function createStudentTestUser() {
     console.log('✅ Student test user created successfully!');
     console.log('========================================');
     console.log('Email: student@test.com');
+    console.log('School Email: student@schoolemail.com');
     console.log('Passcode: 12345');
     console.log('Role: student');
     console.log('========================================\n');

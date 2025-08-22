@@ -1,0 +1,192 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isTeacher() {
+      return isAuthenticated() && 
+        getUserData().role == 'teacher';
+    }
+    
+    function isStudent() {
+      return isAuthenticated() && 
+        getUserData().role == 'student';
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isClassroomTeacher(classroomId) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/classrooms/$(classroomId)).data.teacherId == request.auth.uid;
+    }
+    
+    function isEnrolledStudent(classroomId) {
+      return isAuthenticated() && 
+        exists(/databases/$(database)/documents/enrollments/$(request.auth.uid + '_' + classroomId));
+    }
+    
+    // Users collection rules
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isOwner(userId);
+      
+      // Users can create their profile if it doesn't exist (for new signups)
+      allow create: if isOwner(userId) && 
+        request.resource.data.keys().hasAll(['email', 'role', 'displayName']) &&
+        request.resource.data.email == request.auth.token.email;
+      
+      // Users can update their own profile, but cannot change their role
+      allow update: if isOwner(userId) && 
+        (!request.resource.data.keys().hasAny(['role']) || 
+         request.resource.data.role == resource.data.role);
+      
+      // No one can delete user profiles
+      allow delete: if false;
+    }
+    
+    // Classrooms collection rules
+    match /classrooms/{classroomId} {
+      // Teachers can read their own classrooms
+      // Students can read classrooms they're enrolled in
+      allow read: if isTeacher() && resource.data.teacherId == request.auth.uid ||
+                     isStudent() && isEnrolledStudent(classroomId);
+      
+      // Only teachers can create classrooms for themselves
+      allow create: if isTeacher() && 
+        request.resource.data.teacherId == request.auth.uid &&
+        request.resource.data.keys().hasAll(['name', 'teacherId']);
+      
+      // Teachers can update their own classrooms
+      allow update: if isTeacher() && 
+        resource.data.teacherId == request.auth.uid &&
+        request.resource.data.teacherId == resource.data.teacherId; // Can't change ownership
+      
+      // Teachers can delete their own classrooms
+      allow delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+    }
+    
+    // Assignments collection rules
+    match /assignments/{assignmentId} {
+      // Teachers can read assignments from their classrooms
+      // Students can read assignments from enrolled classrooms
+      allow read: if (isTeacher() && isClassroomTeacher(resource.data.classroomId)) ||
+                     (isStudent() && isEnrolledStudent(resource.data.classroomId));
+      
+      // Teachers can create assignments in their classrooms
+      allow create: if isTeacher() && 
+        isClassroomTeacher(request.resource.data.classroomId) &&
+        request.resource.data.keys().hasAll(['classroomId', 'title']);
+      
+      // Teachers can update assignments in their classrooms
+      allow update: if isTeacher() && 
+        isClassroomTeacher(resource.data.classroomId) &&
+        request.resource.data.classroomId == resource.data.classroomId; // Can't move to different classroom
+      
+      // Teachers can delete assignments from their classrooms
+      allow delete: if isTeacher() && isClassroomTeacher(resource.data.classroomId);
+    }
+    
+    // Submissions collection rules
+    match /submissions/{submissionId} {
+      // Teachers can read all submissions in their classrooms
+      // Students can read their own submissions
+      allow read: if (isTeacher() && isClassroomTeacher(resource.data.classroomId)) ||
+                     (isStudent() && resource.data.studentId == request.auth.uid);
+      
+      // Students can create submissions for assignments in enrolled classrooms
+      allow create: if isStudent() && 
+        request.resource.data.studentId == request.auth.uid &&
+        isEnrolledStudent(request.resource.data.classroomId) &&
+        request.resource.data.keys().hasAll(['studentId', 'assignmentId', 'classroomId', 'studentEmail', 'studentName']);
+      
+      // Students can update their own submissions only if not graded
+      // Teachers can update submissions in their classrooms (for grading)
+      allow update: if (isStudent() && 
+                        resource.data.studentId == request.auth.uid && 
+                        resource.data.status != 'graded' &&
+                        request.resource.data.studentId == resource.data.studentId) ||
+                       (isTeacher() && isClassroomTeacher(resource.data.classroomId));
+      
+      // Only teachers can delete submissions from their classrooms
+      allow delete: if isTeacher() && isClassroomTeacher(resource.data.classroomId);
+    }
+    
+    // Enrollments collection rules
+    // Using composite key: userId_classroomId for easy lookup
+    match /enrollments/{enrollmentId} {
+      // Teachers can read all enrollments for their classrooms
+      // Students can read their own enrollments
+      allow read: if (isTeacher() && isClassroomTeacher(resource.data.classroomId)) ||
+                     (isStudent() && resource.data.studentId == request.auth.uid);
+      
+      // Teachers can create enrollments for their classrooms
+      allow create: if isTeacher() && 
+        isClassroomTeacher(request.resource.data.classroomId) &&
+        request.resource.data.keys().hasAll(['studentId', 'classroomId', 'email', 'name']);
+      
+      // Teachers can update enrollments in their classrooms
+      allow update: if isTeacher() && 
+        isClassroomTeacher(resource.data.classroomId) &&
+        request.resource.data.classroomId == resource.data.classroomId &&
+        request.resource.data.studentId == resource.data.studentId; // Can't change student
+      
+      // Teachers can delete enrollments from their classrooms
+      allow delete: if isTeacher() && isClassroomTeacher(resource.data.classroomId);
+    }
+    
+    // Teacher imports collection rules
+    match /teacher_imports/{importId} {
+      // Teachers can only access their own import records
+      allow read: if isTeacher() && resource.data.teacherId == request.auth.uid;
+      
+      // Teachers can create their own import records
+      allow create: if isTeacher() && 
+        request.resource.data.teacherId == request.auth.uid;
+      
+      // Teachers can update their own import records
+      allow update: if isTeacher() && 
+        resource.data.teacherId == request.auth.uid &&
+        request.resource.data.teacherId == resource.data.teacherId;
+      
+      // Teachers can delete their own import records
+      allow delete: if isTeacher() && resource.data.teacherId == request.auth.uid;
+    }
+    
+    // Grades collection (if used separately from submissions)
+    match /grades/{gradeId} {
+      // Teachers can read all grades in their classrooms
+      // Students can read their own grades
+      allow read: if (isTeacher() && isClassroomTeacher(resource.data.classroomId)) ||
+                     (isStudent() && resource.data.studentId == request.auth.uid);
+      
+      // Only teachers can create grades for submissions in their classrooms
+      allow create: if isTeacher() && 
+        isClassroomTeacher(request.resource.data.classroomId);
+      
+      // Only teachers can update grades in their classrooms
+      // Protect locked grades from modification
+      allow update: if isTeacher() && 
+        isClassroomTeacher(resource.data.classroomId) &&
+        (!resource.data.isLocked || resource.data.isLocked == false);
+      
+      // Grades should not be deleted (maintain history)
+      allow delete: if false;
+    }
+    
+    // Default deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -8,8 +8,8 @@ const fs = require('fs');
 async function testImportFix() {
   console.log('🧪 Testing Import Difference Detection Fix...\n');
   
-  // Load test snapshot
-  const snapshotPath = '/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-mock.json';
+  // Load test snapshot - using simplified mock data
+  const snapshotPath = '/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-simple.json';
   const snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
   
   // API endpoint - using deployed function

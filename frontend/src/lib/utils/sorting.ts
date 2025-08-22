@@ -68,6 +68,11 @@ export interface StudentProgressItem {
  * Extract first and last names from student name
  */
 function extractNames(name: string): { firstName: string; lastName: string } {
+	// Handle undefined, null, or empty names gracefully
+	if (!name || typeof name !== 'string') {
+		return { firstName: '', lastName: '' };
+	}
+
 	const parts = name.trim().split(/\s+/);
 	if (parts.length === 1) {
 		return { firstName: parts[0], lastName: '' };
@@ -87,7 +92,13 @@ export function sortStudentProgress(
 ): StudentProgressItem[] {
 	if (!students || students.length === 0) return [];
 
-	const sorted = [...students].sort((a, b) => {
+	// Filter out students with invalid or missing names when sorting by name
+	const validStudents =
+		sortField === 'name'
+			? students.filter((student) => student.studentName && typeof student.studentName === 'string')
+			: students;
+
+	const sorted = [...validStudents].sort((a, b) => {
 		let comparison = 0;
 
 		switch (sortField) {

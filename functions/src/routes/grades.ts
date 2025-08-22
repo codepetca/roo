@@ -6,6 +6,7 @@
 import { Request, Response } from "express";
 import * as admin from "firebase-admin";
 import { createFirestoreGradeService } from "../services/firestore";
+import { FirestoreRepository } from "../services/firestore-repository";
 import { 
   createSubmissionRequestSchema,
   updateSubmissionStatusSchema 
@@ -157,11 +158,33 @@ export async function getSubmissionsByAssignment(req: Request, res: Response) {
     const firestoreService = createFirestoreGradeService();
     const submissions = await firestoreService.getSubmissionsByAssignmentId(assignmentId);
 
+    // Get the assignment to find the classroom
+    const repository = new FirestoreRepository();
+    const assignment = await repository.getAssignment(assignmentId);
+    
+    if (!assignment) {
+      res.status(404).json({
+        success: false,
+        error: "Assignment not found"
+      });
+      return;
+    }
+
+    // Get all enrolled students for the classroom
+    const enrollments = await repository.getEnrollmentsByClassroom(assignment.classroomId);
+
     res.json({
       success: true,
-      assignmentId,
-      count: submissions.length,
-      submissions
+      data: {
+        submissions,
+        enrollments,
+        classroomId: assignment.classroomId,
+        stats: {
+          totalSubmissions: submissions.length,
+          totalEnrolled: enrollments.length,
+          submissionRate: enrollments.length > 0 ? Math.round((submissions.length / enrollments.length) * 100) : 0
+        }
+      }
     });
 
   } catch (error) {
