@@ -173,14 +173,35 @@ function transformAssignment(
   assignment: AssignmentWithStats,
   classroomId: string
 ): AssignmentInput {
-  // Map assignment type
+  // Map assignment type with title-based coding detection (matching AppScript logic)
   let type: 'coding' | 'quiz' | 'written' | 'form' = 'written';
-  if (assignment.type === 'quiz') {
+  
+  // Use type from AppScript if already determined
+  if (assignment.type === 'assignment') {
+    // assignment.type is 'assignment' after transformation from 'coding'/'written'
+    type = 'written'; // Default assignment type
+  } else if (assignment.type === 'quiz') {
     type = 'quiz';
   } else if (assignment.type === 'form') {
     type = 'form';
-  } else if (assignment.quizData) {
-    type = 'quiz';
+  } else {
+    // Fallback detection if not set during import (should match AppScript logic)
+    if (assignment.workType === 'SHORT_ANSWER_QUESTION' || 
+        assignment.workType === 'MULTIPLE_CHOICE_QUESTION' ||
+        assignment.quizData) {
+      
+      // Check assignment title for coding keywords
+      const title = (assignment.title || '').toLowerCase();
+      const codingKeywords = ['program', 'code', 'karel', 'function', 'algorithm', 'coding'];
+      
+      const isCodingQuiz = codingKeywords.some(keyword => 
+        title.includes(keyword)
+      );
+      
+      type = isCodingQuiz ? 'coding' : 'quiz';
+    } else {
+      type = 'written'; // Default for regular assignments
+    }
   }
 
   // Map status
@@ -254,7 +275,7 @@ function transformSubmission(
   classroomId: string
 ): SubmissionInput {
   const studentId = StableIdGenerator.student(submission.studentEmail);
-  const assignmentId = StableIdGenerator.assignment(classroomId, submission.assignmentId);
+  const assignmentId = submission.assignmentId;
 
   // Map status
   let status: 'draft' | 'submitted' | 'graded' | 'returned' = 'submitted';
@@ -323,7 +344,7 @@ export function extractGradeFromSubmission(
   }
 
   const studentId = StableIdGenerator.student(submission.studentEmail);
-  const assignmentId = StableIdGenerator.assignment(classroomId, submission.assignmentId);
+  const assignmentId = submission.assignmentId;
   const submissionId = StableIdGenerator.submission(classroomId, assignmentId, studentId);
 
   const grade = submission.grade;

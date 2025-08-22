@@ -203,6 +203,38 @@ def anonymize_json(data):
                 # Replace course group emails
                 elif key == "courseGroupEmail":
                     new_obj[key] = value.replace("@gapps.yrdsb.ca", "@example.com")
+                # Handle extractedContent field - anonymize text and structured data
+                elif key == "extractedContent" and isinstance(value, dict):
+                    extracted_content = dict(value)
+                    
+                    # Anonymize text content
+                    if "text" in extracted_content and isinstance(extracted_content["text"], str):
+                        text = extracted_content["text"]
+                        # Replace names in extracted text
+                        for original_name, fake_name in name_mapping.items():
+                            text = text.replace(original_name, fake_name)
+                        # Replace email addresses in text
+                        for student_number, reversed_number in student_number_mapping.items():
+                            text = text.replace(f"{student_number}@gapps.yrdsb.ca", f"{reversed_number}@gapps.yrdsb.ca")
+                        extracted_content["text"] = text
+                    
+                    # Anonymize structured data (recursively)
+                    if "structuredData" in extracted_content:
+                        extracted_content["structuredData"] = replace_identifiers(extracted_content["structuredData"])
+                    
+                    # Process other nested fields
+                    for field in ["images", "metadata"]:
+                        if field in extracted_content:
+                            extracted_content[field] = replace_identifiers(extracted_content[field])
+                    
+                    new_obj[key] = extracted_content
+                # Handle aiProcessingStatus field - keep structure but clean timestamps
+                elif key == "aiProcessingStatus" and isinstance(value, dict):
+                    ai_status = dict(value)
+                    # Normalize timestamps for consistency
+                    if "lastProcessedAt" in ai_status:
+                        ai_status["lastProcessedAt"] = "2025-01-15T12:00:00.000Z"
+                    new_obj[key] = ai_status
                 # Recursively process nested objects
                 elif isinstance(value, (dict, list)):
                     new_obj[key] = replace_identifiers(value)
@@ -230,8 +262,8 @@ def anonymize_json(data):
     return replace_identifiers(data)
 
 def main():
-    source_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-stewart.chan-2025-08-15.json")
-    output_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-mock.json")
+    source_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-stewart.chan-2025-08-22.json")
+    output_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-mock2.json")
     
     print(f"Reading {source_file}...")
     with open(source_file, 'r') as f:

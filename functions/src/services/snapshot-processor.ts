@@ -59,7 +59,7 @@ export class SnapshotProcessor {
   /**
    * Process a complete classroom snapshot
    */
-  async processSnapshot(snapshot: ClassroomSnapshot): Promise<ProcessingResult> {
+  async processSnapshot(snapshot: ClassroomSnapshot, authenticatedUserEmail?: string): Promise<ProcessingResult> {
     const startTime = Date.now();
     const result: ProcessingResult = {
       success: true,
@@ -114,7 +114,7 @@ export class SnapshotProcessor {
 
       // Step 9: Finalize teacher associations
       logger.info("Finalizing teacher associations");
-      await this.finalizeTeacherAssociations(snapshot.teacher.email);
+      await this.finalizeTeacherAssociations(authenticatedUserEmail || snapshot.teacher.email);
 
       // Step 10: Update denormalized counts
       logger.info("Updating denormalized counts");
@@ -424,7 +424,7 @@ export class SnapshotProcessor {
           if (gradeInput) {
             const submissionId = StableIdGenerator.submission(
               classroomId,
-              StableIdGenerator.assignment(classroomId, submissionSnapshot.assignmentId),
+              submissionSnapshot.assignmentId,
               StableIdGenerator.student(submissionSnapshot.studentEmail)
             );
             

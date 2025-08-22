@@ -124,12 +124,25 @@ var SchemaAdapters = {
     try {
       const now = new Date().toISOString();
       
-      // Map Google Classroom work types to our schema types
-      const workTypeMapping = {
-        'ASSIGNMENT': 'assignment',
-        'SHORT_ANSWER_QUESTION': 'quiz',
-        'MULTIPLE_CHOICE_QUESTION': 'quiz'
-      };
+      // Determine assignment type with title-based coding detection
+      let assignmentType = 'written'; // Default for regular assignments
+      
+      if (courseWork.workType === 'SHORT_ANSWER_QUESTION' || 
+          courseWork.workType === 'MULTIPLE_CHOICE_QUESTION' ||
+          courseWork.materials?.some(m => m.form)) {
+        
+        // Check assignment title for coding keywords
+        const title = (courseWork.title || '').toLowerCase();
+        const codingKeywords = ['program', 'code', 'karel', 'function', 'algorithm', 'coding'];
+        
+        const isCodingQuiz = codingKeywords.some(keyword => 
+          title.includes(keyword)
+        );
+        
+        assignmentType = isCodingQuiz ? 'coding' : 'quiz';
+      } else if (courseWork.workType === 'ASSIGNMENT') {
+        assignmentType = 'written';
+      }
       
       return {
         // Core assignment data
@@ -137,8 +150,8 @@ var SchemaAdapters = {
         title: courseWork.title || 'Untitled Assignment',
         description: courseWork.description || '',
         
-        // Assignment classification
-        type: workTypeMapping[courseWork.workType] || 'assignment',
+        // Assignment classification with title-based coding detection
+        type: assignmentType,
         maxScore: courseWork.maxPoints || 100,
         
         // Timing information
@@ -321,7 +334,13 @@ var SchemaAdapters = {
         
         // Enhanced submission data
         submissionHistory: submission.submissionHistory || undefined,
-        attachmentCount: this.countAttachments(submission)
+        attachmentCount: this.countAttachments(submission),
+        
+        // Content extraction from attachments
+        extractedContent: this.extractSubmissionContent(submission, assignment),
+        
+        // AI processing status
+        aiProcessingStatus: this.createAiProcessingStatus(submission, assignment)
       };
     } catch (error) {
       console.error('Error adapting submission:', error);
@@ -507,6 +526,184 @@ var SchemaAdapters = {
       return {
         valid: false,
         errors: [`Validation error: ${error.message}`]
+      };
+    }
+  },
+  
+  /**
+   * Extract content from submission attachments
+   * @param {Object} submission - Google Classroom submission object
+   * @param {Object} assignment - Assignment object for context
+   * @returns {Object} Extracted content object
+   */
+  extractSubmissionContent: function(submission, assignment) {
+    const extractedContent = {
+      text: '',
+      structuredData: {},
+      images: [],
+      metadata: {
+        attachmentTypes: [],
+        totalAttachments: 0,
+        extractionErrors: []
+      }
+    };
+    
+    try {
+      // Handle short answer and multiple choice submissions first
+      if (submission.shortAnswerSubmission?.answer) {
+        extractedContent.text = submission.shortAnswerSubmission.answer;
+        extractedContent.metadata.submissionType = 'short_answer';
+        return extractedContent;
+      }
+      
+      if (submission.multipleChoiceSubmission?.answer) {
+        extractedContent.structuredData.selectedAnswer = submission.multipleChoiceSubmission.answer;
+        extractedContent.text = `Selected: ${submission.multipleChoiceSubmission.answer}`;
+        extractedContent.metadata.submissionType = 'multiple_choice';
+        return extractedContent;
+      }
+      
+      // Handle assignment submissions with attachments
+      if (submission.assignmentSubmission?.attachments) {
+        const attachments = submission.assignmentSubmission.attachments;
+        extractedContent.metadata.totalAttachments = attachments.length;
+        
+        let combinedText = '';
+        
+        for (const attachment of attachments) {
+          try {
+            if (attachment.driveFile) {
+              // Extract content from Google Drive files
+              const fileId = attachment.driveFile.id;
+              const mimeType = attachment.driveFile.mimeType || '';
+              
+              extractedContent.metadata.attachmentTypes.push({
+                type: 'driveFile',
+                mimeType: mimeType,
+                title: attachment.driveFile.title
+              });
+              
+              // Use ContentExtractor to get file content
+              const content = ContentExtractor.extractContentByMimeType(fileId, mimeType);
+              
+              if (content.text) {
+                combinedText += `\n[${attachment.driveFile.title}]\n${content.text}\n`;
+              }
+              
+              if (content.structuredData) {
+                extractedContent.structuredData[attachment.driveFile.title] = content.structuredData;
+              }
+              
+              // Store metadata
+              if (content.metadata) {
+                extractedContent.metadata[`file_${fileId}`] = content.metadata;
+              }
+              
+            } else if (attachment.link) {
+              // Handle external links
+              extractedContent.metadata.attachmentTypes.push({
+                type: 'link',
+                url: attachment.link.url,
+                title: attachment.link.title
+              });
+              combinedText += `\n[Link: ${attachment.link.title}] ${attachment.link.url}\n`;
+              
+            } else if (attachment.youTubeVideo) {
+              // Handle YouTube videos
+              extractedContent.metadata.attachmentTypes.push({
+                type: 'youtube',
+                url: attachment.youTubeVideo.alternateLink,
+                title: attachment.youTubeVideo.title
+              });
+              combinedText += `\n[YouTube Video: ${attachment.youTubeVideo.title}] ${attachment.youTubeVideo.alternateLink}\n`;
+            }
+            
+          } catch (attachmentError) {
+            console.warn(`Error processing attachment:`, attachmentError);
+            extractedContent.metadata.extractionErrors.push({
+              attachment: attachment.driveFile?.title || attachment.link?.url || 'unknown',
+              error: attachmentError.message
+            });
+          }
+        }
+        
+        extractedContent.text = combinedText.trim();
+        extractedContent.metadata.submissionType = 'assignment';
+      }
+      
+      // Handle form submissions (for quiz assignments)
+      if (assignment?.type === 'quiz' || assignment?.type === 'coding') {
+        // Try to extract form response data if available
+        const formId = assignment?.materials?.forms?.[0]?.formId;
+        if (formId && submission.id) {
+          try {
+            const formContent = ContentExtractor.extractFormResponse(formId, submission.id);
+            if (formContent.responses) {
+              extractedContent.structuredData = formContent.responses;
+              extractedContent.text = formContent.text || extractedContent.text;
+              extractedContent.metadata.submissionType = 'form_response';
+            }
+          } catch (formError) {
+            console.warn('Error extracting form response:', formError);
+            extractedContent.metadata.extractionErrors.push({
+              type: 'form_extraction',
+              error: formError.message
+            });
+          }
+        }
+      }
+      
+      return extractedContent;
+      
+    } catch (error) {
+      console.error('Error extracting submission content:', error);
+      extractedContent.metadata.extractionErrors.push({
+        type: 'general_extraction',
+        error: error.message
+      });
+      return extractedContent;
+    }
+  },
+  
+  /**
+   * Create AI processing status object
+   * @param {Object} submission - Google Classroom submission object
+   * @param {Object} assignment - Assignment object for context
+   * @returns {Object} AI processing status
+   */
+  createAiProcessingStatus: function(submission, assignment) {
+    try {
+      const hasContent = !!(
+        submission.shortAnswerSubmission?.answer ||
+        submission.multipleChoiceSubmission?.answer ||
+        (submission.assignmentSubmission?.attachments && 
+         submission.assignmentSubmission.attachments.length > 0)
+      );
+      
+      const hasAttachments = !!(submission.assignmentSubmission?.attachments?.length);
+      const isQuizType = assignment?.type === 'quiz' || assignment?.type === 'coding';
+      
+      return {
+        contentExtracted: hasContent,
+        readyForGrading: hasContent && (
+          // Ready if it's a quiz/coding with responses
+          (isQuizType && (submission.shortAnswerSubmission || submission.multipleChoiceSubmission)) ||
+          // Ready if it's an assignment with attachments
+          (!isQuizType && hasAttachments) ||
+          // Ready if there's any text content
+          !!(submission.shortAnswerSubmission?.answer)
+        ),
+        processingErrors: [],
+        lastProcessedAt: new Date().toISOString()
+      };
+      
+    } catch (error) {
+      console.error('Error creating AI processing status:', error);
+      return {
+        contentExtracted: false,
+        readyForGrading: false,
+        processingErrors: [error.message],
+        lastProcessedAt: new Date().toISOString()
       };
     }
   }

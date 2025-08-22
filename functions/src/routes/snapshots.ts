@@ -216,7 +216,7 @@ export async function importSnapshot(req: Request, res: Response): Promise<Respo
     }
 
     // Process the snapshot
-    const processingResult = await snapshotProcessor.processSnapshot(snapshot);
+    const processingResult = await snapshotProcessor.processSnapshot(snapshot, user.email);
     
     if (processingResult.success) {
       logger.info("Snapshot import successful", {
