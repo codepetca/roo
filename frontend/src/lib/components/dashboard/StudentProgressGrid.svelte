@@ -80,6 +80,21 @@
 	// Manual grade state management
 	let manualGrades = $state<Map<string, string>>(new Map());
 
+	// Compact view state management
+	let isCompactView = $state(
+		typeof localStorage !== 'undefined' 
+			? localStorage.getItem('studentProgress-compactView') === 'true'
+			: false
+	);
+
+	// Save compact view preference to localStorage
+	function toggleCompactView() {
+		isCompactView = !isCompactView;
+		if (typeof localStorage !== 'undefined') {
+			localStorage.setItem('studentProgress-compactView', isCompactView.toString());
+		}
+	}
+
 	function gradeStudent(student: StudentProgressItem) {
 		console.log('Grade student:', student.studentName);
 		// TODO: Implement grading modal/navigation
@@ -199,7 +214,7 @@
 						<div
 							class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 						>
-							Manual Grade
+							Override
 						</div>
 						<div
 							class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
@@ -208,42 +223,64 @@
 							AI Comments
 						</div>
 						<div
-							class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+							class="min-w-0 flex items-center justify-center"
 						>
-							Actions
+							<button
+								onclick={toggleCompactView}
+								class="p-1 rounded hover:bg-gray-100 transition-colors {isCompactView 
+									? 'text-blue-600' 
+									: 'text-gray-500'}"
+								title={isCompactView 
+									? 'Switch to Normal view (2 lines per student)' 
+									: 'Switch to Compact view (1 line per student)'}
+							>
+								{#if isCompactView}
+									<!-- Show 4-lines icon when in compact mode -->
+									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+											d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+									</svg>
+								{:else}
+									<!-- Show 2-lines icon when in normal mode -->
+									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+											d="M4 8h16M4 16h16" />
+									</svg>
+								{/if}
+							</button>
 						</div>
 					</div>
 
 					<!-- Grid Rows -->
 					{#each studentProgress as student (student.studentId)}
 						<div
-							class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 px-6 py-4 hover:bg-gray-50"
+							class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 hover:bg-gray-50 {isCompactView 
+								? 'px-4 py-1' 
+								: 'px-6 py-4'}"
 						>
-							<!-- Student Column (2fr) -->
+							<!-- Student Column (2fr) - Avatar removed -->
 							<div class="flex min-w-0 items-center">
-								<div class="h-10 w-10 flex-shrink-0">
-									<div class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200">
-										<span class="text-sm font-medium text-gray-700">
-											{student.studentName
-												.split(' ')
-												.map((n) => n[0])
-												.join('')
-												.toUpperCase()}
-										</span>
-									</div>
-								</div>
-								<div class="ml-4 min-w-0 flex-1">
-									<div class="truncate text-sm font-medium text-gray-900">
-										{student.studentName}
-									</div>
-									<div class="truncate text-sm text-gray-500">
-										{student.studentEmail.split('@')[0]}
-									</div>
+								<div class="min-w-0 flex-1">
+									{#if isCompactView}
+										<!-- Compact: Single line with name and email -->
+										<div class="truncate text-sm font-medium text-gray-900">
+											{student.studentName} 
+											<span class="font-normal text-gray-500">({student.studentEmail.split('@')[0]})</span>
+										</div>
+									{:else}
+										<!-- Normal: Two lines -->
+										<div class="truncate text-sm font-medium text-gray-900">
+											{student.studentName}
+										</div>
+										<div class="truncate text-sm text-gray-500">
+											{student.studentEmail.split('@')[0]}
+										</div>
+									{/if}
 								</div>
 							</div>
 
 							<!-- Submitted Column (1fr) -->
-							<div class="flex min-w-0 items-center text-sm">
+							<div class="flex min-w-0 items-center {isCompactView ? 'text-xs' : 'text-sm'}">
 								{#if student.status === 'not_submitted'}
 									<span class="text-gray-400 italic">Not Submitted</span>
 								{:else}
@@ -254,8 +291,8 @@
 							<!-- Grade Column (1fr) -->
 							<div class="flex min-w-0 items-center">
 								{#if student.score !== undefined && student.maxScore !== undefined}
-									<div class="flex items-center space-x-2">
-										<span class="text-sm font-medium text-gray-900">
+									<div class="flex items-center {isCompactView ? 'space-x-1' : 'space-x-2'}">
+										<span class="{isCompactView ? 'text-xs' : 'text-sm'} font-medium text-gray-900">
 											{student.score}/{student.maxScore}
 										</span>
 										<Badge
@@ -264,7 +301,7 @@
 												: student.percentage >= 60
 													? 'warning'
 													: 'error'}
-											size="sm"
+											size={isCompactView ? 'xs' : 'sm'}
 										>
 											{#snippet children()}
 												{student.percentage}%
@@ -272,18 +309,18 @@
 										</Badge>
 									</div>
 								{:else}
-									<span class="text-sm text-gray-400">—</span>
+									<span class="{isCompactView ? 'text-xs' : 'text-sm'} text-gray-400">—</span>
 								{/if}
 							</div>
 
 							<!-- Manual Grade Column (2fr) -->
 							<div class="flex min-w-0 items-center">
-								<div class="flex w-full items-center space-x-2">
+								<div class="flex w-full items-center {isCompactView ? 'space-x-1' : 'space-x-2'}">
 									<input
 										type="number"
 										min="0"
 										max={student.maxScore || 100}
-										class="w-16 rounded border border-gray-300 px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
+										class="{isCompactView ? 'w-14 px-1 py-0.5 text-xs' : 'w-16 px-2 py-1 text-sm'} rounded border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 										value={manualGrades.get(student.studentId) || ''}
 										oninput={(e) => handleManualGradeInput(student.studentId, e.target.value)}
 										title="Enter manual grade (auto-saves)"
@@ -293,19 +330,24 @@
 							</div>
 
 							<!-- AI Comments Column (4fr) -->
-							<div class="flex min-w-0 items-center text-sm" title={getFullComment(student)}>
+							<div class="flex min-w-0 items-center {isCompactView ? 'text-xs' : 'text-sm'}" title={getFullComment(student)}>
 								{#if student.status === 'not_submitted'}
 									<span class="text-gray-400 italic">No submission</span>
 								{:else}
 									<span class="break-words text-gray-900"
-										>{truncateComment(student.feedback, 120)}</span
+										>{truncateComment(student.feedback, isCompactView ? 80 : 120)}</span
 									>
 								{/if}
 							</div>
 
 							<!-- Actions Column (1fr) - Moved to end -->
 							<div class="flex min-w-0 items-center">
-								<Button variant="primary" size="sm" onclick={() => gradeStudent(student)}>
+								<Button 
+									variant="primary" 
+									size={isCompactView ? 'xs' : 'sm'} 
+									class={isCompactView ? 'px-3' : ''}
+									onclick={() => gradeStudent(student)}
+								>
 									{#snippet children()}
 										Grade
 									{/snippet}

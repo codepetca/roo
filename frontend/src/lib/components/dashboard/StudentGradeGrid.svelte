@@ -277,13 +277,13 @@
 	/* Force proper z-index stacking for sticky elements */
 	thead th.student-header {
 		position: sticky !important;
-		z-index: 100 !important;
+		z-index: 20 !important;
 		background-color: rgb(249, 250, 251) !important; /* bg-gray-50 */
 	}
 
 	tbody td.student-cell {
 		position: sticky !important;
-		z-index: 50 !important;
+		z-index: 10 !important;
 		background-color: white !important;
 	}
 
