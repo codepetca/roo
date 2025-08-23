@@ -188,7 +188,7 @@
 											{assignment.title || assignment.name || 'Untitled'}
 										</div>
 										<div class="mt-1 text-xs text-gray-400">
-											{assignment.type === 'quiz' ? 'Quiz' : 'Assignment'}
+											{assignment.classification?.platform === 'google_form' ? 'Form' : ''}
 										</div>
 									</th>
 								{/each}

@@ -406,7 +406,7 @@
 												: 'Unknown Assignment'}
 										</div>
 										<div class="text-sm text-gray-500">
-											{assignment?.type === 'quiz' ? 'Quiz' : 'Assignment'}
+											{assignment ? assignment.classification?.platform === 'google_form' ? 'Form' : '' : 'Unknown'}
 										</div>
 									</td>
 									<td class="px-6 py-4 whitespace-nowrap">

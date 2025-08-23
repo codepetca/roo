@@ -24,16 +24,10 @@
 		customAssignmentContent?: Snippet<[Assignment]>;
 	} = $props();
 
-	// Group assignments by type
-	let groupedAssignments = $derived.by(() => {
-		if (!Array.isArray(assignments)) {
-			return { quizzes: [], assignments: [] };
-		}
-		const quizzes = assignments.filter((a) => a.type === 'quiz');
-		const regularAssignments = assignments.filter((a) => a.type !== 'quiz');
-
-		return { quizzes, assignments: regularAssignments };
-	});
+	// Helper function to check if assignment is a Google Form
+	function isGoogleForm(assignment: Assignment): boolean {
+		return assignment.classification?.platform === 'google_form';
+	}
 
 	function handleAssignmentSelect(assignmentId: string) {
 		onSelect?.(assignmentId);
@@ -83,7 +77,7 @@
 	<div class="flex-1 overflow-y-auto">
 		{#if loading}
 			<!-- Loading State -->
-			<div class="p-4 space-y-3">
+			<div class="space-y-3 p-4">
 				{#each Array.from({ length: 6 }, (_, i) => i) as i}
 					<div class="animate-pulse rounded-lg bg-white p-3">
 						<div class="mb-2 h-4 w-3/4 rounded bg-gray-200"></div>
@@ -93,116 +87,74 @@
 			</div>
 		{:else if assignments.length === 0}
 			<!-- Empty State -->
-			<div class="flex flex-col items-center justify-center h-full p-8 text-center">
-				<div class="rounded-full bg-gray-100 p-3 mb-4">
+			<div class="flex h-full flex-col items-center justify-center p-8 text-center">
+				<div class="mb-4 rounded-full bg-gray-100 p-3">
 					<svg class="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-							d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+						/>
 					</svg>
 				</div>
-				<h4 class="text-sm font-medium text-gray-900 mb-1">No assignments yet</h4>
+				<h4 class="mb-1 text-sm font-medium text-gray-900">No assignments yet</h4>
 				<p class="text-xs text-gray-500">
-					{role === 'teacher' ? 'Create assignments to see them here' : 'Assignments will appear here when available'}
+					{role === 'teacher'
+						? 'Create assignments to see them here'
+						: 'Assignments will appear here when available'}
 				</p>
 			</div>
 		{:else}
-			<!-- Assignment Groups -->
-			<div class="p-4 space-y-6">
-				<!-- Quizzes -->
-				{#if groupedAssignments.quizzes.length > 0}
-					<div>
-						<div class="mb-2 flex items-center">
-							<h4 class="text-xs font-semibold text-gray-800 uppercase tracking-wider">Quizzes</h4>
-							<Badge variant="secondary" class="ml-2">
-								{groupedAssignments.quizzes.length}
-							</Badge>
-						</div>
-						<div class="space-y-1">
-							{#each groupedAssignments.quizzes as assignment}
-								<button
-									onclick={() => handleAssignmentSelect(assignment.id)}
-									class="w-full text-left p-3 rounded-lg transition-colors border
-										{assignment.id === selectedAssignmentId 
-											? 'bg-blue-100 border-blue-200 text-blue-900' 
-											: 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'}"
+			<!-- Simple chronological assignment list -->
+			<div>
+				{#each assignments as assignment (assignment.id)}
+					<button
+						onclick={() => handleAssignmentSelect(assignment.id)}
+						class="w-full border-b border-gray-200 py-2 text-left transition-all
+							{assignment.id === selectedAssignmentId
+							? 'bg-blue-200'
+							: 'bg-white hover:bg-gray-50'}"
+					>
+						<div class="min-w-0 flex-1 px-3">
+							<div class="flex items-center space-x-2">
+								<svg
+									class="h-4 w-4 flex-shrink-0 text-gray-400"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
 								>
-									<div class="flex items-start space-x-3">
-										<div class="mt-0.5 rounded-md p-1 
-											{assignment.id === selectedAssignmentId 
-												? 'bg-blue-200 text-blue-700' 
-												: 'bg-green-100 text-green-600'}">
-											<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-													d={getAssignmentIcon(assignment.type)} />
-											</svg>
-										</div>
-										<div class="flex-1 min-w-0">
-											<p class="font-medium text-sm truncate">
-												{getAssignmentDisplayTitle(assignment)}
-											</p>
-											<div class="flex items-center justify-between mt-1">
-												<p class="text-xs text-gray-500 truncate">
-													{assignment.maxScore} points
-												</p>
-												{#if customAssignmentContent}
-													{@render customAssignmentContent(assignment)}
-												{/if}
-											</div>
-										</div>
-									</div>
-								</button>
-							{/each}
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d={getAssignmentIcon(assignment.type)}
+									/>
+								</svg>
+								<h5 class="truncate text-sm font-medium text-gray-900">
+									{getAssignmentDisplayTitle(assignment)}
+								</h5>
+							</div>
+							<div class="mt-1 flex items-center justify-between text-xs text-gray-600">
+								<div class="flex items-center space-x-2">
+									<span>Max: {assignment.maxScore || 0} pts</span>
+									{#if assignment.dueDate}
+										<span>•</span>
+										<span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+									{/if}
+								</div>
+								{#if isGoogleForm(assignment)}
+									<span class="text-xs font-medium text-purple-700 bg-purple-200 px-2 py-0.5 rounded">
+										Form
+									</span>
+								{/if}
+							</div>
+							{#if customAssignmentContent}
+								{@render customAssignmentContent(assignment)}
+							{/if}
 						</div>
-					</div>
-				{/if}
-
-				<!-- Regular Assignments -->
-				{#if groupedAssignments.assignments.length > 0}
-					<div>
-						<div class="mb-2 flex items-center">
-							<h4 class="text-xs font-semibold text-gray-800 uppercase tracking-wider">Assignments</h4>
-							<Badge variant="secondary" class="ml-2">
-								{groupedAssignments.assignments.length}
-							</Badge>
-						</div>
-						<div class="space-y-1">
-							{#each groupedAssignments.assignments as assignment}
-								<button
-									onclick={() => handleAssignmentSelect(assignment.id)}
-									class="w-full text-left p-3 rounded-lg transition-colors border
-										{assignment.id === selectedAssignmentId 
-											? 'bg-blue-100 border-blue-200 text-blue-900' 
-											: 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'}"
-								>
-									<div class="flex items-start space-x-3">
-										<div class="mt-0.5 rounded-md p-1 
-											{assignment.id === selectedAssignmentId 
-												? 'bg-blue-200 text-blue-700' 
-												: 'bg-blue-100 text-blue-600'}">
-											<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-													d={getAssignmentIcon(assignment.type)} />
-											</svg>
-										</div>
-										<div class="flex-1 min-w-0">
-											<p class="font-medium text-sm truncate">
-												{getAssignmentDisplayTitle(assignment)}
-											</p>
-											<div class="flex items-center justify-between mt-1">
-												<p class="text-xs text-gray-500 truncate">
-													{assignment.maxScore} points
-												</p>
-												{#if customAssignmentContent}
-													{@render customAssignmentContent(assignment)}
-												{/if}
-											</div>
-										</div>
-									</div>
-								</button>
-							{/each}
-						</div>
-					</div>
-				{/if}
+					</button>
+				{/each}
 			</div>
 		{/if}
 	</div>

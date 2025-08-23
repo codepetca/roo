@@ -88,12 +88,6 @@ class DataStore {
 	// Computed state for UI
 	hasData = $derived(this.classrooms.length > 0 || this.assignments.length > 0);
 
-	// Assignment groupings for UI
-	assignmentsGrouped = $derived({
-		all: this.assignments,
-		quizzes: this.assignments.filter((a) => a.type === 'quiz'),
-		assignments: this.assignments.filter((a) => a.type !== 'quiz')
-	});
 
 	// Selected entities state
 	selectedClassroomId = $state<string | null>(null);
@@ -773,8 +767,8 @@ class DataStore {
 	 * Check if assignment can be auto-graded
 	 */
 	isAssignmentAutoGradable(assignment: Assignment): boolean {
-		// Only quizzes can be auto-graded in this implementation
-		return assignment.type === 'quiz';
+		// Google forms and assignments with auto-grade classification can be auto-graded
+		return assignment.classification?.platform === 'google_form' || assignment.classification?.gradingApproach === 'auto_grade';
 	}
 
 	/**

@@ -33,29 +33,10 @@
 		});
 	});
 
-	// Group assignments by type
-	let groupedAssignments = $derived.by(() => {
-		if (!Array.isArray(assignments)) {
-			console.log('📋 GroupedAssignments: Not an array, returning empty groups');
-			return { quizzes: [], assignments: [] };
-		}
-		const quizzes = assignments.filter((a) => a.type === 'quiz');
-		const regularAssignments = assignments.filter((a) => a.type !== 'quiz');
-
-		console.log('📋 GroupedAssignments:', {
-			totalAssignments: assignments.length,
-			quizzesCount: quizzes.length,
-			regularAssignmentsCount: regularAssignments.length,
-			quizzes: quizzes.map((q) => ({ id: q.id, title: q.title || q.name, type: q.type })),
-			regularAssignments: regularAssignments.map((a) => ({
-				id: a.id,
-				title: a.title || a.name,
-				type: a.type
-			}))
-		});
-
-		return { quizzes, assignments: regularAssignments };
-	});
+	// Helper function to check if assignment is a Google Form
+	function isGoogleForm(assignment: Assignment): boolean {
+		return assignment.classification?.platform === 'google_form';
+	}
 
 	function selectAssignment(assignmentId: string) {
 		dataStore.selectAssignment(assignmentId);
@@ -76,7 +57,6 @@
 				return 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2';
 		}
 	}
-
 
 	// Auto-select first assignment if none selected
 	$effect(() => {
@@ -154,108 +134,53 @@
 				</div>
 			</div>
 		{:else}
+			<!-- Single chronological list of all assignments -->
 			<div>
-				<!-- Quizzes Section -->
-				{#if groupedAssignments?.quizzes?.length > 0}
-					<div>
-						<h4
-							class="mb-1 bg-gray-100 px-3 py-1 text-xs font-bold tracking-wider text-gray-800 uppercase"
-						>
-							Quizzes ({groupedAssignments.quizzes.length})
-						</h4>
-						<div>
-							{#each groupedAssignments.quizzes as assignment (assignment.id)}
-								<button
-									onclick={() => selectAssignment(assignment.id)}
-									class="w-full border-b border-gray-200 py-2 text-left transition-all"
-									class:bg-blue-200={assignment.id === selectedAssignmentId}
-									class:bg-white={assignment.id !== selectedAssignmentId}
-									class:hover:bg-gray-50={assignment.id !== selectedAssignmentId}
-									class:hover:bg-blue-300={assignment.id === selectedAssignmentId}
+				{#each assignments as assignment (assignment.id)}
+					<button
+						onclick={() => selectAssignment(assignment.id)}
+						class="w-full border-b border-gray-200 py-2 text-left transition-all"
+						class:bg-blue-200={assignment.id === selectedAssignmentId}
+						class:bg-white={assignment.id !== selectedAssignmentId}
+						class:hover:bg-gray-50={assignment.id !== selectedAssignmentId}
+						class:hover:bg-blue-300={assignment.id === selectedAssignmentId}
+					>
+						<div class="min-w-0 flex-1 px-3">
+							<div class="flex items-center space-x-2">
+								<svg
+									class="h-4 w-4 flex-shrink-0 text-gray-400"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
 								>
-									<div class="min-w-0 flex-1 px-3">
-										<div class="flex items-center space-x-2">
-											<svg
-												class="h-4 w-4 flex-shrink-0 text-gray-400"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d={getAssignmentIcon(assignment.type)}
-												/>
-											</svg>
-											<h5 class="truncate text-sm font-medium text-gray-900">
-												{assignment.title || assignment.name || 'Untitled Quiz'}
-											</h5>
-										</div>
-										<div class="mt-1 flex items-center space-x-2 text-xs text-gray-600">
-											<span>Max: {assignment.maxScore || assignment.maxPoints || 0} pts</span>
-											{#if assignment.dueDate}
-												<span>•</span>
-												<span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
-											{/if}
-										</div>
-									</div>
-								</button>
-							{/each}
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d={getAssignmentIcon(assignment.type)}
+									/>
+								</svg>
+								<h5 class="truncate text-sm font-medium text-gray-900">
+									{assignment.title || assignment.name || 'Untitled'}
+								</h5>
+							</div>
+							<div class="mt-1 flex items-center justify-between text-xs text-gray-600">
+								<div class="flex items-center space-x-2">
+									<span>Max: {assignment.maxScore || assignment.maxPoints || 0} pts</span>
+									{#if assignment.dueDate}
+										<span>•</span>
+										<span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
+									{/if}
+								</div>
+								{#if isGoogleForm(assignment)}
+									<span class="text-xs font-medium text-purple-700 bg-purple-200 px-2 py-0.5 rounded">
+										Form
+									</span>
+								{/if}
+							</div>
 						</div>
-					</div>
-				{/if}
-
-				<!-- Regular Assignments Section -->
-				{#if groupedAssignments?.assignments?.length > 0}
-					<div>
-						<h4
-							class="mb-1 bg-gray-100 px-3 py-1 text-xs font-bold tracking-wider text-gray-800 uppercase"
-						>
-							Assignments ({groupedAssignments?.assignments?.length || 0})
-						</h4>
-						<div>
-							{#each groupedAssignments?.assignments || [] as assignment (assignment.id)}
-								<button
-									onclick={() => selectAssignment(assignment.id)}
-									class="w-full border-b border-gray-200 py-2 text-left transition-all"
-									class:bg-blue-200={assignment.id === selectedAssignmentId}
-									class:bg-white={assignment.id !== selectedAssignmentId}
-									class:hover:bg-gray-50={assignment.id !== selectedAssignmentId}
-									class:hover:bg-blue-300={assignment.id === selectedAssignmentId}
-								>
-									<div class="min-w-0 flex-1 px-3">
-										<div class="flex items-center space-x-2">
-											<svg
-												class="h-4 w-4 flex-shrink-0 text-gray-400"
-												fill="none"
-												viewBox="0 0 24 24"
-												stroke="currentColor"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d={getAssignmentIcon(assignment.type)}
-												/>
-											</svg>
-											<h5 class="truncate text-sm font-medium text-gray-900">
-												{assignment.title || assignment.name || 'Untitled Assignment'}
-											</h5>
-										</div>
-										<div class="mt-1 flex items-center space-x-2 text-xs text-gray-600">
-											<span>Max: {assignment.maxScore || assignment.maxPoints || 0} pts</span>
-											{#if assignment.dueDate}
-												<span>•</span>
-												<span>Due: {new Date(assignment.dueDate).toLocaleDateString()}</span>
-											{/if}
-										</div>
-									</div>
-								</button>
-							{/each}
-						</div>
-					</div>
-				{/if}
+					</button>
+				{/each}
 			</div>
 		{/if}
 	</div>

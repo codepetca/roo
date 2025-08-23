@@ -97,11 +97,11 @@
 			<!-- Loading State -->
 			<div class="space-y-6">
 				<div class="animate-pulse">
-					<div class="h-8 w-1/3 rounded bg-gray-200 mb-4"></div>
+					<div class="mb-4 h-8 w-1/3 rounded bg-gray-200"></div>
 					<div class="h-4 w-2/3 rounded bg-gray-200"></div>
 				</div>
 				<div class="animate-pulse rounded-lg bg-white p-6 shadow">
-					<div class="h-6 w-1/4 rounded bg-gray-200 mb-4"></div>
+					<div class="mb-4 h-6 w-1/4 rounded bg-gray-200"></div>
 					<div class="space-y-3">
 						<div class="h-4 w-3/4 rounded bg-gray-200"></div>
 						<div class="h-4 w-1/2 rounded bg-gray-200"></div>
@@ -110,15 +110,24 @@
 			</div>
 		{:else if !assignment}
 			<!-- No Assignment Selected -->
-			<div class="flex flex-col items-center justify-center h-96 text-center">
-				<div class="rounded-full bg-gray-100 p-6 mb-6">
-					<svg class="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+			<div class="flex h-96 flex-col items-center justify-center text-center">
+				<div class="mb-6 rounded-full bg-gray-100 p-6">
+					<svg
+						class="h-12 w-12 text-gray-400"
+						fill="none"
+						viewBox="0 0 24 24"
+						stroke="currentColor"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+						/>
 					</svg>
 				</div>
-				<h3 class="text-lg font-medium text-gray-900 mb-2">Select an assignment</h3>
-				<p class="text-gray-500 max-w-sm">
+				<h3 class="mb-2 text-lg font-medium text-gray-900">Select an assignment</h3>
+				<p class="max-w-sm text-gray-500">
 					Choose an assignment from the sidebar to view your grade and feedback details.
 				</p>
 			</div>
@@ -137,7 +146,7 @@
 					<Card>
 						{#snippet children()}
 							<div class="p-6">
-								<div class="flex items-center justify-between mb-4">
+								<div class="mb-4 flex items-center justify-between">
 									<h3 class="text-lg font-semibold text-gray-900">Your Grade</h3>
 									<Badge variant="secondary">
 										{grade.gradedBy === 'ai' ? '🤖 AI Graded' : '👨‍🏫 Manual'}
@@ -148,7 +157,7 @@
 									<!-- Score Display -->
 									<div class="text-center">
 										<div class="flex items-center justify-center">
-											<div class="rounded-full {getGradeColor(grade.percentage)} p-6 mb-3">
+											<div class="rounded-full {getGradeColor(grade.percentage)} mb-3 p-6">
 												<div class="text-2xl font-bold text-white">
 													{Math.round(grade.percentage)}%
 												</div>
@@ -158,23 +167,36 @@
 											<div class="text-lg font-semibold text-gray-900">
 												{grade.score}/{grade.maxScore}
 											</div>
-											<div class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium {getGradeTextColor(grade.percentage)}">
+											<div
+												class="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium {getGradeTextColor(
+													grade.percentage
+												)}"
+											>
 												{getLetterGrade(grade.percentage)}
 											</div>
 										</div>
 									</div>
 
 									<!-- Grade Details -->
-									<div class="lg:col-span-2 space-y-4">
+									<div class="space-y-4 lg:col-span-2">
 										<div class="grid grid-cols-2 gap-4">
 											<div>
 												<dt class="text-sm font-medium text-gray-500">Assignment Type</dt>
-												<dd class="flex items-center mt-1 text-sm text-gray-900">
-													<svg class="mr-2 h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-														<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-															d={getAssignmentTypeIcon(assignment.type)} />
+												<dd class="mt-1 flex items-center text-sm text-gray-900">
+													<svg
+														class="mr-2 h-4 w-4 text-gray-400"
+														fill="none"
+														viewBox="0 0 24 24"
+														stroke="currentColor"
+													>
+														<path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d={getAssignmentTypeIcon(assignment.type)}
+														/>
 													</svg>
-													{assignment.type === 'quiz' ? 'Quiz' : 'Assignment'}
+													{assignment.classification?.platform === 'google_form' ? 'Form' : 'Assignment'}
 												</dd>
 											</div>
 											<div>
@@ -204,7 +226,7 @@
 				<Card>
 					{#snippet children()}
 						<div class="p-6">
-							<h3 class="text-lg font-semibold text-gray-900 mb-4">Assignment Information</h3>
+							<h3 class="mb-4 text-lg font-semibold text-gray-900">Assignment Information</h3>
 							<dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
 								<div>
 									<dt class="text-sm font-medium text-gray-500">Points Possible</dt>
@@ -213,13 +235,15 @@
 								<div>
 									<dt class="text-sm font-medium text-gray-500">Assignment Type</dt>
 									<dd class="mt-1 text-sm text-gray-900">
-										{assignment.type === 'quiz' ? 'Quiz' : 'Assignment'}
+										{assignment.classification?.platform === 'google_form' ? 'Form' : 'Assignment'}
 									</dd>
 								</div>
 								{#if assignment.description}
 									<div class="sm:col-span-2">
 										<dt class="text-sm font-medium text-gray-500">Description</dt>
-										<dd class="mt-1 text-sm text-gray-900 whitespace-pre-wrap">{assignment.description}</dd>
+										<dd class="mt-1 text-sm whitespace-pre-wrap text-gray-900">
+											{assignment.description}
+										</dd>
 									</div>
 								{/if}
 							</dl>
@@ -232,9 +256,9 @@
 					<Card>
 						{#snippet children()}
 							<div class="p-6">
-								<h3 class="text-lg font-semibold text-gray-900 mb-4">Feedback</h3>
+								<h3 class="mb-4 text-lg font-semibold text-gray-900">Feedback</h3>
 								<div class="prose prose-sm max-w-none">
-									<div class="bg-gray-50 rounded-lg p-4 whitespace-pre-wrap text-gray-700">
+									<div class="rounded-lg bg-gray-50 p-4 whitespace-pre-wrap text-gray-700">
 										{grade.feedback}
 									</div>
 								</div>
@@ -248,24 +272,24 @@
 					<Card>
 						{#snippet children()}
 							<div class="p-6">
-								<h3 class="text-lg font-semibold text-gray-900 mb-4">Rubric Breakdown</h3>
+								<h3 class="mb-4 text-lg font-semibold text-gray-900">Rubric Breakdown</h3>
 								<div class="space-y-4">
 									{#each grade.rubricScores as rubricScore}
-										<div class="border rounded-lg p-4">
-											<div class="flex justify-between items-start mb-2">
+										<div class="rounded-lg border p-4">
+											<div class="mb-2 flex items-start justify-between">
 												<h4 class="font-medium text-gray-900">{rubricScore.criterionTitle}</h4>
 												<div class="text-sm font-medium text-gray-900">
 													{rubricScore.score}/{rubricScore.maxScore}
 												</div>
 											</div>
 											{#if rubricScore.feedback}
-												<p class="text-sm text-gray-600 mt-2">{rubricScore.feedback}</p>
+												<p class="mt-2 text-sm text-gray-600">{rubricScore.feedback}</p>
 											{/if}
 											<!-- Progress bar -->
 											<div class="mt-3">
-												<div class="bg-gray-200 rounded-full h-2">
-													<div 
-														class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+												<div class="h-2 rounded-full bg-gray-200">
+													<div
+														class="h-2 rounded-full bg-blue-600 transition-all duration-300"
 														style="width: {(rubricScore.score / rubricScore.maxScore) * 100}%"
 													></div>
 												</div>
@@ -283,15 +307,27 @@
 					<Card>
 						{#snippet children()}
 							<div class="p-12 text-center">
-								<div class="rounded-full bg-gray-100 p-6 mx-auto mb-4 w-24 h-24 flex items-center justify-center">
-									<svg class="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-											d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+								<div
+									class="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 p-6"
+								>
+									<svg
+										class="h-8 w-8 text-gray-400"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+										/>
 									</svg>
 								</div>
-								<h3 class="text-lg font-medium text-gray-900 mb-2">Not Graded Yet</h3>
-								<p class="text-gray-500 max-w-sm mx-auto">
-									This assignment hasn't been graded yet. Check back later to see your results and feedback.
+								<h3 class="mb-2 text-lg font-medium text-gray-900">Not Graded Yet</h3>
+								<p class="mx-auto max-w-sm text-gray-500">
+									This assignment hasn't been graded yet. Check back later to see your results and
+									feedback.
 								</p>
 							</div>
 						{/snippet}

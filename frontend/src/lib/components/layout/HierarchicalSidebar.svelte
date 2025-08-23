@@ -99,7 +99,7 @@
 
 	// Get assignment type icon path
 	function getAssignmentIcon(assignment: Assignment): string {
-		if (assignment.type === 'quiz') {
+		if (assignment.classification?.platform === 'google_form') {
 			return 'M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2M9 5a2 2 0 012 2v6a2 2 0 01-2 2M9 5V3a2 2 0 012-2h4a2 2 0 012 2v2M9 13h6m-3-3v3';
 		}
 		return 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z';
@@ -371,7 +371,7 @@
 										<div class="flex items-center space-x-2">
 											<!-- Assignment Type Icon -->
 											<div
-												class="flex-shrink-0 p-1 {assignment.type === 'quiz'
+												class="flex-shrink-0 p-1 {assignment.classification?.platform === 'google_form'
 													? 'bg-green-100 text-green-600'
 													: 'bg-blue-100 text-blue-600'} rounded"
 											>
