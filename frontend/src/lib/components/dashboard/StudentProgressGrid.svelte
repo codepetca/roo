@@ -170,46 +170,34 @@
 						class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 bg-gray-50 px-6 py-3"
 					>
 						<div
-							class="min-w-0 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100"
+							class="min-w-0 cursor-pointer transition-colors hover:bg-gray-100 flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 							onclick={() => handleSort('name')}
 							title={getSortDescription('name')}
 						>
-							<div
-								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-							>
-								<span>Student</span>
-								<span class="text-xs">
-									{getSortIcon(sortField === 'name', sortDirection)}
-								</span>
-							</div>
+							<span>Student</span>
+							<span class="text-xs">
+								{getSortIcon(sortField === 'name', sortDirection)}
+							</span>
 						</div>
 						<div
-							class="min-w-0 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100"
+							class="min-w-0 cursor-pointer transition-colors hover:bg-gray-100 flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 							onclick={() => handleSort('submitted')}
 							title={getSortDescription('submitted', sortDirection)}
 						>
-							<div
-								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-							>
-								<span>Submitted</span>
-								<span class="text-xs">
-									{getSortIcon(sortField === 'submitted', sortDirection)}
-								</span>
-							</div>
+							<span>Submitted</span>
+							<span class="text-xs">
+								{getSortIcon(sortField === 'submitted', sortDirection)}
+							</span>
 						</div>
 						<div
-							class="min-w-0 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100"
+							class="min-w-0 cursor-pointer transition-colors hover:bg-gray-100 flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 							onclick={() => handleSort('grade')}
 							title={getSortDescription('grade', sortDirection)}
 						>
-							<div
-								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
-							>
-								<span>Grade</span>
-								<span class="text-xs">
-									{getSortIcon(sortField === 'grade', sortDirection)}
-								</span>
-							</div>
+							<span>Grade</span>
+							<span class="text-xs">
+								{getSortIcon(sortField === 'grade', sortDirection)}
+							</span>
 						</div>
 						<div
 							class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
@@ -223,7 +211,7 @@
 							AI Comments
 						</div>
 						<div
-							class="min-w-0 flex items-center justify-center"
+							class="min-w-0 flex items-center text-left"
 						>
 							<button
 								onclick={toggleCompactView}
