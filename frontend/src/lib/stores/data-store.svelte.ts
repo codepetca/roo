@@ -785,14 +785,11 @@ class DataStore {
 	setStudentSort(field: StudentSortField, direction?: SortDirection): void {
 		this.studentSortField = field;
 
-		if (field === 'name') {
-			// Name sorting is always ascending
-			this.studentSortDirection = 'asc';
-		} else if (direction !== undefined) {
+		if (direction !== undefined) {
 			this.studentSortDirection = direction;
 		} else {
-			// Toggle direction for other fields
-			this.studentSortDirection = getNextSortDirection(this.studentSortDirection);
+			// Use ascending as default for all fields when first clicked
+			this.studentSortDirection = 'asc';
 		}
 
 		console.log('🔄 Student sort set to:', this.studentSortField, this.studentSortDirection);
@@ -802,8 +799,8 @@ class DataStore {
 	 * Toggle student sort direction (for sortable fields)
 	 */
 	toggleStudentSort(field: StudentSortField): void {
-		if (this.studentSortField === field && field !== 'name') {
-			// Same field, toggle direction (except for name which is always ascending)
+		if (this.studentSortField === field) {
+			// Same field, toggle direction for all fields including name
 			this.studentSortDirection = getNextSortDirection(this.studentSortDirection);
 		} else {
 			// Different field, set it with appropriate initial direction

@@ -103,16 +103,22 @@ export function sortStudentProgress(
 
 		switch (sortField) {
 			case 'name':
-				// Sort by lastName, firstName (always ascending for name)
+				// Sort by lastName, firstName when ascending; firstName, lastName when descending
 				const namesA = extractNames(a.studentName);
 				const namesB = extractNames(b.studentName);
 
-				// First compare last names
-				comparison = namesA.lastName.toLowerCase().localeCompare(namesB.lastName.toLowerCase());
-
-				// If last names are equal, compare first names
-				if (comparison === 0) {
+				if (direction === 'asc') {
+					// Ascending: Sort by lastName, then firstName
+					comparison = namesA.lastName.toLowerCase().localeCompare(namesB.lastName.toLowerCase());
+					if (comparison === 0) {
+						comparison = namesA.firstName.toLowerCase().localeCompare(namesB.firstName.toLowerCase());
+					}
+				} else {
+					// Descending: Sort by firstName, then lastName
 					comparison = namesA.firstName.toLowerCase().localeCompare(namesB.firstName.toLowerCase());
+					if (comparison === 0) {
+						comparison = namesA.lastName.toLowerCase().localeCompare(namesB.lastName.toLowerCase());
+					}
 				}
 				break;
 
@@ -147,7 +153,7 @@ export function sortStudentProgress(
 				return 0;
 		}
 
-		// For name sorting, always use ascending (as requested)
+		// For name sorting, we've already handled direction within the case
 		if (sortField === 'name') {
 			return comparison;
 		}
@@ -195,7 +201,9 @@ export function getSortDescription(
 		case 'title':
 			return `Sorted by title (${directionText})`;
 		case 'name':
-			return 'Sorted by last name, first name';
+			return direction === 'desc' 
+				? 'Sorted by first name, last name' 
+				: 'Sorted by last name, first name';
 		case 'status':
 			return 'Sorted by status (pending first)';
 		case 'submitted':
