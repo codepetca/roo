@@ -6,12 +6,47 @@ import {
   gradeQuizRequestSchema,
   gradeCodeRequestSchema
 } from "../schemas";
+import { AssignmentClassification } from "../../shared/schemas/core";
 import { handleRouteError, validateData, sendApiResponse } from "../middleware/validation";
 
 // Schema for Grade All request
 const gradeAllRequestSchema = z.object({
   assignmentId: z.string().min(1, "Assignment ID is required")
 });
+
+/**
+ * Derive classification from legacy assignment data
+ * Used when assignment.classification is not available
+ */
+function deriveClassificationFromAssignment(assignment: any): AssignmentClassification {
+  // Default classification
+  let platform: AssignmentClassification['platform'] = 'google_classroom';
+  let contentType: AssignmentClassification['contentType'] = 'text';
+  let gradingApproach: AssignmentClassification['gradingApproach'] = 'ai_analysis';
+  
+  // Derive from legacy type field
+  if (assignment.type === 'coding') {
+    platform = 'google_form';
+    contentType = 'code';
+    gradingApproach = 'generous_code';
+  } else if (assignment.type === 'quiz') {
+    platform = 'google_form';
+    contentType = assignment.workType === 'MULTIPLE_CHOICE_QUESTION' ? 'choice' : 'short_answer';
+    gradingApproach = contentType === 'choice' ? 'auto_grade' : 'standard_quiz';
+  } else if (assignment.type === 'written') {
+    platform = 'google_docs';
+    contentType = 'text';
+    gradingApproach = 'essay_rubric';
+  }
+  
+  return {
+    platform,
+    contentType,
+    gradingApproach,
+    tags: [assignment.type || 'unknown', 'legacy_derived'],
+    confidence: 0.7 // Lower confidence for derived classification
+  };
+}
 
 /**
  * Test AI grading with sample text (development endpoint)
@@ -410,12 +445,53 @@ export async function gradeAllAssignments(req: Request, res: Response) {
         
         for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
           try {
-            // Determine if this is a code assignment
-            const isCodeAssignment = assignment.type === 'coding' || assignment.isQuiz === false;
+            // Get submission text from the correct field (FIX: Use extractedContent.text)
+            const submissionText = submission.extractedContent?.text || submission.content || '';
             
-            // Use appropriate prompt template
+            // Smart grading strategy selection using new classification system
+            const classification = assignment.classification || deriveClassificationFromAssignment(assignment);
+            
+            // Runtime content analysis - detect code in submission
+            const codePatterns = [
+              /function\s+\w+\s*\(/,    // function declarations
+              /\bmove\(\)/,              // Karel commands  
+              /\bturnLeft\(\)/,
+              /\bfor\s*\(/,              // loops
+              /\bwhile\s*\(/,
+              /\bif\s*\(/,               // conditionals
+              /console\.\w+/,           // console methods
+              /\{[\s\S]*\}/              // code blocks
+            ];
+            const hasCodeInSubmission = codePatterns.some(pattern => pattern.test(submissionText));
+            
+            // Override grading approach if we detect code
+            let finalGradingApproach = classification.gradingApproach;
+            if (hasCodeInSubmission && classification.contentType !== 'code') {
+              finalGradingApproach = 'generous_code';
+            }
+            
+            // Select prompt template based on final grading approach
             const { GRADING_PROMPTS } = await import("../services/gemini");
-            const promptTemplate = isCodeAssignment ? GRADING_PROMPTS.generousCode : GRADING_PROMPTS.default;
+            const promptTemplateMap: Record<string, string> = {
+              'generous_code': GRADING_PROMPTS.generousCode,
+              'standard_quiz': GRADING_PROMPTS.quizQuestion || GRADING_PROMPTS.default,
+              'essay_rubric': GRADING_PROMPTS.essay || GRADING_PROMPTS.default,
+              'ai_analysis': GRADING_PROMPTS.default,
+              'auto_grade': GRADING_PROMPTS.default,
+              'manual': GRADING_PROMPTS.default
+            };
+            const promptTemplate = promptTemplateMap[finalGradingApproach] || GRADING_PROMPTS.default;
+            
+            // Select criteria based on content type
+            const criteriaMap: Record<string, string[]> = {
+              'code': ["Understanding", "Logic", "Implementation"],
+              'choice': ["Accuracy"],
+              'short_answer': ["Accuracy", "Completeness", "Understanding"],
+              'text': ["Content", "Organization", "Analysis"],
+              'mixed': ["Technical Accuracy", "Explanation", "Implementation"],
+              'mathematical': ["Correctness", "Method", "Explanation"]
+            };
+            const criteria = criteriaMap[classification.contentType] || ["Content", "Quality", "Completeness"];
             
             // Prepare grading request
             const gradingRequest = {
@@ -424,8 +500,8 @@ export async function gradeAllAssignments(req: Request, res: Response) {
               title: assignment.title || assignment.name || 'Assignment',
               description: assignment.description || '',
               maxPoints: assignment.maxScore || 100,
-              criteria: isCodeAssignment ? ["Understanding", "Logic", "Implementation"] : ["Content", "Organization", "Analysis"],
-              submission: submission.content || 'No content provided',
+              criteria,
+              submission: submissionText || 'No content provided',
               promptTemplate
             };
             
@@ -445,7 +521,7 @@ export async function gradeAllAssignments(req: Request, res: Response) {
               criteriaScores: gradingResult.criteriaScores,
               metadata: {
                 gradingMode: 'bulk',
-                isCodeAssignment
+                isCodeAssignment: finalGradingApproach === 'generous_code'
               }
             });
             

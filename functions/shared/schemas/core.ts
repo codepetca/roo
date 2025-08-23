@@ -98,6 +98,49 @@ export const classroomSchema = baseEntitySchema.extend({
 });
 
 /**
+ * Assignment Classification Schema - Future-proof categorization system
+ * Separates submission format from content type from grading strategy
+ */
+export const assignmentClassificationSchema = z.object({
+  // Platform/format where assignment is submitted
+  platform: z.enum([
+    'google_form',      // Google Forms quiz
+    'google_classroom', // Direct GC question (MC/SA)
+    'google_docs',      // Google Docs submission
+    'external_link',    // GitHub, CodeHS, etc.
+    'file_upload',      // Direct file upload
+    'inline_text'       // Text entered in GC
+  ]),
+  
+  // Type of content being assessed
+  contentType: z.enum([
+    'code',            // Programming exercises
+    'text',            // Essays, written responses
+    'mixed',           // Combination of code and text
+    'choice',          // Multiple choice only
+    'short_answer',    // Brief text responses
+    'mathematical'     // Math problems (future)
+  ]),
+  
+  // How the assignment should be graded
+  gradingApproach: z.enum([
+    'generous_code',   // Lenient grading for handwritten code
+    'strict_code',     // Strict syntax checking (future)
+    'standard_quiz',   // Regular quiz grading
+    'essay_rubric',    // Rubric-based essay grading
+    'ai_analysis',     // AI determines criteria
+    'auto_grade',      // Automatic grading (MC)
+    'manual'           // Teacher grades manually
+  ]),
+  
+  // Additional metadata for future extensions
+  tags: z.array(z.string()).optional(),
+  
+  // Confidence score for auto-classification (0.0 to 1.0)
+  confidence: z.number().min(0).max(1).optional()
+});
+
+/**
  * Assignment Base Schema - Core assignment fields without transform
  * Exported for use in .extend() operations since the main assignmentSchema uses .transform()
  */
@@ -107,6 +150,9 @@ export const assignmentBaseSchema = baseEntitySchema.extend({
   name: z.string().min(1).optional(), // Google Classroom uses 'name' instead of 'title'
   description: z.string().optional(),
   type: z.enum(['coding', 'quiz', 'written', 'form']).optional(),
+  
+  // New: Advanced classification system
+  classification: assignmentClassificationSchema.optional(),
   
   // Legacy compatibility fields
   isQuiz: z.boolean().optional(),
@@ -214,7 +260,23 @@ export const submissionSchema = baseEntitySchema.extend({
   late: z.boolean().default(false),
   
   // Grade reference (if graded)
-  gradeId: z.string().optional()
+  gradeId: z.string().optional(),
+  
+  // AI processing status (optional for backward compatibility)
+  aiProcessingStatus: z.object({
+    contentExtracted: z.boolean().default(false),
+    readyForGrading: z.boolean().default(false),
+    processingErrors: z.array(z.string()).default([]),
+    lastProcessedAt: z.string().datetime().optional()
+  }).optional(),
+  
+  // Content extraction cache (for AI grading)
+  extractedContent: z.object({
+    text: z.string().optional(),
+    structuredData: z.record(z.unknown()).optional(),
+    images: z.array(z.string()).optional(), // Base64 or URLs
+    metadata: z.record(z.unknown()).optional()
+  }).optional()
 });
 
 /**
@@ -301,6 +363,7 @@ export const studentEnrollmentSchema = baseEntitySchema.extend({
 /**
  * Export TypeScript types from Zod schemas
  */
+export type AssignmentClassification = z.infer<typeof assignmentClassificationSchema>;
 export type DashboardUser = z.infer<typeof dashboardUserSchema>;
 export type Classroom = z.infer<typeof classroomSchema>;
 export type Assignment = z.infer<typeof assignmentSchema>;

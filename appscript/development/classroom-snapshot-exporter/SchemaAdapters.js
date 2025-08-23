@@ -687,7 +687,7 @@ var SchemaAdapters = {
         contentExtracted: hasContent,
         readyForGrading: hasContent && (
           // Ready if it's a quiz/coding with responses
-          (isQuizType && (submission.shortAnswerSubmission || submission.multipleChoiceSubmission)) ||
+          (isQuizType && !!(submission.shortAnswerSubmission || submission.multipleChoiceSubmission)) ||
           // Ready if it's an assignment with attachments
           (!isQuizType && hasAttachments) ||
           // Ready if there's any text content

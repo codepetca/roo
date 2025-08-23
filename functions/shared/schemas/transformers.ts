@@ -12,6 +12,7 @@ import {
   Submission,
   Grade,
   StudentEnrollment,
+  AssignmentClassification,
   DashboardUserInput,
   ClassroomInput,
   AssignmentInput,
@@ -167,6 +168,100 @@ function transformClassroom(
 }
 
 /**
+ * Create assignment classification based on Google Classroom data
+ */
+function createAssignmentClassification(assignment: AssignmentWithStats): AssignmentClassification {
+  // Determine platform based on submission method
+  let platform: AssignmentClassification['platform'] = 'google_classroom';
+  
+  // Check for materials structure - handle both schema and actual data formats
+  const materials = assignment.materials as any;
+  
+  // Check for Google Form (could be in forms array or materials array with form type)
+  if (materials?.forms && materials.forms.length > 0) {
+    platform = 'google_form';
+  } else if (materials?.materials?.some((m: any) => m.type === 'form')) {
+    platform = 'google_form';
+  }
+  // Check for Google Drive files  
+  else if (materials?.driveFiles && materials.driveFiles.length > 0) {
+    platform = 'google_docs';
+  } else if (materials?.materials?.some((m: any) => m.type === 'driveFile')) {
+    platform = 'google_docs';
+  }
+  // Check for external links
+  else if (materials?.links && materials.links.length > 0) {
+    // Check if it's a GitHub/CodeHS link
+    const hasCodeLink = materials.links.some((link: any) => 
+      link.url?.includes('github.com') || 
+      link.url?.includes('codehs.com') ||
+      link.url?.includes('repl.it')
+    );
+    platform = hasCodeLink ? 'external_link' : 'google_classroom';
+  } else if (materials?.materials?.some((m: any) => m.type === 'link')) {
+    // Check links in the materials array
+    const hasCodeLink = materials.materials
+      .filter((m: any) => m.type === 'link')
+      .some((m: any) => 
+        m.link?.url?.includes('github.com') || 
+        m.link?.url?.includes('codehs.com') ||
+        m.link?.url?.includes('repl.it')
+      );
+    platform = hasCodeLink ? 'external_link' : 'google_classroom';
+  }
+  
+  // Determine content type
+  let contentType: AssignmentClassification['contentType'] = 'text';
+  const title = (assignment.title || '').toLowerCase();
+  const description = (assignment.description || '').toLowerCase();
+  
+  // Check for coding content
+  const codingKeywords = ['karel', 'function', 'algorithm', 'programming', 'code', 'coding', 'program'];
+  const hasCodingContent = codingKeywords.some(keyword => 
+    title.includes(keyword) || description.includes(keyword)
+  );
+  
+  if (hasCodingContent) {
+    contentType = 'code';
+  } else if (assignment.workType === 'MULTIPLE_CHOICE_QUESTION') {
+    contentType = 'choice';
+  } else if (assignment.workType === 'SHORT_ANSWER_QUESTION') {
+    contentType = 'short_answer';
+  } else if (platform === 'google_docs' || assignment.description) {
+    contentType = 'text';
+  }
+  
+  // Determine grading approach
+  let gradingApproach: AssignmentClassification['gradingApproach'] = 'ai_analysis';
+  
+  if (contentType === 'code' && platform === 'google_form') {
+    gradingApproach = 'generous_code';
+  } else if (contentType === 'choice') {
+    gradingApproach = 'auto_grade';
+  } else if (platform === 'google_form' && contentType !== 'code') {
+    gradingApproach = 'standard_quiz';
+  } else if (platform === 'google_docs' && contentType === 'text') {
+    gradingApproach = 'essay_rubric';
+  }
+  
+  // Generate tags
+  const tags = [
+    assignment.type || 'unknown',
+    platform,
+    contentType,
+    'auto_classified'
+  ].filter(Boolean);
+  
+  return {
+    platform,
+    contentType, 
+    gradingApproach,
+    tags,
+    confidence: 0.85 // High confidence for auto-classification
+  };
+}
+
+/**
  * Transform assignment from snapshot to core schema
  */
 function transformAssignment(
@@ -212,11 +307,15 @@ function transformAssignment(
     status = 'closed';
   }
 
+  // Generate classification
+  const classification = createAssignmentClassification(assignment);
+
   return {
     classroomId,
     title: assignment.title,
     description: assignment.description || '',
     type,
+    classification, // Add the new classification
     dueDate: assignment.dueDate ? new Date(assignment.dueDate) : undefined,
     maxScore: assignment.maxScore,
     rubric: assignment.rubric ? {
@@ -275,7 +374,7 @@ function transformSubmission(
   classroomId: string
 ): SubmissionInput {
   const studentId = StableIdGenerator.student(submission.studentEmail);
-  const assignmentId = submission.assignmentId;
+  const assignmentId = StableIdGenerator.assignment(classroomId, submission.assignmentId);
 
   // Map status
   let status: 'draft' | 'submitted' | 'graded' | 'returned' = 'submitted';
@@ -328,7 +427,24 @@ function transformSubmission(
     importedAt: new Date(),
     source: 'import',
     externalId: submission.id,
-    late: submission.late || false
+    late: submission.late || false,
+    
+    // Preserve AI processing fields if present (enhanced schema support)
+    aiProcessingStatus: submission.aiProcessingStatus ? {
+      contentExtracted: submission.aiProcessingStatus.contentExtracted || false,
+      readyForGrading: typeof submission.aiProcessingStatus.readyForGrading === 'boolean' 
+        ? submission.aiProcessingStatus.readyForGrading 
+        : !!submission.aiProcessingStatus.readyForGrading,
+      processingErrors: submission.aiProcessingStatus.processingErrors || [],
+      lastProcessedAt: submission.aiProcessingStatus.lastProcessedAt
+    } : undefined,
+    
+    extractedContent: submission.extractedContent ? {
+      text: submission.extractedContent.text,
+      structuredData: submission.extractedContent.structuredData,
+      images: submission.extractedContent.images,
+      metadata: submission.extractedContent.metadata
+    } : undefined
   };
 }
 
@@ -344,7 +460,7 @@ export function extractGradeFromSubmission(
   }
 
   const studentId = StableIdGenerator.student(submission.studentEmail);
-  const assignmentId = submission.assignmentId;
+  const assignmentId = StableIdGenerator.assignment(classroomId, submission.assignmentId);
   const submissionId = StableIdGenerator.submission(classroomId, assignmentId, studentId);
 
   const grade = submission.grade;
