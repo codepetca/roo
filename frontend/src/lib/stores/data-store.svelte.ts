@@ -456,8 +456,8 @@ class DataStore {
 						assignment.id,
 						assignment.title || assignment.name
 					);
-					const submissions = await api.getSubmissionsByAssignment(assignment.id);
-					return { assignmentId: assignment.id, submissions };
+					const response = await api.getSubmissionsByAssignment(assignment.id);
+					return { assignmentId: assignment.id, submissions: response.submissions };
 				}
 				console.log('📡 Using cached submissions for assignment:', assignment.id);
 				return {

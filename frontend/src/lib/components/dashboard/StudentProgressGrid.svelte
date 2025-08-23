@@ -151,59 +151,76 @@
 				<!-- Responsive CSS Grid Layout (2:1:1:2:4:1 ratio) -->
 				<div class="min-w-full bg-white">
 					<!-- Grid Header -->
-					<div class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 bg-gray-50 px-6 py-3">
-						<div class="min-w-0">
-							<button
-								onclick={() => handleSort('name')}
-								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
-								title={getSortDescription('name')}
+					<div
+						class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 bg-gray-50 px-6 py-3"
+					>
+						<div
+							class="min-w-0 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100"
+							onclick={() => handleSort('name')}
+							title={getSortDescription('name')}
+						>
+							<div
+								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 							>
 								<span>Student</span>
 								<span class="text-xs">
 									{getSortIcon(sortField === 'name', sortDirection)}
 								</span>
-							</button>
+							</div>
 						</div>
-						<div class="min-w-0">
-							<button
-								onclick={() => handleSort('submitted')}
-								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
-								title={getSortDescription('submitted', sortDirection)}
+						<div
+							class="min-w-0 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100"
+							onclick={() => handleSort('submitted')}
+							title={getSortDescription('submitted', sortDirection)}
+						>
+							<div
+								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 							>
 								<span>Submitted</span>
 								<span class="text-xs">
 									{getSortIcon(sortField === 'submitted', sortDirection)}
 								</span>
-							</button>
+							</div>
 						</div>
-						<div class="min-w-0">
-							<button
-								onclick={() => handleSort('grade')}
-								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:text-gray-700 focus:text-gray-700 focus:outline-none"
-								title={getSortDescription('grade', sortDirection)}
+						<div
+							class="min-w-0 cursor-pointer rounded px-2 py-1 transition-colors hover:bg-gray-100"
+							onclick={() => handleSort('grade')}
+							title={getSortDescription('grade', sortDirection)}
+						>
+							<div
+								class="flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
 							>
 								<span>Grade</span>
 								<span class="text-xs">
 									{getSortIcon(sortField === 'grade', sortDirection)}
 								</span>
-							</button>
+							</div>
 						</div>
-						<div class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+						<div
+							class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+						>
 							Manual Grade
 						</div>
-						<div class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase" title="AI-generated feedback and comments">
+						<div
+							class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+							title="AI-generated feedback and comments"
+						>
 							AI Comments
 						</div>
-						<div class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">
+						<div
+							class="min-w-0 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+						>
 							Actions
 						</div>
 					</div>
 
 					<!-- Grid Rows -->
 					{#each studentProgress as student (student.studentId)}
-						<div class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 px-6 py-4 hover:bg-gray-50">
+						<div
+							class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 px-6 py-4 hover:bg-gray-50"
+						>
 							<!-- Student Column (2fr) -->
-							<div class="min-w-0 flex items-center">
+							<div class="flex min-w-0 items-center">
 								<div class="h-10 w-10 flex-shrink-0">
 									<div class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200">
 										<span class="text-sm font-medium text-gray-700">
@@ -216,22 +233,26 @@
 									</div>
 								</div>
 								<div class="ml-4 min-w-0 flex-1">
-									<div class="text-sm font-medium text-gray-900 truncate">{student.studentName}</div>
-									<div class="text-sm text-gray-500 truncate">{student.studentEmail.split('@')[0]}</div>
+									<div class="truncate text-sm font-medium text-gray-900">
+										{student.studentName}
+									</div>
+									<div class="truncate text-sm text-gray-500">
+										{student.studentEmail.split('@')[0]}
+									</div>
 								</div>
 							</div>
 
 							<!-- Submitted Column (1fr) -->
-							<div class="min-w-0 flex items-center text-sm">
+							<div class="flex min-w-0 items-center text-sm">
 								{#if student.status === 'not_submitted'}
 									<span class="text-gray-400 italic">Not Submitted</span>
 								{:else}
-									<span class="text-gray-900 truncate">{formatDate(student.submittedAt)}</span>
+									<span class="truncate text-gray-900">{formatDate(student.submittedAt)}</span>
 								{/if}
 							</div>
 
 							<!-- Grade Column (1fr) -->
-							<div class="min-w-0 flex items-center">
+							<div class="flex min-w-0 items-center">
 								{#if student.score !== undefined && student.maxScore !== undefined}
 									<div class="flex items-center space-x-2">
 										<span class="text-sm font-medium text-gray-900">
@@ -256,13 +277,13 @@
 							</div>
 
 							<!-- Manual Grade Column (2fr) -->
-							<div class="min-w-0 flex items-center">
-								<div class="flex items-center space-x-2 w-full">
-									<input 
-										type="number" 
-										min="0" 
+							<div class="flex min-w-0 items-center">
+								<div class="flex w-full items-center space-x-2">
+									<input
+										type="number"
+										min="0"
 										max={student.maxScore || 100}
-										class="w-16 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+										class="w-16 rounded border border-gray-300 px-2 py-1 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
 										value={manualGrades.get(student.studentId) || ''}
 										oninput={(e) => handleManualGradeInput(student.studentId, e.target.value)}
 										title="Enter manual grade (auto-saves)"
@@ -272,19 +293,18 @@
 							</div>
 
 							<!-- AI Comments Column (4fr) -->
-							<div 
-								class="min-w-0 flex items-center text-sm"
-								title={getFullComment(student)}
-							>
+							<div class="flex min-w-0 items-center text-sm" title={getFullComment(student)}>
 								{#if student.status === 'not_submitted'}
 									<span class="text-gray-400 italic">No submission</span>
 								{:else}
-									<span class="text-gray-900 break-words">{truncateComment(student.feedback, 120)}</span>
+									<span class="break-words text-gray-900"
+										>{truncateComment(student.feedback, 120)}</span
+									>
 								{/if}
 							</div>
 
 							<!-- Actions Column (1fr) - Moved to end -->
-							<div class="min-w-0 flex items-center">
+							<div class="flex min-w-0 items-center">
 								<Button variant="primary" size="sm" onclick={() => gradeStudent(student)}>
 									{#snippet children()}
 										Grade
