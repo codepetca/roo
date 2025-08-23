@@ -185,7 +185,10 @@
 									<th
 										class="max-w-32 min-w-24 px-2 py-2 text-center text-xs font-medium tracking-wider text-gray-500 uppercase"
 									>
-										<div class="truncate" title={assignment.title || assignment.name}>
+										<div 
+											class="assignment-title-clamp leading-tight" 
+											title={assignment.title || assignment.name}
+										>
 											{assignment.title || assignment.name || 'Untitled'}
 										</div>
 										<div class="mt-1 text-xs text-gray-400">
@@ -282,5 +285,17 @@
 		position: sticky !important;
 		z-index: 50 !important;
 		background-color: white !important;
+	}
+
+	/* Three-line ellipsis for assignment titles */
+	.assignment-title-clamp {
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		line-height: 1.2;
+		max-height: 3.6em; /* 3 lines * 1.2 line-height */
+		word-break: break-word;
 	}
 </style>
