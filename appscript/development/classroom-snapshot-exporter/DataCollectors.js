@@ -234,6 +234,18 @@ var DataCollectors = {
    * @returns {Object} Structured materials object
    */
   processAssignmentMaterials: function(materials) {
+    if (!materials || !Array.isArray(materials)) {
+      console.log('  📋 No materials to process');
+      return {
+        driveFiles: [],
+        links: [],
+        youtubeVideos: [],
+        forms: []
+      };
+    }
+    
+    console.log(`  📋 Processing ${materials.length} materials`);
+    
     const processed = {
       driveFiles: [],
       links: [],
@@ -241,8 +253,13 @@ var DataCollectors = {
       forms: []
     };
     
-    materials.forEach(material => {
+    materials.forEach((material, index) => {
+      // Log what type of material this is
+      const materialType = Object.keys(material).filter(k => k !== 'title' && k !== 'description');
+      console.log(`    [${index}] Material type: ${materialType.join(', ')}`);
+      
       if (material.driveFile) {
+        console.log(`    [${index}] 📁 Drive file: ${material.driveFile.driveFile?.title || 'Untitled'}`);
         processed.driveFiles.push({
           id: material.driveFile.driveFile.id,
           title: material.driveFile.driveFile.title,
@@ -250,12 +267,14 @@ var DataCollectors = {
           thumbnailUrl: material.driveFile.driveFile.thumbnailUrl
         });
       } else if (material.link) {
+        console.log(`    [${index}] 🔗 Link: ${material.link.title || material.link.url}`);
         processed.links.push({
           url: material.link.url,
           title: material.link.title || material.link.url,
           thumbnailUrl: material.link.thumbnailUrl
         });
       } else if (material.youtubeVideo) {
+        console.log(`    [${index}] 📺 YouTube: ${material.youtubeVideo.title || 'Untitled'}`);
         processed.youtubeVideos.push({
           id: material.youtubeVideo.id,
           title: material.youtubeVideo.title,
@@ -263,16 +282,49 @@ var DataCollectors = {
           thumbnailUrl: material.youtubeVideo.thumbnailUrl
         });
       } else if (material.form) {
+        // Extract form ID from URL for proper form response access
+        const formId = this.extractFormIdFromUrl(material.form.formUrl);
+        console.log(`    [${index}] 📋 Form: ${material.form.title || 'Untitled'} - ID: ${formId}`);
+        console.log(`    [${index}] 📋 Form URL: ${material.form.formUrl}`);
         processed.forms.push({
           formUrl: material.form.formUrl,
+          formId: formId,
           responseUrl: material.form.responseUrl,
           title: material.form.title,
           thumbnailUrl: material.form.thumbnailUrl
         });
+      } else {
+        console.log(`    [${index}] ❓ Unknown material type:`, materialType);
+        console.log(`    [${index}] ❓ Full material:`, JSON.stringify(material, null, 2));
       }
     });
     
+    console.log(`  📋 Processed result:`, {
+      driveFiles: processed.driveFiles.length,
+      links: processed.links.length,
+      youtubeVideos: processed.youtubeVideos.length,
+      forms: processed.forms.length
+    });
+    
     return processed;
+  },
+  
+  /**
+   * Extract Google Form ID from a form URL
+   * @param {string} formUrl - Form URL from Google Classroom
+   * @returns {string|null} Form ID or null if not found
+   */
+  extractFormIdFromUrl: function(formUrl) {
+    if (!formUrl) return null;
+    
+    try {
+      // Form URLs look like: https://docs.google.com/forms/d/FORM_ID/edit
+      const match = formUrl.match(/\/forms\/d\/([a-zA-Z0-9-_]+)/);
+      return match ? match[1] : null;
+    } catch (error) {
+      console.warn('Error extracting form ID from URL:', formUrl, error);
+      return null;
+    }
   },
   
   /**
@@ -511,7 +563,7 @@ var DataCollectors = {
       }
       
       const totalAssignments = assignments.length;
-      const batchSize = Math.min(8, Math.max(1, Math.floor(50 / Math.max(1, totalAssignments / 10)))); // Adaptive batch size
+      const batchSize = Math.min(12, Math.max(2, Math.floor(60 / Math.max(1, totalAssignments / 8)))); // Optimized: larger batches for faster processing
       const allSubmissions = [];
       
       console.log(`Starting parallel submission collection for ${totalAssignments} assignments (batch size: ${batchSize})`);

@@ -262,7 +262,7 @@ def anonymize_json(data):
     return replace_identifiers(data)
 
 def main():
-    source_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-stewart.chan-2025-08-23.json")
+    source_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-stewart.chan-2025-08-24.json")
     output_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-mock.json")
     
     print(f"Reading {source_file}...")

@@ -31,6 +31,28 @@ export class GeminiService {
       );
     }
 
+    // Handle empty or minimal submissions before calling AI
+    if (!request.submission || 
+        request.submission.trim() === '' || 
+        request.submission.trim() === 'No content provided') {
+      
+      logger.info("Empty submission detected, returning default response", {
+        submissionId: request.submissionId,
+        assignmentId: request.assignmentId
+      });
+      
+      return {
+        score: 0,
+        feedback: "No submission content was found. This may be a Google Form that hasn't been properly extracted yet, or the student may not have submitted any content.",
+        criteriaScores: request.criteria.map(criterion => ({
+          name: criterion,
+          score: 0,
+          maxScore: Math.floor(request.maxPoints / request.criteria.length),
+          feedback: "No content available for evaluation"
+        }))
+      };
+    }
+
     try {
       // Build the prompt
       const criteriaList = request.criteria.join("\n- ");
@@ -53,13 +75,29 @@ export class GeminiService {
       const response = await result.response;
       const text = response.text();
 
-      // Parse JSON response
+      // Parse JSON response with better error handling
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        throw new Error("Invalid response format from AI");
+        logger.error("No JSON found in Gemini response", {
+          submissionId: request.submissionId,
+          responseText: text.substring(0, 500) + (text.length > 500 ? '...' : ''),
+          promptLength: prompt.length
+        });
+        throw new Error("Invalid response format from AI - no JSON found in response");
       }
 
-      const gradingResult = JSON.parse(jsonMatch[0]) as GradingResponse;
+      let gradingResult: GradingResponse;
+      try {
+        gradingResult = JSON.parse(jsonMatch[0]) as GradingResponse;
+      } catch (parseError) {
+        logger.error("Failed to parse JSON from Gemini response", {
+          submissionId: request.submissionId,
+          jsonMatch: jsonMatch[0],
+          parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error',
+          fullResponse: text.substring(0, 1000) + (text.length > 1000 ? '...' : '')
+        });
+        throw new Error(`Invalid JSON format from AI: ${parseError instanceof Error ? parseError.message : 'Parse error'}`);
+      }
 
       // Validate response
       if (

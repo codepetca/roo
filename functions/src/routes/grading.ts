@@ -448,6 +448,25 @@ export async function gradeAllAssignments(req: Request, res: Response) {
             // Get submission text from the correct field (FIX: Use extractedContent.text)
             const submissionText = submission.extractedContent?.text || submission.content || '';
             
+            // Check if this is a Google Forms submission that failed to extract
+            // Note: assignment might have materials from snapshot data (not in DTO type)
+            const assignmentData = assignment as any;
+            const isGoogleForm = assignmentData?.materials?.forms && assignmentData.materials.forms.length > 0;
+            const hasExtractionErrors = submission.extractedContent?.metadata?.extractionErrors?.length > 0;
+            
+            if (isGoogleForm && (!submissionText || submissionText.trim() === '') && hasExtractionErrors) {
+              console.log(`⚠️ Google Forms submission with extraction errors: ${submission.studentName}`);
+              // Return a specific response for failed form extraction
+              return {
+                submissionId: submission.id,
+                score: 0,
+                maxScore: assignment.maxScore || 100,
+                feedback: "This is a Google Forms submission that could not be processed. The form responses may not be accessible or the form extraction failed. Please check the form permissions and try re-importing the classroom data.",
+                gradeId: 'pending_form_extraction',
+                error: 'Form extraction failed'
+              };
+            }
+            
             // Smart grading strategy selection using new classification system
             const classification = assignment.classification || deriveClassificationFromAssignment(assignment);
             

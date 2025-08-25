@@ -207,7 +207,12 @@ var ClassroomSnapshotExporter = {
       
       // Get assignments for this classroom
       console.log(`  Fetching assignments for ${classroom.name}...`);
-      const assignments = DataCollectors.collectAssignments(classroom.id, config);
+      // Force includeMaterials to ensure Forms are detected
+      const enhancedConfig = {
+        ...config,
+        includeMaterials: true  // Always true to detect Forms assignments
+      };
+      const assignments = DataCollectors.collectAssignments(classroom.id, enhancedConfig);
       enrichedClassroom.assignments = assignments.map(assignment => 
         SchemaAdapters.adaptAssignment(assignment)
       );

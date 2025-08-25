@@ -175,12 +175,8 @@ var SchemaAdapters = {
         },
         
         // Enhanced data (optional)
-        materials: courseWork.enhancedMaterials || (courseWork.materials ? {
-          driveFiles: [],
-          links: [],
-          youtubeVideos: [],
-          forms: []
-        } : undefined),
+        materials: courseWork.enhancedMaterials || 
+          (courseWork.materials ? DataCollectors.processAssignmentMaterials(courseWork.materials) : undefined),
         
         // Quiz data (if available)
         quizData: courseWork.quizData || undefined,
@@ -337,7 +333,7 @@ var SchemaAdapters = {
         attachmentCount: this.countAttachments(submission),
         
         // Content extraction from attachments
-        extractedContent: this.extractSubmissionContent(submission, assignment),
+        extractedContent: this.extractSubmissionContent(submission, assignment, studentData),
         
         // AI processing status
         aiProcessingStatus: this.createAiProcessingStatus(submission, assignment)
@@ -534,9 +530,10 @@ var SchemaAdapters = {
    * Extract content from submission attachments
    * @param {Object} submission - Google Classroom submission object
    * @param {Object} assignment - Assignment object for context
+   * @param {Object} studentData - Student data containing email and profile info
    * @returns {Object} Extracted content object
    */
-  extractSubmissionContent: function(submission, assignment) {
+  extractSubmissionContent: function(submission, assignment, studentData) {
     const extractedContent = {
       text: '',
       structuredData: {},
@@ -547,6 +544,14 @@ var SchemaAdapters = {
         extractionErrors: []
       }
     };
+    
+    // Forms to skip - these have no email data and cannot be graded
+    const PROBLEMATIC_FORMS = [
+      'Learning Survey',
+      'Project Reflection',
+      'learning survey',
+      'project reflection'
+    ];
     
     try {
       // Handle short answer and multiple choice submissions first
@@ -632,25 +637,98 @@ var SchemaAdapters = {
       }
       
       // Handle form submissions (for quiz assignments)
-      if (assignment?.type === 'quiz' || assignment?.type === 'coding') {
+      console.log(`🔍 [Forms Debug] Assignment: ${assignment?.title}, Type: ${assignment?.type}, WorkType: ${assignment?.workType}, HasForms: ${assignment?.materials?.forms?.length > 0}`);
+      
+      // Also try for assignments that have Forms but weren't classified as quiz/coding
+      if (assignment?.type === 'quiz' || assignment?.type === 'coding' || 
+          (assignment?.materials?.forms && assignment?.materials?.forms.length > 0)) {
         // Try to extract form response data if available
-        const formId = assignment?.materials?.forms?.[0]?.formId;
-        if (formId && submission.id) {
+        let formId = assignment?.materials?.forms?.[0]?.formId;
+        
+        // Fallback: extract form ID from URL if not available
+        if (!formId && assignment?.materials?.forms?.[0]?.formUrl) {
+          const formUrl = assignment.materials.forms[0].formUrl;
+          const match = formUrl.match(/\/forms\/d\/([a-zA-Z0-9-_]+)/);
+          formId = match ? match[1] : null;
+          console.log(`Extracted form ID from URL: ${formId}`);
+        }
+        
+        if (formId) {
+          // Check if this form should be skipped
+          const assignmentTitle = assignment?.title || 'Unknown Assignment';
+          const shouldSkipForm = PROBLEMATIC_FORMS.some(skipTitle => 
+            assignmentTitle.toLowerCase().includes(skipTitle.toLowerCase())
+          );
+          
+          if (shouldSkipForm) {
+            console.log(`⏭️ [Skip Forms] Skipping problematic form: ${assignmentTitle}`);
+            extractedContent.metadata.extractionErrors.push({
+              type: 'form_skipped_no_emails',
+              error: `Form "${assignmentTitle}" skipped - no email data available for student matching`,
+              formId: formId,
+              skipReason: 'Known problematic form with missing email collection'
+            });
+          } else {
           try {
-            const formContent = ContentExtractor.extractFormResponse(formId, submission.id);
-            if (formContent.responses) {
-              extractedContent.structuredData = formContent.responses;
-              extractedContent.text = formContent.text || extractedContent.text;
-              extractedContent.metadata.submissionType = 'form_response';
+            // Get student email from student data
+            const studentEmail = studentData?.email || studentData?.profile?.emailAddress;
+            console.log(`📧 [Forms Debug] Student email: ${studentEmail}, FormID: ${formId}`);
+            
+            if (!studentEmail) {
+              console.warn(`No student email found for submission ${submission.id}`);
+              extractedContent.metadata.extractionErrors.push({
+                type: 'student_email_missing',
+                error: 'Cannot match Forms response without student email'
+              });
+            } else {
+              // Try to get responses for this specific student by email
+              console.log(`🎯 [Forms Debug] Calling extractFormResponse for ${studentEmail}`);
+              const formContent = ContentExtractor.extractFormResponse(formId, studentEmail, submission.id);
+              console.log(`📝 [Forms Debug] Form content returned:`, formContent?.responses ? `${Object.keys(formContent.responses).length} responses` : 'no responses');
+              
+              if (formContent.responses && Object.keys(formContent.responses).length > 0) {
+                extractedContent.structuredData = formContent.responses;
+                extractedContent.text = formContent.text || extractedContent.text;
+                extractedContent.metadata.submissionType = 'form_response';
+                extractedContent.metadata.formsMatchInfo = formContent.metadata;
+                console.log(`Successfully extracted ${Object.keys(formContent.responses).length} form responses for ${studentEmail}`);
+                
+                // Log matching method for debugging
+                if (formContent.metadata.matchedByEmail) {
+                  console.log(`✅ Forms response matched by email: ${studentEmail}`);
+                } else {
+                  console.warn(`⚠️ Forms response NOT matched by email for: ${studentEmail}, used fallback method`);
+                }
+              } else {
+                console.warn(`No form responses found for student ${studentEmail} in form ${formId}`);
+                extractedContent.metadata.extractionErrors.push({
+                  type: 'form_no_responses',
+                  error: `Form found but no responses available for student: ${studentEmail}`,
+                  formId: formId,
+                  studentEmail: studentEmail,
+                  formMetadata: formContent.metadata
+                });
+              }
             }
           } catch (formError) {
-            console.warn('Error extracting form response:', formError);
+            console.error(`❌ [Forms Debug] Error extracting form response from ${formId}:`, formError);
             extractedContent.metadata.extractionErrors.push({
               type: 'form_extraction',
-              error: formError.message
+              error: formError.message,
+              formId: formId,
+              studentEmail: studentEmail || 'unknown'
             });
           }
+          } // End of else block for non-skipped forms
+        } else {
+          console.log(`⚠️ [Forms Debug] No formId found for assignment ${assignment?.title}`);
+          extractedContent.metadata.extractionErrors.push({
+            type: 'form_id_missing',
+            error: 'Quiz assignment has no accessible form ID'
+          });
         }
+      } else {
+        console.log(`⏭️ [Forms Debug] Skipping Forms extraction for assignment ${assignment?.title} (not quiz/coding/forms)`);
       }
       
       return extractedContent;
