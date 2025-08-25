@@ -49,7 +49,7 @@ export interface SubmissionData {
   studentId: string;
   studentName: string;
   studentEmail: string;
-  submissionText: string;
+  studentWork: string;
   submittedAt: admin.firestore.Timestamp;
   status: "pending" | "grading" | "graded" | "error";
   grade?: GradeData;

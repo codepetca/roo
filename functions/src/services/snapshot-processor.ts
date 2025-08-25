@@ -86,11 +86,15 @@ export class SnapshotProcessor {
       const transformed = snapshotToCore(snapshot);
 
       // Step 2: Process teacher
+      console.log(`[SNAPSHOT DEBUG] About to process teacher: ${snapshot.teacher.email}`);
       await this.processTeacher(transformed.teacher, snapshot.teacher.email);
+      console.log(`[SNAPSHOT DEBUG] Teacher processing completed`);
 
       // Step 3: Get existing data for merge
+      console.log(`[SNAPSHOT DEBUG] Starting to fetch existing data for merge`);
       logger.info("Fetching existing data for merge");
       const existing = await this.getExistingData(transformed);
+      console.log(`[SNAPSHOT DEBUG] Existing data fetched successfully`);
 
       // Step 4: Merge with existing data
       logger.info("Merging with existing data");
@@ -270,6 +274,18 @@ export class SnapshotProcessor {
     result: ProcessingResult
   ): Promise<void> {
     try {
+      console.log(`[PROCESS CREATES] Starting batch creates`);
+      console.log(`[PROCESS CREATES] Submissions to create: ${mergeResult.toCreate.submissions.length}`);
+      console.log(`[PROCESS CREATES] First submission exists:`, !!mergeResult.toCreate.submissions[0]);
+      
+      if (mergeResult.toCreate.submissions.length > 0) {
+        console.log(`[PROCESS CREATES] First submission sample:`, {
+          id: mergeResult.toCreate.submissions[0]?.id,
+          studentId: mergeResult.toCreate.submissions[0]?.studentId,
+          keysCount: Object.keys(mergeResult.toCreate.submissions[0] || {}).length
+        });
+      }
+      
       // Process all creates in parallel using batch operations
       await Promise.all([
         // Batch create classrooms (cast as the id is guaranteed to exist after merge)
@@ -291,11 +307,47 @@ export class SnapshotProcessor {
           }),
         
         // Batch create submissions
-        this.repository.batchCreate("submissions", mergeResult.toCreate.submissions as any[])
+        (() => {
+          try {
+            console.log(`[PRE-BATCH DEBUG] About to create ${mergeResult.toCreate.submissions.length} submissions`);
+            
+            // Debug first few submissions for empty keys
+            mergeResult.toCreate.submissions.slice(0, 3).forEach((submission, index) => {
+              try {
+                const keys = Object.keys(submission);
+                const emptyKeys = keys.filter(key => key === '' || key === null || key === undefined);
+                console.log(`[PRE-BATCH DEBUG] Submission ${index} keys:`, keys);
+                if (emptyKeys.length > 0) {
+                  console.error(`[PRE-BATCH DEBUG] Found empty keys in submission ${index}:`, emptyKeys);
+                  console.error(`[PRE-BATCH DEBUG] Full submission data:`, JSON.stringify(submission, null, 2));
+                }
+              } catch (inspectionError) {
+                console.error(`[PRE-BATCH DEBUG] Error inspecting submission ${index}:`, inspectionError);
+              }
+            });
+            
+            console.log(`[PRE-BATCH DEBUG] Pre-inspection completed, calling batchCreate`);
+            return this.repository.batchCreate("submissions", mergeResult.toCreate.submissions as any[]);
+          } catch (error) {
+            console.error(`[PRE-BATCH DEBUG] Error during pre-batch setup:`, error);
+            throw error;
+          }
+        })()
           .then(() => {
+            console.log(`[STATS DEBUG] Submissions batch create completed successfully`);
+            console.log(`[STATS DEBUG] Total submissions created: ${mergeResult.toCreate.submissions.length}`);
+            console.log(`[STATS DEBUG] Sample submission IDs:`, 
+              mergeResult.toCreate.submissions.slice(0, 5).map(s => s.id));
+            
             const versioned = mergeResult.toCreate.submissions.filter(s => s.version > 1);
             result.stats.submissionsVersioned = versioned.length;
             result.stats.submissionsCreated = mergeResult.toCreate.submissions.length - versioned.length;
+            
+            console.log(`[STATS DEBUG] Final stats - Created: ${result.stats.submissionsCreated}, Versioned: ${result.stats.submissionsVersioned}`);
+          })
+          .catch(error => {
+            console.error(`[STATS DEBUG] Submissions batch create FAILED:`, error);
+            throw error;
           }),
         
         // Batch create enrollments

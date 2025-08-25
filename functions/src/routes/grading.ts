@@ -277,7 +277,7 @@ export async function gradeCode(req: Request, res: Response) {
       description: validatedData.assignmentDescription || "",
       maxPoints: validatedData.maxPoints || 100,
       criteria: ["Understanding", "Logic", "Implementation"],
-      submission: validatedData.submissionText,
+      submission: validatedData.studentWork,
       promptTemplate
     };
 
@@ -295,7 +295,7 @@ export async function gradeCode(req: Request, res: Response) {
       gradedBy: "ai",
       criteriaScores: result.criteriaScores,
       metadata: {
-        submissionLength: validatedData.submissionText.length,
+        submissionLength: validatedData.studentWork.length,
         criteria: gradingRequest.criteria,
         gradingMode: validatedData.gradingStrictness,
         isCodeAssignment: validatedData.isCodeAssignment

@@ -368,7 +368,7 @@ const ContentExtractor = {
     this.debugLog('📄 Starting content extraction', `${submission.attachments?.length || 0} attachments`);
     
     const extractedContent = {
-      text: submission.submissionText || '',
+      text: submission.studentWork || '',
       structuredData: {},
       sections: [],
       images: [],

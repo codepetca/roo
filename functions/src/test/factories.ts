@@ -46,7 +46,7 @@ export const sheetFactories = {
     studentFirstName: "John",
     studentLastName: "Doe",
     studentEmail: "john.doe@student.edu",
-    submissionText: "function hello() { console.log(\"Hello World!\"); }",
+    studentWork: "function hello() { console.log(\"Hello World!\"); }",
     submissionDate: "2024-01-15T10:30:00Z",
     currentGrade: undefined,
     gradingStatus: "pending",
@@ -62,7 +62,7 @@ export const sheetFactories = {
 
   quizSubmission: (overrides: Partial<SheetSubmission> = {}): SheetSubmission => ({
     ...sheetFactories.submission(),
-    submissionText: "Answer 1: True, Answer 2: False, Answer 3: C",
+    studentWork: "Answer 1: True, Answer 2: False, Answer 3: C",
     isQuiz: true,
     formId: "quiz-form-1",
     ...overrides
@@ -233,7 +233,7 @@ export const requestFactories = {
     studentId: "student-1",
     studentName: "John Doe",
     studentEmail: "john.doe@student.edu",
-    submissionText: "console.log(\"Hello, World!\");",
+    studentWork: "console.log(\"Hello, World!\");",
     submittedAt: "2024-01-15T10:30:00Z",
     status: "pending",
     ...overrides
@@ -255,7 +255,7 @@ export const requestFactories = {
 
   gradeCode: (overrides: Partial<GradeCodeRequest> = {}): GradeCodeRequest => ({
     submissionId: "submission-1",
-    submissionText: "function greet(name) { return `Hello, ${name}!`; }",
+    studentWork: "function greet(name) { return `Hello, ${name}!`; }",
     assignmentId: "assignment-1",
     assignmentTitle: "Greeting Function",
     studentId: "student-1",

@@ -299,7 +299,7 @@ describe("DTO Schema Validation", () => {
     it("should validate code grading request", () => {
       const validData = {
         submissionId: "submission-1",
-        submissionText: "function hello() { console.log(\"Hello\"); }",
+        studentWork: "function hello() { console.log(\"Hello\"); }",
         assignmentId: "assignment-1",
         assignmentTitle: "Coding Assignment",
         studentId: "student-1",

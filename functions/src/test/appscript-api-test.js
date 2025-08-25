@@ -219,7 +219,7 @@ function testWithSampleData() {
       studentFirstName: "Test",
       studentLastName: "Student",
       studentEmail: "test.student@example.com",
-      submissionText: "Sample submission content",
+      studentWork: "Sample submission content",
       submissionDate: new Date().toISOString(),
       gradingStatus: "pending",
       maxPoints: 100
@@ -231,7 +231,7 @@ function testWithSampleData() {
       studentFirstName: "Another",
       studentLastName: "Student",
       studentEmail: "another.student@example.com",
-      submissionText: "Sample quiz answers",
+      studentWork: "Sample quiz answers",
       submissionDate: new Date().toISOString(),
       gradingStatus: "pending",
       maxPoints: 50

@@ -52,7 +52,7 @@ describe("GeminiService", () => {
         description: request.assignmentDescription,
         maxPoints: request.maxPoints,
         criteria: ["Logic", "Implementation"],
-        submission: request.submissionText
+        submission: request.studentWork
       });
 
       expect(result.score).toBe(85);

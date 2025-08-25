@@ -29,7 +29,7 @@ describe('Snapshot Normalization', () => {
           {
             id: "sub-1",
             studentEmail: "student@test.com",
-            submissionText: "Test submission",
+            studentWork: "Test submission",
             updatedAt: "2025-08-15T21:56:00.687Z",
             submittedAt: "2025-08-15T20:00:00.000Z"
           }
@@ -54,7 +54,7 @@ describe('Snapshot Normalization', () => {
     const submission = normalized.classrooms[0].submissions[0];
     expect((submission as any).updatedAt).toBeUndefined();
     expect((submission as any).submittedAt).toBe("2025-08-15T20:00:00.000Z");
-    expect((submission as any).submissionText).toBe("Test submission");
+    expect((submission as any).studentWork).toBe("Test submission");
   });
 
   it('should preserve all other data fields', () => {

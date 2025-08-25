@@ -140,7 +140,7 @@ export const enhancedSubmissionSchema = z.object({
   studentName: z.string(),
   
   // Submission content
-  submissionText: z.string().optional(), // Direct text submission
+  studentWork: z.string().optional(), // Student work content from Google Classroom
   attachments: z.array(submissionAttachmentSchema).default([]),
   
   // For quiz submissions

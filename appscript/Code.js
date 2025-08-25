@@ -579,7 +579,7 @@ function extractSubmissionsFromResponseSheet(
           studentFirstName: firstName || "Unknown",
           studentLastName: lastName || "",
           studentEmail: studentEmail || ("student" + i + "@unknown.com"),
-          submissionText: contentParts.join("\n\n"),
+          studentWork: contentParts.join("\n\n"),
           submissionDate: new Date(timestamp).toISOString(),
           submissionType: "forms",
           sourceFileId: fileId,
@@ -680,7 +680,7 @@ function writeToPersonalSheets(submissions) {
           s.studentFirstName,
           s.studentLastName,
           s.studentEmail,
-          s.submissionText,
+          s.studentWork,
           s.submissionDate,
           s.currentGrade,
           s.gradingStatus,
@@ -1046,7 +1046,7 @@ function testSystem() {
       console.log("Assignment:", submissions[0].assignmentTitle);
       console.log("Course:", submissions[0].courseId);
       console.log("Student:", submissions[0].studentName);
-      console.log("Content length:", submissions[0].submissionText.length, "characters");
+      console.log("Content length:", submissions[0].studentWork.length, "characters");
     }
   }
 

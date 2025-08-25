@@ -75,6 +75,9 @@ export function snapshotToCore(snapshot: ClassroomSnapshot): {
   const enrollments: StudentEnrollment[] = [];
 
   for (const classroomData of snapshot.classrooms) {
+    console.log(`[TRANSFORM DEBUG] Processing classroom: ${classroomData.name}`);
+    console.log(`[TRANSFORM DEBUG] Raw submissions in classroom: ${classroomData.submissions.length}`);
+    
     // Transform classroom
     const classroom = transformClassroom(classroomData, classroomData.teacherEmail);
     classrooms.push(classroom);
@@ -98,13 +101,21 @@ export function snapshotToCore(snapshot: ClassroomSnapshot): {
     }
 
     // Transform submissions for this classroom
+    let processedSubmissions = 0;
     for (const submissionData of classroomData.submissions) {
-      const submission = transformSubmission(
-        submissionData,
-        StableIdGenerator.classroom(classroomData.id)
-      );
-      submissions.push(submission);
+      try {
+        const submission = transformSubmission(
+          submissionData,
+          StableIdGenerator.classroom(classroomData.id)
+        );
+        submissions.push(submission);
+        processedSubmissions++;
+      } catch (error) {
+        console.error(`[TRANSFORM ERROR] Failed to transform submission ${submissionData.id}:`, error);
+      }
     }
+    console.log(`[TRANSFORM DEBUG] Successfully transformed ${processedSubmissions} submissions`);
+    console.log(`[TRANSFORM DEBUG] Total submissions array length: ${submissions.length}`);
   }
 
   return {
@@ -408,7 +419,7 @@ function transformSubmission(
     // Fallback for unknown attachment types
     return {
       type: 'file' as const,
-      url: '',
+      url: 'https://unknown-attachment.placeholder',
       name: 'Unknown attachment',
       mimeType: undefined
     };
@@ -420,7 +431,7 @@ function transformSubmission(
     studentId,
     studentEmail: submission.studentEmail,
     studentName: submission.studentName,
-    content: submission.submissionText || '',
+    content: submission.studentWork || '',
     attachments,
     status,
     submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : new Date(),
@@ -436,14 +447,22 @@ function transformSubmission(
         ? submission.aiProcessingStatus.readyForGrading 
         : !!submission.aiProcessingStatus.readyForGrading,
       processingErrors: submission.aiProcessingStatus.processingErrors || [],
-      lastProcessedAt: submission.aiProcessingStatus.lastProcessedAt
+      lastProcessedAt: submission.aiProcessingStatus.lastProcessedAt || null
     } : undefined,
     
     extractedContent: submission.extractedContent ? {
-      text: submission.extractedContent.text,
-      structuredData: submission.extractedContent.structuredData,
-      images: submission.extractedContent.images,
-      metadata: submission.extractedContent.metadata
+      text: submission.extractedContent.text || '',
+      structuredData: submission.extractedContent.structuredData ? 
+        Object.fromEntries(
+          Object.entries(submission.extractedContent.structuredData)
+            .filter(([key]) => key !== '' && key != null)
+        ) : {},
+      images: submission.extractedContent.images || [],
+      metadata: submission.extractedContent.metadata ? 
+        Object.fromEntries(
+          Object.entries(submission.extractedContent.metadata)
+            .filter(([key]) => key !== '' && key != null)
+        ) : {}
     } : undefined
   };
 }
@@ -486,7 +505,7 @@ export function extractGradeFromSubmission(
     gradedBy: grade.gradedBy === 'system' ? 'auto' : grade.gradedBy,
     gradingMethod: grade.gradingMethod || 'points',
     submissionVersionGraded: 1, // Default to version 1
-    submissionContentSnapshot: submission.submissionText,
+    submissionContentSnapshot: submission.studentWork,
     isLocked: grade.gradedBy === 'manual',
     lockedReason: grade.gradedBy === 'manual' ? 'Manual grade' : undefined,
     aiGradingInfo: grade.aiGradingInfo
@@ -577,7 +596,7 @@ export function mergeSnapshotWithExisting(
   }
   
   const existingSubmissions = new Map(existing.submissions.map(s => [
-    `${s.classroomId}_${s.assignmentId}_${s.studentId}`,
+    StableIdGenerator.submission(s.classroomId, s.assignmentId, s.studentId),
     s
   ]));
   const existingEnrollments = new Map(existing.enrollments.map(e => [
@@ -678,7 +697,11 @@ export function mergeSnapshotWithExisting(
 
   // Process submissions - this is where versioning matters
   for (const submission of snapshot.submissions) {
-    const submissionKey = `${submission.classroomId}_${submission.assignmentId}_${submission.studentId}`;
+    const submissionKey = StableIdGenerator.submission(
+      submission.classroomId,
+      submission.assignmentId,
+      submission.studentId
+    );
     const existing = existingSubmissions.get(submissionKey);
     
     if (existing) {

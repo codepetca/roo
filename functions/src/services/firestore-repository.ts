@@ -579,25 +579,84 @@ export class FirestoreRepository {
     collectionName: string,
     items: T[]
   ): Promise<void> {
-    if (items.length === 0) return;
+    if (items.length === 0) {
+      console.log(`[BATCH CREATE] No items to create for collection ${collectionName}`);
+      return;
+    }
+    
+    console.log(`[BATCH CREATE] Starting batch creation for collection ${collectionName} with ${items.length} items`);
     
     // Process in chunks of 500 (Firestore batch limit)
     const chunks = this.chunkArray(items, 500);
     
-    for (const chunk of chunks) {
+    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+      const chunk = chunks[chunkIndex];
+      console.log(`[BATCH CREATE] Processing chunk ${chunkIndex + 1}/${chunks.length} with ${chunk.length} items`);
+      
       const batch = db.batch();
       
       for (const item of chunk) {
-        const docRef = db.collection(collectionName).doc(item.id);
-        batch.set(docRef, cleanForFirestore({
-          ...item,
-          createdAt: getCurrentTimestamp(),
-          updatedAt: getCurrentTimestamp()
-        }));
+        try {
+          const cleaned = cleanForFirestore({
+            ...item,
+            createdAt: getCurrentTimestamp(),
+            updatedAt: getCurrentTimestamp()
+          });
+          
+          // Debug: Check for empty string keys recursively
+          const findEmptyKeys = (obj: any, path = ''): string[] => {
+            const emptyPaths: string[] = [];
+            
+            if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+              for (const [key, value] of Object.entries(obj)) {
+                const currentPath = path ? `${path}.${key}` : key;
+                
+                if (key === '' || key === null || key === undefined) {
+                  emptyPaths.push(`${currentPath} (empty key)`);
+                }
+                
+                if (value && typeof value === 'object') {
+                  emptyPaths.push(...findEmptyKeys(value, currentPath));
+                }
+              }
+            }
+            
+            return emptyPaths;
+          };
+          
+          const emptyKeyPaths = findEmptyKeys(cleaned);
+          if (emptyKeyPaths.length > 0) {
+            console.error(`[BATCH CREATE] Found empty/invalid keys in item ${item.id}:`, emptyKeyPaths);
+            console.error(`[BATCH CREATE] Cleaned data:`, JSON.stringify(cleaned, null, 2));
+            throw new Error(`Invalid document data: found empty keys at paths: ${emptyKeyPaths.join(', ')}`);
+          }
+          
+          const docRef = db.collection(collectionName).doc(item.id);
+          batch.set(docRef, cleaned);
+          
+          if (collectionName === 'submissions') {
+            console.log(`[BATCH CREATE] Adding submission to batch: ${item.id} (student: ${(item as any).studentName})`);
+          }
+        } catch (error) {
+          console.error(`[BATCH CREATE] Failed to prepare item ${item.id} for batch:`, error);
+          if (collectionName === 'submissions') {
+            console.error(`[BATCH CREATE] Raw item data:`, JSON.stringify(item, null, 2));
+          }
+          throw error;
+        }
       }
       
-      await batch.commit();
+      try {
+        console.log(`[BATCH CREATE] Committing batch for chunk ${chunkIndex + 1}/${chunks.length}`);
+        await batch.commit();
+        console.log(`[BATCH CREATE] Successfully committed chunk ${chunkIndex + 1}/${chunks.length} for collection ${collectionName}`);
+      } catch (error) {
+        console.error(`[BATCH CREATE] Failed to commit batch for collection ${collectionName}, chunk ${chunkIndex + 1}:`, error);
+        throw error;
+      }
     }
+    
+    console.log(`[BATCH CREATE] Successfully created ${items.length} items in collection ${collectionName}`);
   }
 
   async batchUpdate<T extends { id: string }>(

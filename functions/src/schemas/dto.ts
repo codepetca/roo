@@ -68,7 +68,7 @@ export const createSubmissionRequestSchema = z.object({
   studentId: z.string().min(1),
   studentName: z.string().min(1),
   studentEmail: z.string().email(),
-  submissionText: z.string().min(1),
+  studentWork: z.string().min(1),
   submittedAt: z.string().datetime().optional(),
   status: z.enum(["pending", "grading", "graded", "error"]).default("pending")
 });
@@ -151,7 +151,7 @@ export const gradeQuizRequestSchema = z.object({
 // Request DTO for grading code assignments
 export const gradeCodeRequestSchema = z.object({
   submissionId: z.string().min(1),
-  submissionText: z.string().min(1),
+  studentWork: z.string().min(1),
   assignmentId: z.string().min(1),
   assignmentTitle: z.string().min(1),
   studentId: z.string().min(1),
