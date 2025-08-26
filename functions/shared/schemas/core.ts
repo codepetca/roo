@@ -42,6 +42,12 @@ const dateTimeSchema = z.union([
   })
 ]).transform(val => val instanceof Date ? val : val);
 
+// Firestore-safe record schema that rejects empty string keys
+const firestoreRecordSchema = z.record(
+  z.string().min(1, "Field names cannot be empty strings"),
+  z.unknown()
+);
+
 // Base entity schema with common fields
 const baseEntitySchema = z.object({
   id: z.string(),
@@ -273,9 +279,9 @@ export const submissionSchema = baseEntitySchema.extend({
   // Content extraction cache (for AI grading)
   extractedContent: z.object({
     text: z.string().optional(),
-    structuredData: z.record(z.unknown()).optional(),
+    structuredData: firestoreRecordSchema.optional(),
     images: z.array(z.string()).optional(), // Base64 or URLs
-    metadata: z.record(z.unknown()).optional()
+    metadata: firestoreRecordSchema.optional()
   }).optional()
 });
 
@@ -422,7 +428,7 @@ export interface AssignmentWithStats extends Assignment {
 export const recentActivitySchema = z.object({
   type: z.enum(['submission', 'grade', 'assignment']),
   timestamp: dateTimeSchema,
-  details: z.record(z.unknown())
+  details: firestoreRecordSchema
 });
 
 // Teacher dashboard stats schema

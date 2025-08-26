@@ -19,7 +19,8 @@ import {
   normalizeWithSchema,
   safeNormalizeWithSchema,
   normalizeTimestamps,
-  cleanUndefinedValues
+  cleanUndefinedValues,
+  removeEmptyKeys
 } from "@shared/utils/normalization";
 import { db, getCurrentTimestamp, FieldValue } from "../config/firebase";
 import * as admin from "firebase-admin";
@@ -37,11 +38,20 @@ import { normalizeSnapshotForComparison, createStableJsonString } from "@shared/
  */
 
 /**
- * Remove undefined values from an object to prepare it for Firestore
- * Firestore doesn't accept undefined values, so we need to clean them
+ * Clean an object for Firestore compatibility
+ * - Removes undefined values (Firestore doesn't accept them)
+ * - Removes empty string keys (Firestore FieldPath validation rejects them)
+ * @param obj - Object to clean
+ * @returns Object ready for Firestore
  */
 export function cleanForFirestore<T extends Record<string, any>>(obj: T): T {
-  return cleanUndefinedValues(obj) as T;
+  // First remove undefined values
+  const withoutUndefined = cleanUndefinedValues(obj);
+  
+  // Then remove empty string keys
+  const cleaned = removeEmptyKeys(withoutUndefined);
+  
+  return cleaned as T;
 }
 
 /**
@@ -603,33 +613,7 @@ export class FirestoreRepository {
             updatedAt: getCurrentTimestamp()
           });
           
-          // Debug: Check for empty string keys recursively
-          const findEmptyKeys = (obj: any, path = ''): string[] => {
-            const emptyPaths: string[] = [];
-            
-            if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
-              for (const [key, value] of Object.entries(obj)) {
-                const currentPath = path ? `${path}.${key}` : key;
-                
-                if (key === '' || key === null || key === undefined) {
-                  emptyPaths.push(`${currentPath} (empty key)`);
-                }
-                
-                if (value && typeof value === 'object') {
-                  emptyPaths.push(...findEmptyKeys(value, currentPath));
-                }
-              }
-            }
-            
-            return emptyPaths;
-          };
-          
-          const emptyKeyPaths = findEmptyKeys(cleaned);
-          if (emptyKeyPaths.length > 0) {
-            console.error(`[BATCH CREATE] Found empty/invalid keys in item ${item.id}:`, emptyKeyPaths);
-            console.error(`[BATCH CREATE] Cleaned data:`, JSON.stringify(cleaned, null, 2));
-            throw new Error(`Invalid document data: found empty keys at paths: ${emptyKeyPaths.join(', ')}`);
-          }
+          // cleanForFirestore now handles empty key removal universally
           
           const docRef = db.collection(collectionName).doc(item.id);
           batch.set(docRef, cleaned);

@@ -238,6 +238,42 @@ export function cleanUndefinedValues<T extends Record<string, any>>(obj: T): Par
 }
 
 /**
+ * Remove empty string keys from an object recursively
+ * This ensures compatibility with Firestore which rejects empty string field names
+ * @param obj - Object to clean
+ * @returns Object with empty string keys removed
+ */
+export function removeEmptyKeys<T>(obj: T): T {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj) || obj instanceof Date) {
+    return obj;
+  }
+  
+  const result: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    // Skip empty string keys - these are invalid in Firestore
+    if (key === '' || key == null) {
+      console.warn(`Removing invalid Firestore field name: "${key}"`);
+      continue;
+    }
+    
+    // Recursively clean nested objects
+    if (value && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+      result[key] = removeEmptyKeys(value);
+    } else if (Array.isArray(value)) {
+      // Clean array elements that are objects
+      result[key] = value.map(item => 
+        (item && typeof item === 'object' && !Array.isArray(item) && !(item instanceof Date))
+          ? removeEmptyKeys(item)
+          : item
+      );
+    } else {
+      result[key] = value;
+    }
+  }
+  return result as T;
+}
+
+/**
  * Type guard to check if an error is a Zod validation error
  * @param error - Error to check
  * @returns True if error is ZodError

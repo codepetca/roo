@@ -75,28 +75,54 @@ export class GeminiService {
       const response = await result.response;
       const text = response.text();
 
-      // Parse JSON response with better error handling
+      // Parse JSON response with better error handling and fallback
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
-        logger.error("No JSON found in Gemini response", {
+        logger.error("No JSON found in Gemini response, creating fallback response", {
           submissionId: request.submissionId,
           responseText: text.substring(0, 500) + (text.length > 500 ? '...' : ''),
           promptLength: prompt.length
         });
-        throw new Error("Invalid response format from AI - no JSON found in response");
+        
+        // Create fallback JSON response when AI doesn't return proper JSON
+        const fallbackResult: GradingResponse = {
+          score: 0,
+          feedback: `AI grading failed to return proper JSON format. Raw response: "${text.substring(0, 200)}${text.length > 200 ? '...' : ''}". Please review this submission manually.`,
+          criteriaScores: request.criteria.map((criterion, index) => ({
+            name: criterion,
+            score: 0,
+            maxScore: Math.floor(request.maxPoints / request.criteria.length),
+            feedback: "Could not evaluate due to AI response format issue"
+          }))
+        };
+        
+        return fallbackResult;
       }
 
       let gradingResult: GradingResponse;
       try {
         gradingResult = JSON.parse(jsonMatch[0]) as GradingResponse;
       } catch (parseError) {
-        logger.error("Failed to parse JSON from Gemini response", {
+        logger.error("Failed to parse JSON from Gemini response, creating fallback", {
           submissionId: request.submissionId,
           jsonMatch: jsonMatch[0],
           parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error',
           fullResponse: text.substring(0, 1000) + (text.length > 1000 ? '...' : '')
         });
-        throw new Error(`Invalid JSON format from AI: ${parseError instanceof Error ? parseError.message : 'Parse error'}`);
+        
+        // Create fallback response for malformed JSON
+        const fallbackResult: GradingResponse = {
+          score: 0,
+          feedback: `AI returned malformed JSON. Parse error: ${parseError instanceof Error ? parseError.message : 'Unknown'}. Raw JSON: "${jsonMatch[0].substring(0, 200)}${jsonMatch[0].length > 200 ? '...' : ''}". Please review this submission manually.`,
+          criteriaScores: request.criteria.map((criterion, index) => ({
+            name: criterion,
+            score: 0,
+            maxScore: Math.floor(request.maxPoints / request.criteria.length),
+            feedback: "Could not evaluate due to malformed AI response"
+          }))
+        };
+        
+        return fallbackResult;
       }
 
       // Validate response

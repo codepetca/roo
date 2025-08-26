@@ -445,25 +445,28 @@ export async function gradeAllAssignments(req: Request, res: Response) {
         
         for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
           try {
-            // Get submission text from the correct field (FIX: Use extractedContent.text)
-            const submissionText = submission.extractedContent?.text || submission.content || '';
+            // Get submission text from the normalized content field
+            const submissionText = submission.content || '';
             
-            // Check if this is a Google Forms submission that failed to extract
-            // Note: assignment might have materials from snapshot data (not in DTO type)
-            const assignmentData = assignment as any;
-            const isGoogleForm = assignmentData?.materials?.forms && assignmentData.materials.forms.length > 0;
-            const hasExtractionErrors = submission.extractedContent?.metadata?.extractionErrors?.length > 0;
-            
-            if (isGoogleForm && (!submissionText || submissionText.trim() === '') && hasExtractionErrors) {
-              console.log(`⚠️ Google Forms submission with extraction errors: ${submission.studentName}`);
-              // Return a specific response for failed form extraction
+            // Check if this is an empty submission (before sending to AI)
+            if (!submissionText || submissionText.trim() === '') {
+              console.log(`⚠️ Empty submission detected: ${submission.studentName}`);
+              // Note: assignment might have materials from snapshot data (not in DTO type)
+              const assignmentData = assignment as any;
+              const isGoogleForm = assignmentData?.materials?.forms && assignmentData.materials.forms.length > 0;
+              
+              const feedbackText = isGoogleForm 
+                ? "This is a Google Forms submission with no content. The form responses may not be accessible or the form extraction failed during import. Please check the form permissions and try re-importing the classroom data."
+                : "This submission appears to be empty. The student may not have submitted any work, or there was an issue extracting the content during import.";
+              
+              // Return a structured response for empty submissions (avoids AI confusion)
               return {
                 submissionId: submission.id,
                 score: 0,
                 maxScore: assignment.maxScore || 100,
-                feedback: "This is a Google Forms submission that could not be processed. The form responses may not be accessible or the form extraction failed. Please check the form permissions and try re-importing the classroom data.",
-                gradeId: 'pending_form_extraction',
-                error: 'Form extraction failed'
+                feedback: feedbackText,
+                gradeId: 'empty_submission',
+                error: isGoogleForm ? 'Empty form submission' : 'Empty submission'
               };
             }
             

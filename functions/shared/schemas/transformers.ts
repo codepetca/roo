@@ -431,7 +431,7 @@ function transformSubmission(
     studentId,
     studentEmail: submission.studentEmail,
     studentName: submission.studentName,
-    content: submission.studentWork || '',
+    content: submission.extractedContent?.text || submission.studentWork || '',
     attachments,
     status,
     submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : new Date(),
@@ -452,17 +452,9 @@ function transformSubmission(
     
     extractedContent: submission.extractedContent ? {
       text: submission.extractedContent.text || '',
-      structuredData: submission.extractedContent.structuredData ? 
-        Object.fromEntries(
-          Object.entries(submission.extractedContent.structuredData)
-            .filter(([key]) => key !== '' && key != null)
-        ) : {},
+      structuredData: submission.extractedContent.structuredData || {},
       images: submission.extractedContent.images || [],
-      metadata: submission.extractedContent.metadata ? 
-        Object.fromEntries(
-          Object.entries(submission.extractedContent.metadata)
-            .filter(([key]) => key !== '' && key != null)
-        ) : {}
+      metadata: submission.extractedContent.metadata || {}
     } : undefined
   };
 }
