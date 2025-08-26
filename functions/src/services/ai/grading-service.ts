@@ -150,7 +150,7 @@ export class GeminiService {
   }
 
   /**
-   * Grade a quiz with multiple questions using mixed AI and rule-based grading
+   * Grade a quiz with multiple questions using optimized bulk AI grading
    */
   async gradeQuiz(request: QuizGradingRequest): Promise<QuizGradingResponse> {
     const rateLimitKey = `quiz:${request.formId}`;
@@ -165,67 +165,83 @@ export class GeminiService {
     const questionGrades = [];
     let totalScore = 0;
 
+    // Separate multiple choice from AI-graded questions
+    const multipleChoiceQuestions = [];
+    const aiGradedQuestions = [];
+
     for (const question of request.answerKey.questions) {
       const studentAnswer = request.studentAnswers[question.questionNumber] || "";
       
-      // For multiple choice, do exact matching
       if (question.questionType === "MULTIPLE_CHOICE") {
-        const isCorrect = studentAnswer.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase();
-        const score = isCorrect ? question.points : 0;
-        
-        questionGrades.push({
-          questionNumber: question.questionNumber,
-          score,
-          feedback: isCorrect ? "Correct!" : `Incorrect. The correct answer is: ${question.correctAnswer}`,
-          maxScore: question.points
-        });
-        
-        totalScore += score;
+        multipleChoiceQuestions.push({ question, studentAnswer });
       } else {
-        // For text/code questions, use AI grading with appropriate strictness
-        const prompt = this.buildQuestionGradingPrompt(question, studentAnswer);
+        aiGradedQuestions.push({ question, studentAnswer });
+      }
+    }
+
+    // Process multiple choice questions instantly
+    for (const { question, studentAnswer } of multipleChoiceQuestions) {
+      const isCorrect = studentAnswer.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase();
+      const score = isCorrect ? question.points : 0;
+      
+      questionGrades.push({
+        questionNumber: question.questionNumber,
+        score,
+        feedback: isCorrect ? "Correct!" : `Incorrect. The correct answer is: ${question.correctAnswer}`,
+        maxScore: question.points
+      });
+      
+      totalScore += score;
+    }
+
+    // Process all AI-graded questions in a single bulk call
+    if (aiGradedQuestions.length > 0) {
+      try {
+        const bulkPrompt = this.buildBulkQuizGradingPrompt(aiGradedQuestions);
+        const result = await this.model.generateContent(bulkPrompt);
+        const response = await result.response;
+        const text = response.text();
         
-        try {
-          const result = await this.model.generateContent(prompt);
-          const response = await result.response;
-          const text = response.text();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const bulkResults = JSON.parse(jsonMatch[0]);
           
-          const jsonMatch = text.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const gradingResult = JSON.parse(jsonMatch[0]);
-            const score = Math.max(0, Math.min(question.points, gradingResult.score || 0));
+          // Process results for each AI-graded question
+          for (const { question } of aiGradedQuestions) {
+            const gradingResult = bulkResults.results?.[question.questionNumber];
             
-            questionGrades.push({
-              questionNumber: question.questionNumber,
-              score,
-              feedback: gradingResult.feedback || "No feedback provided",
-              maxScore: question.points
-            });
-            
-            totalScore += score;
-          } else {
-            // Fallback: give partial credit for non-empty answers
-            const score = studentAnswer.trim() ? Math.floor(question.points * 0.5) : 0;
-            questionGrades.push({
-              questionNumber: question.questionNumber,
-              score,
-              feedback: "Could not parse AI response, partial credit given for attempt",
-              maxScore: question.points
-            });
-            totalScore += score;
+            if (gradingResult) {
+              const score = Math.max(0, Math.min(question.points, gradingResult.score || 0));
+              
+              questionGrades.push({
+                questionNumber: question.questionNumber,
+                score,
+                feedback: gradingResult.feedback || "No feedback provided",
+                maxScore: question.points
+              });
+              
+              totalScore += score;
+            } else {
+              // Fallback for missing results
+              const studentAnswer = request.studentAnswers[question.questionNumber] || "";
+              const score = studentAnswer.trim() ? Math.floor(question.points * 0.7) : 0;
+              questionGrades.push({
+                questionNumber: question.questionNumber,
+                score,
+                feedback: "Bulk grading result missing, partial credit given",
+                maxScore: question.points
+              });
+              totalScore += score;
+            }
           }
-        } catch (error) {
-          logger.error(`Error grading question ${question.questionNumber}`, error);
-          // Give partial credit for attempts
-          const score = studentAnswer.trim() ? Math.floor(question.points * 0.5) : 0;
-          questionGrades.push({
-            questionNumber: question.questionNumber,
-            score,
-            feedback: "Grading error occurred, partial credit given for attempt",
-            maxScore: question.points
-          });
-          totalScore += score;
+        } else {
+          // Fallback: individual processing for parse errors
+          logger.warn('Bulk quiz grading failed to parse, falling back to individual grading');
+          return this.fallbackToIndividualGrading(request);
         }
+      } catch (error) {
+        logger.error('Bulk quiz grading failed, falling back to individual grading', error);
+        return this.fallbackToIndividualGrading(request);
       }
     }
 
@@ -273,6 +289,136 @@ export class GeminiService {
       .replace("{studentAnswer}", studentAnswer)
       .replace("{correctAnswer}", question.correctAnswer)
       .replace("{maxPoints}", question.points.toString());
+  }
+
+  /**
+   * Build bulk grading prompt for multiple quiz questions
+   */
+  private buildBulkQuizGradingPrompt(questionData: Array<{question: any, studentAnswer: string}>): string {
+    const questionsSection = questionData.map(({question, studentAnswer}, index) => {
+      const questionNumber = question.questionNumber;
+      
+      // Detect if this is likely a code question for generous grading
+      const isCodeQuestion = question.questionText.toLowerCase().includes("code") || 
+                            question.questionText.toLowerCase().includes("program") ||
+                            question.questionText.toLowerCase().includes("karel") ||
+                            studentAnswer.includes("{") || studentAnswer.includes("}");
+
+      const gradingMode = question.gradingStrictness === "generous" || isCodeQuestion 
+        ? "GENEROUS GRADING MODE: Focus on understanding and logic over syntax"
+        : question.gradingStrictness === "strict" 
+        ? "STRICT GRADING MODE: Accuracy and precision are important"
+        : "BALANCED GRADING MODE: Be fair but encouraging";
+
+      return `
+QUESTION ${questionNumber}:
+Text: ${question.questionText}
+Student Answer: "${studentAnswer}"
+Correct Answer: ${question.correctAnswer}
+Max Points: ${question.points}
+Grading Mode: ${gradingMode}
+`;
+    }).join('\n');
+
+    return `You are grading a quiz with multiple questions. Grade ALL questions and return results as a single JSON object.
+
+${questionsSection}
+
+Return your response as a JSON object in this exact format:
+{
+  "results": {
+    "1": { "score": number, "feedback": "string" },
+    "2": { "score": number, "feedback": "string" },
+    ...
+  }
+}
+
+For each question:
+- Assign a score between 0 and the max points
+- Provide specific, constructive feedback
+- Follow the specified grading mode for each question
+- Be generous with partial credit for code questions
+- Focus on understanding over perfect syntax for programming questions`;
+  }
+
+  /**
+   * Fallback to individual question grading when bulk grading fails
+   */
+  private async fallbackToIndividualGrading(request: QuizGradingRequest): Promise<QuizGradingResponse> {
+    logger.warn('Using fallback individual grading for quiz', {
+      submissionId: request.submissionId,
+      questionCount: request.answerKey.questions.length
+    });
+
+    const questionGrades = [];
+    let totalScore = 0;
+
+    for (const question of request.answerKey.questions) {
+      const studentAnswer = request.studentAnswers[question.questionNumber] || "";
+      
+      if (question.questionType === "MULTIPLE_CHOICE") {
+        const isCorrect = studentAnswer.trim().toLowerCase() === question.correctAnswer.trim().toLowerCase();
+        const score = isCorrect ? question.points : 0;
+        
+        questionGrades.push({
+          questionNumber: question.questionNumber,
+          score,
+          feedback: isCorrect ? "Correct!" : `Incorrect. The correct answer is: ${question.correctAnswer}`,
+          maxScore: question.points
+        });
+        
+        totalScore += score;
+      } else {
+        try {
+          const questionPrompt = this.buildQuestionGradingPrompt(question, studentAnswer);
+          const result = await this.model.generateContent(questionPrompt);
+          const response = await result.response;
+          const text = response.text();
+          
+          const jsonMatch = text.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const gradingResult = JSON.parse(jsonMatch[0]);
+            const score = Math.max(0, Math.min(question.points, gradingResult.score || 0));
+            
+            questionGrades.push({
+              questionNumber: question.questionNumber,
+              score,
+              feedback: gradingResult.feedback || "No feedback provided",
+              maxScore: question.points
+            });
+            
+            totalScore += score;
+          } else {
+            // Final fallback for unparseable responses
+            const score = studentAnswer.trim() ? Math.floor(question.points * 0.5) : 0;
+            questionGrades.push({
+              questionNumber: question.questionNumber,
+              score,
+              feedback: "AI grading failed, partial credit given based on response presence",
+              maxScore: question.points
+            });
+            totalScore += score;
+          }
+        } catch (error) {
+          logger.error('Individual question grading failed', {
+            questionNumber: question.questionNumber,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+          
+          // Emergency fallback
+          const score = studentAnswer.trim() ? Math.floor(question.points * 0.3) : 0;
+          questionGrades.push({
+            questionNumber: question.questionNumber,
+            score,
+            feedback: "Grading error occurred, minimal credit given",
+            maxScore: question.points
+          });
+          totalScore += score;
+        }
+      }
+    }
+
+    return { totalScore, questionGrades };
   }
 
   /**
