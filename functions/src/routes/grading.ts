@@ -49,6 +49,85 @@ function deriveClassificationFromAssignment(assignment: any): AssignmentClassifi
 }
 
 /**
+ * Extract submission content based on assignment classification
+ * Different platforms store data in different fields
+ * Updated: 2025-08-26 - Fixed Google Forms quiz extraction
+ */
+function extractSubmissionContent(submission: any, classification: AssignmentClassification): string {
+  // Google Forms - check quiz-specific fields
+  if (classification.platform === 'google_form') {
+    // Priority 1: Quiz response data
+    if (submission.quizResponse) {
+      return formatQuizResponse(submission.quizResponse);
+    }
+    
+    // Priority 2: Structured data in extractedContent
+    if (submission.extractedContent?.structuredData) {
+      return JSON.stringify(submission.extractedContent.structuredData, null, 2);
+    }
+    
+    // Priority 3: Check attachments for form data
+    if (submission.attachments?.length > 0) {
+      const formAttachment = submission.attachments.find((a: any) => a.type === 'form');
+      if (formAttachment) {
+        return `Form Response: ${formAttachment.title || 'Google Form'}\n${formAttachment.responseData || 'No response data available'}`;
+      }
+    }
+  }
+  
+  // Google Docs - prioritize extracted text
+  if (classification.platform === 'google_docs') {
+    if (submission.extractedContent?.text) {
+      return submission.extractedContent.text;
+    }
+  }
+  
+  // Code submissions - check for processed code
+  if (classification.contentType === 'code') {
+    if (submission.extractedContent?.text) {
+      return submission.extractedContent.text;
+    }
+  }
+  
+  // Standard fallback chain for all other types
+  return submission.content || 
+         submission.extractedContent?.text || 
+         submission.studentWork || 
+         '';
+}
+
+/**
+ * Format quiz response data for AI processing
+ */
+function formatQuizResponse(quizResponse: any): string {
+  if (!quizResponse) return '';
+  
+  let formatted = `Quiz Response\n============\n`;
+  
+  // Handle response ID
+  if (quizResponse.responseId) {
+    formatted += `Response ID: ${quizResponse.responseId}\n\n`;
+  }
+  
+  // Handle responses array
+  if (quizResponse.responses && Array.isArray(quizResponse.responses)) {
+    quizResponse.responses.forEach((item: any, idx: number) => {
+      formatted += `Question ${idx + 1}: ${item.questionText || item.question || 'Unknown question'}\n`;
+      formatted += `Answer: ${item.answer || item.selectedChoice || item.response || 'No answer provided'}\n`;
+      if (item.points !== undefined) {
+        formatted += `Points: ${item.points}\n`;
+      }
+      formatted += '\n';
+    });
+  } else if (typeof quizResponse === 'object') {
+    // Handle other quiz response formats
+    formatted += JSON.stringify(quizResponse, null, 2);
+  }
+  
+  return formatted;
+}
+
+/**
  * Test AI grading with sample text (development endpoint)
  * Location: functions/src/routes/grading.ts:9
  * Route: POST /test-grading
@@ -420,13 +499,13 @@ export async function gradeAllAssignments(req: Request, res: Response) {
     }
     
     // Process submissions in batches to respect rate limits
-    // Reduce batch size for better rate limit management
-    const BATCH_SIZE = 3;
+    // Optimized settings: Gemini Flash allows 1500 requests/minute (25/second)
+    const BATCH_SIZE = 10; // Process 10 submissions in parallel
     const successful: any[] = [];
     const failed: any[] = [];
     
     // Add small delay between batches to avoid overwhelming the API
-    const BATCH_DELAY_MS = 2000; // 2 seconds between batches
+    const BATCH_DELAY_MS = 100; // 100ms between batches - minimal delay for safety
     
     for (let i = 0; i < submissions.length; i += BATCH_SIZE) {
       const batch = submissions.slice(i, i + BATCH_SIZE);
@@ -445,12 +524,29 @@ export async function gradeAllAssignments(req: Request, res: Response) {
         
         for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
           try {
-            // Get submission text from the normalized content field
-            const submissionText = submission.content || '';
+            // Smart grading strategy selection using new classification system
+            const classification = assignment.classification || deriveClassificationFromAssignment(assignment);
+            
+            // Get submission text using classification-aware extraction
+            const submissionText = extractSubmissionContent(submission, classification);
             
             // Check if this is an empty submission (before sending to AI)
             if (!submissionText || submissionText.trim() === '') {
               console.log(`⚠️ Empty submission detected: ${submission.studentName}`);
+              console.log(`📊 Classification:`, {
+                platform: classification.platform,
+                contentType: classification.contentType,
+                gradingApproach: classification.gradingApproach
+              });
+              console.log(`🔍 Available submission fields:`, {
+                hasContent: !!submission.content,
+                hasExtractedContent: !!submission.extractedContent,
+                hasStudentWork: !!submission.studentWork,
+                hasQuizResponse: !!submission.quizResponse,
+                extractedContentKeys: submission.extractedContent ? Object.keys(submission.extractedContent) : [],
+                submissionKeys: Object.keys(submission)
+              });
+              
               // Note: assignment might have materials from snapshot data (not in DTO type)
               const assignmentData = assignment as any;
               const isGoogleForm = assignmentData?.materials?.forms && assignmentData.materials.forms.length > 0;
@@ -469,9 +565,6 @@ export async function gradeAllAssignments(req: Request, res: Response) {
                 error: isGoogleForm ? 'Empty form submission' : 'Empty submission'
               };
             }
-            
-            // Smart grading strategy selection using new classification system
-            const classification = assignment.classification || deriveClassificationFromAssignment(assignment);
             
             // Runtime content analysis - detect code in submission
             const codePatterns = [

@@ -61,11 +61,12 @@ This project implements **comprehensive type safety** at every layer:
 2. **Transformation Pipeline** (`shared/schemas/transformers.ts`): Snapshot → Core conversion
 3. **Repository Services** (`functions/src/services/`): Type-safe CRUD with Firebase Admin SDK
 4. **Grade Versioning** (`functions/src/services/grade-versioning.ts`): Protected grade history
+5. **AI Grading Pipeline** (`functions/src/routes/grading.ts`): Classification-aware content extraction and AI grading
 
 ### **Frontend Layer (Simple API Consumption)**
-5. **API Client** (`frontend/src/lib/api/client.ts`): Direct HTTP calls with auth token injection
-6. **API Endpoints** (`frontend/src/lib/api/endpoints.ts`): Type-safe endpoint definitions with Zod validation
-7. **Simple Stores** (`frontend/src/lib/stores/`): Reactive state management with Svelte 5 runes
+6. **API Client** (`frontend/src/lib/api/client.ts`): Direct HTTP calls with auth token injection
+7. **API Endpoints** (`frontend/src/lib/api/endpoints.ts`): Type-safe endpoint definitions with Zod validation
+8. **Simple Stores** (`frontend/src/lib/stores/`): Reactive state management with Svelte 5 runes
 
 ## 🔄 **SIMPLIFIED FRONTEND ARCHITECTURE (Current)**
 
@@ -75,6 +76,19 @@ This project implements **comprehensive type safety** at every layer:
 ```
 SvelteKit Load Functions → HTTP API Calls → typedApiRequest → Zod Validation → Reactive Stores → UI Components
 ```
+
+### **AI Grading Pipeline (Backend Only)**
+```
+AppScript Extract → Snapshot Import → Firestore Storage → Classification-Aware Extraction → AI Grading → Grade Storage
+```
+
+**Pipeline Architecture Rules**:
+1. **AppScript** (`appscript/development/classroom-snapshot-exporter/`): Extracts submissions from Google Classroom, detects platform types (Google Forms, Docs, etc.)
+2. **Snapshot Processing** (`functions/src/services/snapshot-processor.ts`): Transforms raw classroom data into normalized core entities with classification metadata
+3. **Classification System** (`shared/schemas/core.ts`): Each assignment gets `platform`, `contentType`, and `gradingApproach` classification
+4. **Content Extraction** (`functions/src/routes/grading.ts:extractSubmissionContent()`): Platform-aware data extraction (Google Forms → `quizResponse`, Google Docs → `extractedContent.text`, etc.)
+5. **AI Grading** (Google Gemini 1.5 Flash): Receives properly extracted content with context-appropriate prompts based on classification
+6. **Grade Versioning** (`functions/src/services/grade-versioning.ts`): Preserves grade history across assignment updates
 
 ### **Key Frontend Components**
 - **Load Functions** (`routes/**/+page.ts`): SvelteKit SSR data loading with fetch()
