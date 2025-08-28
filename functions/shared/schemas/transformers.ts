@@ -41,6 +41,10 @@ export class StableIdGenerator {
   }
 
   static submission(classroomId: string, assignmentId: string, studentId: string): string {
+    // If assignmentId already contains the classroom prefix, don't duplicate it
+    if (assignmentId.startsWith(classroomId)) {
+      return `${assignmentId}_${studentId}`;
+    }
     return `${classroomId}_${assignmentId}_${studentId}`;
   }
 

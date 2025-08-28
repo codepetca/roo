@@ -80,7 +80,12 @@ export class FirestoreGradeService {
         gradedAt: getCurrentTimestamp() as admin.firestore.Timestamp
       };
 
-      const gradeRef = await db.collection("grades").add(grade);
+      // Remove undefined fields to prevent Firestore errors
+      const cleanGrade = Object.fromEntries(
+        Object.entries(grade).filter(([_, value]) => value !== undefined)
+      ) as GradeData;
+
+      const gradeRef = await db.collection("grades").add(cleanGrade);
       
       // Update the submission status if submission exists
       try {
