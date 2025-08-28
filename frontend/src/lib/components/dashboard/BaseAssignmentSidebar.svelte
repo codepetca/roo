@@ -112,9 +112,7 @@
 					<button
 						onclick={() => handleAssignmentSelect(assignment.id)}
 						class="w-full border-b border-gray-200 py-2 text-left transition-all
-							{assignment.id === selectedAssignmentId
-							? 'bg-blue-200'
-							: 'bg-white hover:bg-gray-50'}"
+							{assignment.id === selectedAssignmentId ? 'bg-blue-200' : 'bg-white hover:bg-gray-50'}"
 					>
 						<div class="min-w-0 flex-1 px-3">
 							<div class="flex items-center space-x-2">
@@ -144,7 +142,9 @@
 									{/if}
 								</div>
 								{#if isGoogleForm(assignment)}
-									<span class="text-xs font-medium text-purple-700 bg-purple-200 px-2 py-0.5 rounded">
+									<span
+										class="rounded bg-purple-200 px-2 py-0.5 text-xs font-medium text-purple-700"
+									>
 										Form
 									</span>
 								{/if}

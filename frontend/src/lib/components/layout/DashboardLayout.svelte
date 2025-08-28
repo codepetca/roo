@@ -3,14 +3,14 @@
 
 	let {
 		topComponent,
-		sidebarComponent, 
+		sidebarComponent,
 		mainComponent,
 		viewMode = 'assignment',
 		error = null
 	}: {
 		topComponent?: Snippet;
 		sidebarComponent?: Snippet;
-		mainComponent?: Snippet; 
+		mainComponent?: Snippet;
 		viewMode?: 'assignment' | 'grid';
 		error?: string | null;
 	} = $props();

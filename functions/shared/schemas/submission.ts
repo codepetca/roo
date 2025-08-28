@@ -101,7 +101,7 @@ export const gradeSchema = z.object({
   
   // Grading metadata
   gradedAt: z.string().datetime(),
-  gradedBy: z.enum(['ai', 'manual', 'system']),
+  gradedBy: z.enum(['ai', 'manual', 'system', 'teacher']),
   gradingMethod: z.enum(['rubric', 'points', 'completion']).optional(),
   
   // Rubric grading (if applicable)
@@ -121,6 +121,14 @@ export const gradeSchema = z.object({
     processingTime: z.number(), // milliseconds
     tokenUsage: z.number().optional()
   }).optional(),
+  
+  // Question-by-question scores and feedback (for quizzes)
+  questionGrades: z.array(z.object({
+    questionNumber: z.number(),
+    score: z.number().min(0),
+    maxScore: z.number().min(0),
+    feedback: z.string()
+  })).optional(),
   
   // Review status
   needsReview: z.boolean().default(false),
@@ -149,7 +157,7 @@ export const enhancedSubmissionSchema = z.object({
   // Status and timing
   status: z.enum(['pending', 'submitted', 'grading', 'graded', 'returned', 'error']),
   submittedAt: z.string().datetime().optional(),
-  updatedAt: z.string().datetime(),
+  updatedAt: z.string().datetime().optional(),
   
   // Grading information
   grade: gradeSchema.optional(),

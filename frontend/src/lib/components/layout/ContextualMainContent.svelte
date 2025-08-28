@@ -148,7 +148,8 @@
 							<div class="flex items-start space-x-4">
 								<!-- Assignment Icon -->
 								<div
-									class="flex-shrink-0 p-3 {selectedAssignment.classification?.platform === 'google_form'
+									class="flex-shrink-0 p-3 {selectedAssignment.classification?.platform ===
+									'google_form'
 										? 'bg-green-100 text-green-600'
 										: 'bg-blue-100 text-blue-600'} rounded-lg"
 								>
@@ -167,7 +168,11 @@
 										<h3 class="text-lg font-semibold text-gray-900">
 											{dataStore.getAssignmentDisplayTitle(selectedAssignment)}
 										</h3>
-										<Badge variant={selectedAssignment.classification?.platform === 'google_form' ? 'success' : 'info'}>
+										<Badge
+											variant={selectedAssignment.classification?.platform === 'google_form'
+												? 'success'
+												: 'info'}
+										>
 											{#snippet children()}
 												{dataStore.getAssignmentTypeLabel(selectedAssignment)}
 											{/snippet}
@@ -376,7 +381,8 @@
 												<div class="flex items-center space-x-3">
 													<!-- Assignment Icon -->
 													<div
-														class="flex-shrink-0 p-2 {assignment.classification?.platform === 'google_form'
+														class="flex-shrink-0 p-2 {assignment.classification?.platform ===
+														'google_form'
 															? 'bg-green-100 text-green-600'
 															: 'bg-blue-100 text-blue-600'} rounded-lg"
 													>

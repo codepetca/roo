@@ -23,6 +23,12 @@ export interface GradeData {
     maxScore: number;
     feedback: string;
   }>;
+  questionGrades?: Array<{
+    questionNumber: number;
+    score: number;
+    feedback: string;
+    maxScore: number;
+  }>;
   metadata?: {
     submissionLength?: number;
     criteria?: string[];
@@ -306,7 +312,9 @@ export class FirestoreGradeService {
                            : 0,
               // Add missing required fields with defaults
               classroomId: gradeData.classroomId || gradeData.assignmentId?.split('_assignment_')[0] || '',
-              submissionVersionGraded: gradeData.submissionVersionGraded || 1
+              submissionVersionGraded: gradeData.submissionVersionGraded || 1,
+              // Extract questionGrades from direct field or fallback to metadata
+              questionGrades: gradeData.questionGrades || gradeData.metadata?.questionGrades || undefined
             };
             
             gradeMap.set(doc.id, transformedGrade);

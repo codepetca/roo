@@ -205,7 +205,7 @@ function testExport() {
       maxClassrooms: 1,
       maxStudentsPerClass: 5,
       maxSubmissionsPerAssignment: 3,
-      includeSubmissions: false, // Start without submissions for faster testing
+      includeSubmissions: true, // Include submissions to test complete functionality
       selectedClassrooms: [firstClassroom.id] // Always select at least one classroom for testing
     });
     
@@ -550,6 +550,133 @@ function testFormsExtraction() {
   } catch (error) {
     console.error('❌ Forms extraction test failed:', error);
     return { success: false, error: error.message, stack: error.stack };
+  }
+}
+
+/**
+ * Test complete quiz data extraction integration
+ * Tests QuizExtractor + ContentExtractor + DataCollectors integration
+ */
+function testCompleteQuizIntegration() {
+  try {
+    console.log('🧪 === Testing Complete Quiz Integration ===');
+    
+    // Get classrooms to find assignments with forms
+    const classrooms = DataCollectors.collectClassrooms();
+    console.log(`Found ${classrooms.length} classrooms`);
+    
+    if (!classrooms || classrooms.length === 0) {
+      console.error('❌ No classrooms found');
+      return { success: false, error: 'No classrooms available' };
+    }
+    
+    // Look for assignments with forms
+    let testAssignment = null;
+    let testClassroom = null;
+    
+    for (const classroom of classrooms) {
+      console.log(`\n📚 Checking classroom: ${classroom.name}`);
+      
+      const assignments = DataCollectors.collectAssignments(classroom.id, {
+        includeMaterials: true,
+        includeQuizData: true
+      });
+      
+      // Find assignment with forms
+      const formsAssignment = assignments.find(a => 
+        a.materials && a.materials.some(m => m.form && m.form.formUrl)
+      );
+      
+      if (formsAssignment) {
+        testAssignment = formsAssignment;
+        testClassroom = classroom;
+        break;
+      }
+    }
+    
+    if (!testAssignment) {
+      console.log('⚠️ No assignments with forms found in accessible classrooms');
+      return { success: false, error: 'No form assignments found' };
+    }
+    
+    console.log(`\n🎯 Testing with assignment: ${testAssignment.title}`);
+    console.log(`📋 Assignment has quizData: ${!!testAssignment.quizData}`);
+    
+    if (testAssignment.quizData) {
+      console.log(`✅ Quiz extraction successful:`);
+      console.log(`  📝 Questions: ${testAssignment.quizData.totalQuestions}`);
+      console.log(`  📊 Points: ${testAssignment.quizData.totalPoints}`);
+      console.log(`  🤖 Auto-gradable: ${testAssignment.quizData.autoGradableQuestions}`);
+      console.log(`  ✋ Manual grading needed: ${testAssignment.quizData.manualGradingRequired}`);
+      
+      // Show first few questions as example
+      if (testAssignment.quizData.questions && testAssignment.quizData.questions.length > 0) {
+        console.log(`\n📝 Sample questions:`);
+        testAssignment.quizData.questions.slice(0, 3).forEach((q, i) => {
+          console.log(`  ${i + 1}. ${q.title} (${q.points}pts, ID: ${q.id})`);
+          if (q.correctAnswers && q.correctAnswers.length > 0) {
+            console.log(`     ✅ Correct: ${q.correctAnswers.join(', ')}`);
+          }
+        });
+      }
+      
+      // Test student response matching
+      const students = DataCollectors.collectStudents(testClassroom.id);
+      if (students && students.length > 0) {
+        console.log(`\n👥 Testing with ${students.length} students...`);
+        
+        const firstStudent = students[0];
+        console.log(`🧑‍🎓 Testing student: ${firstStudent.profile?.name?.fullName || firstStudent.profile?.emailAddress || 'Unknown'}`);
+        console.log(`🔍 Student data structure:`, JSON.stringify(firstStudent, null, 2));
+        
+        // Test content extraction - try different possible email paths
+        const formUrl = testAssignment.materials.find(m => m.form).form.formUrl;
+        const formId = ContentExtractor.extractFormIdFromUrl(formUrl);
+        
+        // Try different ways to get student email
+        const studentEmail = firstStudent.profile?.emailAddress || 
+                           firstStudent.profile?.email || 
+                           firstStudent.emailAddress ||
+                           firstStudent.email;
+                           
+        console.log(`📧 Using student email: ${studentEmail}`);
+        const extractedContent = ContentExtractor.extractFormResponse(formId, studentEmail);
+        
+        if (extractedContent && extractedContent.structuredData) {
+          console.log(`✅ Content extraction successful:`);
+          console.log(`  📝 Questions answered: ${Object.keys(extractedContent.structuredData).length}`);
+          
+          // Check if question IDs match
+          const questionIds = Object.keys(extractedContent.structuredData);
+          const quizQuestionIds = testAssignment.quizData.questions.map(q => q.id);
+          
+          const matchingIds = questionIds.filter(id => quizQuestionIds.includes(id));
+          console.log(`  🔗 Matching question IDs: ${matchingIds.length}/${questionIds.length}`);
+          
+          if (matchingIds.length > 0) {
+            console.log(`✅ Integration successful - questions can be matched between quiz structure and student responses!`);
+          } else {
+            console.log(`⚠️ No matching question IDs - check ID extraction logic`);
+          }
+        } else {
+          console.log(`⚠️ No content extracted for student (may not have submitted)`);
+        }
+      }
+      
+      return {
+        success: true,
+        quizData: testAssignment.quizData,
+        message: 'Quiz integration test completed successfully'
+      };
+      
+    } else {
+      console.log(`❌ Quiz extraction failed - form may not be configured as quiz`);
+      return { success: false, error: 'Quiz extraction failed' };
+    }
+    
+  } catch (error) {
+    console.error('❌ Quiz integration test failed:', error.toString());
+    return { success: false, error: error.toString() };
   }
 }
 

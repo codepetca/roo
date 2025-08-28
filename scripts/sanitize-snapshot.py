@@ -140,8 +140,8 @@ def anonymize_json(data):
         if isinstance(obj, dict):
             new_obj = {}
             for key, value in obj.items():
-                # Replace teacher email (including teacherEmail field)
-                if key in ["email", "teacherEmail"] and value == "stewart.chan@gapps.yrdsb.ca":
+                # Replace teacher email (including teacherEmail, teacherId fields)
+                if key in ["email", "teacherEmail", "teacherId"] and value == "stewart.chan@gapps.yrdsb.ca":
                     new_obj[key] = "teacher@schoolemail.com"
                 # Replace student emails
                 elif key in ["email", "studentEmail"] and "@gapps.yrdsb.ca" in str(value):
@@ -262,7 +262,7 @@ def anonymize_json(data):
     return replace_identifiers(data)
 
 def main():
-    source_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-stewart.chan-2025-08-24.json")
+    source_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-stewart.chan-2025-08-27.json")
     output_file = Path("/Users/stew/Repos/vibe/roo/frontend/e2e/fixtures/classroom-snapshot-mock.json")
     
     print(f"Reading {source_file}...")

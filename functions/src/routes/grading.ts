@@ -307,11 +307,11 @@ export async function gradeQuiz(req: Request, res: Response) {
       maxPoints: answerKey.totalPoints,
       feedback: `Quiz graded automatically. Score: ${gradingResult.totalScore}/${answerKey.totalPoints}`,
       gradedBy: "ai",
+      questionGrades: gradingResult.questionGrades,
       metadata: {
         formId: validatedData.formId,
         questionCount: answerKey.questions.length,
-        totalQuestions: answerKey.questions.length,
-        questionGrades: gradingResult.questionGrades
+        totalQuestions: answerKey.questions.length
       }
     });
 
@@ -597,31 +597,105 @@ export async function gradeAllAssignments(req: Request, res: Response) {
             };
             const promptTemplate = promptTemplateMap[finalGradingApproach] || GRADING_PROMPTS.default;
             
-            // Select criteria based on content type
-            const criteriaMap: Record<string, string[]> = {
-              'code': ["Understanding", "Logic", "Implementation"],
-              'choice': ["Accuracy"],
-              'short_answer': ["Accuracy", "Completeness", "Understanding"],
-              'text': ["Content", "Organization", "Analysis"],
-              'mixed': ["Technical Accuracy", "Explanation", "Implementation"],
-              'mathematical': ["Correctness", "Method", "Explanation"]
-            };
-            const criteria = criteriaMap[classification.contentType] || ["Content", "Quality", "Completeness"];
+            // Check if this is a quiz that should use quiz grading
+            let isQuiz = classification.platform === 'google_form' && 
+                          (classification.gradingApproach === 'standard_quiz' || 
+                           classification.gradingApproach === 'auto_grade' ||
+                           assignment.type === 'quiz'); // Also check legacy quiz type
             
-            // Prepare grading request
-            const gradingRequest = {
-              submissionId: submission.id,
-              assignmentId: submission.assignmentId,
-              title: assignment.title || assignment.name || 'Assignment',
-              description: assignment.description || '',
-              maxPoints: assignment.maxScore || 100,
-              criteria,
-              submission: submissionText || 'No content provided',
-              promptTemplate
-            };
+            let gradingResult: any;
             
-            // Grade with AI
-            const gradingResult = await geminiService.gradeSubmission(gradingRequest);
+            if (isQuiz && submission.extractedContent?.formId) {
+              // Quiz grading path - use detailed question-by-question grading
+              try {
+                console.log(`🧮 Using quiz grading for ${submission.studentName} (formId: ${submission.extractedContent.formId})`);
+                
+                // Get answer key from sheets
+                const { createSheetsService } = await import("../services/sheets");
+                const { getDefaultSpreadsheetId } = await import("../config/teachers");
+                
+                const spreadsheetId = await getDefaultSpreadsheetId();
+                if (!spreadsheetId) {
+                  throw new Error("No teacher sheets configured for quiz grading");
+                }
+                
+                const sheetsService = await createSheetsService(spreadsheetId);
+                const answerKey = await sheetsService.getAnswerKey(submission.extractedContent.formId);
+                
+                if (answerKey) {
+                  // Convert student answers to the format expected by quiz grading
+                  const studentAnswers: { [questionNumber: number]: string } = {};
+                  if (submission.extractedContent.answers) {
+                    Object.entries(submission.extractedContent.answers).forEach(([key, value]) => {
+                      const questionNum = parseInt(key);
+                      if (!isNaN(questionNum)) {
+                        studentAnswers[questionNum] = String(value);
+                      }
+                    });
+                  }
+                  
+                  // Use quiz grading method - ensure answerKey has required properties
+                  if (!answerKey.formId || !answerKey.questions || !Array.isArray(answerKey.questions)) {
+                    throw new Error("Invalid answer key structure");
+                  }
+                  
+                  const quizResult = await geminiService.gradeQuiz({
+                    submissionId: submission.id,
+                    formId: submission.extractedContent.formId,
+                    studentAnswers,
+                    answerKey: answerKey as any // Type assertion after validation
+                  });
+                  
+                  // Convert quiz result to standard grading result format
+                  gradingResult = {
+                    score: quizResult.totalScore,
+                    feedback: `Quiz completed with ${quizResult.totalScore}/${answerKey.totalPoints} points. Individual question feedback available.`,
+                    criteriaScores: [], // Quiz uses question-based scoring instead
+                    questionGrades: quizResult.questionGrades
+                  };
+                  
+                  console.log(`✅ Quiz grading completed: ${quizResult.totalScore}/${answerKey.totalPoints} with ${quizResult.questionGrades.length} question details`);
+                } else {
+                  console.log(`⚠️ Answer key not found for formId ${submission.extractedContent.formId}, falling back to generic grading`);
+                  throw new Error("Answer key not found - falling back to generic grading");
+                }
+              } catch (quizError) {
+                console.log(`⚠️ Quiz grading failed for ${submission.studentName}, falling back to generic grading:`, quizError);
+                // Fall back to generic grading
+                isQuiz = false; // Set flag to use generic path below
+              }
+            }
+            
+            if (!isQuiz || !gradingResult) {
+              // Generic grading path - existing logic for non-quiz assignments
+              console.log(`📝 Using generic grading for ${submission.studentName}`);
+              
+              // Select criteria based on content type
+              const criteriaMap: Record<string, string[]> = {
+                'code': ["Understanding", "Logic", "Implementation"],
+                'choice': ["Accuracy"],
+                'short_answer': ["Accuracy", "Completeness", "Understanding"],
+                'text': ["Content", "Organization", "Analysis"],
+                'mixed': ["Technical Accuracy", "Explanation", "Implementation"],
+                'mathematical': ["Correctness", "Method", "Explanation"]
+              };
+              const criteria = criteriaMap[classification.contentType] || ["Content", "Quality", "Completeness"];
+              
+              // Prepare grading request
+              const gradingRequest = {
+                submissionId: submission.id,
+                assignmentId: submission.assignmentId,
+                title: assignment.title || assignment.name || 'Assignment',
+                description: assignment.description || '',
+                maxPoints: assignment.maxScore || 100,
+                criteria,
+                submission: submissionText || 'No content provided',
+                promptTemplate
+              };
+              
+              // Grade with AI using generic method
+              gradingResult = await geminiService.gradeSubmission(gradingRequest);
+            }
             
             // Save grade to Firestore
             const gradeId = await firestoreService.saveGrade({
@@ -634,9 +708,11 @@ export async function gradeAllAssignments(req: Request, res: Response) {
               feedback: gradingResult.feedback,
               gradedBy: "ai",
               criteriaScores: gradingResult.criteriaScores,
+              questionGrades: gradingResult.questionGrades,
               metadata: {
                 gradingMode: 'bulk',
-                isCodeAssignment: finalGradingApproach === 'generous_code'
+                isCodeAssignment: finalGradingApproach === 'generous_code',
+                ...(isQuiz && submission.extractedContent?.formId && { formId: submission.extractedContent.formId })
               }
             });
             

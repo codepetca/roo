@@ -371,7 +371,8 @@
 										<div class="flex items-center space-x-2">
 											<!-- Assignment Type Icon -->
 											<div
-												class="flex-shrink-0 p-1 {assignment.classification?.platform === 'google_form'
+												class="flex-shrink-0 p-1 {assignment.classification?.platform ===
+												'google_form'
 													? 'bg-green-100 text-green-600'
 													: 'bg-blue-100 text-blue-600'} rounded"
 											>

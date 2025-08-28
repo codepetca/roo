@@ -88,7 +88,6 @@ class DataStore {
 	// Computed state for UI
 	hasData = $derived(this.classrooms.length > 0 || this.assignments.length > 0);
 
-
 	// Selected entities state
 	selectedClassroomId = $state<string | null>(null);
 	selectedAssignmentId = $state<string | null>(null);
@@ -216,7 +215,8 @@ class DataStore {
 					score: sub.grade?.score,
 					maxScore: sub.grade?.maxScore || this.selectedAssignment?.maxScore,
 					percentage: sub.grade?.percentage,
-					feedback: sub.grade?.feedback
+					feedback: sub.grade?.feedback,
+					questionGrades: sub.grade?.questionGrades
 				});
 			}
 		});
@@ -768,7 +768,10 @@ class DataStore {
 	 */
 	isAssignmentAutoGradable(assignment: Assignment): boolean {
 		// Google forms and assignments with auto-grade classification can be auto-graded
-		return assignment.classification?.platform === 'google_form' || assignment.classification?.gradingApproach === 'auto_grade';
+		return (
+			assignment.classification?.platform === 'google_form' ||
+			assignment.classification?.gradingApproach === 'auto_grade'
+		);
 	}
 
 	/**

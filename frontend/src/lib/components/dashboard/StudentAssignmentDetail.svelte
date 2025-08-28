@@ -196,7 +196,9 @@
 															d={getAssignmentTypeIcon(assignment.type)}
 														/>
 													</svg>
-													{assignment.classification?.platform === 'google_form' ? 'Form' : 'Assignment'}
+													{assignment.classification?.platform === 'google_form'
+														? 'Form'
+														: 'Assignment'}
 												</dd>
 											</div>
 											<div>

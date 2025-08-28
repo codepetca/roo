@@ -105,7 +105,7 @@ export const studentSnapshotSchema = z.object({
       fullName: z.string()
     }),
     emailAddress: z.string().email(),
-    photoUrl: z.string().url().optional()
+    photoUrl: z.string().optional() // Allow any string including empty
   }).optional(),
   
   // Enrollment info
@@ -169,8 +169,9 @@ export const classroomWithDataSchema = z.object({
   calendarId: z.string().optional(),
   
   // Permissions and ownership
-  ownerId: z.string(),
-  teacherEmail: z.string().email(),
+  ownerId: z.string().optional(), // May not be provided by all data sources
+  teacherId: z.string().optional(), // For compatibility with data sources that provide teacherId
+  teacherEmail: z.string().email(), // Primary teacher identifier
   guardianNotificationSettings: z.object({
     enabled: z.boolean()
   }).optional()

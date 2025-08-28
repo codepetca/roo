@@ -397,8 +397,8 @@ function transformSubmission(
     status = 'returned';
   }
 
-  // Transform attachments
-  const attachments = submission.attachments.map(att => {
+  // Transform attachments - handle undefined/null attachments
+  const attachments = (submission.attachments || []).map(att => {
     if ('type' in att) {
       if (att.type === 'driveFile') {
         return {
@@ -494,13 +494,14 @@ export function extractGradeFromSubmission(
         feedback: cs.feedback
       })) : undefined,
     gradedAt: grade.gradedAt ? new Date(grade.gradedAt) : new Date(),
-    gradedBy: grade.gradedBy === 'system' ? 'auto' : grade.gradedBy,
+    gradedBy: grade.gradedBy === 'system' ? 'auto' : (grade.gradedBy === 'teacher' ? 'manual' : grade.gradedBy),
     gradingMethod: grade.gradingMethod || 'points',
     submissionVersionGraded: 1, // Default to version 1
     submissionContentSnapshot: submission.studentWork,
     isLocked: grade.gradedBy === 'manual',
     lockedReason: grade.gradedBy === 'manual' ? 'Manual grade' : undefined,
-    aiGradingInfo: grade.aiGradingInfo
+    aiGradingInfo: grade.aiGradingInfo,
+    questionGrades: grade.questionGrades
   };
 }
 

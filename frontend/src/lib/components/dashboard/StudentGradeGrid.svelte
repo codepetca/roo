@@ -185,8 +185,8 @@
 									<th
 										class="max-w-32 min-w-24 px-2 py-2 text-center text-xs font-medium tracking-wider text-gray-500 uppercase"
 									>
-										<div 
-											class="assignment-title-clamp leading-tight" 
+										<div
+											class="assignment-title-clamp leading-tight"
 											title={assignment.title || assignment.name}
 										>
 											{assignment.title || assignment.name || 'Untitled'}

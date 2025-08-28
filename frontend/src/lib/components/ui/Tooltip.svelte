@@ -50,24 +50,24 @@
 			const topOffset = -10;
 			let left = mouseX + rightOffset;
 			let top = mouseY + topOffset;
-			
+
 			// Ensure tooltip doesn't go off the right edge of the screen
 			const tooltipWidth = 450; // Approximate width for max-w-md
 			if (left + tooltipWidth > window.innerWidth) {
 				left = mouseX - tooltipWidth - rightOffset; // Position to the left instead
 			}
-			
+
 			// Ensure tooltip doesn't go off the bottom of the screen
 			const tooltipHeight = 200; // Approximate height
 			if (top + tooltipHeight > window.innerHeight) {
 				top = mouseY - tooltipHeight - Math.abs(topOffset);
 			}
-			
+
 			// Ensure tooltip doesn't go above the top of the screen
 			if (top < 0) {
 				top = 10;
 			}
-			
+
 			return `left: ${left}px; top: ${top}px;`;
 		}
 		return '';
@@ -166,8 +166,8 @@
 		>
 			<!-- Backdrop for center-overlay mode -->
 			{#if needsBackdrop}
-				<div 
-					class="absolute inset-0 bg-black bg-opacity-20 backdrop-blur-sm"
+				<div
+					class="bg-opacity-20 absolute inset-0 bg-black backdrop-blur-sm"
 					onclick={hideTooltip}
 					onkeydown={(e) => e.key === 'Escape' && hideTooltip()}
 					role="button"
@@ -178,7 +178,9 @@
 
 			<!-- Tooltip content -->
 			<div
-				class="rounded-lg bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-xl transition-opacity duration-200 max-w-lg min-w-fit {needsBackdrop ? 'relative z-10' : ''}"
+				class="max-w-lg min-w-fit rounded-lg bg-gray-900 px-4 py-3 text-sm font-medium text-white shadow-xl transition-opacity duration-200 {needsBackdrop
+					? 'relative z-10'
+					: ''}"
 			>
 				{#if content}
 					{@render content()}

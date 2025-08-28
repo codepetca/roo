@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { isQuiz, isAssignment, getAssessmentCategory, groupAssignments } from './assessment-categorization';
+import {
+	isQuiz,
+	isAssignment,
+	getAssessmentCategory,
+	groupAssignments
+} from './assessment-categorization';
 import type { Assignment } from '@shared/schemas/core';
 
 describe('Assessment Categorization', () => {
@@ -128,7 +133,7 @@ describe('Assessment Categorization', () => {
 
 	describe('isAssignment', () => {
 		it('should return opposite of isQuiz', () => {
-			mockAssignments.forEach(assignment => {
+			mockAssignments.forEach((assignment) => {
 				expect(isAssignment(assignment)).toBe(!isQuiz(assignment));
 			});
 		});
@@ -152,15 +157,15 @@ describe('Assessment Categorization', () => {
 	describe('groupAssignments', () => {
 		it('should group assignments correctly', () => {
 			const grouped = groupAssignments(mockAssignments);
-			
+
 			expect(grouped.quizzes).toHaveLength(4); // Now includes coding Google Form
 			expect(grouped.assignments).toHaveLength(3);
-			
+
 			// Check quiz IDs (includes Google Form coding)
-			expect(grouped.quizzes.map(q => q.id)).toEqual(['1', '1a', '4', '5']);
-			
+			expect(grouped.quizzes.map((q) => q.id)).toEqual(['1', '1a', '4', '5']);
+
 			// Check assignment IDs (only non-Google Form assignments)
-			expect(grouped.assignments.map(a => a.id)).toEqual(['2', '3', '6']);
+			expect(grouped.assignments.map((a) => a.id)).toEqual(['2', '3', '6']);
 		});
 
 		it('should handle empty array', () => {

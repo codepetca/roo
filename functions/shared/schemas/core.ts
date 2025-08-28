@@ -312,6 +312,14 @@ export const gradeSchema = baseEntitySchema.extend({
     feedback: z.string().optional()
   })).optional(),
   
+  // Question-by-question scores and feedback (for quizzes)
+  questionGrades: z.array(z.object({
+    questionNumber: z.number(),
+    score: z.number().min(0),
+    maxScore: z.number().min(0),
+    feedback: z.string()
+  })).optional(),
+  
   // Grading metadata
   gradedAt: dateTimeSchema,
   gradedBy: z.enum(['ai', 'manual', 'auto']),

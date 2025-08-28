@@ -13,7 +13,8 @@ var ClassroomSnapshotExporter = {
    */
   export: function(options = {}) {
     const startTime = new Date();
-    console.log('Starting classroom snapshot export with options:', options);
+    console.log('🔍 [Config Debug] Starting classroom snapshot export with options:', options);
+    console.log('🔍 [Config Debug] options.includeSubmissions value:', options.includeSubmissions);
     
     try {
       // Set default options
@@ -161,26 +162,51 @@ var ClassroomSnapshotExporter = {
         console.log(`Limited to ${classrooms.length} classrooms`);
       }
       
-      // Step 2: Enrich each classroom with nested data
+      // Step 2: Enrich classrooms with nested data (parallel when possible)
       const enrichedClassrooms = [];
       
-      for (let i = 0; i < classrooms.length; i++) {
-        const classroom = classrooms[i];
-        console.log(`Processing classroom ${i + 1}/${classrooms.length}: ${classroom.name}`);
-        
+      if (classrooms.length <= 3) {
+        // Use parallel processing for small numbers of classrooms
+        console.log(`Using parallel processing for ${classrooms.length} classrooms`);
         try {
-          const enrichedClassroom = this.enrichClassroomWithData(classroom, config, teacherEmail);
-          enrichedClassrooms.push(enrichedClassroom);
-          
-        } catch (classroomError) {
-          console.error(`Error processing classroom ${classroom.name}:`, classroomError);
-          // Include classroom with minimal data rather than failing completely
-          enrichedClassrooms.push(SchemaAdapters.adaptClassroom(classroom, teacherEmail));
+          const parallelResults = this.processClassroomsParallel(classrooms, config, teacherEmail);
+          enrichedClassrooms.push(...parallelResults);
+        } catch (parallelError) {
+          console.warn(`Parallel processing failed, falling back to sequential: ${parallelError.message}`);
+          // Fallback to sequential processing
+          for (let i = 0; i < classrooms.length; i++) {
+            const classroom = classrooms[i];
+            console.log(`Processing classroom ${i + 1}/${classrooms.length}: ${classroom.name}`);
+            try {
+              const enrichedClassroom = this.enrichClassroomWithData(classroom, config, teacherEmail);
+              enrichedClassrooms.push(enrichedClassroom);
+            } catch (classroomError) {
+              console.error(`Error processing classroom ${classroom.name}:`, classroomError);
+              enrichedClassrooms.push(SchemaAdapters.adaptClassroom(classroom, teacherEmail));
+            }
+          }
         }
-        
-        // Add small delay to avoid rate limiting
-        if (i < classrooms.length - 1) {
-          Utilities.sleep(100);
+      } else {
+        // Sequential processing for large numbers of classrooms
+        console.log(`Using sequential processing for ${classrooms.length} classrooms`);
+        for (let i = 0; i < classrooms.length; i++) {
+          const classroom = classrooms[i];
+          console.log(`Processing classroom ${i + 1}/${classrooms.length}: ${classroom.name}`);
+          
+          try {
+            const enrichedClassroom = this.enrichClassroomWithData(classroom, config, teacherEmail);
+            enrichedClassrooms.push(enrichedClassroom);
+            
+          } catch (classroomError) {
+            console.error(`Error processing classroom ${classroom.name}:`, classroomError);
+            // Include classroom with minimal data rather than failing completely
+            enrichedClassrooms.push(SchemaAdapters.adaptClassroom(classroom, teacherEmail));
+          }
+          
+          // Add small delay to avoid rate limiting (reduced from 100ms)
+          if (i < classrooms.length - 1) {
+            Utilities.sleep(50);
+          }
         }
       }
       
@@ -242,6 +268,7 @@ var ClassroomSnapshotExporter = {
       
       // Get submissions if requested - using parallel collection for better performance
       let allSubmissions = [];
+      console.log(`🔍 [Submission Debug] includeSubmissions config: ${config.includeSubmissions}`);
       if (config.includeSubmissions) {
         const assignmentCount = enrichedClassroom.assignments.length;
         console.log(`  Fetching submissions for ${classroom.name} (${assignmentCount} assignments)...`);
@@ -477,5 +504,161 @@ var ClassroomSnapshotExporter = {
       valid: issues.length === 0,
       issues: issues
     };
+  },
+  
+  /**
+   * Process multiple classrooms in parallel for better performance
+   * @param {Array} classrooms - Array of classroom objects
+   * @param {Object} config - Export configuration 
+   * @param {string} teacherEmail - Teacher's email address
+   * @returns {Array} Array of enriched classrooms
+   */
+  processClassroomsParallel: function(classrooms, config, teacherEmail) {
+    try {
+      console.log(`Starting parallel processing of ${classrooms.length} classrooms`);
+      
+      // Prepare parallel requests for assignments and students
+      const token = DataCollectors.getAuthToken();
+      const requests = [];
+      
+      // Add assignment requests for each classroom
+      classrooms.forEach(classroom => {
+        requests.push({
+          url: `${DataCollectors.API_BASE}/courses/${classroom.id}/courseWork?pageSize=${DataCollectors.MAX_PAGE_SIZE}`,
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          method: 'GET'
+        });
+      });
+      
+      // Add student requests for each classroom
+      classrooms.forEach(classroom => {
+        requests.push({
+          url: `${DataCollectors.API_BASE}/courses/${classroom.id}/students?pageSize=${DataCollectors.MAX_PAGE_SIZE}`,
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          method: 'GET'
+        });
+      });
+      
+      console.log(`Making ${requests.length} parallel API calls for classroom data...`);
+      const responses = UrlFetchApp.fetchAll(requests);
+      
+      // Process responses - assignments first, then students
+      const enrichedClassrooms = [];
+      const numClassrooms = classrooms.length;
+      
+      for (let i = 0; i < numClassrooms; i++) {
+        const classroom = classrooms[i];
+        const assignmentResponse = responses[i];
+        const studentResponse = responses[i + numClassrooms];
+        
+        try {
+          console.log(`Processing parallel results for ${classroom.name}...`);
+          
+          // Start with basic classroom structure
+          const enrichedClassroom = SchemaAdapters.adaptClassroom(classroom, teacherEmail);
+          
+          // Process assignments response
+          let assignments = [];
+          if (assignmentResponse.getResponseCode() === 200) {
+            const assignmentData = JSON.parse(assignmentResponse.getContentText());
+            assignments = assignmentData.courseWork || [];
+            
+            // Enhanced assignments with materials if needed
+            if (config.includeMaterials) {
+              assignments = assignments.map(assignment => 
+                DataCollectors.enhanceAssignment(assignment, classroom.id, config)
+              );
+            }
+          } else {
+            console.warn(`Failed to get assignments for ${classroom.name}: ${assignmentResponse.getResponseCode()}`);
+          }
+          
+          enrichedClassroom.assignments = assignments.map(assignment => 
+            SchemaAdapters.adaptAssignment(assignment)
+          );
+          
+          // Process students response
+          let students = [];
+          if (studentResponse.getResponseCode() === 200) {
+            const studentData = JSON.parse(studentResponse.getContentText());
+            students = studentData.students || [];
+            
+            // Cache students for later use
+            DataCollectors.Cache.students.set(classroom.id, students);
+          } else {
+            console.warn(`Failed to get students for ${classroom.name}: ${studentResponse.getResponseCode()}`);
+          }
+          
+          // Apply student limits
+          if (config.maxStudentsPerClass && students.length > config.maxStudentsPerClass) {
+            students = students.slice(0, config.maxStudentsPerClass);
+            console.log(`Limited to ${students.length} students for ${classroom.name}`);
+          }
+          
+          enrichedClassroom.students = students.map(student => 
+            SchemaAdapters.adaptStudent(student, classroom.id)
+          );
+          
+          // Set counts
+          enrichedClassroom.studentCount = enrichedClassroom.students.length;
+          enrichedClassroom.assignmentCount = enrichedClassroom.assignments.length;
+          
+          // Collect submissions if requested
+          console.log(`🔍 [Parallel Fix] includeSubmissions config: ${config.includeSubmissions}`);
+          if (config.includeSubmissions) {
+            console.log(`  Collecting submissions for ${enrichedClassroom.assignments.length} assignments in ${classroom.name}...`);
+            try {
+              const parallelSubmissions = DataCollectors.collectSubmissionsParallel(
+                classroom.id,
+                enrichedClassroom.assignments,
+                config
+              );
+              
+              // Adapt submissions to schema format
+              enrichedClassroom.submissions = parallelSubmissions.map(submission => {
+                // Find the corresponding assignment for proper adaptation
+                const assignment = enrichedClassroom.assignments.find(a => a.id === submission.courseWorkId);
+                const assignmentInfo = assignment || {
+                  id: submission.courseWorkId,
+                  title: 'Unknown Assignment',
+                  maxPoints: submission.maxPoints || 100
+                };
+                // Look up student data for this submission
+                const studentData = enrichedClassroom.students.find(s => s.userId === submission.userId) || null;
+                return SchemaAdapters.adaptSubmission(submission, assignmentInfo, studentData);
+              });
+              
+              console.log(`  Collected ${enrichedClassroom.submissions.length} submissions for ${classroom.name}`);
+              
+            } catch (submissionError) {
+              console.error(`  Error collecting submissions for ${classroom.name}:`, submissionError.message);
+              enrichedClassroom.submissions = [];
+            }
+          } else {
+            enrichedClassroom.submissions = [];
+          }
+          
+          enrichedClassrooms.push(enrichedClassroom);
+          
+        } catch (classroomError) {
+          console.error(`Error processing parallel classroom ${classroom.name}:`, classroomError);
+          // Include basic classroom data
+          enrichedClassrooms.push(SchemaAdapters.adaptClassroom(classroom, teacherEmail));
+        }
+      }
+      
+      console.log(`Parallel processing completed for ${enrichedClassrooms.length} classrooms`);
+      return enrichedClassrooms;
+      
+    } catch (error) {
+      console.error('Error in parallel classroom processing:', error);
+      throw error;
+    }
   }
 };

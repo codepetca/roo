@@ -81,9 +81,21 @@ export class SnapshotProcessor {
     };
 
     try {
-      // Step 1: Transform snapshot to core entities
-      logger.info("Transforming snapshot to core entities");
+      // Step 1: Transform snapshot to core entities with detailed logging
+      logger.info("TRANSFORM DEBUG: Starting snapshot to core transformation", {
+        snapshotKeys: Object.keys(snapshot),
+        classroomCount: snapshot.classrooms.length,
+        teacherEmail: snapshot.teacher.email
+      });
+      
       const transformed = snapshotToCore(snapshot);
+      logger.info("TRANSFORM DEBUG: Core transformation successful", {
+        transformedKeys: Object.keys(transformed),
+        classroomCount: transformed.classrooms.length,
+        assignmentCount: transformed.assignments.length,
+        submissionCount: transformed.submissions.length,
+        enrollmentCount: transformed.enrollments.length
+      });
 
       // Step 2: Process teacher
       console.log(`[SNAPSHOT DEBUG] About to process teacher: ${snapshot.teacher.email}`);

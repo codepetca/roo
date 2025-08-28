@@ -4,13 +4,18 @@ import { z } from "zod";
  * Quiz Data Schema
  * Google Forms quiz structure with questions, answer keys, and sample solutions
  * 
+ * MATCHING MECHANISM:
+ * - quizData.questions[].id matches structuredData[questionId].questionId
+ * - quizData = form structure with correct answers (from QuizExtractor)
+ * - structuredData = student responses keyed by questionId (from ContentExtractor)
+ * 
  * Location: shared/schemas/quiz-data.ts
  */
 
 // Individual quiz question
 export const quizQuestionSchema = z.object({
-  // Question identification
-  id: z.string(),
+  // Question identification (matches structuredData key for student responses)
+  id: z.string(), // From Google Forms item.getId() - critical for matching student responses
   title: z.string(),
   description: z.string().optional(),
   
@@ -23,7 +28,8 @@ export const quizQuestionSchema = z.object({
     'PARAGRAPH',       // Long text answer
     'LINEAR_SCALE',    // Rating scale
     'MULTIPLE_CHOICE_GRID', // Grid of choices
-    'CHECKBOX_GRID'    // Grid of checkboxes
+    'CHECKBOX_GRID',   // Grid of checkboxes
+    'UNKNOWN'          // Unknown/unrecognized question type
   ]),
   
   // Grading information

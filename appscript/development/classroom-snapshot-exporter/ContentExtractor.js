@@ -294,9 +294,13 @@ const ContentExtractor = {
         
         extractedResponses[question] = answer;
         
-        // Also store by question number for easier processing
+        // Store by question ID for matching with quiz data
+        const questionId = itemResponse.getItem().getId().toString();
         const questionIndex = itemResponse.getItem().getIndex();
-        structuredData[questionIndex.toString()] = {
+        
+        structuredData[questionId] = {
+          questionId: questionId,
+          questionIndex: questionIndex,
           question: question,
           answer: answer,
           type: itemResponse.getItem().getType().toString()

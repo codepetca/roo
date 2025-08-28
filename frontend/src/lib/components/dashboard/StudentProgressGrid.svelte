@@ -2,6 +2,7 @@
 	import { dataStore } from '$lib/stores/data-store.svelte';
 	import { Badge, Button, Card } from '$lib/components/ui';
 	import { getSortIcon, getSortDescription } from '$lib/utils/sorting';
+	import FeedbackDetailModal from './FeedbackDetailModal.svelte';
 	import type { Assignment } from '@shared/schemas/core';
 	import type { StudentSortField } from '$lib/utils/sorting';
 
@@ -65,6 +66,12 @@
 		maxScore?: number;
 		percentage?: number;
 		feedback?: string;
+		questionGrades?: Array<{
+			questionNumber: number;
+			score: number;
+			maxScore: number;
+			feedback: string;
+		}>;
 	};
 
 	function formatDate(date?: Date): string {
@@ -82,10 +89,14 @@
 
 	// Compact view state management
 	let isCompactView = $state(
-		typeof localStorage !== 'undefined' 
+		typeof localStorage !== 'undefined'
 			? localStorage.getItem('studentProgress-compactView') === 'true'
 			: false
 	);
+
+	// Modal state management
+	let modalOpen = $state(false);
+	let selectedStudentForModal = $state<StudentProgressItem | null>(null);
 
 	// Save compact view preference to localStorage
 	function toggleCompactView() {
@@ -123,6 +134,16 @@
 
 	function handleSort(field: StudentSortField) {
 		dataStore.toggleStudentSort(field);
+	}
+
+	function openFeedbackModal(student: StudentProgressItem) {
+		selectedStudentForModal = student;
+		modalOpen = true;
+	}
+
+	function closeFeedbackModal() {
+		modalOpen = false;
+		selectedStudentForModal = null;
 	}
 </script>
 
@@ -170,7 +191,7 @@
 						class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 bg-gray-50 px-6 py-3"
 					>
 						<div
-							class="min-w-0 cursor-pointer transition-colors hover:bg-gray-100 flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+							class="flex min-w-0 cursor-pointer items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:bg-gray-100"
 							onclick={() => handleSort('name')}
 							title={getSortDescription('name')}
 						>
@@ -180,7 +201,7 @@
 							</span>
 						</div>
 						<div
-							class="min-w-0 cursor-pointer transition-colors hover:bg-gray-100 flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+							class="flex min-w-0 cursor-pointer items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:bg-gray-100"
 							onclick={() => handleSort('submitted')}
 							title={getSortDescription('submitted', sortDirection)}
 						>
@@ -190,7 +211,7 @@
 							</span>
 						</div>
 						<div
-							class="min-w-0 cursor-pointer transition-colors hover:bg-gray-100 flex items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase"
+							class="flex min-w-0 cursor-pointer items-center space-x-1 text-left text-xs font-medium tracking-wider text-gray-500 uppercase transition-colors hover:bg-gray-100"
 							onclick={() => handleSort('grade')}
 							title={getSortDescription('grade', sortDirection)}
 						>
@@ -210,29 +231,35 @@
 						>
 							AI Comments
 						</div>
-						<div
-							class="min-w-0 flex items-center text-left"
-						>
+						<div class="flex min-w-0 items-center text-left">
 							<button
 								onclick={toggleCompactView}
-								class="p-1 rounded hover:bg-gray-100 transition-colors {isCompactView 
-									? 'text-blue-600' 
+								class="rounded p-1 transition-colors hover:bg-gray-100 {isCompactView
+									? 'text-blue-600'
 									: 'text-gray-500'}"
-								title={isCompactView 
-									? 'Switch to Normal view (2 lines per student)' 
+								title={isCompactView
+									? 'Switch to Normal view (2 lines per student)'
 									: 'Switch to Compact view (1 line per student)'}
 							>
 								{#if isCompactView}
 									<!-- Show 4-lines icon when in compact mode -->
 									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-											d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M4 6h16M4 10h16M4 14h16M4 18h16"
+										/>
 									</svg>
 								{:else}
 									<!-- Show 2-lines icon when in normal mode -->
 									<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-											d="M4 8h16M4 16h16" />
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M4 8h16M4 16h16"
+										/>
 									</svg>
 								{/if}
 							</button>
@@ -242,8 +269,8 @@
 					<!-- Grid Rows -->
 					{#each studentProgress as student (student.studentId)}
 						<div
-							class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 hover:bg-gray-50 {isCompactView 
-								? 'px-4 py-1' 
+							class="grid grid-cols-[2fr_1fr_1fr_1fr_5fr_0.5fr] gap-4 border-b border-gray-200 hover:bg-gray-50 {isCompactView
+								? 'px-4 py-1'
 								: 'px-6 py-4'}"
 						>
 							<!-- Student Column (2fr) - Avatar removed -->
@@ -252,8 +279,10 @@
 									{#if isCompactView}
 										<!-- Compact: Single line with name and email -->
 										<div class="truncate text-sm font-medium text-gray-900">
-											{student.studentName} 
-											<span class="font-normal text-gray-500">({student.studentEmail.split('@')[0]})</span>
+											{student.studentName}
+											<span class="font-normal text-gray-500"
+												>({student.studentEmail.split('@')[0]})</span
+											>
 										</div>
 									{:else}
 										<!-- Normal: Two lines -->
@@ -308,7 +337,9 @@
 										type="number"
 										min="0"
 										max={student.maxScore || 100}
-										class="{isCompactView ? 'w-14 px-1 py-0.5 text-xs' : 'w-16 px-2 py-1 text-sm'} rounded border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+										class="{isCompactView
+											? 'w-14 px-1 py-0.5 text-xs'
+											: 'w-16 px-2 py-1 text-sm'} rounded border border-gray-300 focus:ring-1 focus:ring-blue-500 focus:outline-none"
 										value={manualGrades.get(student.studentId) || ''}
 										oninput={(e) => handleManualGradeInput(student.studentId, e.target.value)}
 										title="Enter manual grade (auto-saves)"
@@ -317,22 +348,26 @@
 								</div>
 							</div>
 
-							<!-- AI Comments Column (4fr) -->
-							<div class="flex min-w-0 items-center {isCompactView ? 'text-xs' : 'text-sm'}" title={getFullComment(student)}>
+							<!-- AI Comments Column (4fr) - Clickable -->
+							<div class="flex min-w-0 items-center {isCompactView ? 'text-xs' : 'text-sm'}">
 								{#if student.status === 'not_submitted'}
 									<span class="text-gray-400 italic">No submission</span>
 								{:else}
-									<span class="break-words text-gray-900"
-										>{truncateComment(student.feedback, isCompactView ? 80 : 120)}</span
+									<button
+										class="cursor-pointer rounded px-2 py-1 text-left break-words text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none"
+										title="Click to view detailed feedback"
+										onclick={() => openFeedbackModal(student)}
 									>
+										{truncateComment(student.feedback, isCompactView ? 80 : 120)}
+									</button>
 								{/if}
 							</div>
 
 							<!-- Actions Column (1fr) - Moved to end -->
 							<div class="flex min-w-0 items-center">
-								<Button 
-									variant="primary" 
-									size={isCompactView ? 'xs' : 'sm'} 
+								<Button
+									variant="primary"
+									size={isCompactView ? 'xs' : 'sm'}
 									class={isCompactView ? 'px-3' : ''}
 									onclick={() => gradeStudent(student)}
 								>
@@ -348,3 +383,10 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Feedback Detail Modal -->
+<FeedbackDetailModal
+	open={modalOpen}
+	student={selectedStudentForModal}
+	onClose={closeFeedbackModal}
+/>

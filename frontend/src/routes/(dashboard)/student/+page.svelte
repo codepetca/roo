@@ -22,21 +22,19 @@
 
 	// Derived state
 	let selectedClassroom = $derived(
-		dashboardData?.classrooms.find(c => c.classroom.id === selectedClassroomId)?.classroom
+		dashboardData?.classrooms.find((c) => c.classroom.id === selectedClassroomId)?.classroom
 	);
 	let selectedClassroomData = $derived(
-		dashboardData?.classrooms.find(c => c.classroom.id === selectedClassroomId)
+		dashboardData?.classrooms.find((c) => c.classroom.id === selectedClassroomId)
 	);
 	let assignments = $derived(selectedClassroomData?.assignments || []);
 	let myGrades = $derived(selectedClassroomData?.grades || []);
-	let selectedAssignment = $derived(
-		assignments.find(a => a.id === selectedAssignmentId)
-	);
+	let selectedAssignment = $derived(assignments.find((a) => a.id === selectedAssignmentId));
 	let selectedAssignmentGrade = $derived(
-		myGrades.find(g => g.assignmentId === selectedAssignmentId)
+		myGrades.find((g) => g.assignmentId === selectedAssignmentId)
 	);
 
-	// Student-specific derived statistics  
+	// Student-specific derived statistics
 	let totalGrades = $derived(dashboardData?.overallStats.completedAssignments || 0);
 	let averageScore = $derived(Math.round(dashboardData?.overallStats.averageGrade || 0));
 	let completedAssignments = $derived(dashboardData?.overallStats.completedAssignments || 0);
@@ -103,7 +101,7 @@
 		// Update the main data store for ClassroomSelector compatibility
 		if (dashboardData) {
 			dataStore.setData({
-				classrooms: dashboardData.classrooms.map(c => c.classroom),
+				classrooms: dashboardData.classrooms.map((c) => c.classroom),
 				assignments: selectedClassroomData?.assignments || []
 			});
 			dataStore.selectClassroom(classroomId);
@@ -149,14 +147,14 @@
 			// Initialize the main data store with student data for shared component compatibility
 			if (dashboardData.classrooms.length > 0) {
 				dataStore.setData({
-					classrooms: dashboardData.classrooms.map(c => c.classroom),
+					classrooms: dashboardData.classrooms.map((c) => c.classroom),
 					assignments: [],
 					user: {
 						id: auth.user?.uid || '',
 						email: auth.user?.email || '',
 						displayName: auth.user?.displayName || auth.user?.email || '',
 						role: 'student' as const,
-						classroomIds: dashboardData.classrooms.map(c => c.classroom.id),
+						classroomIds: dashboardData.classrooms.map((c) => c.classroom.id),
 						totalStudents: 0,
 						totalClassrooms: dashboardData.classrooms.length
 					}
@@ -167,7 +165,6 @@
 					selectClassroom(dashboardData.classrooms[0].classroom.id);
 				}
 			}
-
 		} catch (err: unknown) {
 			console.error('❌ Failed to load student dashboard data:', err);
 			error = (err as Error)?.message || 'Failed to load dashboard data';
@@ -196,7 +193,7 @@
 		}
 	});
 
-	// Sync assignment selection from dataStore back to local state  
+	// Sync assignment selection from dataStore back to local state
 	$effect(() => {
 		const storeSelectedAssignmentId = dataStore.selectedAssignmentId;
 		if (storeSelectedAssignmentId && storeSelectedAssignmentId !== selectedAssignmentId) {
@@ -224,13 +221,17 @@
 				role="student"
 			>
 				{#snippet customAssignmentContent(assignment)}
-					{@const hasGrade = myGrades.some(g => g.assignmentId === assignment.id)}
+					{@const hasGrade = myGrades.some((g) => g.assignmentId === assignment.id)}
 					{#if hasGrade}
-						<span class="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-800">
+						<span
+							class="inline-flex items-center rounded-full bg-green-100 px-1.5 py-0.5 text-xs font-medium text-green-800"
+						>
 							✓ Graded
 						</span>
 					{:else}
-						<span class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-800">
+						<span
+							class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-800"
+						>
 							Pending
 						</span>
 					{/if}
@@ -243,7 +244,7 @@
 		{#if viewMode === 'grid'}
 			<!-- Student Grades Grid View -->
 			<div class="flex-1 overflow-auto p-6">
-				<h2 class="text-lg font-semibold mb-4">All My Grades</h2>
+				<h2 class="mb-4 text-lg font-semibold">All My Grades</h2>
 				{#if !loading && dashboardData}
 					<StatsGrid stats={statsData} />
 				{/if}
@@ -261,13 +262,29 @@
 							{#snippet children()}
 								{#if loading}
 									<svg class="mr-2 h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-										<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-										<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+										<circle
+											class="opacity-25"
+											cx="12"
+											cy="12"
+											r="10"
+											stroke="currentColor"
+											stroke-width="4"
+										></circle>
+										<path
+											class="opacity-75"
+											fill="currentColor"
+											d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+										></path>
 									</svg>
 									Refreshing...
 								{:else}
 									<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+										/>
 									</svg>
 									Refresh
 								{/if}
@@ -281,11 +298,17 @@
 			<div class="flex-1 overflow-auto p-6">
 				<PageHeader
 					title="Student Dashboard"
-					description="Welcome back, {auth.user?.email?.split('@')[0] || 'Student'}! Select a classroom and assignment to view detailed feedback."
+					description="Welcome back, {auth.user?.email?.split('@')[0] ||
+						'Student'}! Select a classroom and assignment to view detailed feedback."
 				/>
 
 				{#if error}
-					<Alert variant="error" title="Error loading dashboard" dismissible onDismiss={() => (error = null)}>
+					<Alert
+						variant="error"
+						title="Error loading dashboard"
+						dismissible
+						onDismiss={() => (error = null)}
+					>
 						{#snippet children()}
 							{error}
 							<div class="mt-3">

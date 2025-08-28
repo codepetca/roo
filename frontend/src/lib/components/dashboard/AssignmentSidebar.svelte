@@ -173,7 +173,9 @@
 									{/if}
 								</div>
 								{#if isGoogleForm(assignment)}
-									<span class="text-xs font-medium text-purple-700 bg-purple-200 px-2 py-0.5 rounded">
+									<span
+										class="rounded bg-purple-200 px-2 py-0.5 text-xs font-medium text-purple-700"
+									>
 										Form
 									</span>
 								{/if}

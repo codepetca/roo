@@ -10,10 +10,45 @@ var DataCollectors = {
   API_BASE: 'https://classroom.googleapis.com/v1',
   MAX_PAGE_SIZE: 100,
   
+  // Performance cache
+  Cache: {
+    authToken: null,
+    authTokenExpiry: 0,
+    students: new Map(), // courseId -> students
+    forms: new Map(),    // formId -> form instance
+    quizData: new Map(), // formUrl -> quiz data
+    
+    // Clear expired items
+    cleanup: function() {
+      const now = Date.now();
+      if (this.authTokenExpiry < now) {
+        this.authToken = null;
+        this.authTokenExpiry = 0;
+      }
+    },
+    
+    // Get cached auth token or fetch new one
+    getAuthToken: function() {
+      this.cleanup();
+      if (this.authToken && this.authTokenExpiry > Date.now()) {
+        return this.authToken;
+      }
+      
+      try {
+        this.authToken = ScriptApp.getOAuthToken();
+        this.authTokenExpiry = Date.now() + (55 * 60 * 1000); // Cache for 55 minutes
+        return this.authToken;
+      } catch (error) {
+        console.error('Error getting auth token:', error);
+        throw new Error('Failed to get authentication token');
+      }
+    }
+  },
+  
   // Adaptive rate limiter
   RateLimiter: {
-    currentDelay: 50,  // Start optimistic at 50ms
-    minDelay: 25,      // Minimum delay
+    currentDelay: 25,  // Start more aggressive at 25ms  
+    minDelay: 15,      // Minimum delay - very aggressive
     maxDelay: 500,     // Maximum delay for severe rate limiting
     consecutiveSuccesses: 0,
     
@@ -25,9 +60,9 @@ var DataCollectors = {
     // Called after successful API call
     onSuccess: function() {
       this.consecutiveSuccesses++;
-      // Reduce delay after multiple successes
-      if (this.consecutiveSuccesses >= 3 && this.currentDelay > this.minDelay) {
-        this.currentDelay = Math.max(this.minDelay, this.currentDelay - 5);
+      // More aggressive optimization - reduce delay faster
+      if (this.consecutiveSuccesses >= 2 && this.currentDelay > this.minDelay) {
+        this.currentDelay = Math.max(this.minDelay, this.currentDelay - 10);
         this.consecutiveSuccesses = 0;
         console.log(`Rate limiter optimized: reduced to ${this.currentDelay}ms`);
       }
@@ -51,20 +86,11 @@ var DataCollectors = {
   },
   
   /**
-   * Get OAuth token for API calls
+   * Get OAuth token for API calls (cached for performance)
    * @returns {string} OAuth token
    */
   getAuthToken: function() {
-    try {
-      const token = ScriptApp.getOAuthToken();
-      if (!token) {
-        throw new Error('No OAuth token available');
-      }
-      return token;
-    } catch (error) {
-      console.error('Error getting auth token:', error);
-      throw new Error('Failed to get authentication token');
-    }
+    return this.Cache.getAuthToken();
   },
   
   /**
@@ -138,7 +164,7 @@ var DataCollectors = {
     try {
       console.log('Collecting classrooms...');
       
-      const url = `${this.API_BASE}/courses?teacherId=me&courseStates=ACTIVE&pageSize=${this.MAX_PAGE_SIZE}`;
+      const url = `${this.API_BASE}/courses?teacherId=me&courseStates=ACTIVE&pageSize=${this.MAX_PAGE_SIZE}&fields=courses(id,name,section,description,room,ownerId,creationTime,updateTime,alternateLink,teacherGroupEmail,courseGroupEmail,guardiansEnabled,calendarId)`;
       const response = this.makeApiRequest(url);
       
       if (!response || !response.courses) {
@@ -165,7 +191,7 @@ var DataCollectors = {
     try {
       console.log(`Collecting assignments for course ${courseId}...`);
       
-      const url = `${this.API_BASE}/courses/${courseId}/courseWork?pageSize=${this.MAX_PAGE_SIZE}`;
+      const url = `${this.API_BASE}/courses/${courseId}/courseWork?pageSize=${this.MAX_PAGE_SIZE}&fields=courseWork(id,title,description,materials,state,alternateLink,creationTime,updateTime,dueDate,dueTime,maxPoints,workType,submissionModificationMode)`;
       const response = this.makeApiRequest(url);
       
       if (!response || !response.courseWork) {
@@ -208,10 +234,14 @@ var DataCollectors = {
         enhanced.enhancedMaterials = this.processAssignmentMaterials(assignment.materials);
       }
       
-      // Add quiz data if this is a quiz assignment
-      if (config.includeQuizData && assignment.workType === 'SHORT_ANSWER_QUESTION' || assignment.workType === 'MULTIPLE_CHOICE_QUESTION') {
+      // Add quiz data if assignment has forms (any assignment type can have Google Forms)
+      const hasFormMaterials = assignment.materials && 
+                               assignment.materials.some(material => material.form && material.form.formUrl);
+      
+      if (config.includeQuizData && hasFormMaterials) {
         try {
-          enhanced.quizData = this.collectQuizData(courseId, assignment.id);
+          console.log(`Attempting to collect quiz data for assignment: ${assignment.title}`);
+          enhanced.quizData = this.collectQuizData(courseId, assignment.id, assignment);
         } catch (quizError) {
           console.warn(`Could not get quiz data for ${assignment.title}:`, quizError.message);
         }
@@ -371,42 +401,95 @@ var DataCollectors = {
   },
   
   /**
-   * Collect quiz data for quiz assignments
+   * Collect quiz data for quiz assignments with Google Forms
    * @param {string} courseId - Course ID
    * @param {string} assignmentId - Assignment ID
-   * @returns {Object} Quiz data
+   * @param {Object} assignment - Assignment object (optional, for optimization)
+   * @returns {Object} Quiz data extracted from Google Form or null if no form
    */
-  collectQuizData: function(courseId, assignmentId) {
-    // Note: Google Classroom API doesn't expose quiz questions directly
-    // This would require Google Forms API access for form-based quizzes
-    // For now, return placeholder structure
-    return {
-      questions: [],
-      settings: {
-        shuffleQuestions: false,
-        allowMultipleSubmissions: false
+  collectQuizData: function(courseId, assignmentId, assignment = null) {
+    try {
+      // If assignment not provided, fetch it
+      if (!assignment) {
+        const url = `${this.API_BASE}/courses/${courseId}/courseWork/${assignmentId}`;
+        const response = this.makeApiRequest(url);
+        assignment = response;
       }
-    };
+      
+      // Check if assignment has forms in materials
+      if (!assignment.materials) {
+        console.log(`No materials found for assignment ${assignmentId}`);
+        return null;
+      }
+      
+      // Find form material
+      const formMaterial = assignment.materials.find(material => material.form);
+      if (!formMaterial || !formMaterial.form.formUrl) {
+        console.log(`No form found in materials for assignment ${assignmentId}`);
+        return null;
+      }
+      
+      const formUrl = formMaterial.form.formUrl;
+      console.log(`Extracting quiz data from form: ${formUrl}`);
+      
+      // Check cache first for quiz data
+      if (this.Cache.quizData.has(formUrl)) {
+        const cached = this.Cache.quizData.get(formUrl);
+        console.log(`Using cached quiz data for form: ${formUrl} (${cached?.totalQuestions || 0} questions)`);
+        return cached;
+      }
+      
+      // Use QuizExtractor to get quiz data with robust error handling
+      const quizData = extractQuizData(formUrl);
+      
+      // Cache the result (even if null)
+      this.Cache.quizData.set(formUrl, quizData);
+      
+      if (quizData) {
+        console.log(`Successfully extracted quiz data: ${quizData.totalQuestions} questions, ${quizData.totalPoints} points`);
+        return quizData;
+      } else {
+        console.log(`Form at ${formUrl} is not configured as a quiz or extraction failed`);
+        return null;
+      }
+      
+    } catch (error) {
+      console.error(`Error collecting quiz data for assignment ${assignmentId}:`, error.toString());
+      return null;
+    }
   },
   
   /**
-   * Collect students for a specific classroom
+   * Collect students for a specific classroom (cached for performance)
    * @param {string} courseId - Google Classroom course ID
    * @returns {Array} Array of student objects
    */
   collectStudents: function(courseId) {
     try {
+      // Check cache first
+      if (this.Cache.students.has(courseId)) {
+        const cached = this.Cache.students.get(courseId);
+        console.log(`Using cached students for course ${courseId} (${cached.length} students)`);
+        return cached;
+      }
+      
       console.log(`Collecting students for course ${courseId}...`);
       
-      const url = `${this.API_BASE}/courses/${courseId}/students?pageSize=${this.MAX_PAGE_SIZE}`;
+      const url = `${this.API_BASE}/courses/${courseId}/students?pageSize=${this.MAX_PAGE_SIZE}&fields=students(courseId,userId,profile)`;
       const response = this.makeApiRequest(url);
       
       if (!response || !response.students) {
         console.log(`No students found for course ${courseId}`);
-        return [];
+        const emptyResult = [];
+        this.Cache.students.set(courseId, emptyResult);
+        return emptyResult;
       }
       
       console.log(`Collected ${response.students.length} students for course ${courseId}`);
+      
+      // Cache the result
+      this.Cache.students.set(courseId, response.students);
+      
       return response.students;
       
     } catch (error) {
@@ -435,12 +518,20 @@ var DataCollectors = {
       }
       
       let submissions = response.studentSubmissions;
+      console.log(`🔍 [Submission Debug] Raw API returned ${submissions.length} submissions for assignment ${assignmentId}`);
+      
+      // Debug: Log submission states
+      submissions.forEach((sub, i) => {
+        console.log(`🔍 [Submission Debug] Submission ${i}: state=${sub.state}, userId=${sub.userId}, hasWork=${!!(sub.assignmentSubmission || sub.shortAnswerSubmission || sub.multipleChoiceSubmission)}`);
+      });
       
       // Filter out non-submitted work if requested
+      const originalCount = submissions.length;
       submissions = submissions.filter(submission => {
         const state = submission.state || 'NEW';
         return state !== 'NEW' && state !== 'CREATED';
       });
+      console.log(`🔍 [Submission Debug] After filtering NEW/CREATED states: ${submissions.length}/${originalCount} submissions remain`);
       
       // Limit number of submissions if specified
       if (config.maxSubmissionsPerAssignment && submissions.length > config.maxSubmissionsPerAssignment) {
@@ -563,7 +654,7 @@ var DataCollectors = {
       }
       
       const totalAssignments = assignments.length;
-      const batchSize = Math.min(12, Math.max(2, Math.floor(60 / Math.max(1, totalAssignments / 8)))); // Optimized: larger batches for faster processing
+      const batchSize = Math.min(15, Math.max(3, Math.floor(80 / Math.max(1, totalAssignments / 10)))); // More aggressive batching
       const allSubmissions = [];
       
       console.log(`Starting parallel submission collection for ${totalAssignments} assignments (batch size: ${batchSize})`);
@@ -580,9 +671,9 @@ var DataCollectors = {
           const batchSubmissions = this.processBatchParallel(courseId, batch, config);
           allSubmissions.push(...batchSubmissions);
           
-          // Small delay between batches to respect rate limits
+          // Reduced delay between batches for better performance
           if (i + batchSize < assignments.length) {
-            Utilities.sleep(100);
+            Utilities.sleep(50);
           }
           
         } catch (batchError) {
@@ -643,12 +734,20 @@ var DataCollectors = {
             
             if (data && data.studentSubmissions) {
               let submissions = data.studentSubmissions;
+              console.log(`🔍 [Parallel Debug] Assignment ${assignment.title}: Raw API returned ${submissions.length} submissions`);
+              
+              // Debug: Log submission states
+              submissions.forEach((sub, idx) => {
+                console.log(`🔍 [Parallel Debug] Assignment ${assignment.title}, Submission ${idx}: state=${sub.state}, userId=${sub.userId}, hasWork=${!!(sub.assignmentSubmission || sub.shortAnswerSubmission || sub.multipleChoiceSubmission)}`);
+              });
               
               // Filter to only submitted work
+              const originalCount = submissions.length;
               submissions = submissions.filter(submission => {
                 const state = submission.state || 'NEW';
                 return state !== 'NEW' && state !== 'CREATED';
               });
+              console.log(`🔍 [Parallel Debug] Assignment ${assignment.title}: After filtering NEW/CREATED states: ${submissions.length}/${originalCount} submissions remain`);
               
               // Apply max submissions limit if specified
               if (config.maxSubmissionsPerAssignment && submissions.length > config.maxSubmissionsPerAssignment) {

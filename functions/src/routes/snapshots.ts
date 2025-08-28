@@ -115,12 +115,57 @@ export async function importSnapshot(req: Request, res: Response): Promise<Respo
       });
     }
 
-    // Basic validation for now
+    // Detailed schema validation with comprehensive error logging
     const snapshot = req.body;
     if (!snapshot || typeof snapshot !== "object") {
       return res.status(400).json({
         success: false,
         error: "Invalid JSON format"
+      });
+    }
+
+    // Log snapshot structure for debugging
+    logger.info("SCHEMA DEBUG: Raw snapshot structure", {
+      teacherEmail: user.email,
+      keys: Object.keys(snapshot),
+      hasTeacher: !!snapshot.teacher,
+      hasClassrooms: !!snapshot.classrooms,
+      hasGlobalStats: !!snapshot.globalStats,
+      teacherKeys: snapshot.teacher ? Object.keys(snapshot.teacher) : [],
+      classroomCount: snapshot.classrooms?.length || 0,
+      firstClassroomKeys: snapshot.classrooms?.[0] ? Object.keys(snapshot.classrooms[0]) : [],
+      globalStatsKeys: snapshot.globalStats ? Object.keys(snapshot.globalStats) : []
+    });
+
+    // Attempt schema validation and log specific failures
+    try {
+      const validatedSnapshot = classroomSnapshotSchema.parse(snapshot);
+      logger.info("SCHEMA DEBUG: Snapshot schema validation passed", {
+        teacherEmail: user.email,
+        validatedClassroomCount: validatedSnapshot.classrooms.length
+      });
+    } catch (validationError) {
+      logger.error("SCHEMA DEBUG: Snapshot schema validation failed", {
+        teacherEmail: user.email,
+        error: validationError,
+        issues: validationError instanceof z.ZodError ? validationError.issues.map(issue => ({
+          path: issue.path.join('.'),
+          message: issue.message,
+          received: 'received' in issue ? issue.received : undefined,
+          expected: issue.code
+        })) : 'Not a Zod error'
+      });
+
+      return res.status(400).json({
+        success: false,
+        error: "Snapshot schema validation failed",
+        details: validationError instanceof z.ZodError ? {
+          issues: validationError.issues.map(issue => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+            received: 'received' in issue ? issue.received : undefined
+          }))
+        } : { message: validationError instanceof Error ? validationError.message : 'Unknown validation error' }
       });
     }
     

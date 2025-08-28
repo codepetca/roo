@@ -246,33 +246,51 @@ export class FirestoreRepository {
     // Get user to check for schoolEmail
     const user = await this.getUserByEmail(userEmail);
     
-    // Prefer schoolEmail if available, otherwise use personal email
-    const teacherEmail = user?.schoolEmail || userEmail;
-    
     console.log("FirestoreRepository: getClassroomsByTeacher debug", {
       userEmail,
-      user: user ? { id: user.id, email: user.email, schoolEmail: user.schoolEmail } : null,
-      teacherEmail,
-      queryField: "teacherEmail"
+      user: user ? { id: user.id, email: user.email, schoolEmail: user.schoolEmail } : null
     });
     
-    // Query classrooms by the appropriate email (stored in teacherId field)
-    const snapshot = await db.collection(this.collections.classrooms)
-      .where("teacherId", "==", teacherEmail)
-      .get();
+    // Try both school email and personal email to find classrooms
+    const emailsToTry = [];
+    if (user?.schoolEmail) {
+      emailsToTry.push(user.schoolEmail);
+    }
+    emailsToTry.push(userEmail);
+    
+    let allClassrooms: Classroom[] = [];
+    
+    for (const email of emailsToTry) {
+      console.log(`Trying to find classrooms for email: ${email}`);
+      
+      const snapshot = await db.collection(this.collections.classrooms)
+        .where("teacherId", "==", email)
+        .get();
 
-    const classrooms = snapshot.docs.map(doc => {
-      const classroom = { ...doc.data(), id: doc.id } as Classroom;
-      return serializeTimestamps(classroom);
+      const classrooms = snapshot.docs.map(doc => {
+        const classroom = { ...doc.data(), id: doc.id } as Classroom;
+        return serializeTimestamps(classroom);
+      });
+      
+      console.log(`Found ${classrooms.length} classrooms for ${email}`);
+      
+      if (classrooms.length > 0) {
+        allClassrooms.push(...classrooms);
+      }
+    }
+    
+    // Remove duplicates based on classroom ID
+    const uniqueClassrooms = allClassrooms.filter((classroom, index, self) => 
+      index === self.findIndex(c => c.id === classroom.id)
+    );
+
+    console.log("FirestoreRepository: getClassroomsByTeacher final results", {
+      emailsChecked: emailsToTry,
+      totalFound: uniqueClassrooms.length,
+      classroomIds: uniqueClassrooms.map(c => ({ id: c.id, name: c.name, teacherId: c.teacherId }))
     });
 
-    console.log("FirestoreRepository: getClassroomsByTeacher results", {
-      teacherEmail,
-      queryResultCount: classrooms.length,
-      classroomIds: classrooms.map(c => ({ id: c.id, name: c.name, teacherId: c.teacherId }))
-    });
-
-    return classrooms;
+    return uniqueClassrooms;
   }
 
   async updateClassroom(id: string, updates: Partial<Classroom>): Promise<void> {

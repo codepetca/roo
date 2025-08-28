@@ -770,11 +770,13 @@ export const api = {
 						classroomCount: z.number()
 					})
 					.optional(),
-				new: z.object({
-					classroomCount: z.number(),
-					assignmentCount: z.number(),
-					submissionCount: z.number()
-				}).optional(),
+				new: z
+					.object({
+						classroomCount: z.number(),
+						assignmentCount: z.number(),
+						submissionCount: z.number()
+					})
+					.optional(),
 				changes: z
 					.object({
 						newClassrooms: z.number()
@@ -786,16 +788,9 @@ export const api = {
 
 	// Teacher dashboard endpoints
 	async getTeacherDashboard(): Promise<TeacherDashboard> {
-		console.log('🔍 Calling getTeacherDashboard API...');
-
 		try {
-			// First, let's see what the raw API returns without Zod validation
-			const rawResult = await apiRequest('/teacher/dashboard', {});
-			console.log('🔍 DASHBOARD RAW RESULT (no Zod):', rawResult);
-
-			// Now do the normal validated request
 			const result = await typedApiRequest('/teacher/dashboard', {}, teacherDashboardSchema);
-			console.log('✅ getTeacherDashboard succeeded:', result);
+			console.log('🏠 Dashboard loaded:', { classroomCount: result.classrooms.length, hasTeacher: !!result.teacher });
 			return result;
 		} catch (error) {
 			console.error('❌ getTeacherDashboard failed:', error);

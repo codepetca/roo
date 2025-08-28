@@ -111,7 +111,9 @@ export function sortStudentProgress(
 					// Ascending: Sort by lastName, then firstName
 					comparison = namesA.lastName.toLowerCase().localeCompare(namesB.lastName.toLowerCase());
 					if (comparison === 0) {
-						comparison = namesA.firstName.toLowerCase().localeCompare(namesB.firstName.toLowerCase());
+						comparison = namesA.firstName
+							.toLowerCase()
+							.localeCompare(namesB.firstName.toLowerCase());
 					}
 				} else {
 					// Descending: Sort by firstName, then lastName
@@ -201,8 +203,8 @@ export function getSortDescription(
 		case 'title':
 			return `Sorted by title (${directionText})`;
 		case 'name':
-			return direction === 'desc' 
-				? 'Sorted by first name, last name' 
+			return direction === 'desc'
+				? 'Sorted by first name, last name'
 				: 'Sorted by last name, first name';
 		case 'status':
 			return 'Sorted by status (pending first)';

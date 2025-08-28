@@ -82,37 +82,20 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 	}
 
 	const fullUrl = `${API_BASE_URL}/api${endpoint}`;
-	console.log('🌐 API Request:', {
-		method: options.method || 'GET',
-		url: fullUrl,
-		hasAuth: !!token,
-		headers: Object.keys(headers),
-		useEmulators: PUBLIC_USE_EMULATORS,
-		baseUrl: API_BASE_URL
-	});
+	// console.log('🌐 API Request:', fullUrl);
 
 	const response = await fetch(fullUrl, {
 		...options,
 		headers
 	});
 
-	console.log('📡 API Response:', {
-		status: response.status,
-		statusText: response.statusText,
-		ok: response.ok,
-		url: fullUrl
-	});
+	// console.log('📡 API Response:', response.status);
 
 	// Always parse JSON response first
 	let data;
 	try {
 		data = await response.json();
-		console.log('📦 Response data preview:', {
-			success: data.success,
-			hasData: !!data.data,
-			dataType: typeof data.data,
-			error: data.error
-		});
+		// console.log('📦 Response data preview');
 	} catch (parseError) {
 		console.error('❌ Failed to parse response JSON:', parseError);
 		// If JSON parsing fails, it's likely a real network error or invalid response
@@ -146,7 +129,7 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
 		throw error;
 	}
 
-	console.log('✅ API request successful');
+	// console.log('✅ API request successful');
 	return data;
 }
 
@@ -189,17 +172,9 @@ export async function typedApiRequest<T>(
 	// Check if response has nested 'data' property (Format 1)
 	if ('data' in rawResponse) {
 		dataToValidate = (rawResponse as any).data;
-		console.debug('🔧 Using nested data property from API response');
+		// console.debug('🔧 Using nested data property from API response');
 
-		// Special logging for dashboard endpoint IMMEDIATELY after extraction
-		if (endpoint.includes('teacher/dashboard')) {
-			console.log('🔍 DASHBOARD API DEBUG - Raw API Response:');
-			console.log('Full rawResponse:', rawResponse);
-			console.log('Extracted data field:', dataToValidate);
-			if (dataToValidate && typeof dataToValidate === 'object') {
-				console.log('Keys in extracted data:', Object.keys(dataToValidate));
-			}
-		}
+		// Dashboard debug logs disabled
 	} else {
 		// Handle submissions/assignment response format (Format 2)
 		// Backend returns: { success: true, assignmentId: "...", [...submissions] }
@@ -217,62 +192,30 @@ export async function typedApiRequest<T>(
 
 		if (arrayKey) {
 			dataToValidate = responseObj[arrayKey];
-			console.debug(`🔧 Using array property '${arrayKey}' from API response`);
+			// console.debug(`🔧 Using array property '${arrayKey}' from API response`);
 		} else {
 			// For non-array responses, extract the data excluding wrapper properties
 			const { success, error, assignmentId, ...actualData } = responseObj;
 			dataToValidate = actualData;
-			console.debug('🔧 Using extracted data from API response wrapper');
+			// console.debug('🔧 Using extracted data from API response wrapper');
 		}
 	}
 
 	// For array endpoints: convert null to empty array
 	if (dataToValidate === null && (schema._def as any).typeName === 'ZodArray') {
-		console.debug('🔧 Converting null array response to empty array');
+		// console.debug('🔧 Converting null array response to empty array');
 		dataToValidate = [];
 	}
 
 	// Add detailed logging for debugging validation issues
-	console.debug('Data to validate:', JSON.stringify(dataToValidate, null, 2));
-	console.debug('Schema type:', (schema._def as any).typeName);
+	// console.debug('Data to validate:', JSON.stringify(dataToValidate, null, 2));
+	// console.debug('Schema type:', (schema._def as any).typeName);
 
-	// Special debug logging for dashboard endpoint
-	if (endpoint.includes('teacher/dashboard')) {
-		console.log('🔍 DASHBOARD API DEBUG - Before Validation:');
-		console.log('Raw dataToValidate:', dataToValidate);
-		if (dataToValidate && typeof dataToValidate === 'object') {
-			console.log('Has teacher?', 'teacher' in dataToValidate);
-			console.log('Has classrooms?', 'classrooms' in dataToValidate);
-			console.log('Classrooms value:', (dataToValidate as any).classrooms);
-			console.log(
-				'Classrooms length:',
-				Array.isArray((dataToValidate as any).classrooms)
-					? (dataToValidate as any).classrooms.length
-					: 'not an array'
-			);
-			if ((dataToValidate as any).classrooms && (dataToValidate as any).classrooms.length > 0) {
-				console.log('First classroom:', (dataToValidate as any).classrooms[0]);
-			}
-		}
-	}
+	// Dashboard debug logs disabled
 
 	const validation = safeValidateApiResponse(schema, dataToValidate);
 
-	// Log result after validation for dashboard
-	if (endpoint.includes('teacher/dashboard')) {
-		console.log('🔍 DASHBOARD API DEBUG - After Validation:');
-		console.log('Validation success?', validation.success);
-		if (validation.success && validation.data) {
-			console.log('Validated data:', validation.data);
-			console.log('Validated classrooms:', (validation.data as any).classrooms);
-			console.log(
-				'Validated classrooms length:',
-				Array.isArray((validation.data as any).classrooms)
-					? (validation.data as any).classrooms.length
-					: 'not an array'
-			);
-		}
-	}
+	// Dashboard validation debug logs disabled
 
 	if (!validation.success) {
 		console.error('🚨 API RESPONSE VALIDATION FAILED 🚨');
