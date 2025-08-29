@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { api } from '$lib/api';
-	import { PUBLIC_USE_EMULATORS } from '$env/static/public';
+	import { PUBLIC_ENVIRONMENT } from '$env/static/public';
 
 	let status = $state<'checking' | 'connected' | 'error'>('checking');
 	let apiVersion = $state<string>('');
 	let errorMessage = $state<string>('');
 
 	onMount(async () => {
-		if (PUBLIC_USE_EMULATORS !== 'true') {
+		if (PUBLIC_ENVIRONMENT !== 'development') {
 			status = 'connected';
 			return;
 		}
@@ -24,7 +24,7 @@
 	});
 </script>
 
-{#if PUBLIC_USE_EMULATORS === 'true'}
+{#if PUBLIC_ENVIRONMENT === 'development'}
 	<div
 		class="fixed right-4 bottom-4 rounded-lg p-4 shadow-lg
     {status === 'connected'

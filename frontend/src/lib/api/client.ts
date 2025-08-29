@@ -10,8 +10,8 @@
 import { httpsCallable, type HttpsCallableResult } from 'firebase/functions';
 import { firebaseFunctions, firebaseAuth } from '../firebase';
 import {
-	PUBLIC_USE_EMULATORS,
-	PUBLIC_FUNCTIONS_EMULATOR_URL,
+	PUBLIC_ENVIRONMENT,
+	PUBLIC_EMULATOR_FUNCTIONS_URL,
 	PUBLIC_FIREBASE_PROJECT_ID
 } from '$env/static/public';
 import { z } from 'zod';
@@ -21,8 +21,8 @@ import { safeValidateApiResponse } from '../schemas';
  * Base URL for direct HTTP calls
  */
 export const API_BASE_URL =
-	PUBLIC_USE_EMULATORS === 'true'
-		? PUBLIC_FUNCTIONS_EMULATOR_URL
+	PUBLIC_ENVIRONMENT === 'development'
+		? PUBLIC_EMULATOR_FUNCTIONS_URL
 		: `https://us-central1-${PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
 
 /**

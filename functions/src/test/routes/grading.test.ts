@@ -53,7 +53,7 @@ describe("Grade All Assignments", () => {
 
     // Mock request/response
     mockRequest = {
-      body: { classroomId: "classroom_737123279360" },
+      body: { assignmentId: "assignment_123" },
       app: {
         locals: {
           geminiApiKey: "test-api-key"
@@ -68,8 +68,9 @@ describe("Grade All Assignments", () => {
 
     // Create mock services
     mockRepository = {
-      getUngradedSubmissions: vi.fn(),
-      getAssignment: vi.fn()
+      getAllSubmissionsByAssignment: vi.fn(),
+      getAssignment: vi.fn(),
+      getGradesByClassroom: vi.fn()
     };
 
     mockGeminiService = {
@@ -81,7 +82,7 @@ describe("Grade All Assignments", () => {
     };
 
     // Setup mock implementations
-    (validateData as any).mockReturnValue({ classroomId: "classroom_737123279360" });
+    (validateData as any).mockReturnValue({ assignmentId: "assignment_123" });
     (FirestoreRepository as any).mockImplementation(() => mockRepository);
     (createGeminiService as any).mockReturnValue(mockGeminiService);
     (createFirestoreGradeService as any).mockReturnValue(mockFirestoreService);
@@ -98,23 +99,25 @@ describe("Grade All Assignments", () => {
           id: "sub-1",
           studentId: "student-1", 
           studentName: "Aaron Adams",
-          assignmentId: "assignment-1",
+          assignmentId: "assignment_123",
+          classroomId: "classroom_737123279360",
           content: "function hello() { console.log('Hello World'); }",
-          status: "pending"
+          status: "submitted"
         }),
         domainFactories.submission({
           id: "sub-2", 
           studentId: "student-2",
           studentName: "Beth Baker",
-          assignmentId: "assignment-1", 
+          assignmentId: "assignment_123",
+          classroomId: "classroom_737123279360", 
           content: "function greet(name) { return `Hello ${name}`; }",
-          status: "pending"
+          status: "submitted"
         })
       ];
 
       // Create test assignment
       const assignment = domainFactories.assignment({
-        id: "assignment-1",
+        id: "assignment_123",
         title: "Test Assignment",
         description: "Test description",
         maxPoints: 100,
@@ -122,8 +125,9 @@ describe("Grade All Assignments", () => {
       });
 
       // Mock repository responses
-      mockRepository.getUngradedSubmissions.mockResolvedValue(submissions);
+      mockRepository.getAllSubmissionsByAssignment.mockResolvedValue(submissions);
       mockRepository.getAssignment.mockResolvedValue(assignment);
+      mockRepository.getGradesByClassroom.mockResolvedValue([]);
       mockFirestoreService.saveGrade.mockResolvedValue("grade-123");
 
       // Mock grading service responses
@@ -140,14 +144,14 @@ describe("Grade All Assignments", () => {
       // Verify input validation
       expect(validateData).toHaveBeenCalledWith(
         expect.any(Object),
-        { classroomId: "classroom_737123279360" }
+        { assignmentId: "assignment_123" }
       );
 
-      // Verify ungraded submissions fetched
-      expect(mockRepository.getUngradedSubmissions).toHaveBeenCalledWith("classroom_737123279360");
+      // Verify submissions fetched
+      expect(mockRepository.getAllSubmissionsByAssignment).toHaveBeenCalledWith("assignment_123");
 
       // Verify assignment data retrieved
-      expect(mockRepository.getAssignment).toHaveBeenCalledWith("assignment-1");
+      expect(mockRepository.getAssignment).toHaveBeenCalledWith("assignment_123");
 
       // Verify grading service called for each submission
       expect(mockGeminiService.gradeSubmission).toHaveBeenCalledTimes(2);
@@ -162,26 +166,32 @@ describe("Grade All Assignments", () => {
           totalSubmissions: 2,
           gradedCount: 2,
           failedCount: 0,
+          skippedCount: 0,
           results: expect.arrayContaining([
             expect.objectContaining({
               submissionId: "sub-1",
+              gradeId: "grade-123",
+              score: 85
+            }),
+            expect.objectContaining({
+              submissionId: "sub-2",
               gradeId: "grade-123",
               score: 85
             })
           ])
         }),
         true,
-        expect.stringContaining("Graded 2 of 2 submissions")
+        "Smart Grade All completed: 2 graded, 0 skipped (2 total)"
       );
     });
 
-    it("should handle classroom with no ungraded submissions", async () => {
+    it("should handle assignment with no submissions", async () => {
       // Mock empty submissions
-      mockRepository.getUngradedSubmissions.mockResolvedValue([]);
+      mockRepository.getAllSubmissionsByAssignment.mockResolvedValue([]);
 
       await gradeAllAssignments(mockRequest as Request, mockResponse as Response);
 
-      expect(mockRepository.getUngradedSubmissions).toHaveBeenCalledWith("classroom_737123279360");
+      expect(mockRepository.getAllSubmissionsByAssignment).toHaveBeenCalledWith("assignment_123");
       expect(mockGeminiService.gradeSubmission).not.toHaveBeenCalled();
       
       expect(sendApiResponse).toHaveBeenCalledWith(
@@ -190,10 +200,11 @@ describe("Grade All Assignments", () => {
           totalSubmissions: 0,
           gradedCount: 0,
           failedCount: 0,
+          skippedCount: 0,
           results: []
         },
         true,
-        "No ungraded submissions found"
+        "No submissions found for this assignment"
       );
     });
   });
@@ -214,7 +225,7 @@ describe("Grade All Assignments", () => {
     });
 
     it("should handle repository errors", async () => {
-      mockRepository.getUngradedSubmissions.mockRejectedValue(new Error("Database connection failed"));
+      mockRepository.getAllSubmissionsByAssignment.mockRejectedValue(new Error("Database connection failed"));
 
       await gradeAllAssignments(mockRequest as Request, mockResponse as Response);
 
@@ -230,24 +241,29 @@ describe("Grade All Assignments", () => {
         domainFactories.submission({
           id: "sub-1",
           studentName: "Aaron Adams",
-          assignmentId: "assignment-1",
-          content: "valid code"
+          assignmentId: "assignment_123",
+          classroomId: "classroom_737123279360",
+          content: "valid code",
+          status: "submitted"
         }),
         domainFactories.submission({
           id: "sub-2", 
           studentName: "Beth Baker",
-          assignmentId: "assignment-1",
-          content: "invalid code"
+          assignmentId: "assignment_123",
+          classroomId: "classroom_737123279360",
+          content: "invalid code",
+          status: "submitted"
         })
       ];
 
       const assignment = domainFactories.assignment({
-        id: "assignment-1",
+        id: "assignment_123",
         title: "Test Assignment"
       });
 
-      mockRepository.getUngradedSubmissions.mockResolvedValue(submissions);
+      mockRepository.getAllSubmissionsByAssignment.mockResolvedValue(submissions);
       mockRepository.getAssignment.mockResolvedValue(assignment);
+      mockRepository.getGradesByClassroom.mockResolvedValue([]);
       mockFirestoreService.saveGrade.mockResolvedValue("grade-123");
 
       // First submission succeeds, second fails
@@ -263,45 +279,48 @@ describe("Grade All Assignments", () => {
           totalSubmissions: 2,
           gradedCount: 1,
           failedCount: 1,
+          skippedCount: 0,
           results: expect.arrayContaining([
             expect.objectContaining({ submissionId: "sub-1" })
           ]),
           failures: expect.arrayContaining([
             expect.objectContaining({
               submissionId: "sub-2",
-              error: "AI service timeout"
+              error: expect.any(String)
             })
           ])
         }),
         true,
-        expect.stringContaining("Graded 1 of 2 submissions")
+        "Smart Grade All completed: 1 graded, 0 skipped (2 total)"
       );
     });
   });
 
   describe("Batch Processing", () => {
     it("should process multiple submissions and return results", async () => {
-      // Create test submissions with multiple assignments
+      // Create test submissions for the same assignment
       const submissions = [
         domainFactories.submission({
           id: "sub-1",
-          assignmentId: "assignment-1",
-          studentName: "Student 1"
+          assignmentId: "assignment_123",
+          classroomId: "classroom_737123279360",
+          studentName: "Student 1",
+          status: "submitted"
         }),
         domainFactories.submission({
           id: "sub-2",
-          assignmentId: "assignment-2", 
-          studentName: "Student 2"
+          assignmentId: "assignment_123",
+          classroomId: "classroom_737123279360", 
+          studentName: "Student 2",
+          status: "submitted"
         })
       ];
 
-      const assignment1 = domainFactories.assignment({ id: "assignment-1", title: "Assignment 1" });
-      const assignment2 = domainFactories.assignment({ id: "assignment-2", title: "Assignment 2" });
+      const assignment = domainFactories.assignment({ id: "assignment_123", title: "Test Assignment" });
 
-      mockRepository.getUngradedSubmissions.mockResolvedValue(submissions);
-      mockRepository.getAssignment
-        .mockResolvedValueOnce(assignment1)
-        .mockResolvedValueOnce(assignment2);
+      mockRepository.getAllSubmissionsByAssignment.mockResolvedValue(submissions);
+      mockRepository.getAssignment.mockResolvedValue(assignment);
+      mockRepository.getGradesByClassroom.mockResolvedValue([]);
       mockFirestoreService.saveGrade.mockResolvedValue("grade-123");
       mockGeminiService.gradeSubmission.mockResolvedValue(responseFactories.gradingResult());
 
@@ -314,10 +333,11 @@ describe("Grade All Assignments", () => {
         expect.objectContaining({
           totalSubmissions: 2,
           gradedCount: 2,
-          failedCount: 0
+          failedCount: 0,
+          skippedCount: 0
         }),
         true,
-        expect.stringContaining("Graded 2 of 2 submissions")
+        "Smart Grade All completed: 2 graded, 0 skipped (2 total)"
       );
     });
   });

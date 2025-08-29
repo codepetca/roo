@@ -4,13 +4,13 @@
  */
 
 import { type Handle } from '@sveltejs/kit';
-import { PUBLIC_USE_EMULATORS } from '$env/static/public';
+import { PUBLIC_ENVIRONMENT } from '$env/static/public';
 
 // Firebase Admin SDK initialization is no longer needed in frontend
 // Authentication is handled client-side and verified by backend API
 
 // Set Firebase emulator environment variables for development
-if (PUBLIC_USE_EMULATORS === 'true') {
+if (PUBLIC_ENVIRONMENT === 'development') {
 	process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
 	process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8080';
 }

@@ -12,8 +12,8 @@ global.fetch = mockFetch;
 
 // Mock environment variables
 vi.mock('$env/static/public', () => ({
-	PUBLIC_USE_EMULATORS: 'true',
-	PUBLIC_FUNCTIONS_EMULATOR_URL: 'http://localhost:5001/test-project/us-central1',
+	PUBLIC_ENVIRONMENT: 'development',
+	PUBLIC_EMULATOR_FUNCTIONS_URL: 'http://localhost:5001/test-project/us-central1',
 	PUBLIC_FIREBASE_API_KEY: 'test-api-key',
 	PUBLIC_FIREBASE_AUTH_DOMAIN: 'test.firebaseapp.com',
 	PUBLIC_FIREBASE_PROJECT_ID: 'test-project',

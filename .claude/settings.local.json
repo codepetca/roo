@@ -33,7 +33,8 @@
       "WebFetch(domain:ai.google.dev)",
       "Bash(firebase:*)",
       "mcp__firebase__firestore_query_collection",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "WebSearch"
     ],
     "deny": []
   },

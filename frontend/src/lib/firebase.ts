@@ -24,7 +24,12 @@ import {
 	PUBLIC_FIREBASE_STORAGE_BUCKET,
 	PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
 	PUBLIC_FIREBASE_APP_ID,
-	PUBLIC_USE_EMULATORS
+	PUBLIC_ENVIRONMENT,
+	PUBLIC_EMULATOR_AUTH_URL,
+	PUBLIC_EMULATOR_FIRESTORE_HOST,
+	PUBLIC_EMULATOR_FIRESTORE_PORT,
+	PUBLIC_EMULATOR_FUNCTIONS_HOST,
+	PUBLIC_EMULATOR_FUNCTIONS_PORT
 } from '$env/static/public';
 
 // Firebase configuration
@@ -57,10 +62,14 @@ export function initializeFirebase() {
 		db = getFirestore(app);
 		functions = getFunctions(app);
 
-		// Connect to emulators if in development
-		if (PUBLIC_USE_EMULATORS === 'true' && !emulatorsConnected) {
+		// Connect to emulators in local environment
+		console.log('🔍 DEBUG: PUBLIC_ENVIRONMENT =', PUBLIC_ENVIRONMENT);
+		if (PUBLIC_ENVIRONMENT === 'development' && !emulatorsConnected) {
+			console.log('🔍 DEBUG: Connecting to local emulators...');
 			connectToEmulators();
 			emulatorsConnected = true;
+		} else {
+			console.log('🔍 DEBUG: Using remote Firebase services for environment:', PUBLIC_ENVIRONMENT);
 		}
 	}
 
@@ -73,25 +82,35 @@ export function initializeFirebase() {
  */
 function connectToEmulators() {
 	try {
+		console.log('🔍 DEBUG: Starting emulator connections...');
+		
 		// Connect Auth emulator
-		connectAuthEmulator(auth, 'http://localhost:9099', {
+		const authUrl = PUBLIC_EMULATOR_AUTH_URL || 'http://127.0.0.1:9099';
+		connectAuthEmulator(auth, authUrl, {
 			disableWarnings: true
 		});
+		console.log('🔍 DEBUG: Auth emulator connected at', authUrl);
 
 		// Connect Firestore emulator
-		connectFirestoreEmulator(db, 'localhost', 8080);
+		const firestoreHost = PUBLIC_EMULATOR_FIRESTORE_HOST || '127.0.0.1';
+		const firestorePort = parseInt(PUBLIC_EMULATOR_FIRESTORE_PORT || '8080');
+		connectFirestoreEmulator(db, firestoreHost, firestorePort);
+		console.log('🔍 DEBUG: Firestore emulator connected at', `${firestoreHost}:${firestorePort}`);
 
 		// Connect Functions emulator
-		connectFunctionsEmulator(functions, 'localhost', 5001);
+		const functionsHost = PUBLIC_EMULATOR_FUNCTIONS_HOST || '127.0.0.1';
+		const functionsPort = parseInt(PUBLIC_EMULATOR_FUNCTIONS_PORT || '5001');
+		connectFunctionsEmulator(functions, functionsHost, functionsPort);
+		console.log('🔍 DEBUG: Functions emulator connected at', `${functionsHost}:${functionsPort}`);
 
 		console.log('🔧 Connected to Firebase Emulators');
-		console.log('   Auth: http://localhost:9099');
-		console.log('   Firestore: http://localhost:8080');
-		console.log('   Functions: http://localhost:5001');
-		console.log('   Emulator UI: http://localhost:4000');
+		console.log(`   Auth: ${authUrl}`);
+		console.log(`   Firestore: ${firestoreHost}:${firestorePort}`);
+		console.log(`   Functions: ${functionsHost}:${functionsPort}`);
+		console.log('   Emulator UI: http://127.0.0.1:4000');
 	} catch (error) {
-		// Emulators might already be connected
-		console.warn('Emulator connection warning:', error);
+		// Emulators might already be connected or there could be other issues
+		console.error('🚨 Emulator connection error:', error);
 	}
 }
 

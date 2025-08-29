@@ -1,193 +1,344 @@
-# Environment Switching Guide: Staging ↔ Production
+# Environment Switching Guide
 
-Complete guide for switching between staging and production Firebase environments in the Roo project.
+This guide explains how to quickly switch between emulators (local), staging, and production environments in the Roo project.
 
-## 🎯 Quick Switch Commands
+## Quick Reference
 
 ```bash
-# Switch to staging environment
-./scripts/use-staging.sh
+# Switch environments using NPM scripts (recommended)
+npm run env:local      # Switch to local emulators
+npm run env:staging    # Switch to staging Firebase
+npm run env:production # Switch to production Firebase
+npm run env:status     # Show current environment
 
-# Switch to production environment  
-./scripts/use-production.sh
+# Or use scripts directly
+./scripts/switch-environment.sh local
+./scripts/switch-environment.sh staging
+./scripts/switch-environment.sh production
+./scripts/show-environment.sh
 ```
 
-## 📋 Required .env Configuration
+## Environments Overview
 
-### Staging Environment
+### 🔧 Local (Emulators)
+- **Firebase Project**: `roo-app-3d24e` (uses production project config)
+- **Services**: All services run locally via Firebase emulators
+- **Data**: Isolated test data, automatically seeded
+- **Use Case**: Development, testing, debugging
 
-You need to obtain the actual Firebase Web App configuration for the staging project and update these files:
+### ⚠️ Staging
+- **Firebase Project**: `roo-staging-602dd` 
+- **Services**: Real Firebase services in staging project
+- **Data**: Staging test data, safe for testing
+- **Use Case**: Integration testing, demo, pre-production validation
 
-#### `frontend/.env.staging`
-```env
-PUBLIC_FIREBASE_API_KEY=your-staging-api-key
-PUBLIC_FIREBASE_AUTH_DOMAIN=roo-staging-602dd.firebaseapp.com
-PUBLIC_FIREBASE_PROJECT_ID=roo-staging-602dd
-PUBLIC_FIREBASE_STORAGE_BUCKET=roo-staging-602dd.firebasestorage.app
-PUBLIC_FIREBASE_MESSAGING_SENDER_ID=933233788608
-PUBLIC_FIREBASE_APP_ID=your-staging-app-id
+### 🚨 Production
+- **Firebase Project**: `roo-app-3d24e`
+- **Services**: Real Firebase services in production
+- **Data**: Live user data
+- **Use Case**: Live application, requires extra caution
+
+## Environment Files Structure
+
+### Frontend Environment Files
+```
+frontend/
+├── .env                 # Active environment (copied from specific env)
+├── .env.local          # Local emulator configuration
+├── .env.staging        # Staging Firebase configuration  
+├── .env.production     # Production Firebase configuration
+└── .env.example        # Template for new environments
+```
+
+### Functions Environment Files
+```
+functions/
+├── .env                # Active environment (copied from specific env)
+├── .env.local         # Local emulator configuration
+├── .env.staging       # Staging Firebase configuration
+├── .env.production    # Production Firebase configuration
+└── .env.local.example # Template for new environments
+```
+
+## Switching Commands
+
+### Master Switcher Script
+The `scripts/switch-environment.sh` script is the main tool for switching environments:
+
+```bash
+# Basic usage
+./scripts/switch-environment.sh [local|staging|production]
+
+# Examples
+./scripts/switch-environment.sh local      # Switch to emulators
+./scripts/switch-environment.sh staging    # Switch to staging
+./scripts/switch-environment.sh production # Switch to production (requires confirmation)
+```
+
+**Features:**
+- Automatic environment file validation
+- Firebase project switching
+- Environment file backup
+- Safety confirmations for production
+- Colored output with clear status
+
+### Individual Scripts
+Legacy scripts that delegate to the master switcher:
+
+```bash
+./scripts/use-local.sh       # Switch to local emulators
+./scripts/use-staging.sh     # Switch to staging Firebase
+./scripts/use-production.sh  # Switch to production Firebase
+```
+
+### NPM Scripts (Recommended)
+Convenient shortcuts available in `package.json`:
+
+```bash
+npm run env:local      # Switch to local development
+npm run env:staging    # Switch to staging environment
+npm run env:production # Switch to production environment
+npm run env:status     # Display current environment status
+```
+
+### Environment Status Display
+Check your current environment configuration:
+
+```bash
+npm run env:status
+# or
+./scripts/show-environment.sh
+```
+
+**Status Display Shows:**
+- Current Firebase project
+- Active environment files
+- Emulator vs. remote services
+- API key configuration status
+- Available environment files
+- Switching commands
+
+## Safety Features
+
+### Production Safeguards
+- **Confirmation Required**: Production switch requires typing "YES"
+- **Clear Warnings**: Red text warns about live data
+- **Backup System**: Automatic backup of current environment files
+
+### Environment Validation
+- **File Existence**: Validates environment files exist before switching
+- **Firebase CLI**: Checks Firebase CLI installation and authentication
+- **Project Access**: Verifies access to target Firebase project
+
+### Backup System
+Environment files are automatically backed up to `env-backups/` with timestamps:
+```
+env-backups/
+├── 20250128_143022/
+│   ├── frontend.env.backup
+│   └── functions.env.backup
+└── 20250128_143156/
+    ├── frontend.env.backup
+    └── functions.env.backup
+```
+
+## Configuration Details
+
+### Local Environment (.env.local)
+```bash
+# Uses emulators for all services
+PUBLIC_USE_EMULATORS=true
+PUBLIC_FUNCTIONS_EMULATOR_URL=http://localhost:5001/roo-app-3d24e/us-central1
+
+# Test accounts
+VITE_TEST_TEACHER_BOARD_EMAIL=teacher@test.com
+VITE_TEST_STUDENT_BOARD_EMAIL=student@test.com
+```
+
+**Emulator Ports:**
+- Auth Emulator: `http://localhost:9099`
+- Firestore Emulator: `http://localhost:8080`
+- Functions Emulator: `http://localhost:5001`
+- Emulator UI: `http://localhost:4000`
+
+### Staging Environment (.env.staging)
+```bash
+# Uses staging Firebase project
 PUBLIC_USE_EMULATORS=false
+PUBLIC_FIREBASE_PROJECT_ID=roo-staging-602dd
+
+# Staging test accounts
+VITE_TEST_TEACHER_BOARD_EMAIL=dev.codepet@gmail.com
+VITE_TEST_STUDENT_BOARD_EMAIL=student.test@gmail.com
 ```
 
-**How to get the actual values:**
-1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Select the "roo staging" project
-3. Go to Project Settings → General → Your apps
-4. Copy the Firebase SDK snippet values
-
-#### `functions/.env.staging`
-```env
-ENVIRONMENT=staging
-FIREBASE_PROJECT_ID=roo-staging-602dd
-GEMINI_API_KEY=your-staging-gemini-key
-BREVO_API_KEY=your-staging-brevo-key
-```
-
-### Production Environment
-
-Already configured in:
-- `frontend/.env.production` ✅
-- `functions/.env` (created automatically by scripts)
-
-## 🔄 What Each Script Does
-
-### `use-staging.sh`
-1. **Firebase CLI**: Switches to staging project (`roo-staging-602dd`)
-2. **Frontend**: Copies `.env.staging` → `.env`
-3. **Functions**: Copies `.env.staging` → `.env`
-4. **Verification**: Shows current project status
-
-### `use-production.sh`
-1. **Firebase CLI**: Switches to production project (`roo-app-3d24e`)
-2. **Frontend**: Copies `.env.production` → `.env`
-3. **Functions**: Creates production `.env` file
-4. **Verification**: Shows current project status
-
-## 🛠️ Additional Considerations When Switching
-
-### 1. Service Account Authentication
-
-**Backend Firebase Admin SDK** uses service account authentication:
-
-**For Staging:**
+### Production Environment (.env.production)
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS="path/to/staging-service-account.json"
+# Uses production Firebase project
+PUBLIC_USE_EMULATORS=false
+PUBLIC_FIREBASE_PROJECT_ID=roo-app-3d24e
+
+# Production configuration - no test accounts
 ```
 
-**For Production:**
+## Development Workflow
+
+### Starting Local Development
 ```bash
-export GOOGLE_APPLICATION_CREDENTIALS="path/to/production-service-account.json"
+# Switch to local environment
+npm run env:local
+
+# Start development servers
+npm run dev  # Starts emulators + frontend
+
+# Access emulator UI
+open http://localhost:4000
 ```
 
-Or add to your shell profile (`~/.zshrc` or `~/.bashrc`):
+### Testing Against Staging
 ```bash
-alias staging-creds='export GOOGLE_APPLICATION_CREDENTIALS="/path/to/staging-service-account.json"'
-alias prod-creds='export GOOGLE_APPLICATION_CREDENTIALS="/path/to/production-service-account.json"'
-```
+# Switch to staging
+npm run env:staging
 
-### 2. API Keys and External Services
+# Develop against staging Firebase
+npm run dev
 
-Update these keys when switching environments:
-
-**Google Gemini API:**
-- Production key vs staging/development key
-- Different rate limits and quotas
-
-**Brevo Email Service:**
-- Different API keys for staging vs production
-- Different sender configurations
-
-**Google Sheets API:**
-- May need different service account permissions
-- Different spreadsheet IDs for testing
-
-### 3. Database State Considerations
-
-**Firestore Collections:**
-- Staging: Safe to experiment and delete data
-- Production: Contains real user data - handle with extreme care
-
-**Authentication Users:**
-- Staging: Test users only
-- Production: Real user accounts
-
-### 4. Deployment Considerations
-
-**Functions Deployment:**
-```bash
-# Deploy to currently selected project
+# Deploy to staging
 npm run deploy
-
-# Or explicitly specify project
-firebase deploy --project staging
-firebase deploy --project production
 ```
 
-**Frontend Deployment:**
+### Production Deployment
 ```bash
-# Deploys to currently selected Firebase project
-npm run build:frontend && firebase deploy --only hosting
+# Switch to production (requires confirmation)
+npm run env:production
+
+# Run quality checks
+npm run quality:check
+
+# Deploy to production
+npm run deploy
 ```
 
-## 🚨 Safety Checklist
+## Troubleshooting
 
-### Before Switching to Production:
-- [ ] Verify you have production service account credentials
-- [ ] Confirm all API keys are production-ready
-- [ ] Check that you're not in a testing/experimental mindset
-- [ ] Consider impact of any database operations
+### Common Issues
 
-### Before Switching to Staging:
-- [ ] Ensure staging project exists and is accessible
-- [ ] Verify staging API keys and credentials are configured
-- [ ] Understand that staging data can be deleted/modified freely
-
-## 🔍 Verification Commands
-
-Check your current environment:
-
+#### "Firebase CLI not found"
 ```bash
-# Current Firebase project
-firebase projects:list
-firebase use
-
-# Current environment files
-cat frontend/.env | grep PROJECT_ID
-cat functions/.env | grep FIREBASE_PROJECT_ID
-
-# Service account verification
-echo $GOOGLE_APPLICATION_CREDENTIALS
+npm install -g firebase-tools
+firebase login
 ```
 
-## 🚧 Troubleshooting
+#### "Project access denied" 
+- Ensure you're authenticated: `firebase login`
+- Verify project access in Firebase Console
+- Check `.firebaserc` project configuration
 
-### Authentication Issues
-**Problem:** Script shows "invalid_grant" or authentication errors
-**Solution:** 
-1. Check service account credentials path
-2. Verify service account has proper permissions
-3. Re-authenticate with Firebase CLI: `firebase login`
+#### "Environment file not found"
+- Run `npm run env:status` to see missing files
+- Copy from `.env.example` files as templates
+- Ensure proper API keys are configured
 
-### Missing Configuration
-**Problem:** "Warning: .env.staging not found"
-**Solution:**
-1. Get actual Firebase config values from Firebase Console
-2. Update `frontend/.env.staging` with real values
-3. Add necessary API keys to `functions/.env.staging`
+#### "Firebase project not switching"
+- Run `firebase logout` then `firebase login`
+- Manually switch: `firebase use production` or `firebase use staging`
+- Check `.firebaserc` has correct project aliases
 
-### Wrong Project Selected
-**Problem:** Commands affecting wrong environment
-**Solution:**
-1. Run `firebase use` to check current project
-2. Run appropriate switch script: `./scripts/use-staging.sh` or `./scripts/use-production.sh`
-3. Verify with `firebase projects:list`
+### Verification Steps
 
-## 📚 Additional Resources
+1. **Check Current Environment**:
+   ```bash
+   npm run env:status
+   ```
 
-- [Firebase CLI Reference](https://firebase.google.com/docs/cli)
-- [Firebase Project Management](https://firebase.google.com/docs/projects/learn-more)
-- [Environment Variables in SvelteKit](https://kit.svelte.dev/docs/modules#$env-static-public)
+2. **Verify Firebase Project**:
+   ```bash
+   firebase use
+   ```
+
+3. **Check Environment Files**:
+   ```bash
+   cat frontend/.env | grep PROJECT_ID
+   cat functions/.env | grep PROJECT_ID
+   ```
+
+4. **Test API Connectivity**:
+   ```bash
+   # For emulators
+   curl http://localhost:5001/roo-app-3d24e/us-central1/api/health
+   
+   # For remote
+   curl https://us-central1-roo-app-3d24e.cloudfunctions.net/api/health
+   ```
+
+## API Key Management
+
+### Required API Keys
+
+#### Development/Local:
+- Gemini API (optional for local testing)
+- Brevo API (optional for local testing)
+- Service account JSON for Sheets access
+
+#### Staging:
+- Staging-specific Gemini API key (if available)
+- Staging-specific Brevo API key (if available)
+- Service account with staging permissions
+
+#### Production:
+- Production Gemini API key ⚠️
+- Production Brevo API key ⚠️
+- Production service account ⚠️
+
+### Security Notes
+- Never commit API keys to repository
+- Use different keys for different environments
+- Rotate keys regularly
+- Monitor API usage and billing
+
+## Best Practices
+
+### Before Switching Environments
+1. Commit current changes
+2. Check environment status: `npm run env:status`
+3. Backup important data if needed
+4. Run tests if switching from development
+
+### After Switching Environments
+1. Verify switch was successful: `npm run env:status`
+2. Check Firebase project: `firebase use`
+3. Test basic connectivity
+4. Review environment-specific configuration
+
+### Production Safety
+- Always run `npm run quality:check` before production deployment
+- Use staging environment for testing production-like scenarios
+- Have a rollback plan ready
+- Monitor applications after production deployments
+
+## Integration with Development Tools
+
+### VS Code Configuration
+Add to `.vscode/settings.json`:
+```json
+{
+  "terminal.integrated.env.osx": {
+    "NODE_ENV": "development"
+  }
+}
+```
+
+### Environment-Specific Scripts
+Create custom scripts for common environment-specific tasks:
+```bash
+# In package.json
+"scripts": {
+  "dev:staging": "npm run env:staging && npm run dev",
+  "deploy:staging": "npm run env:staging && npm run deploy",
+  "test:staging": "npm run env:staging && npm run test:e2e"
+}
+```
 
 ---
 
-**⚠️ Remember:** Always double-check which environment you're working in, especially when making database changes or deploying code!
+**⚠️ Important**: Always double-check your environment before making changes, especially when working with production data. Use `npm run env:status` frequently to verify your current configuration.

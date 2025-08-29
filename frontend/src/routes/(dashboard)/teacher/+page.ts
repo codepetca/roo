@@ -1,14 +1,14 @@
 import type { PageLoad } from './$types';
 import {
-	PUBLIC_USE_EMULATORS,
-	PUBLIC_FUNCTIONS_EMULATOR_URL,
+	PUBLIC_ENVIRONMENT,
+	PUBLIC_EMULATOR_FUNCTIONS_URL,
 	PUBLIC_FIREBASE_PROJECT_ID
 } from '$env/static/public';
 
 // Firebase Functions base URL
 const API_BASE_URL =
-	PUBLIC_USE_EMULATORS === 'true'
-		? PUBLIC_FUNCTIONS_EMULATOR_URL
+	PUBLIC_ENVIRONMENT === 'development'
+		? PUBLIC_EMULATOR_FUNCTIONS_URL
 		: `https://us-central1-${PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
 
 export const load: PageLoad = async ({ fetch, parent }) => {

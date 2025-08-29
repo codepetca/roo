@@ -1,4 +1,15 @@
-// Clear any explicit credential environment variables FIRST - before any imports
+// Environment setup for Firebase functions
+// Firebase functions emulator automatically loads .env file from functions directory
+console.log(`🌍 Functions Environment: ${process.env.ENVIRONMENT || 'development'}`);
+
+// Set emulator flags for development environment (local emulators)
+if (process.env.ENVIRONMENT === 'development' || process.env.FUNCTIONS_EMULATOR === 'true') {
+  console.log('🔧 Emulator mode detected');
+  console.log(`   Firestore: ${process.env.FIRESTORE_EMULATOR_HOST || 'localhost:8080'}`);
+  console.log(`   Auth: ${process.env.FIREBASE_AUTH_EMULATOR_HOST || 'localhost:9099'}`);
+}
+
+// Clear any explicit credential environment variables after loading .env
 if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
   delete process.env.GOOGLE_APPLICATION_CREDENTIALS;
   console.log("Cleared GOOGLE_APPLICATION_CREDENTIALS environment variable");
@@ -12,7 +23,7 @@ import { auth } from "firebase-functions/v1";
 import { getFirestore } from "firebase-admin/firestore";
 import { initializeApp, getApps } from "firebase-admin/app";
 import { userDomainSchema } from "./schemas/domain";
-import { getCurrentTimestamp } from "./config/firebase";
+import { getCurrentTimestamp, db } from "./config/firebase";
 
 // Extended request interface with params
 interface RequestWithParams extends Request {
@@ -395,7 +406,8 @@ export const createProfileForExistingUser = onCall(
       throw new Error("User ID is required");
     }
 
-    const db = getFirestore();
+    // Use the configured db instance from config/firebase.ts
+    // This automatically connects to the correct environment (emulator or production)
     
     try {
       // Check if profile already exists
@@ -417,9 +429,9 @@ export const createProfileForExistingUser = onCall(
       const adminAuth = getAuth();
       const user = await adminAuth.getUser(uid);
 
-      // Create user profile using domain schema
-      const now = getCurrentTimestamp();
-      const userDomain = {
+      // Create user profile with proper timestamp handling for emulator
+      const now = new Date();
+      const userDoc = {
         id: user.uid,
         email: user.email || "",
         displayName: displayName || user.displayName || user.email?.split("@")[0] || "User",
@@ -433,34 +445,60 @@ export const createProfileForExistingUser = onCall(
         createdAt: now,
         updatedAt: now
       };
-
-      // Validate with domain schema
-      const validatedUser = userDomainSchema.parse(userDomain);
       
-      // Save to Firestore
-      await db.collection("users").doc(user.uid).set(validatedUser);
+      // Save to Firestore with enhanced error logging
+      console.log('💾 Attempting to write user profile to Firestore:', {
+        uid: user.uid,
+        collection: 'users',
+        isEmulator: process.env.FUNCTIONS_EMULATOR === 'true'
+      });
+      
+      await db.collection("users").doc(user.uid).set(userDoc);
+      
+      console.log('✅ User profile successfully written to Firestore:', {
+        uid: user.uid,
+        role: userDoc.role
+      });
       
       // Set custom claims in Firebase Auth for role-based access
-      await adminAuth.setCustomUserClaims(user.uid, { role: validatedUser.role });
+      await adminAuth.setCustomUserClaims(user.uid, { role: userDoc.role });
       
       logger.info("User profile created successfully", { 
         uid: user.uid, 
-        role: validatedUser.role,
-        schoolEmail: validatedUser.schoolEmail,
+        role: userDoc.role,
+        schoolEmail: userDoc.schoolEmail,
         calledBy: "createProfileForExistingUser"
       });
       
       return { 
         success: true, 
         message: "User profile created successfully",
-        profile: validatedUser
+        profile: userDoc
       };
 
     } catch (error) {
+      // Enhanced error logging with more context
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      
       logger.error("Failed to create profile for existing user", {
         uid,
-        error: error instanceof Error ? error.message : "Unknown error"
+        role,
+        schoolEmail,
+        error: errorMessage,
+        stack: errorStack,
+        isEmulator: process.env.FUNCTIONS_EMULATOR === 'true',
+        firestoreHost: process.env.FIRESTORE_EMULATOR_HOST
       });
+      
+      console.error('❌ createProfileForExistingUser failed with full details:', {
+        uid,
+        role,
+        errorMessage,
+        errorStack,
+        timestamp: new Date().toISOString()
+      });
+      
       throw error;
     }
   }

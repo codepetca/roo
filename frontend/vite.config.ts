@@ -1,16 +1,30 @@
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import path from 'path';
 
-export default defineConfig({
-	plugins: [tailwindcss(), sveltekit()],
-	resolve: {
-		alias: {
-			'@shared': path.resolve(__dirname, '../functions/shared')
-		}
-	},
-	test: {
+export default defineConfig(({ mode }) => {
+	// Load environment based on PUBLIC_ENVIRONMENT if set, otherwise use mode
+	const env = process.env.PUBLIC_ENVIRONMENT || mode;
+	const envDir = process.cwd();
+	
+	// Load environment variables
+	const envVars = loadEnv(env, envDir, '');
+	
+	console.log(`🌍 Frontend Environment: ${env}`);
+	if (env === 'development') {
+		console.log('🔧 Frontend configured for emulators');
+	}
+	
+	return {
+		plugins: [tailwindcss(), sveltekit()],
+		resolve: {
+			alias: {
+				'@shared': path.resolve(__dirname, '../functions/shared')
+			}
+		},
+		envDir: envDir,
+		test: {
 		projects: [
 			{
 				extends: './vite.config.ts',
@@ -39,5 +53,6 @@ export default defineConfig({
 				}
 			}
 		]
-	}
+		}
+	};
 });

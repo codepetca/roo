@@ -1,7 +1,8 @@
 {
   "projects": {
     "default": "roo-app-3d24e",
-    "production": "roo-app-3d24e",
-    "staging": "roo-staging-602dd"
+    "local": "roo-app-3d24e",
+    "staging": "roo-staging-602dd",
+    "production": "roo-app-3d24e"
   }
 }

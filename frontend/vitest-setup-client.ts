@@ -79,8 +79,8 @@ vi.mock('$env/static/public', () => ({
 	PUBLIC_FIREBASE_STORAGE_BUCKET: 'test.appspot.com',
 	PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '123456789',
 	PUBLIC_FIREBASE_APP_ID: '1:123456789:web:abcdef',
-	PUBLIC_USE_EMULATORS: 'true',
-	PUBLIC_FUNCTIONS_EMULATOR_URL: 'http://localhost:5001/test-project/us-central1'
+	PUBLIC_ENVIRONMENT: 'development',
+	PUBLIC_EMULATOR_FUNCTIONS_URL: 'http://localhost:5001/test-project/us-central1'
 }));
 
 // Mock SvelteKit modules

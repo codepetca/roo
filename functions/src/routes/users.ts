@@ -9,7 +9,7 @@ import { z } from "zod";
 import { handleRouteError, sendApiResponse, validateData, getUserFromRequest } from "../middleware/validation";
 import { userDomainSchema } from "../schemas/domain";
 // NOTE: userDomainToDto removed - user DTO transformations no longer needed
-import { db, getCurrentTimestamp } from "../config/firebase";
+import { db } from "../config/firebase";
 import { FirestoreRepository } from "../services/firestore-repository";
 import * as admin from "firebase-admin";
 
@@ -61,7 +61,7 @@ export async function getUserProfile(req: Request, res: Response) {
 
     // Update last login timestamp through repository
     await repository.updateUser(decodedToken.uid, {
-      lastLogin: getCurrentTimestamp()
+      lastLogin: new Date()
     });
 
     // Return normalized user profile - repository already handles schema normalization
@@ -184,7 +184,7 @@ export async function updateSchoolEmail(req: Request, res: Response) {
     // Update school email
     await db.collection("users").doc(user.uid).update({
       schoolEmail,
-      updatedAt: getCurrentTimestamp()
+      updatedAt: new Date()
     });
 
     logger.info("School email updated", { 

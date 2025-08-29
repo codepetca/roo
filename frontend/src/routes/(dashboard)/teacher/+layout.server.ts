@@ -1,15 +1,15 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import {
-	PUBLIC_USE_EMULATORS,
-	PUBLIC_FUNCTIONS_EMULATOR_URL,
+	PUBLIC_ENVIRONMENT,
+	PUBLIC_EMULATOR_FUNCTIONS_URL,
 	PUBLIC_FIREBASE_PROJECT_ID
 } from '$env/static/public';
 
 // API base URL - use same configuration as frontend API client
 const API_BASE_URL =
-	PUBLIC_USE_EMULATORS === 'true'
-		? PUBLIC_FUNCTIONS_EMULATOR_URL
+	PUBLIC_ENVIRONMENT === 'development'
+		? PUBLIC_EMULATOR_FUNCTIONS_URL
 		: `https://us-central1-${PUBLIC_FIREBASE_PROJECT_ID}.cloudfunctions.net`;
 
 /**
