@@ -216,7 +216,7 @@ class DataStore {
 					maxScore: sub.grade?.maxScore || this.selectedAssignment?.maxScore,
 					percentage: sub.grade?.percentage,
 					feedback: sub.grade?.feedback,
-					questionGrades: sub.grade?.questionGrades
+					questionGrades: sub.grade?.questionGrades || sub.grade?.criteriaScores
 				});
 			}
 		});

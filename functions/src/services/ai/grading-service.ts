@@ -99,13 +99,36 @@ export class GeminiService {
         return fallbackResult;
       }
 
+      // Clean the JSON to handle common AI formatting issues
+      const cleanJson = (jsonString: string): string => {
+        return jsonString
+          // Remove trailing commas before closing brackets/braces
+          .replace(/,(\s*[}\]])/g, '$1')
+          // Fix any double commas
+          .replace(/,,/g, ',')
+          // Remove any trailing comma at the end before final brace
+          .replace(/,(\s*)}/g, '$1}')
+          // Clean up any malformed nested trailing commas
+          .replace(/,(\s*),/g, ',');
+      };
+
       let gradingResult: GradingResponse;
       try {
-        gradingResult = JSON.parse(jsonMatch[0]) as GradingResponse;
+        const cleanedJson = cleanJson(jsonMatch[0]);
+        logger.info("JSON cleaning applied", {
+          submissionId: request.submissionId,
+          originalLength: jsonMatch[0].length,
+          cleanedLength: cleanedJson.length,
+          hadTrailingCommas: jsonMatch[0] !== cleanedJson
+        });
+        
+        gradingResult = JSON.parse(cleanedJson) as GradingResponse;
       } catch (parseError) {
+        const cleanedJson = cleanJson(jsonMatch[0]);
         logger.error("Failed to parse JSON from Gemini response, creating fallback", {
           submissionId: request.submissionId,
-          jsonMatch: jsonMatch[0],
+          originalJson: jsonMatch[0].substring(0, 500),
+          cleanedJson: cleanedJson.substring(0, 500),
           parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error',
           fullResponse: text.substring(0, 1000) + (text.length > 1000 ? '...' : '')
         });

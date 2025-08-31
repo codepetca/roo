@@ -13,7 +13,8 @@
 		percentage?: number;
 		feedback?: string;
 		questionGrades?: Array<{
-			questionNumber: number;
+			name?: string;
+			questionNumber?: number;
 			score: number;
 			maxScore: number;
 			feedback: string;
@@ -41,7 +42,9 @@
 				name: student.studentName,
 				hasQuestionGrades: !!student.questionGrades,
 				questionGradesLength: student.questionGrades?.length || 0,
-				questionGrades: student.questionGrades
+				questionGrades: student.questionGrades,
+				firstItemStructure: student.questionGrades?.[0] ? Object.keys(student.questionGrades[0]) : null,
+				firstItemSample: student.questionGrades?.[0]
 			});
 		}
 	});
@@ -105,13 +108,19 @@
 			{#if hasQuestionGrades}
 				<!-- Question-by-Question Breakdown -->
 				<div class="mb-6">
-					<h3 class="mb-4 text-lg font-medium text-gray-900">Question-by-Question Breakdown</h3>
+					<h3 class="mb-4 text-lg font-medium text-gray-900">Detailed Breakdown</h3>
 					<div class="space-y-3">
 						{#each student.questionGrades as questionGrade, index}
 							<div class="rounded-lg border border-gray-200 p-4">
 								<div class="mb-2 flex items-center justify-between">
 									<h4 class="font-medium text-gray-900">
-										Question {questionGrade.questionNumber}
+										{#if questionGrade.name}
+											{questionGrade.name}
+										{:else if questionGrade.questionNumber}
+											Question {questionGrade.questionNumber}
+										{:else}
+											Criteria {index + 1}
+										{/if}
 									</h4>
 									<div class="flex items-center space-x-2">
 										<span class="text-sm font-medium text-gray-700">

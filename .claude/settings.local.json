@@ -34,7 +34,9 @@
       "Bash(firebase:*)",
       "mcp__firebase__firestore_query_collection",
       "mcp__context7__resolve-library-id",
-      "WebSearch"
+      "WebSearch",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_click"
     ],
     "deny": []
   },

@@ -137,8 +137,18 @@
 	}
 
 	function openFeedbackModal(student: StudentProgressItem) {
+		console.log('🚀 openFeedbackModal called for:', student.studentName);
+		console.log('🎯 Opening feedback modal for student:', {
+			name: student.studentName,
+			hasQuestionGrades: !!student.questionGrades,
+			questionGradesLength: student.questionGrades?.length || 0,
+			firstItemStructure: student.questionGrades?.[0] ? Object.keys(student.questionGrades[0]) : null,
+			studentData: student
+		});
+		
 		selectedStudentForModal = student;
 		modalOpen = true;
+		console.log('🔓 Modal state updated:', { modalOpen, selectedStudentName: selectedStudentForModal?.studentName });
 	}
 
 	function closeFeedbackModal() {
@@ -356,7 +366,12 @@
 									<button
 										class="cursor-pointer rounded px-2 py-1 text-left break-words text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:outline-none"
 										title="Click to view detailed feedback"
-										onclick={() => openFeedbackModal(student)}
+										onclick={(e) => {
+											e.preventDefault();
+											e.stopPropagation();
+											console.log('🔥 FEEDBACK BUTTON CLICKED!', student.studentName);
+											openFeedbackModal(student);
+										}}
 									>
 										{truncateComment(student.feedback, isCompactView ? 80 : 120)}
 									</button>

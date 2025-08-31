@@ -24,6 +24,7 @@
 						name: a.name,
 						displayTitle: a.title || a.name || 'Untitled',
 						type: a.type,
+						isUnitTest: (a.title || a.name)?.includes('Unit 2 Test'),
 						allKeys: Object.keys(a)
 					}))
 				: 'not an array',
@@ -31,6 +32,14 @@
 			assignmentsValue: assignments,
 			loading
 		});
+
+		// Log specific info about Unit 2 Test assignment
+		if (assignments && Array.isArray(assignments)) {
+			const unitTest = assignments.find(a => (a.title || a.name)?.includes('Unit 2 Test'));
+			if (unitTest) {
+				console.log('🧪 Found Unit 2 Test:', unitTest.id, unitTest.title || unitTest.name);
+			}
+		}
 	});
 
 	// Helper function to check if assignment is a Google Form
@@ -39,7 +48,13 @@
 	}
 
 	function selectAssignment(assignmentId: string) {
+		console.log('🚀 selectAssignment called with:', assignmentId);
 		dataStore.selectAssignment(assignmentId);
+	}
+
+	function handleAssignmentClick(assignment: Assignment) {
+		console.log('🎯 handleAssignmentClick called:', assignment.id, assignment.title || assignment.name);
+		selectAssignment(assignment.id);
 	}
 
 	function handleSortToggle() {
@@ -138,7 +153,12 @@
 			<div>
 				{#each assignments as assignment (assignment.id)}
 					<button
-						onclick={() => selectAssignment(assignment.id)}
+						onclick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							console.log('🔥 CLICK HANDLER FIRED!', assignment.id, assignment.title || assignment.name);
+							handleAssignmentClick(assignment);
+						}}
 						class="w-full border-b border-gray-200 py-2 text-left transition-all"
 						class:bg-blue-200={assignment.id === selectedAssignmentId}
 						class:bg-white={assignment.id !== selectedAssignmentId}
