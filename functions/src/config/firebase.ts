@@ -1,5 +1,5 @@
 import * as admin from "firebase-admin";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldPath as AdminFieldPath } from "firebase-admin/firestore";
 import { getFirestoreSettings, logEmulatorStatus, isEmulator, getAuthEmulatorUrl } from "../utils/emulator";
 
 // Initialize Firebase Admin SDK
@@ -50,6 +50,21 @@ export const FieldValue = {
   },
   get increment() {
     return admin.firestore.FieldValue.increment;
+  }
+};
+
+// Safe access to FieldPath that handles initialization
+export const FieldPath = {
+  get documentId() {
+    // Debug the FieldPath access issue in emulators
+    if (isEmulator()) {
+      console.log('🔍 DEBUG: Accessing FieldPath.documentId in emulator');
+      console.log('🔍 DEBUG: AdminFieldPath:', !!AdminFieldPath);
+      console.log('🔍 DEBUG: AdminFieldPath.documentId:', !!AdminFieldPath?.documentId);
+      console.log('🔍 DEBUG: admin.firestore.FieldPath:', !!admin.firestore.FieldPath);
+    }
+    // Use the properly imported AdminFieldPath instead of admin.firestore.FieldPath
+    return AdminFieldPath.documentId();
   }
 };
 

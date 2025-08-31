@@ -3,7 +3,7 @@
  * Location: functions/src/services/firestore.ts:1
  */
 
-import { db, getCurrentTimestamp } from "../config/firebase";
+import { db, getCurrentTimestamp, FieldPath } from "../config/firebase";
 import * as admin from "firebase-admin";
 import { logger } from "firebase-functions";
 
@@ -261,7 +261,7 @@ export class FirestoreGradeService {
       // Get all gradeIds from submissions that have them
       const gradeIds = submissions
         .map(sub => (sub as any).gradeId as string)
-        .filter(Boolean);
+        .filter(gradeId => gradeId && typeof gradeId === 'string' && gradeId.trim().length > 0);
 
       logger.info("Grade IDs to fetch", {
         assignmentId,
@@ -282,16 +282,81 @@ export class FirestoreGradeService {
         // Process in chunks of 10
         for (let i = 0; i < gradeIds.length; i += 10) {
           const batch = gradeIds.slice(i, i + 10);
-          logger.info("Fetching grades batch", {
+          
+          // Skip empty batches
+          if (batch.length === 0) {
+            continue;
+          }
+          
+          // Enhanced logging to debug documentId issues
+          logger.info("Preparing grades batch query", {
             assignmentId,
-            batch,
-            batchSize: batch.length
+            batchIndex: i,
+            batchSize: batch.length,
+            batchSample: batch.slice(0, 3), // Just first 3 IDs to avoid errors
+            hasNulls: batch.some(id => !id),
+            hasNonStrings: batch.some(id => id && typeof id !== 'string')
+          });
+
+          // Double-check each ID before querying
+          const validIds = batch.filter(id => {
+            if (!id) {
+              logger.warn("Found null/undefined gradeId", { assignmentId, batchIndex: i });
+              return false;
+            }
+            if (typeof id !== 'string') {
+              logger.warn("Found non-string gradeId", { assignmentId, batchIndex: i, id, type: typeof id });
+              return false;
+            }
+            if (id.trim().length === 0) {
+              logger.warn("Found empty string gradeId", { assignmentId, batchIndex: i, id });
+              return false;
+            }
+            return true;
+          });
+
+          if (validIds.length === 0) {
+            logger.warn("No valid IDs in batch, skipping", { assignmentId, batchIndex: i, originalBatch: batch });
+            continue;
+          }
+
+          logger.info("Fetching grades batch with validated IDs", {
+            assignmentId,
+            validIds,
+            validIdCount: validIds.length,
+            originalBatchSize: batch.length
           });
           
           // Try without isLatest filter first to see if grades exist at all
-          const gradesSnapshot = await db.collection("grades")
-            .where(admin.firestore.FieldPath.documentId(), "in", batch)
-            .get();
+          let gradesSnapshot;
+          try {
+            logger.info("Executing Firestore documentId query", {
+              assignmentId,
+              batchIndex: i,
+              queryIds: validIds,
+              queryType: "documentId IN array"
+            });
+            
+            gradesSnapshot = await db.collection("grades")
+              .where(FieldPath.documentId, "in", validIds)
+              .get();
+            
+            logger.info("Firestore query successful", {
+              assignmentId,
+              batchIndex: i,
+              resultCount: gradesSnapshot.docs.length
+            });
+          } catch (queryError) {
+            logger.error("Firestore documentId query failed", {
+              assignmentId,
+              batchIndex: i,
+              validIds,
+              error: queryError,
+              errorMessage: queryError instanceof Error ? queryError.message : String(queryError),
+              errorStack: queryError instanceof Error ? queryError.stack : undefined
+            });
+            throw queryError;
+          }
           
           logger.info("Grades query result", {
             assignmentId,

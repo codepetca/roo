@@ -561,10 +561,11 @@ export class FirestoreRepository {
     const snapshot = await db.collection(this.collections.enrollments)
       .where("classroomId", "==", classroomId)
       .where("status", "==", "active")
-      .orderBy("name", "asc")
       .get();
 
-    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as StudentEnrollment));
+    return snapshot.docs
+      .map(doc => ({ ...doc.data(), id: doc.id } as StudentEnrollment))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 
   async getEnrollmentsByStudent(studentId: string): Promise<StudentEnrollment[]> {

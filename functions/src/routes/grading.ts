@@ -605,60 +605,46 @@ export async function gradeAllAssignments(req: Request, res: Response) {
             
             let gradingResult: any;
             
-            if (isQuiz && submission.extractedContent?.formId) {
-              // Quiz grading path - use detailed question-by-question grading
+            if (isQuiz) {
+              // Quiz grading path - use AI grading with structured quiz data
               try {
-                console.log(`🧮 Using quiz grading for ${submission.studentName} (formId: ${submission.extractedContent.formId})`);
+                console.log(`🧠 Using quiz AI grading for ${submission.studentName} (using structured responses)`);
                 
-                // Get answer key from sheets
-                const { createSheetsService } = await import("../services/sheets");
-                const { getDefaultSpreadsheetId } = await import("../config/teachers");
+                // Extract quiz responses from structuredData
                 
-                const spreadsheetId = await getDefaultSpreadsheetId();
-                if (!spreadsheetId) {
-                  throw new Error("No teacher sheets configured for quiz grading");
-                }
+                const quizResponses: string[] = [];
                 
-                const sheetsService = await createSheetsService(spreadsheetId);
-                const answerKey = await sheetsService.getAnswerKey(submission.extractedContent.formId);
-                
-                if (answerKey) {
-                  // Convert student answers to the format expected by quiz grading
-                  const studentAnswers: { [questionNumber: number]: string } = {};
-                  if (submission.extractedContent.answers) {
-                    Object.entries(submission.extractedContent.answers).forEach(([key, value]) => {
-                      const questionNum = parseInt(key);
-                      if (!isNaN(questionNum)) {
-                        studentAnswers[questionNum] = String(value);
-                      }
-                    });
-                  }
-                  
-                  // Use quiz grading method - ensure answerKey has required properties
-                  if (!answerKey.formId || !answerKey.questions || !Array.isArray(answerKey.questions)) {
-                    throw new Error("Invalid answer key structure");
-                  }
-                  
-                  const quizResult = await geminiService.gradeQuiz({
-                    submissionId: submission.id,
-                    formId: submission.extractedContent.formId,
-                    studentAnswers,
-                    answerKey: answerKey as any // Type assertion after validation
+                if (submission.extractedContent?.structuredData) {
+                  Object.entries(submission.extractedContent.structuredData).forEach(([question, answer]) => {
+                    // Handle the flat structure where keys are questions and values are answers
+                    if (question && answer && typeof answer === 'string') {
+                      quizResponses.push(`Question: ${question}\nAnswer: ${answer}`);
+                    }
                   });
-                  
-                  // Convert quiz result to standard grading result format
-                  gradingResult = {
-                    score: quizResult.totalScore,
-                    feedback: `Quiz completed with ${quizResult.totalScore}/${answerKey.totalPoints} points. Individual question feedback available.`,
-                    criteriaScores: [], // Quiz uses question-based scoring instead
-                    questionGrades: quizResult.questionGrades
-                  };
-                  
-                  console.log(`✅ Quiz grading completed: ${quizResult.totalScore}/${answerKey.totalPoints} with ${quizResult.questionGrades.length} question details`);
-                } else {
-                  console.log(`⚠️ Answer key not found for formId ${submission.extractedContent.formId}, falling back to generic grading`);
-                  throw new Error("Answer key not found - falling back to generic grading");
                 }
+                
+                // Format quiz responses for AI grading
+                const quizText = quizResponses.length > 0 
+                  ? `Quiz Responses:\n${quizResponses.join('\n\n')}`
+                  : extractSubmissionContent(submission, classification);
+                
+                // Import quiz-specific prompts
+                const { GRADING_PROMPTS } = await import("../services/ai/prompts");
+                
+                // Use AI grading with quiz-specific prompt
+                const gradingRequest = {
+                  submissionId: submission.id,
+                  assignmentId: submission.assignmentId,
+                  title: assignment.title || assignment.name || 'Quiz Assignment',
+                  description: assignment.description || 'Quiz grading based on student responses',
+                  maxPoints: assignment.maxScore || 100,
+                  criteria: ["Accuracy", "Completeness", "Understanding"],
+                  submission: quizText,
+                  promptTemplate: GRADING_PROMPTS.default // Use general grading prompt for multi-question format
+                };
+                
+                gradingResult = await geminiService.gradeSubmission(gradingRequest);
+                console.log(`✅ Quiz AI grading completed: ${gradingResult.score}/${assignment.maxScore || 100} points`);
               } catch (quizError) {
                 console.log(`⚠️ Quiz grading failed for ${submission.studentName}, falling back to generic grading:`, quizError);
                 // Fall back to generic grading
