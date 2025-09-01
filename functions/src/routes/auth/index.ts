@@ -33,3 +33,8 @@ export {
 export {
   generateAndSendPasscode
 } from "./generate-and-send-passcode";
+
+// Student passcode verification
+export {
+  verifyPasscode
+} from "./verify-passcode";
