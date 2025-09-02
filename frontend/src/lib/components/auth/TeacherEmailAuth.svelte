@@ -23,15 +23,6 @@
 	let loadingMessage = '';
 	let error = '';
 
-	// Fill demo credentials for testing
-	function fillDemoCredentials() {
-		email = 'teacher@test.com';
-		password = 'test123';
-		if (mode === 'signup') {
-			displayName = 'Test Teacher';
-			schoolEmail = 'teacher@school.edu';
-		}
-	}
 
 	async function handleSubmit() {
 		if (mode === 'signup' && password !== confirmPassword) {
@@ -320,30 +311,6 @@
 		</button>
 	</div>
 
-	<!-- Demo credentials -->
-	<div class="border-t border-gray-200 pt-4" data-testid="demo-credentials-section">
-		<p class="mb-2 text-center text-sm text-gray-600">For Testing:</p>
-		<button
-			type="button"
-			on:click={fillDemoCredentials}
-			data-testid="fill-demo-credentials-button"
-			class="w-full rounded-md bg-blue-100 px-3 py-2 text-sm text-blue-700 transition-colors hover:bg-blue-200"
-			disabled={loading}
-		>
-			Fill Demo Teacher Credentials
-		</button>
-	</div>
 
-	<!-- Cancel Button -->
-	<div class="text-center">
-		<button
-			type="button"
-			on:click={handleCancel}
-			data-testid="back-to-options-button"
-			class="text-sm text-gray-500 hover:text-gray-700 focus:underline focus:outline-none"
-			disabled={loading}
-		>
-			Back to options
-		</button>
-	</div>
+	
 </div>

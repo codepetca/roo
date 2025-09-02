@@ -334,17 +334,7 @@
 			<!-- Teacher Email/Password Login -->
 			<div class="space-y-6" data-testid="teacher-email-auth">
 				<div class="flex items-center justify-between">
-					<h3 class="text-lg font-medium text-gray-900" data-testid="teacher-email-signin-title">
-						Teacher Email Sign In
-					</h3>
-					<button
-						type="button"
-						onclick={backToSelect}
-						data-testid="back-to-role-selection-button"
-						class="text-sm text-gray-500 hover:text-gray-700 focus:underline focus:outline-none"
-					>
-						Back
-					</button>
+				
 				</div>
 				<TeacherEmailAuth
 					on:success={handleTeacherEmailAuthSuccess}

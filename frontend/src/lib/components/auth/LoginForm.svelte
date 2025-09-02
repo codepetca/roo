@@ -26,16 +26,6 @@
 		}
 	}
 
-	// Demo credentials helper
-	function fillDemoCredentials(role: 'teacher' | 'student') {
-		if (role === 'teacher') {
-			email = 'teacher@test.com';
-			password = 'test123';
-		} else {
-			email = 'student1@test.com';
-			password = 'test123';
-		}
-	}
 </script>
 
 <div class="mx-auto max-w-md rounded-lg bg-white p-8 shadow-md">
@@ -141,24 +131,4 @@
 		</button>
 	</form>
 
-	<!-- Demo credentials helper -->
-	<div class="mt-6 border-t border-gray-200 pt-6">
-		<p class="mb-3 text-center text-sm text-gray-600">Demo Credentials:</p>
-		<div class="flex space-x-2">
-			<button
-				type="button"
-				onclick={() => fillDemoCredentials('teacher')}
-				class="flex-1 rounded-md bg-blue-100 px-3 py-2 text-sm text-blue-700 transition-colors hover:bg-blue-200"
-			>
-				Demo Teacher
-			</button>
-			<button
-				type="button"
-				onclick={() => fillDemoCredentials('student')}
-				class="flex-1 rounded-md bg-green-100 px-3 py-2 text-sm text-green-700 transition-colors hover:bg-green-200"
-			>
-				Demo Student
-			</button>
-		</div>
-	</div>
 </div>
