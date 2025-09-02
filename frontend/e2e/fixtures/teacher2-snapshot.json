@@ -163,7 +163,7 @@
           },
           "late": false,
           "studentId": "student_id_001",
-          "studentEmail": "student1@test.com",
+          "studentEmail": "student1@schoolemail.com",
           "studentName": "Alex Smith",
           "alternateLink": "https://classroom.example.com/submission5",
           "attachmentCount": 0,
@@ -205,7 +205,6 @@
       "updateTime": "2025-01-01T10:00:00.000Z",
       "alternateLink": "https://classroom.example.com/cs201",
       "teacherGroupEmail": "teachers-cs201@schoolemail.com",
-      "courseGroupEmail": "cs201_brown@schoolemail.com",
       "id": "cs201_classroom",
       "ownerId": "teacher2@schoolemail.com"
     },
@@ -258,9 +257,16 @@
                 "title": "Which SQL command is used to retrieve data?",
                 "required": true,
                 "points": 5,
-                "options": ["INSERT", "SELECT", "UPDATE", "DELETE"],
+                "options": [
+                  "INSERT",
+                  "SELECT",
+                  "UPDATE",
+                  "DELETE"
+                ],
                 "id": "sql_q1",
-                "correctAnswers": ["SELECT"]
+                "correctAnswers": [
+                  "SELECT"
+                ]
               },
               {
                 "autoGradable": false,
@@ -336,11 +342,18 @@
                 "title": "What is database normalization?",
                 "required": true,
                 "points": 8,
-          "studentId": "student_id_006",
-          "studentEmail": "student6@test.com",
-                "options": ["Data backup process", "Eliminating data redundancy", "Creating indexes", "User authentication"],
+                "studentId": "student_id_006",
+                "studentEmail": "student6@test.com",
+                "options": [
+                  "Data backup process",
+                  "Eliminating data redundancy",
+                  "Creating indexes",
+                  "User authentication"
+                ],
                 "id": "adv_sql_q1",
-                "correctAnswers": ["Eliminating data redundancy"]
+                "correctAnswers": [
+                  "Eliminating data redundancy"
+                ]
               }
             ],
             "description": "Advanced concepts in database design and SQL optimization",
@@ -540,7 +553,6 @@
       "updateTime": "2025-01-01T11:00:00.000Z",
       "alternateLink": "https://classroom.example.com/cs202",
       "teacherGroupEmail": "teachers-cs202@schoolemail.com",
-      "courseGroupEmail": "cs202_brown@schoolemail.com",
       "id": "cs202_classroom",
       "ownerId": "teacher2@schoolemail.com"
     }

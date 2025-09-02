@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "firebase": {
+      "enabled": true,
+      "allowedTools": [
+        "firebase_get_project",
+        "firebase_list_apps",
+        "firebase_get_environment", 
+        "firebase_update_environment",
+        "firestore_get_documents",
+        "firestore_query_collection",
+        "firestore_list_collections",
+        "auth_get_user",
+        "auth_list_users",
+        "firebase_consult_assistant"
+      ]
+    },
+    "playwright": {
+      "enabled": false,
+      "comment": "Disabled - use npm run test:e2e for browser testing"
+    },
+    "context7": {
+      "enabled": true,
+      "comment": "Lightweight documentation tool - only 2 tools"
+    }
+  }
+}

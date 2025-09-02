@@ -64,14 +64,18 @@ export class StableIdGenerator {
 
 /**
  * Transform a ClassroomSnapshot into normalized core entities
+ * Now async to support student UID resolution
  */
-export function snapshotToCore(snapshot: ClassroomSnapshot): {
+export async function snapshotToCore(
+  snapshot: ClassroomSnapshot,
+  getUserIdByEmail: (email: string) => Promise<string | null>
+): Promise<{
   teacher: DashboardUserInput;
   classrooms: ClassroomInput[];
   assignments: AssignmentInput[];
   submissions: SubmissionInput[];
   enrollments: StudentEnrollment[];
-} {
+}> {
   const teacher = transformTeacher(snapshot.teacher, snapshot.classrooms);
   const classrooms: ClassroomInput[] = [];
   const assignments: AssignmentInput[] = [];
@@ -97,9 +101,10 @@ export function snapshotToCore(snapshot: ClassroomSnapshot): {
 
     // Transform students/enrollments for this classroom
     for (const studentData of classroomData.students) {
-      const enrollment = transformStudentEnrollment(
+      const enrollment = await transformStudentEnrollment(
         studentData,
-        StableIdGenerator.classroom(classroomData.id)
+        StableIdGenerator.classroom(classroomData.id),
+        getUserIdByEmail
       );
       enrollments.push(enrollment);
     }
@@ -108,9 +113,10 @@ export function snapshotToCore(snapshot: ClassroomSnapshot): {
     let processedSubmissions = 0;
     for (const submissionData of classroomData.submissions) {
       try {
-        const submission = transformSubmission(
+        const submission = await transformSubmission(
           submissionData,
-          StableIdGenerator.classroom(classroomData.id)
+          StableIdGenerator.classroom(classroomData.id),
+          getUserIdByEmail
         );
         submissions.push(submission);
         processedSubmissions++;
@@ -351,13 +357,18 @@ function transformAssignment(
 
 /**
  * Transform student enrollment from snapshot to core schema
+ * Now async to resolve student email to Firebase UID
  */
-function transformStudentEnrollment(
+async function transformStudentEnrollment(
   student: StudentSnapshot,
-  classroomId: string
-): StudentEnrollment {
+  classroomId: string,
+  getUserIdByEmail: (email: string) => Promise<string | null>
+): Promise<StudentEnrollment> {
   const now = new Date();
-  const studentId = StableIdGenerator.student(student.email);
+  
+  // Resolve student email to Firebase UID
+  const firebaseUid = await getUserIdByEmail(student.email);
+  const studentId = firebaseUid || StableIdGenerator.student(student.email);
   const enrollmentId = StableIdGenerator.enrollment(classroomId, studentId);
 
   return {
@@ -383,12 +394,16 @@ function transformStudentEnrollment(
 
 /**
  * Transform submission from snapshot to core schema
+ * Now async to resolve student email to Firebase UID
  */
-function transformSubmission(
+async function transformSubmission(
   submission: SubmissionSnapshot,
-  classroomId: string
-): SubmissionInput {
-  const studentId = StableIdGenerator.student(submission.studentEmail);
+  classroomId: string,
+  getUserIdByEmail: (email: string) => Promise<string | null>
+): Promise<SubmissionInput> {
+  // Resolve student email to Firebase UID
+  const firebaseUid = await getUserIdByEmail(submission.studentEmail);
+  const studentId = firebaseUid || StableIdGenerator.student(submission.studentEmail);
   const assignmentId = StableIdGenerator.assignment(classroomId, submission.assignmentId);
 
   // Map status
@@ -533,7 +548,7 @@ export interface MergeResult {
 }
 
 export function mergeSnapshotWithExisting(
-  snapshot: ReturnType<typeof snapshotToCore>,
+  snapshot: Awaited<ReturnType<typeof snapshotToCore>>,
   existing: {
     classrooms: Classroom[];
     assignments: Assignment[];

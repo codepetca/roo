@@ -109,8 +109,11 @@ describe('snapshotToCore transformation', () => {
     }
   };
 
-  it('transforms snapshot to core entities', () => {
-    const result = snapshotToCore(mockSnapshot);
+  it('transforms snapshot to core entities', async () => {
+    // Mock user lookup function
+    const mockGetUserIdByEmail = async (email: string) => null;
+    
+    const result = await snapshotToCore(mockSnapshot, mockGetUserIdByEmail);
 
     // Check teacher transformation
     expect(result.teacher.email).toBe('teacher@school.edu');
@@ -138,7 +141,7 @@ describe('snapshotToCore transformation', () => {
     expect(result.enrollments[0].status).toBe('active');
   });
 
-  it('handles course state mapping', () => {
+  it('handles course state mapping', async () => {
     const declinedSnapshot = {
       ...mockSnapshot,
       classrooms: [{
@@ -147,7 +150,10 @@ describe('snapshotToCore transformation', () => {
       }]
     };
 
-    const result = snapshotToCore(declinedSnapshot);
+    // Mock user lookup function
+    const mockGetUserIdByEmail = async (email: string) => null;
+    
+    const result = await snapshotToCore(declinedSnapshot, mockGetUserIdByEmail);
     expect(result.classrooms[0].courseState).toBe('ARCHIVED');
   });
 });

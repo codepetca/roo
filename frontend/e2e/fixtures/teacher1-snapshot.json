@@ -90,9 +90,16 @@
                 "title": "What is a variable?",
                 "required": true,
                 "points": 5,
-                "options": ["A storage location", "A function", "A loop", "A conditional"],
+                "options": [
+                  "A storage location",
+                  "A function",
+                  "A loop",
+                  "A conditional"
+                ],
                 "id": "q1",
-                "correctAnswers": ["A storage location"]
+                "correctAnswers": [
+                  "A storage location"
+                ]
               },
               {
                 "autoGradable": true,
@@ -103,9 +110,16 @@
                 "title": "Which loop runs at least once?",
                 "required": true,
                 "points": 5,
-                "options": ["for loop", "while loop", "do-while loop", "if statement"],
+                "options": [
+                  "for loop",
+                  "while loop",
+                  "do-while loop",
+                  "if statement"
+                ],
                 "id": "q2",
-                "correctAnswers": ["do-while loop"]
+                "correctAnswers": [
+                  "do-while loop"
+                ]
               }
             ],
             "description": "Test your understanding of basic programming concepts",
@@ -170,7 +184,7 @@
           "name": "Alex Smith",
           "id": "student_id_001",
           "userId": "student_id_001",
-          "courseId": "cs101_classroom",
+          "courseId": "teacher1_cs101_classroom",
           "email": "student1@schoolemail.com"
         },
         {
@@ -192,7 +206,7 @@
           "name": "Blake Johnson",
           "id": "student_id_002",
           "userId": "student_id_002",
-          "courseId": "cs101_classroom",
+          "courseId": "teacher1_cs101_classroom",
           "email": "student2@schoolemail.com"
         },
         {
@@ -214,7 +228,7 @@
           "name": "Casey Williams",
           "id": "student_id_003",
           "userId": "student_id_003",
-          "courseId": "cs101_classroom",
+          "courseId": "teacher1_cs101_classroom",
           "email": "student3@schoolemail.com"
         }
       ],
@@ -226,7 +240,7 @@
           },
           "late": false,
           "studentId": "student_id_001",
-          "studentEmail": "student1@test.com",
+          "studentEmail": "student1@schoolemail.com",
           "studentName": "Alex Smith",
           "alternateLink": "https://classroom.example.com/submission1",
           "attachmentCount": 0,
@@ -273,7 +287,7 @@
           },
           "late": false,
           "studentId": "student_id_002",
-          "studentEmail": "student2@test.com",
+          "studentEmail": "student2@schoolemail.com",
           "studentName": "Blake Johnson",
           "alternateLink": "https://classroom.example.com/submission2",
           "attachmentCount": 0,
@@ -315,8 +329,7 @@
       "updateTime": "2025-01-01T08:00:00.000Z",
       "alternateLink": "https://classroom.example.com/cs101",
       "teacherGroupEmail": "teachers-cs101@schoolemail.com",
-      "courseGroupEmail": "cs101_anderson@schoolemail.com",
-      "id": "cs101_classroom",
+      "id": "teacher1_cs101_classroom",
       "ownerId": "teacher1@schoolemail.com"
     },
     {
@@ -389,9 +402,16 @@
                 "title": "What is the time complexity of binary search?",
                 "required": true,
                 "points": 10,
-                "options": ["O(1)", "O(log n)", "O(n)", "O(n²)"],
+                "options": [
+                  "O(1)",
+                  "O(log n)",
+                  "O(n)",
+                  "O(n²)"
+                ],
                 "id": "complexity_q1",
-                "correctAnswers": ["O(log n)"]
+                "correctAnswers": [
+                  "O(log n)"
+                ]
               }
             ],
             "description": "Test your understanding of algorithm complexity",
@@ -435,7 +455,7 @@
           "name": "Blake Johnson",
           "id": "student_id_002",
           "userId": "student_id_002",
-          "courseId": "cs102_classroom",
+          "courseId": "teacher1_cs102_classroom",
           "email": "student2@schoolemail.com"
         },
         {
@@ -457,7 +477,7 @@
           "name": "Dana Davis",
           "id": "student_id_004",
           "userId": "student_id_004",
-          "courseId": "cs102_classroom",
+          "courseId": "teacher1_cs102_classroom",
           "email": "student4@schoolemail.com"
         }
       ],
@@ -469,7 +489,7 @@
           },
           "late": false,
           "studentId": "student_id_002",
-          "studentEmail": "student2@test.com",
+          "studentEmail": "student2@schoolemail.com",
           "studentName": "Blake Johnson",
           "alternateLink": "https://classroom.example.com/submission3",
           "attachmentCount": 0,
@@ -503,8 +523,7 @@
       "updateTime": "2025-01-01T09:00:00.000Z",
       "alternateLink": "https://classroom.example.com/cs102",
       "teacherGroupEmail": "teachers-cs102@schoolemail.com",
-      "courseGroupEmail": "cs102_anderson@schoolemail.com",
-      "id": "cs102_classroom",
+      "id": "teacher1_cs102_classroom",
       "ownerId": "teacher1@schoolemail.com"
     }
   ]

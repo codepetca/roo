@@ -153,6 +153,13 @@ async function createUserProfile(userConfig: TestUserConfig): Promise<boolean> {
     if (userConfig.role === 'student' && userConfig.schoolEmail) {
       userProfileData.schoolEmail = userConfig.schoolEmail;
       userProfileData.isStudent = true;
+      // Add passcode field for student authentication
+      userProfileData.passcode = {
+        value: '12345',
+        createdAt: new Date().toISOString(),
+        lastRequestedAt: new Date().toISOString(),
+        attempts: 0
+      };
     }
 
     // Create profile document

@@ -123,6 +123,7 @@ const validated = assignmentSchema.parse(data);
 🚨 **PROTECT grades** - Use `GradeVersioningService` for all grade operations in backend
 🚨 **PRESERVE history** - All entities have `version`, `isLatest`, timestamps
 🚨 **STABLE IDs** - Use `StableIdGenerator` for consistent entity identification
+🚨 **STUDENT ENROLLMENT MATCHING** - Import process resolves student emails to Firebase UIDs for proper dashboard integration
 
 ### **Frontend Development Rules** (MANDATORY for Frontend Development)
 🚨 **FRONTEND ONLY** - These rules apply to `frontend/src/` development only
@@ -250,10 +251,10 @@ TEST_ENVIRONMENT=production npm run test:e2e:production
 ```
 
 ### Standardized Test Credentials
-- **Teacher Tests**: `teacher@test.com` / `test123` (primary test account)
-- **Student Tests**: `student@test.com` / `test123` (student test account)
-- **Legacy Reference**: `test.codepet@gmail.com` (historical, still referenced in some tests)
-- **Profile Data**: Consistent test display names and school emails across test suite
+- **Teacher Tests**: `teacher1@test.com`, `teacher2@test.com`, `teacher3@test.com` / `test123`
+- **Student Tests**: `student1@schoolemail.com` through `student8@schoolemail.com` / passcode `12345`
+- **Authentication**: Teachers use email/password, Students use school email/passcode
+- **Profile Data**: All test users have consistent Firebase UIDs (e.g., `teacher1-e2e-uid`, `student1-e2e-uid`)
 
 ### Test Reliability and Categories
 
@@ -343,6 +344,95 @@ TEST_ENVIRONMENT=staging npm run test:e2e:staging  # E2E tests against staging
 # Uses .env.production (production Firebase project)  
 TEST_ENVIRONMENT=production npm run test:e2e:production  # Read-only tests
 npm run deploy          # Deploy to production (after staging validation)
+```
+
+## Authentication Architecture
+
+The Roo system implements **dual authentication flows** for teachers and students with distinct patterns:
+
+### **Teacher Authentication Flow**
+- **Method**: Standard Firebase Auth with email/password
+- **Accounts**: Created manually via Firebase Auth (app emails like `teacher1@test.com`)
+- **Login**: Direct Firebase signIn with email and password
+- **Profile**: Firestore user document with `role: 'teacher'` and `schoolEmail` field
+- **Dashboard**: Teacher dashboard shows classrooms they've created/imported
+
+### **Student Authentication Flow** 
+- **Method**: School email + 5-character passcode system
+- **Accounts**: Created automatically during classroom import or via passcode request
+- **Login Process**:
+  1. Student enters school email (e.g., `student1@schoolemail.com`)
+  2. Student requests passcode (generates/sends via Brevo email service)
+  3. Student enters passcode for verification
+  4. Backend creates Firebase Auth user and custom token
+  5. Frontend signs in with custom token
+- **Profile**: Firestore user document with `email = schoolEmail` and `role: 'student'`
+- **Dashboard**: Student dashboard shows classrooms they're enrolled in (via teacher imports)
+
+### **Key Authentication Implementation Details**
+
+#### **Student Passcode System**
+```typescript
+// Backend: Generate passcode for student
+POST /api/auth/student-request-passcode
+{ email: "student1@schoolemail.com" }
+
+// Backend: Verify passcode and create Firebase user
+POST /api/auth/verify-passcode  
+{ email: "student1@schoolemail.com", passcode: "ABC12" }
+```
+
+#### **Student Account Creation**
+- **Triggered by**: Classroom import process or passcode request
+- **Email matching**: Student email in snapshot matches Firestore user email
+- **UID Resolution**: Import process resolves school email to Firebase UID for enrollments
+- **Database structure**:
+```typescript
+// Firestore users collection
+{
+  id: "student1-e2e-uid",           // Firebase UID
+  email: "student1@schoolemail.com", // School email (login credential)
+  schoolEmail: "student1@schoolemail.com", // Same as email for students
+  role: "student",
+  passcode: {
+    value: "ABC12",
+    createdAt: timestamp,
+    attempts: 0
+  }
+}
+```
+
+#### **Enrollment Matching Logic**
+- **Critical Fix**: Import process now resolves student emails to Firebase UIDs
+- **Before**: `studentId: "student_student1_at_schoolemail_com"` (email-based)
+- **After**: `studentId: "student1-e2e-uid"` (Firebase UID)
+- **Dashboard Query**: `getEnrollmentsByStudent(firebaseUID)` finds correct enrollments
+
+### **Test Account Configuration**
+
+#### **Teachers (Email/Password)**
+- `teacher1@test.com` / `test123`
+- `teacher2@test.com` / `test123`  
+- `teacher3@test.com` / `test123`
+
+#### **Students (School Email/Passcode)**
+- `student1@schoolemail.com` / `12345`
+- `student2@schoolemail.com` / `12345`
+- ...through `student8@schoolemail.com` / `12345`
+
+#### **Authentication Flow Validation**
+```bash
+# Test teacher authentication
+curl -X POST http://localhost:5001/roo-app-3d24e/us-central1/api/auth/login \
+  -d '{"email":"teacher1@test.com","password":"test123"}'
+
+# Test student passcode request  
+curl -X POST http://localhost:5001/roo-app-3d24e/us-central1/api/auth/student-request-passcode \
+  -d '{"email":"student1@schoolemail.com"}'
+
+# Test student passcode verification
+curl -X POST http://localhost:5001/roo-app-3d24e/us-central1/api/auth/verify-passcode \
+  -d '{"email":"student1@schoolemail.com","passcode":"12345"}'
 ```
 
 #### Critical Firebase Development Patterns

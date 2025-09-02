@@ -60,7 +60,7 @@ export const TEST_TEACHERS: Record<string, TestUserConfig> = {
 export const TEST_STUDENTS: Record<string, TestUserConfig> = {
   student1: {
     uid: 'student1-e2e-uid',
-    email: 'student1@test.com',
+    email: 'student1@schoolemail.com',
     password: TEST_PASSWORD,
     displayName: 'Alex Smith',
     role: 'student',
@@ -68,7 +68,7 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
   },
   student2: {
     uid: 'student2-e2e-uid',
-    email: 'student2@test.com',
+    email: 'student2@schoolemail.com',
     password: TEST_PASSWORD,
     displayName: 'Blake Johnson',
     role: 'student',
@@ -76,7 +76,7 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
   },
   student3: {
     uid: 'student3-e2e-uid',
-    email: 'student3@test.com',
+    email: 'student3@schoolemail.com',
     password: TEST_PASSWORD,
     displayName: 'Casey Williams',
     role: 'student',
@@ -84,7 +84,7 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
   },
   student4: {
     uid: 'student4-e2e-uid',
-    email: 'student4@test.com',
+    email: 'student4@schoolemail.com',
     password: TEST_PASSWORD,
     displayName: 'Dana Davis',
     role: 'student',
@@ -92,7 +92,7 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
   },
   student5: {
     uid: 'student5-e2e-uid',
-    email: 'student5@test.com',
+    email: 'student5@schoolemail.com',
     password: TEST_PASSWORD,
     displayName: 'Elliott Evans',
     role: 'student',
@@ -100,7 +100,7 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
   },
   student6: {
     uid: 'student6-e2e-uid',
-    email: 'student6@test.com',
+    email: 'student6@schoolemail.com',
     password: TEST_PASSWORD,
     displayName: 'Finley Foster',
     role: 'student',
@@ -108,7 +108,7 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
   },
   student7: {
     uid: 'student7-e2e-uid',
-    email: 'student7@test.com',
+    email: 'student7@schoolemail.com',
     password: TEST_PASSWORD,
     displayName: 'Gray Garcia',
     role: 'student',
@@ -116,7 +116,7 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
   },
   student8: {
     uid: 'student8-e2e-uid',
-    email: 'student8@test.com',
+    email: 'student8@schoolemail.com',
     password: TEST_PASSWORD,
     displayName: 'Harper Harris',
     role: 'student',

@@ -88,7 +88,18 @@ export class SnapshotProcessor {
         teacherEmail: snapshot.teacher.email
       });
       
-      const transformed = snapshotToCore(snapshot);
+      // Create user lookup function for resolving student emails to Firebase UIDs
+      const getUserIdByEmail = async (email: string): Promise<string | null> => {
+        try {
+          const user = await this.repository.getUserByEmail(email);
+          return user ? user.id : null;
+        } catch (error) {
+          logger.warn("Failed to resolve user ID by email", { email, error });
+          return null;
+        }
+      };
+      
+      const transformed = await snapshotToCore(snapshot, getUserIdByEmail);
       logger.info("TRANSFORM DEBUG: Core transformation successful", {
         transformedKeys: Object.keys(transformed),
         classroomCount: transformed.classrooms.length,
@@ -176,7 +187,7 @@ export class SnapshotProcessor {
   /**
    * Get existing data for merge comparison
    */
-  private async getExistingData(transformed: ReturnType<typeof snapshotToCore>) {
+  private async getExistingData(transformed: Awaited<ReturnType<typeof snapshotToCore>>) {
     const classroomIds = transformed.classrooms.map(c => 
       StableIdGenerator.classroom(c.externalId!)
     );
