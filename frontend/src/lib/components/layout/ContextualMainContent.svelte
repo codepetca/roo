@@ -24,7 +24,7 @@
 		return assignments.filter((a) => a.classroomId === selectedClassroom.id);
 	});
 
-	// Student status data is now handled by the StudentStatusTable component via dataStore.assignmentStudentStatus
+	// Student status data is now handled by the StudentStatusTable component via dataStore.studentProgress
 
 	// Transform dashboard stats for StatsGrid
 	let statsData = $derived(() => {

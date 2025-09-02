@@ -15,8 +15,8 @@
 	} = $props();
 
 	// Get student status data from store
-	let studentStatus = $derived(dataStore.assignmentStudentStatus);
-	let loading = $derived(dataStore.loadingAssignmentData);
+	let studentStatus = $derived(dataStore.studentProgress);
+	let loading = $derived(dataStore.loadingStudentProgress);
 
 	// Computed statistics
 	let stats = $derived(() => {
