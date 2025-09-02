@@ -147,7 +147,7 @@
 				<input
 					bind:this={fileInput}
 					type="file"
-					accept=".json,application/json"
+					accept=".json"
 					onchange={handleFileInputChange}
 					class="hidden"
 					data-testid="file-input"

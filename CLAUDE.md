@@ -182,14 +182,32 @@ class DataStore {
 - **Old schemas**: `functions/src/schemas/` still exist but being replaced
 - **Migration**: Use `SnapshotProcessor` to convert legacy data
 
-## E2E Testing Guidelines
+## Development Flow & Testing Guidelines
 
-**🚨 IMPORTANT: NO EMULATORS FOR E2E TESTS**
-- **NEVER use emulators** for E2E tests - they add unnecessary complexity
-- **Always test against real Firebase staging project**
-- **Mock Authentication**: Use mock auth to bypass Google OAuth in tests
-- **DO NOT run `npm run emulators`** for E2E testing
-- **Real Firebase**: All E2E tests run against staging Firebase instance
+**🔄 THREE-STAGE DEVELOPMENT PIPELINE**
+This project follows a structured development approach:
+
+1. **🏠 Local Development (Emulators)**: Build and test features locally with Firebase emulators
+2. **🧪 Staging Validation**: Test against real Firebase staging project  
+3. **🚀 Production Deployment**: Deploy only after staging validation passes
+
+### **E2E Testing Strategy by Environment**
+
+#### **Phase 1: Emulator Testing (Primary Development)**
+- **Default approach**: `npm run test:e2e` runs against local emulators
+- **Fast feedback**: No network latency, instant data reset
+- **Safe testing**: No impact on shared staging data
+- **Real authentication**: Still uses actual Firebase Auth flows via emulator
+
+#### **Phase 2: Staging Validation**  
+- **Pre-deployment**: `npm run test:e2e:staging` tests against staging Firebase
+- **Real services**: Validates against actual Firebase infrastructure
+- **Shared environment**: Uses staging project with controlled test data
+
+#### **Phase 3: Production Verification**
+- **Post-deployment**: `npm run test:e2e:production` runs read-only tests
+- **Live validation**: Confirms production deployment success
+- **Non-destructive**: Only read operations, no test data creation
 
 ### Current Test Suite Statistics
 - **Unit Tests**: 24 test files with 156 individual test cases (**91% pass rate**)
@@ -199,21 +217,36 @@ class DataStore {
 - **Coverage**: Complete authentication flows, data import, API-only patterns, cross-page navigation
 
 ### E2E Test Execution Commands
+
+#### **🏠 Local Development (Emulators) - DEFAULT**
 ```bash
-# NO EMULATORS! Test directly against staging
-cd frontend
-npm run dev              # Connects to staging Firebase
-npm run test:e2e         # Run all E2E tests (recommended)
+# Start emulators + development server
+npm run emulators        # Terminal 1: Start Firebase emulators with persistence
+npm run dev             # Terminal 2: Start frontend connecting to emulators
+
+# Run E2E tests against emulators (fast, safe)
+npm run test:e2e         # Default: runs against local emulators
 npx playwright test      # Alternative direct command
 
-# Run specific test categories
-npx playwright test core-auth.test.ts        # Core authentication tests
-npx playwright test core-dashboard.test.ts   # Dashboard functionality tests
-npx playwright test complete-login-flows.test.ts  # End-to-end login flows
+# Debug emulator tests
+npx playwright test --debug    # Interactive debugging
+npx playwright test --headed   # Visible browser
+```
 
-# Debug failing tests
-npx playwright test --debug                  # Interactive debugging mode
-npx playwright test --headed                 # Run with visible browser
+#### **🧪 Staging Validation**
+```bash
+# Test against real staging Firebase
+TEST_ENVIRONMENT=staging npm run test:e2e:staging
+
+# Run specific staging tests
+TEST_ENVIRONMENT=staging npx playwright test core-auth.test.ts
+TEST_ENVIRONMENT=staging npx playwright test multi-user-access.test.ts
+```
+
+#### **🚀 Production Verification (Read-Only)**
+```bash
+# Verify production deployment (non-destructive tests only)
+TEST_ENVIRONMENT=production npm run test:e2e:production
 ```
 
 ### Standardized Test Credentials
@@ -278,15 +311,39 @@ npm run test:unit -- --reporter=verbose
 - **Coverage**: UserService, data stores, API client, validation schemas
 - **Environment**: Server tests (Node.js) + Client tests (Browser/Playwright)
 
-## Firebase Emulator Development (Local Development Only)
+## Firebase Emulator Development (Primary Development Environment)
 
-The project supports Firebase Local Emulator Suite for local development (NOT for E2E tests).
+The project uses Firebase Local Emulator Suite as the **primary development environment** for fast, safe feature development.
 
-#### Emulator Services (Development Only)
-- **Auth**: http://localhost:9099 (mock authentication)
-- **Firestore**: http://localhost:8080 (local database)
-- **Functions**: http://localhost:5001 (API endpoints)
-- **Emulator UI**: http://localhost:4000 (visual debugging)
+#### Emulator Services (Primary for Development & E2E Testing)
+- **Auth**: http://localhost:9099 (real authentication flows, local users)
+- **Firestore**: http://localhost:8080 (local database with persistence)
+- **Functions**: http://localhost:5001 (local API endpoints)
+- **Emulator UI**: http://localhost:4000 (visual debugging and data management)
+
+#### **Environment Management**
+
+**🏠 Local Development (Default)**
+```bash
+# Uses .env (points to emulators)
+npm run emulators        # Start emulators with data persistence
+npm run dev             # Frontend connects to emulators
+npm run test:e2e        # E2E tests against emulators
+```
+
+**🧪 Staging Environment**  
+```bash
+# Uses .env.staging (real Firebase staging project)
+TEST_ENVIRONMENT=staging npm run dev           # Frontend connects to staging
+TEST_ENVIRONMENT=staging npm run test:e2e:staging  # E2E tests against staging
+```
+
+**🚀 Production Environment**
+```bash
+# Uses .env.production (production Firebase project)  
+TEST_ENVIRONMENT=production npm run test:e2e:production  # Read-only tests
+npm run deploy          # Deploy to production (after staging validation)
+```
 
 #### Critical Firebase Development Patterns
 **🚨 IMPORTANT: serverTimestamp() Issues**
