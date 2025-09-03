@@ -17,6 +17,8 @@
     "emulators:exec": "firebase emulators:exec --import=./emulator-data",
     "emulators:export": "firebase emulators:export ./emulator-data",
     "emulators:seed": "node scripts/seed-emulator-data.mjs",
+    "emulators:setup": "bash scripts/setup-complete-test-data.sh",
+    "emulators:setup-users": "bash scripts/setup-test-users-only.sh",
     "wait-for-emulators": "wait-on tcp:8080 tcp:9099 tcp:5001 --timeout 30000",
     "frontend:local": "cd frontend && cross-env PUBLIC_ENVIRONMENT=development npm run dev",
     "frontend:staging": "cd frontend && cross-env PUBLIC_ENVIRONMENT=staging npm run dev",
