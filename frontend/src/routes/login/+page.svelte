@@ -60,29 +60,20 @@
 			}
 
 			// Create teacher profile with role using callable function (consistent with other auth flows)
-			try {
-				console.log('Creating teacher profile with role...');
-				const { httpsCallable } = await import('firebase/functions');
-				const { firebaseFunctions } = await import('$lib/firebase');
+			console.log('Creating teacher profile with role...');
+			const { httpsCallable } = await import('firebase/functions');
+			const { firebaseFunctions } = await import('$lib/firebase');
 
-				const createProfile = httpsCallable(firebaseFunctions, 'createProfileForExistingUser');
-				const profileResult = await createProfile({
-					uid: user.uid,
-					role: 'teacher'
-				});
-				console.log('Teacher profile created:', profileResult.data);
-			} catch (error) {
-				console.error('Profile creation failed:', error);
-				throw error;
-			}
+			const createProfile = httpsCallable(firebaseFunctions, 'createProfileForExistingUser');
+			const profileResult = await createProfile({
+				uid: user.uid,
+				role: 'teacher'
+			});
+			console.log('✅ Teacher profile created:', profileResult.data);
 
-			// Note: auth store refresh may not exist in new auth structure
-
-			// Import goto for navigation
-			const { goto } = await import('$app/navigation');
-
-			// Navigate to teacher dashboard
-			await goto('/teacher');
+			// Navigation will be handled by the auth store's onAuthStateChanged listener
+			// which will detect the new user and redirect appropriately
+			console.log('✅ Google authentication successful - auth store will handle navigation');
 		} catch (error) {
 			console.error('Profile creation failed:', error);
 			// Show error message but stay on login page
@@ -93,44 +84,29 @@
 
 	async function handleTeacherEmailAuthSuccess(_event: CustomEvent) {
 		// User profile already created in TeacherEmailAuth component
-
-		try {
-			// Import goto for navigation
-			const { goto } = await import('$app/navigation');
-
-			// Navigate to teacher dashboard (user profile already created in TeacherEmailAuth)
-			await goto('/teacher');
-		} catch (error) {
-			console.error('Navigation failed:', error);
-			signupSuccess = false;
-			successMessage = 'Authentication successful but navigation failed. Please try again.';
-		}
+		// Let the onAuthStateChanged listener handle navigation to prevent race conditions
+		console.log('✅ Teacher email authentication successful - waiting for auth store navigation');
+		// Navigation will be handled by the auth store's onAuthStateChanged listener
 	}
 
 	async function handleStudentAuthSuccess(event: CustomEvent) {
 		const { user, isNewUser } = event.detail;
 
-		console.log('Student authentication successful', { user, isNewUser });
-
-		// Note: auth store refresh may not exist in new auth structure
-
-		// Import goto for navigation
-		const { goto } = await import('$app/navigation');
-
-		// Navigate to student dashboard
-		await goto('/student');
+		console.log('✅ Student authentication successful - auth store will handle navigation', {
+			user,
+			isNewUser
+		});
+		// Navigation is handled by the student auth component and auth store
 	}
 
 	async function handleStudentSelfRegisterSuccess(event: CustomEvent) {
 		const { user, isNewUser } = event.detail;
 
-		console.log('Student self-registration successful', { user, isNewUser });
-
-		// Import goto for navigation
-		const { goto } = await import('$app/navigation');
-
-		// Navigate to student dashboard
-		await goto('/student');
+		console.log('✅ Student self-registration successful - auth store will handle navigation', {
+			user,
+			isNewUser
+		});
+		// Navigation is handled by the student auth component and auth store
 	}
 </script>
 
@@ -333,9 +309,7 @@
 		{:else if authMode === 'teacher-email'}
 			<!-- Teacher Email/Password Login -->
 			<div class="space-y-6" data-testid="teacher-email-auth">
-				<div class="flex items-center justify-between">
-				
-				</div>
+				<div class="flex items-center justify-between"></div>
 				<TeacherEmailAuth
 					on:success={handleTeacherEmailAuthSuccess}
 					on:cancel={() => (authMode = 'select')}

@@ -1,0 +1,13 @@
+{"users": [
+{
+  "localId": "HCRCnEHYUNVSvphKEoMHOu1m42Z2",
+  "email": "teacher@test.com",
+  "emailVerified": false,
+  "passwordHash": "Z7dXK9nvBdEtv+NAtRENatndfUVRjeB86uhLS9ksibKH85JiwIn0iwUldk6J2ly5tuoqYJQqcAOtG1a3z9N/Og==",
+  "salt": "8JPJmoFLCreYww==",
+  "displayName": "teacher demo",
+  "lastSignedInAt": "1756354546502",
+  "createdAt": "1756177903762",
+  "customAttributes": "{\"role\":\"teacher\"}",
+  "providerUserInfo": []
+}]}

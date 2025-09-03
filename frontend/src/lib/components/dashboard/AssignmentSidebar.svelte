@@ -35,7 +35,7 @@
 
 		// Log specific info about Unit 2 Test assignment
 		if (assignments && Array.isArray(assignments)) {
-			const unitTest = assignments.find(a => (a.title || a.name)?.includes('Unit 2 Test'));
+			const unitTest = assignments.find((a) => (a.title || a.name)?.includes('Unit 2 Test'));
 			if (unitTest) {
 				console.log('🧪 Found Unit 2 Test:', unitTest.id, unitTest.title || unitTest.name);
 			}
@@ -53,7 +53,11 @@
 	}
 
 	function handleAssignmentClick(assignment: Assignment) {
-		console.log('🎯 handleAssignmentClick called:', assignment.id, assignment.title || assignment.name);
+		console.log(
+			'🎯 handleAssignmentClick called:',
+			assignment.id,
+			assignment.title || assignment.name
+		);
 		selectAssignment(assignment.id);
 	}
 
@@ -156,7 +160,11 @@
 						onclick={(e) => {
 							e.preventDefault();
 							e.stopPropagation();
-							console.log('🔥 CLICK HANDLER FIRED!', assignment.id, assignment.title || assignment.name);
+							console.log(
+								'🔥 CLICK HANDLER FIRED!',
+								assignment.id,
+								assignment.title || assignment.name
+							);
 							handleAssignmentClick(assignment);
 						}}
 						class="w-full border-b border-gray-200 py-2 text-left transition-all"

@@ -83,7 +83,7 @@ export function initializeFirebase() {
 function connectToEmulators() {
 	try {
 		console.log('🔍 DEBUG: Starting emulator connections...');
-		
+
 		// Connect Auth emulator
 		const authUrl = PUBLIC_EMULATOR_AUTH_URL || 'http://127.0.0.1:9099';
 		connectAuthEmulator(auth, authUrl, {

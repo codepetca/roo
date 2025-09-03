@@ -43,7 +43,9 @@
 				hasQuestionGrades: !!student.questionGrades,
 				questionGradesLength: student.questionGrades?.length || 0,
 				questionGrades: student.questionGrades,
-				firstItemStructure: student.questionGrades?.[0] ? Object.keys(student.questionGrades[0]) : null,
+				firstItemStructure: student.questionGrades?.[0]
+					? Object.keys(student.questionGrades[0])
+					: null,
 				firstItemSample: student.questionGrades?.[0]
 			});
 		}

@@ -3,6 +3,7 @@
 	import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 	import { firebaseAuth } from '$lib/firebase';
 	import { api, API_BASE_URL } from '$lib/api';
+	import { auth } from '$lib/stores/auth.svelte';
 	import { Button, Alert, LoadingSpinner } from '$lib/components/ui';
 
 	const dispatch = createEventDispatcher<{
@@ -22,7 +23,6 @@
 	let loading = false;
 	let loadingMessage = '';
 	let error = '';
-
 
 	async function handleSubmit() {
 		if (mode === 'signup' && password !== confirmPassword) {
@@ -125,11 +125,11 @@
 			} else {
 				loadingMessage = 'Signing you in...';
 
-				// Sign in existing account
+				// Sign in existing account (keep original approach but let auth store handle navigation)
 				userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
 			}
 
-			// Dispatch success event
+			// Dispatch success event for signup flow
 			dispatch('success', {
 				user: {
 					uid: userCredential.user.uid,
@@ -310,7 +310,4 @@
 			{mode === 'login' ? "Don't have an account? Create one" : 'Already have an account? Sign in'}
 		</button>
 	</div>
-
-
-	
 </div>

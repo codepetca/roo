@@ -186,6 +186,7 @@ The test suite includes comprehensive helper functions for maintainable and reli
 ## Running Tests
 
 ### **🏠 Emulator Testing (Default Development)**
+
 ```bash
 # Setup: Start emulators first (in separate terminals)
 npm run emulators        # Terminal 1: Start Firebase emulators
@@ -202,7 +203,8 @@ npx playwright test --debug                        # Interactive debugging
 npx playwright test core-*.test.ts                 # Core functionality only
 ```
 
-### **🧪 Staging Validation (Pre-deployment)**  
+### **🧪 Staging Validation (Pre-deployment)**
+
 ```bash
 # Run tests against real staging Firebase
 TEST_ENVIRONMENT=staging npm run test:e2e:staging  # All staging tests
@@ -214,7 +216,8 @@ TEST_ENVIRONMENT=staging npm run test:cleanup-users # Clean staging when done
 ```
 
 ### **🚀 Production Verification (Post-deployment)**
-```bash  
+
+```bash
 # Read-only tests against production (non-destructive)
 TEST_ENVIRONMENT=production npm run test:e2e:production
 
@@ -222,10 +225,11 @@ TEST_ENVIRONMENT=production npm run test:e2e:production
 ```
 
 ### **Test Categories (All Environments)**
+
 ```bash
-# Run by test category  
+# Run by test category
 npx playwright test core-*.test.ts        # Core functionality
-npx playwright test teacher-*.test.ts     # Teacher-specific features  
+npx playwright test teacher-*.test.ts     # Teacher-specific features
 npx playwright test *-integration.test.ts # Architecture integration
 npx playwright test test-complete-flow.ts # Comprehensive end-to-end test
 ```
@@ -235,18 +239,21 @@ npx playwright test test-complete-flow.ts # Comprehensive end-to-end test
 ### 1. **Three-Stage Testing Pipeline**
 
 **🏠 Phase 1: Emulator Testing (Primary)**
+
 - **Default**: E2E tests run against Firebase emulators for fast, safe development
 - **Local data**: Uses emulated Firebase services with persistent local data
 - **Real authentication flows**: Actual Firebase Auth patterns via emulator
 - **Fast feedback**: No network latency, instant environment reset
 
 **🧪 Phase 2: Staging Validation**
+
 - **Pre-deployment**: Tests against real staging Firebase project
 - **Shared environment**: Uses staging data with controlled test accounts
 - **Real services**: Validates against actual Firebase infrastructure
 - **Integration testing**: Ensures compatibility with production-like environment
 
-**🚀 Phase 3: Production Verification**  
+**🚀 Phase 3: Production Verification**
+
 - **Post-deployment**: Read-only tests against live production environment
 - **Non-destructive**: Only validates existing functionality, no test data creation
 - **Live validation**: Confirms production deployment success

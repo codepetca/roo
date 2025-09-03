@@ -25,7 +25,6 @@
 			handleSubmit(event);
 		}
 	}
-
 </script>
 
 <div class="mx-auto max-w-md rounded-lg bg-white p-8 shadow-md">
@@ -130,5 +129,4 @@
 			{/if}
 		</button>
 	</form>
-
 </div>

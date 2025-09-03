@@ -142,13 +142,18 @@
 			name: student.studentName,
 			hasQuestionGrades: !!student.questionGrades,
 			questionGradesLength: student.questionGrades?.length || 0,
-			firstItemStructure: student.questionGrades?.[0] ? Object.keys(student.questionGrades[0]) : null,
+			firstItemStructure: student.questionGrades?.[0]
+				? Object.keys(student.questionGrades[0])
+				: null,
 			studentData: student
 		});
-		
+
 		selectedStudentForModal = student;
 		modalOpen = true;
-		console.log('🔓 Modal state updated:', { modalOpen, selectedStudentName: selectedStudentForModal?.studentName });
+		console.log('🔓 Modal state updated:', {
+			modalOpen,
+			selectedStudentName: selectedStudentForModal?.studentName
+		});
 	}
 
 	function closeFeedbackModal() {

@@ -32,10 +32,10 @@ export default defineConfig({
 		}
 	],
 	// Environment-aware retry and performance configuration
-	retries: isProduction ? 0 : (process.env.CI ? 2 : 1), // No retries in production (read-only)
+	retries: isProduction ? 0 : process.env.CI ? 2 : 1, // No retries in production (read-only)
 	reporter: process.env.CI ? [['github'], ['html']] : 'html',
-	timeout: isEmulator ? 30000 : (isStaging ? 60000 : 45000), // Emulators are faster
-	workers: isEmulator ? undefined : (process.env.CI ? 2 : 1), // More parallel on emulators
+	timeout: isEmulator ? 30000 : isStaging ? 60000 : 45000, // Emulators are faster
+	workers: isEmulator ? undefined : process.env.CI ? 2 : 1, // More parallel on emulators
 	// Fail fast in CI
 	forbidOnly: !!process.env.CI,
 	// Global configuration for all tests

@@ -20,48 +20,88 @@ Location: frontend/src/lib/components/auth/AuthGuard.svelte
 	// Reactive state
 	let loading = $state(true);
 	let redirecting = $state(false);
+	let authInitialized = $state(false);
 
-	// Check auth state and handle redirects
+	// Wait for auth initialization on component mount
 	$effect(() => {
-		if (!auth.loading) {
-			loading = false;
+		async function initializeAuthGuard() {
+			console.log('🛡️ AuthGuard: Waiting for auth initialization...');
 
-			// Not authenticated - redirect to login
-			if (!auth.isAuthenticated()) {
-				if (!redirecting) {
-					redirecting = true;
-					const currentPath = $page.url.pathname;
-					goto(`/login?redirect=${encodeURIComponent(currentPath)}`);
-				}
-				return;
+			try {
+				// Wait for auth store to be fully initialized
+				await auth.waitForInitialization();
+				console.log('✅ AuthGuard: Auth initialization complete');
+				authInitialized = true;
+			} catch (error) {
+				console.error('❌ AuthGuard: Auth initialization failed:', error);
+				// Proceed anyway to prevent infinite loading
+				authInitialized = true;
+			} finally {
+				loading = false;
 			}
-
-			// Check role requirements
-			if (requiredRole && auth.user?.role !== requiredRole) {
-				if (!redirecting) {
-					redirecting = true;
-					// Redirect to appropriate dashboard based on user's actual role
-					if (auth.user?.role === 'teacher') {
-						goto('/teacher');
-					} else {
-						goto('/student');
-					}
-				}
-				return;
-			}
-
-			// All checks passed
-			redirecting = false;
 		}
+
+		// Only initialize once
+		if (!authInitialized) {
+			initializeAuthGuard();
+		}
+	});
+
+	// Check auth state and handle redirects only after initialization
+	$effect(() => {
+		if (!authInitialized || redirecting) {
+			return; // Skip checks until properly initialized
+		}
+
+		console.log('🛡️ AuthGuard: Checking auth state', {
+			isAuthenticated: auth.isAuthenticated(),
+			userRole: auth.user?.role,
+			requiredRole
+		});
+
+		// Not authenticated - redirect to login
+		if (!auth.isAuthenticated()) {
+			console.log('🛡️ AuthGuard: User not authenticated, redirecting to login');
+			redirecting = true;
+			const currentPath = $page.url.pathname;
+			goto(`/login?redirect=${encodeURIComponent(currentPath)}`);
+			return;
+		}
+
+		// Check role requirements
+		if (requiredRole && auth.user?.role !== requiredRole) {
+			console.log('🛡️ AuthGuard: Role mismatch, redirecting to appropriate dashboard', {
+				userRole: auth.user?.role,
+				requiredRole
+			});
+			redirecting = true;
+			// Redirect to appropriate dashboard based on user's actual role
+			if (auth.user?.role === 'teacher') {
+				goto('/teacher');
+			} else {
+				goto('/student');
+			}
+			return;
+		}
+
+		// All checks passed
+		console.log('✅ AuthGuard: Authentication checks passed');
+		redirecting = false;
 	});
 </script>
 
-{#if loading || redirecting}
+{#if loading || redirecting || !authInitialized}
 	<div class="flex min-h-screen items-center justify-center bg-gray-50">
 		<div class="text-center">
 			<LoadingSpinner size="lg" />
 			<p class="mt-4 text-gray-600">
-				{loading ? 'Checking authentication...' : 'Redirecting...'}
+				{#if !authInitialized}
+					Initializing authentication...
+				{:else if loading}
+					Checking authentication...
+				{:else}
+					Redirecting...
+				{/if}
 			</p>
 		</div>
 	</div>
@@ -72,7 +112,8 @@ Location: frontend/src/lib/components/auth/AuthGuard.svelte
 	<!-- Fallback - should not normally be reached due to redirects -->
 	<div class="flex min-h-screen items-center justify-center bg-gray-50">
 		<div class="text-center">
-			<p class="text-gray-600">Authentication required...</p>
+			<LoadingSpinner size="sm" />
+			<p class="mt-4 text-gray-600">Verifying access...</p>
 		</div>
 	</div>
 {/if}

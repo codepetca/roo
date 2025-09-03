@@ -31,6 +31,9 @@ let loading = $state(true);
 let error = $state<string | null>(null);
 let initialized = false;
 
+// Promise-based initialization for better synchronization
+let initializationPromise: Promise<void> | null = null;
+
 /**
  * Set auth token in cookies for server-side verification
  */
@@ -53,7 +56,7 @@ async function setAuthCookie(user: User | null) {
  * Wait for Firebase Auth state to be fully ready for API calls
  * Ensures that currentUser is available and can generate valid tokens
  */
-async function waitForAuthStateReady(user: User, maxWaitMs = 5000): Promise<boolean> {
+async function waitForAuthStateReady(user: User, maxWaitMs = 10000): Promise<boolean> {
 	console.log('⏳ Waiting for auth state to be ready for API calls...');
 
 	const startTime = Date.now();
@@ -71,12 +74,63 @@ async function waitForAuthStateReady(user: User, maxWaitMs = 5000): Promise<bool
 			}
 		}
 
-		// Wait a bit before checking again
-		await new Promise((resolve) => setTimeout(resolve, 100));
+		// Wait a bit before checking again (progressive backoff)
+		const waitTime = Math.min(500, 50 + Math.floor((Date.now() - startTime) / 100));
+		await new Promise((resolve) => setTimeout(resolve, waitTime));
 	}
 
 	console.warn('⚠️ Auth state readiness timeout after', maxWaitMs, 'ms');
 	return false;
+}
+
+/**
+ * Wait for auth store to be fully initialized
+ * Returns a promise that resolves when auth state is determined
+ */
+async function waitForInitialization(): Promise<void> {
+	if (initializationPromise) {
+		return initializationPromise;
+	}
+
+	// If already initialized and not loading, return immediately
+	if (initialized && !loading) {
+		return Promise.resolve();
+	}
+
+	// Create and return initialization promise
+	initializationPromise = new Promise((resolve) => {
+		// If already done, resolve immediately
+		if (initialized && !loading) {
+			resolve();
+			return;
+		}
+
+		let checkInterval: NodeJS.Timeout;
+		let timeout: NodeJS.Timeout;
+
+		const checkComplete = () => {
+			if (initialized && !loading) {
+				clearInterval(checkInterval);
+				clearTimeout(timeout);
+				resolve();
+			}
+		};
+
+		// Check every 100ms
+		checkInterval = setInterval(checkComplete, 100);
+
+		// Timeout after 15 seconds
+		timeout = setTimeout(() => {
+			clearInterval(checkInterval);
+			console.warn('⚠️ Auth initialization timeout after 15 seconds');
+			resolve(); // Resolve anyway to prevent hanging
+		}, 15000);
+
+		// Initial check
+		checkComplete();
+	});
+
+	return initializationPromise;
 }
 
 // Note: ensureUserProfile function removed as it's not currently used
@@ -115,7 +169,7 @@ function initializeAuth() {
 	if (!browser || initialized) return;
 
 	initialized = true;
-	console.log('Initializing auth state listener...');
+	console.log('🔄 Initializing auth state listener...');
 
 	// Set up the auth state listener
 	const unsubscribe = onAuthStateChanged(firebaseAuth, async (firebaseUser) => {
@@ -127,25 +181,33 @@ function initializeAuth() {
 
 		try {
 			if (firebaseUser) {
-				loading = true;
 				console.log('📡 Fetching user profile for:', firebaseUser.email);
+
+				// Wait for auth state to be ready before fetching profile
+				const authReady = await waitForAuthStateReady(firebaseUser, 8000);
+				if (!authReady) {
+					console.warn('⚠️ Auth state not fully ready, proceeding anyway...');
+				}
 
 				// Get user profile from Firestore (includes role) with retry logic
 				let profile = null;
-				const maxRetries = 3;
+				const maxRetries = 5;
 
 				for (let attempt = 1; attempt <= maxRetries; attempt++) {
-					profile = await getUserProfile(firebaseUser);
-
-					if (profile) {
-						console.log('✅ Profile fetched successfully on attempt', attempt);
-						break;
+					try {
+						profile = await getUserProfile(firebaseUser);
+						if (profile) {
+							console.log('✅ Profile fetched successfully on attempt', attempt);
+							break;
+						}
+					} catch (profileError) {
+						console.warn(`⚠️ Profile fetch attempt ${attempt} failed:`, profileError);
 					}
 
 					if (attempt < maxRetries) {
-						console.log(`⏳ Profile fetch attempt ${attempt} failed, retrying...`);
+						console.log(`⏳ Retrying profile fetch in ${attempt * 500}ms...`);
 						// Wait before retry, with exponential backoff
-						await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+						await new Promise((resolve) => setTimeout(resolve, attempt * 500));
 					}
 				}
 
@@ -156,6 +218,26 @@ function initializeAuth() {
 						uid: profile.uid,
 						role: profile.role
 					});
+
+					// Handle navigation after successful authentication and profile loading
+					// Only navigate if we're currently on the login page to avoid interrupting user navigation
+					if (browser && window.location.pathname === '/login') {
+						console.log('🧭 Determining navigation target based on user profile...');
+
+						if (profile.role === 'teacher' && !profile.schoolEmail) {
+							console.log('🎓 Teacher needs to set school email, redirecting to onboarding...');
+							await goto('/teacher/onboarding');
+						} else {
+							console.log('🎯 Redirecting to role-specific dashboard...');
+							if (profile.role === 'teacher') {
+								await goto('/teacher');
+							} else {
+								await goto('/student');
+							}
+						}
+					} else {
+						console.log('📍 User not on login page, skipping navigation');
+					}
 				} else {
 					console.error('❌ Failed to get user profile after all retries');
 					error = 'Failed to load user profile. Please try signing in again.';
@@ -177,14 +259,13 @@ function initializeAuth() {
 		}
 	});
 
-	// Ensure we get an initial state callback
-	// In some cases, onAuthStateChanged might not fire immediately
+	// Enhanced timeout handling with proper initialization completion
 	setTimeout(() => {
 		if (loading && !firebaseAuth.currentUser) {
-			console.log('No user after timeout, setting loading to false');
+			console.log('⚡ No user after timeout, completing initialization');
 			loading = false;
 		}
-	}, 1000);
+	}, 3000); // Increased timeout for better reliability
 
 	return unsubscribe;
 }
@@ -208,53 +289,63 @@ async function signIn(email: string, password: string): Promise<void> {
 
 		// Wait for auth state to be ready before making API calls
 		console.log('⏳ Waiting for auth state to stabilize...');
-		const authReady = await waitForAuthStateReady(result.user);
+		const authReady = await waitForAuthStateReady(result.user, 12000);
 
 		if (!authReady) {
-			console.error('❌ Auth state failed to stabilize within timeout');
-			error = 'Authentication timeout. Please try signing in again.';
-			return;
+			console.warn('⚠️ Auth state failed to stabilize within timeout, proceeding anyway...');
 		}
 
 		await setAuthCookie(result.user);
 		console.log('🍪 Auth cookie set successfully');
 
-		// Get user profile from Firestore (includes role)
-		// Note: We rely on onAuthStateChanged to set the user state, but we need the profile
-		// for immediate routing decisions
-		console.log('📡 Fetching user profile for routing decisions...');
-		const userProfile = await getUserProfile(result.user);
+		// Wait for the onAuthStateChanged to complete profile loading
+		// This prevents race conditions between signIn and the auth listener
+		console.log('⏳ Waiting for profile to be loaded by auth state listener...');
 
-		if (!userProfile) {
-			console.error('❌ User profile not found after sign in');
-			error = 'User profile not found. Please contact support.';
-			return;
+		let profileLoadAttempts = 0;
+		const maxWaitTime = 10000; // 10 seconds
+		const startWait = Date.now();
+
+		while (Date.now() - startWait < maxWaitTime) {
+			profileLoadAttempts++;
+
+			// Check if the auth state listener has completed loading the profile
+			if (user && user.uid === result.user.uid) {
+				console.log('✅ Profile loaded by auth state listener on attempt', profileLoadAttempts);
+				break;
+			}
+
+			// Progressive wait time
+			const waitTime = Math.min(300, 50 * profileLoadAttempts);
+			await new Promise((resolve) => setTimeout(resolve, waitTime));
 		}
 
-		console.log('✅ User profile loaded successfully:', {
-			uid: userProfile.uid,
-			role: userProfile.role,
-			hasSchoolEmail: !!userProfile.schoolEmail
+		// Fallback: if profile still not loaded, try to load it directly
+		if (!user || user.uid !== result.user.uid) {
+			console.log('📡 Profile not loaded by listener, fetching directly...');
+			const userProfile = await getUserProfile(result.user);
+
+			if (!userProfile) {
+				console.error('❌ User profile not found after sign in');
+				error = 'User profile not found. Please contact support.';
+				return;
+			}
+
+			// Set the user state
+			user = userProfile;
+			console.log('✅ Profile loaded directly:', userProfile);
+		}
+
+		console.log('✅ User profile ready:', {
+			uid: user.uid,
+			role: user.role,
+			hasSchoolEmail: !!user.schoolEmail
 		});
 
-		// Set the user state immediately for routing (onAuthStateChanged will also set it)
-		user = userProfile;
-
-		// Check if teacher needs to set school email
-		if (userProfile.role === 'teacher' && !userProfile.schoolEmail) {
-			console.log('🎓 Teacher needs to set school email, redirecting to onboarding...');
-			await goto('/teacher/onboarding');
-		} else {
-			console.log('🎯 Redirecting to role-specific dashboard...');
-			// Redirect to clean role-specific routes using (dashboard) route group
-			if (userProfile.role === 'teacher') {
-				await goto('/teacher');
-			} else {
-				await goto('/student');
-			}
-		}
-
-		console.log('✅ Sign in process completed successfully');
+		// Don't navigate here - let onAuthStateChanged handle navigation to avoid race conditions
+		console.log(
+			'✅ Sign in process completed successfully - auth state listener will handle navigation'
+		);
 	} catch (err: unknown) {
 		console.error('❌ Sign in error:', err);
 
@@ -428,6 +519,9 @@ export const auth = {
 	get error() {
 		return error;
 	},
+	get initialized() {
+		return initialized;
+	},
 
 	// Actions
 	signIn,
@@ -435,5 +529,6 @@ export const auth = {
 	logOut,
 	isTeacher,
 	isAuthenticated,
-	setUser
+	setUser,
+	waitForInitialization
 };

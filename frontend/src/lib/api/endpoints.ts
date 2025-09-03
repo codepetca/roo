@@ -597,9 +597,7 @@ export const api = {
 	},
 
 	// Student self-registration endpoint
-	async studentRequestPasscode(data: {
-		email: string;
-	}): Promise<SendPasscodeResponse> {
+	async studentRequestPasscode(data: { email: string }): Promise<SendPasscodeResponse> {
 		return typedApiRequest(
 			'/auth/student-request-passcode',
 			{
@@ -786,7 +784,10 @@ export const api = {
 	async getTeacherDashboard(): Promise<TeacherDashboard> {
 		try {
 			const result = await typedApiRequest('/teacher/dashboard', {}, teacherDashboardSchema);
-			console.log('🏠 Dashboard loaded:', { classroomCount: result.classrooms.length, hasTeacher: !!result.teacher });
+			console.log('🏠 Dashboard loaded:', {
+				classroomCount: result.classrooms.length,
+				hasTeacher: !!result.teacher
+			});
 			return result;
 		} catch (error) {
 			console.error('❌ getTeacherDashboard failed:', error);
