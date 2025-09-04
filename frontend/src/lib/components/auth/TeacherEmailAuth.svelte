@@ -13,18 +13,38 @@
 		cancel: void;
 	}>();
 
-	// Form state
-	let mode: 'login' | 'signup' = 'login';
-	let email = '';
-	let password = '';
-	let confirmPassword = '';
-	let displayName = '';
-	let schoolEmail = '';
-	let loading = false;
-	let loadingMessage = '';
-	let error = '';
+	// Form state using Svelte 5 $state runes
+	let mode = $state<'login' | 'signup'>('login');
+	let email = $state('');
+	let password = $state('');
+	let confirmPassword = $state('');
+	let displayName = $state('');
+	let schoolEmail = $state('');
+	let loading = $state(false);
+	let loadingMessage = $state('');
+	let error = $state('');
+
+	// Derived state for form validation using Svelte 5 $derived
+	let isFormValid = $derived.by(() => {
+		const hasRequiredFields = email.trim() && password.trim();
+		if (mode === 'signup') {
+			return hasRequiredFields && schoolEmail.trim();
+		}
+		return hasRequiredFields;
+	});
 
 	async function handleSubmit() {
+		console.log('🚀 TeacherEmailAuth: Form submission started', {
+			mode,
+			email: email.substring(0, 10) + '...',
+			hasPassword: !!password
+		});
+
+		// Add alert for debugging in tests
+		if (typeof window !== 'undefined') {
+			window.alert('🚀 FORM SUBMIT HANDLER CALLED - CHECK CONSOLE');
+		}
+
 		if (mode === 'signup' && password !== confirmPassword) {
 			error = 'Passwords do not match';
 			return;
@@ -44,6 +64,11 @@
 		error = '';
 
 		try {
+			console.log('🔐 TeacherEmailAuth: Starting Firebase authentication...', {
+				mode,
+				email: email.substring(0, 10) + '...'
+			});
+
 			let userCredential;
 
 			if (mode === 'signup') {
@@ -125,11 +150,77 @@
 			} else {
 				loadingMessage = 'Signing you in...';
 
-				// Sign in existing account (keep original approach but let auth store handle navigation)
-				userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+				console.log('🔑 TeacherEmailAuth: Attempting signInWithEmailAndPassword...');
+				console.log('🔑 Firebase Auth instance:', firebaseAuth ? 'Available' : 'Missing');
+
+				// Sign in existing account
+				try {
+					userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password);
+					console.log('✅ TeacherEmailAuth: signInWithEmailAndPassword successful', {
+						uid: userCredential.user.uid,
+						email: userCredential.user.email
+					});
+				} catch (authError) {
+					console.error('❌ TeacherEmailAuth: signInWithEmailAndPassword failed', {
+						code: authError.code,
+						message: authError.message,
+						stack: authError.stack
+					});
+					throw authError;
+				}
+
+				// Wait for auth store to complete profile loading and navigation
+				loadingMessage = 'Loading your profile...';
+				
+				// Enhanced waiting mechanism with better error handling
+				const maxWaitTime = 15000; // 15 seconds - increased timeout
+				const startTime = Date.now();
+				let lastCheck = 'Starting wait for auth store...';
+				
+				console.log('🔄 Waiting for auth store to complete profile loading...', {
+					userUid: userCredential.user.uid,
+					userEmail: userCredential.user.email
+				});
+				
+				while (Date.now() - startTime < maxWaitTime) {
+					// Check if auth store has completed loading the user
+					if (auth.user && auth.user.uid === userCredential.user.uid && !auth.loading) {
+						console.log('✅ Auth store completed profile loading successfully');
+						break;
+					}
+					
+					// Enhanced logging for debugging
+					const currentCheck = `auth.user: ${auth.user ? auth.user.uid : 'null'}, auth.loading: ${auth.loading}, expected: ${userCredential.user.uid}`;
+					if (currentCheck !== lastCheck) {
+						console.log('🔄 Auth store status:', {
+							hasUser: !!auth.user,
+							userUid: auth.user?.uid || 'none',
+							loading: auth.loading,
+							expected: userCredential.user.uid,
+							elapsed: Date.now() - startTime
+						});
+						lastCheck = currentCheck;
+					}
+					
+					// Wait 300ms before checking again - slightly longer interval
+					await new Promise(resolve => setTimeout(resolve, 300));
+				}
+				
+				if (!auth.user || auth.user.uid !== userCredential.user.uid) {
+					console.error('❌ Auth store failed to complete profile loading within timeout', {
+						finalAuthUser: auth.user?.uid || 'none',
+						expectedUid: userCredential.user.uid,
+						finalLoading: auth.loading,
+						totalWaitTime: Date.now() - startTime
+					});
+					
+					// Don't throw an error here - let the dispatch happen anyway
+					// The navigation issue might be separate from profile loading
+					console.log('⚠️ Proceeding with dispatch despite auth store timeout...');
+				}
 			}
 
-			// Dispatch success event for signup flow
+			// Dispatch success event after auth store completes
 			dispatch('success', {
 				user: {
 					uid: userCredential.user.uid,
@@ -139,7 +230,14 @@
 				}
 			});
 		} catch (err) {
-			console.error('Teacher auth error:', err);
+			console.error('❌ TeacherEmailAuth: Complete authentication error', {
+				error: err,
+				code: err?.code,
+				message: err?.message,
+				stack: err?.stack,
+				mode,
+				email: email.substring(0, 10) + '...'
+			});
 
 			// Handle specific Firebase Auth errors
 			const authError = err as { code?: string; message?: string };
@@ -153,12 +251,22 @@
 				error = 'Please enter a valid email address';
 			} else if (authError.code === 'auth/weak-password') {
 				error = 'Password is too weak. Please choose a stronger password';
+			} else if (authError.code === 'auth/invalid-credential') {
+				error = 'Invalid email or password. Please check your credentials.';
 			} else {
 				error = authError.message || 'Authentication failed';
 			}
+
+			// Log the final error state
+			console.error('❌ TeacherEmailAuth: Final error state set:', error);
 		} finally {
 			loading = false;
 			loadingMessage = '';
+			console.log('🏁 TeacherEmailAuth: Authentication process completed', {
+				loading: false,
+				hasError: !!error,
+				errorMessage: error || 'none'
+			});
 		}
 	}
 
@@ -192,7 +300,15 @@
 		</Alert>
 	{/if}
 
-	<form on:submit|preventDefault={handleSubmit} class="space-y-4" data-testid="teacher-email-form">
+	<form 
+		onsubmit={(e) => {
+			console.log('🔥 FORM SUBMIT EVENT TRIGGERED', e);
+			e.preventDefault();
+			handleSubmit();
+		}}
+		class="space-y-4" 
+		data-testid="teacher-email-form"
+	>
 		<!-- Email -->
 		<div>
 			<label for="email" class="mb-1 block text-sm font-medium text-gray-700">
@@ -283,11 +399,12 @@
 		{/if}
 
 		<!-- Submit Button -->
-		<Button
+		<button
 			type="submit"
-			disabled={loading || !email.trim() || !password.trim()}
-			class="w-full"
+			disabled={loading || !isFormValid}
+			class="w-full inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:outline-none rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
 			data-testid="submit-auth-button"
+			onclick={() => console.log('🔘 Native button clicked')}
 		>
 			{#if loading}
 				<LoadingSpinner size="sm" />
@@ -295,14 +412,14 @@
 			{:else}
 				{mode === 'login' ? 'Sign In' : 'Create Account'}
 			{/if}
-		</Button>
+		</button>
 	</form>
 
 	<!-- Toggle between login/signup -->
 	<div class="text-center">
 		<button
 			type="button"
-			on:click={toggleMode}
+			onclick={toggleMode}
 			data-testid="toggle-auth-mode-button"
 			class="text-sm text-blue-600 transition-colors hover:text-blue-500 focus:underline focus:outline-none"
 			disabled={loading}

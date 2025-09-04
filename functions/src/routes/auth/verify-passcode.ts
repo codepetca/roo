@@ -72,7 +72,7 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
       passcodeLength: passcode.length
     });
 
-    // Find user with matching email and passcode
+    // Find user with matching email
     const userSnapshot = await db.collection('users')
       .where('email', '==', studentEmail)
       .limit(1)
@@ -90,27 +90,62 @@ export async function verifyPasscode(req: Request, res: Response): Promise<void>
     const userDoc = userSnapshot.docs[0];
     const userData = userDoc.data();
 
-    // Check if user has a passcode
-    if (!userData.passcode?.value) {
-      res.status(400).json({
-        success: false,
-        error: 'Invalid passcode',
-        message: 'No passcode found for this user'
-      });
-      return;
+    let passcodeValid = false;
+    let isFromBrevoSystem = false;
+
+    // First, try to verify against user document passcode (permanent student codes)
+    if (userData.passcode?.value && userData.passcode.value === passcode) {
+      passcodeValid = true;
+      logger.info('Passcode verified against user document', { studentEmail });
+    } else {
+      // Fallback: Check the passcodes collection (email-based temporary codes)
+      logger.info('Checking passcodes collection for temporary code', { studentEmail });
+      
+      const passcodeDoc = await db.collection('passcodes').doc(studentEmail).get();
+      
+      if (passcodeDoc.exists) {
+        const passcodeData = passcodeDoc.data()!;
+        const now = new Date();
+        const expiresAt = passcodeData.expiresAt.toDate();
+
+        // Check if passcode matches, hasn't expired, and hasn't been used
+        if (passcodeData.passcode === passcode && 
+            expiresAt > now && 
+            !passcodeData.used) {
+          
+          passcodeValid = true;
+          isFromBrevoSystem = true;
+          
+          // Mark the temporary passcode as used
+          await passcodeDoc.ref.update({ used: true, usedAt: now });
+          
+          logger.info('Passcode verified against Brevo passcodes collection', { 
+            studentEmail, 
+            expiresAt: expiresAt.toISOString()
+          });
+        } else {
+          logger.warn('Passcode validation failed in passcodes collection', { 
+            studentEmail, 
+            expired: expiresAt <= now,
+            used: passcodeData.used,
+            matches: passcodeData.passcode === passcode
+          });
+        }
+      }
     }
 
-    // Verify passcode
-    if (userData.passcode.value !== passcode) {
-      // Increment attempt counter
-      await userDoc.ref.update({
-        'passcode.attempts': (userData.passcode.attempts || 0) + 1
-      });
+    if (!passcodeValid) {
+      // For user document passcodes, increment attempt counter
+      if (userData.passcode?.value) {
+        await userDoc.ref.update({
+          'passcode.attempts': (userData.passcode.attempts || 0) + 1
+        });
+      }
 
       res.status(400).json({
         success: false,
         error: 'Invalid passcode',
-        message: 'The passcode is incorrect'
+        message: userData.passcode?.value ? 'The passcode is incorrect' : 'No passcode found for this user'
       });
       return;
     }

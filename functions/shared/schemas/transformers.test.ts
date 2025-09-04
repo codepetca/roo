@@ -113,7 +113,7 @@ describe('snapshotToCore transformation', () => {
     // Mock user lookup function
     const mockGetUserIdByEmail = async (email: string) => null;
     
-    const result = await snapshotToCore(mockSnapshot, mockGetUserIdByEmail);
+    const result = await snapshotToCore(mockSnapshot, mockGetUserIdByEmail, 'test-teacher-uid');
 
     // Check teacher transformation
     expect(result.teacher.email).toBe('teacher@school.edu');
@@ -123,7 +123,7 @@ describe('snapshotToCore transformation', () => {
     // Check classroom transformation
     expect(result.classrooms).toHaveLength(1);
     expect(result.classrooms[0].name).toBe('Test Classroom');
-    expect(result.classrooms[0].externalId).toBe('classroom_123');
+    expect(result.classrooms[0].googleCourseId).toBe('classroom_123');
 
     // Check assignment transformation
     expect(result.assignments).toHaveLength(1);
@@ -153,7 +153,7 @@ describe('snapshotToCore transformation', () => {
     // Mock user lookup function
     const mockGetUserIdByEmail = async (email: string) => null;
     
-    const result = await snapshotToCore(declinedSnapshot, mockGetUserIdByEmail);
+    const result = await snapshotToCore(declinedSnapshot, mockGetUserIdByEmail, 'test-teacher-uid');
     expect(result.classrooms[0].courseState).toBe('ARCHIVED');
   });
 });

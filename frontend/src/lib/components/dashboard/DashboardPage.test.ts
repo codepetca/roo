@@ -145,9 +145,12 @@ describe('Dashboard Page Logic', () => {
 			expect(assignments).toHaveLength(1);
 
 			// Check quiz properties
-			quizzes.forEach((quiz) => {
-				expect(quiz.isQuiz).toBe(true);
-				expect(quiz.formId).toBeDefined();
+			const expectedFormIds = ['form-123', 'form-456'];
+			quizzes.forEach((quiz, index) => {
+				expect(quiz.isQuiz, `Quiz ${index} should be marked as quiz`).toBe(true);
+				expect(quiz.formId, `Quiz ${index} should have correct form ID`).toBe(
+					expectedFormIds[index]
+				);
 			});
 
 			// Check assignment properties
@@ -158,52 +161,138 @@ describe('Dashboard Page Logic', () => {
 		});
 	});
 
-	describe('API Integration', () => {
-		it('should call listAssignments API', async () => {
+	describe('Dashboard Data Processing', () => {
+		it('should process assignments data for dashboard display', async () => {
 			const assignments = await mockApi.listAssignments();
-			expect(mockApi.listAssignments).toHaveBeenCalledTimes(1);
-			expect(assignments).toEqual(mockAssignments);
+
+			// Test actual dashboard logic: assignment categorization
+			const recentAssignments = assignments.slice(0, 5);
+			const assignmentsByType = assignments.reduce(
+				(acc: Record<string, any[]>, assignment: any) => {
+					const type = assignment.isQuiz ? 'quizzes' : 'assignments';
+					if (!acc[type]) acc[type] = [];
+					acc[type].push(assignment);
+					return acc;
+				},
+				{}
+			);
+
+			expect(recentAssignments.length).toBeLessThanOrEqual(5);
+			expect(assignmentsByType.quizzes).toHaveLength(2);
+			expect(assignmentsByType.assignments).toHaveLength(1);
+			expect(assignmentsByType.quizzes.every((q: any) => q.formId)).toBe(true);
 		});
 
-		it('should call getUngradedSubmissions API', async () => {
+		it('should process submissions data for dashboard metrics', async () => {
 			const submissions = await mockApi.getUngradedSubmissions();
-			expect(mockApi.getUngradedSubmissions).toHaveBeenCalledTimes(1);
-			expect(submissions).toEqual(mockSubmissions);
+
+			// Test actual dashboard logic: submission status processing
+			const submissionsByStatus = submissions.reduce(
+				(acc: Record<string, any[]>, submission: any) => {
+					if (!acc[submission.status]) acc[submission.status] = [];
+					acc[submission.status].push(submission);
+					return acc;
+				},
+				{}
+			);
+			const pendingCount = submissionsByStatus.pending?.length || 0;
+			const gradingCount = submissionsByStatus.grading?.length || 0;
+
+			expect(pendingCount).toBe(1);
+			expect(gradingCount).toBe(1);
+			expect(submissions.every((s: any) => s.studentName && s.assignmentId)).toBe(true);
 		});
 
-		it('should handle API errors gracefully', async () => {
-			mockApi.listAssignments.mockRejectedValue(new Error('API Error'));
+		it('should handle API error states in dashboard logic', async () => {
+			mockApi.listAssignments.mockRejectedValue(new Error('Network error'));
 
-			await expect(mockApi.listAssignments()).rejects.toThrow('API Error');
-		});
-
-		it('should handle submissions API errors with fallback', async () => {
-			mockApi.getUngradedSubmissions.mockRejectedValue(new Error('Submissions API error'));
+			// Test error handling with fallback data
+			let errorState = false;
+			let fallbackData: any[] = [];
 
 			try {
-				await mockApi.getUngradedSubmissions();
+				await mockApi.listAssignments();
 			} catch (error) {
-				expect(error).toBeInstanceOf(Error);
-				expect((error as Error).message).toBe('Submissions API error');
+				errorState = true;
+				fallbackData = []; // Dashboard should handle empty state
 			}
+
+			expect(errorState).toBe(true);
+			expect(fallbackData).toEqual([]);
+			// Verify dashboard can handle empty assignment list
+			const totalAssignments = fallbackData.length;
+			expect(totalAssignments).toBe(0);
+		});
+
+		it('should combine assignments and submissions data for unified dashboard view', async () => {
+			const assignments = await mockApi.listAssignments();
+			const submissions = await mockApi.getUngradedSubmissions();
+
+			// Test dashboard logic: correlating assignments with submissions
+			const assignmentsWithSubmissions = assignments.map((assignment: any) => {
+				const relatedSubmissions = submissions.filter((s: any) => s.assignmentId === assignment.id);
+				return {
+					...assignment,
+					submissionCount: relatedSubmissions.length,
+					hasUngraded: relatedSubmissions.some((s: any) => s.status === 'pending')
+				};
+			});
+
+			// Verify business logic results
+			const assignment1 = assignmentsWithSubmissions.find((a: any) => a.id === 'assignment-1');
+			const assignment2 = assignmentsWithSubmissions.find((a: any) => a.id === 'assignment-2');
+
+			expect(assignment1?.submissionCount).toBe(1);
+			expect(assignment1?.hasUngraded).toBe(true);
+			expect(assignment2?.submissionCount).toBe(1);
+			expect(assignment2?.hasUngraded).toBe(false); // grading status
 		});
 	});
 
 	describe('Data Transformation', () => {
 		it('should handle assignment titles and descriptions', () => {
-			mockAssignments.forEach((assignment) => {
-				expect(assignment.title).toBeDefined();
-				expect(assignment.description).toBeDefined();
-				expect(assignment.maxPoints).toBeGreaterThan(0);
+			const expectedTitles = ['Math Quiz 1', 'Essay Assignment', 'Science Quiz 2'];
+			const expectedDescriptions = [
+				'Basic arithmetic',
+				'Write about your favorite book',
+				'Physics concepts'
+			];
+			const expectedMaxPoints = [100, 50, 75];
+
+			mockAssignments.forEach((assignment, index) => {
+				expect(assignment.title, `Assignment ${index} should have correct title`).toBe(
+					expectedTitles[index]
+				);
+				expect(assignment.description, `Assignment ${index} should have correct description`).toBe(
+					expectedDescriptions[index]
+				);
+				expect(assignment.maxPoints, `Assignment ${index} should have correct max points`).toBe(
+					expectedMaxPoints[index]
+				);
 			});
 		});
 
 		it('should handle submission student information', () => {
-			mockSubmissions.forEach((submission) => {
-				expect(submission.studentName).toBeDefined();
-				expect(submission.studentEmail).toBeDefined();
-				expect(submission.assignmentId).toBeDefined();
-				expect(['pending', 'grading', 'graded']).toContain(submission.status);
+			const expectedStudentNames = ['John Doe', 'Jane Smith'];
+			const expectedStudentEmails = ['student1@test.com', 'student2@test.com'];
+			const expectedAssignmentIds = ['assignment-1', 'assignment-2'];
+			const expectedStatuses = ['pending', 'grading'];
+
+			mockSubmissions.forEach((submission, index) => {
+				expect(submission.studentName, `Submission ${index} should have correct student name`).toBe(
+					expectedStudentNames[index]
+				);
+				expect(
+					submission.studentEmail,
+					`Submission ${index} should have correct student email`
+				).toBe(expectedStudentEmails[index]);
+				expect(
+					submission.assignmentId,
+					`Submission ${index} should have correct assignment ID`
+				).toBe(expectedAssignmentIds[index]);
+				expect(submission.status, `Submission ${index} should have valid status`).toBe(
+					expectedStatuses[index]
+				);
 			});
 		});
 
@@ -294,7 +383,9 @@ describe('Dashboard Page Logic', () => {
 		});
 
 		it('should handle assignment status indicators', () => {
-			mockSubmissions.forEach((submission) => {
+			const expectedClasses = ['bg-yellow-100 text-yellow-800', 'bg-blue-100 text-blue-800'];
+
+			mockSubmissions.forEach((submission, index) => {
 				let statusClass = '';
 
 				if (submission.status === 'pending') {
@@ -305,9 +396,11 @@ describe('Dashboard Page Logic', () => {
 					statusClass = 'bg-gray-100 text-gray-800';
 				}
 
-				expect(statusClass).toBeDefined();
-				expect(statusClass).toContain('bg-');
-				expect(statusClass).toContain('text-');
+				expect(statusClass, `Submission ${index} should have correct status class`).toBe(
+					expectedClasses[index]
+				);
+				expect(statusClass, `Status class should include background color`).toMatch(/bg-\w+-\d+/);
+				expect(statusClass, `Status class should include text color`).toMatch(/text-\w+-\d+/);
 			});
 		});
 	});

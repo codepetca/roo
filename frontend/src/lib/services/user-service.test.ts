@@ -34,19 +34,24 @@ vi.mock('../data/validation', () => ({
 const { UserService } = await import('./user-service');
 
 type UserProfile = {
-	uid: string;
+	id: string;
 	email: string;
 	displayName: string;
-	role: 'teacher' | 'student';
+	role: 'teacher' | 'student' | 'admin';
 	schoolEmail?: string | null;
+	// Google ID field - required by new schema
+	googleUserId: string;
+	// Firebase Auth integration
+	firebaseUid?: string;
 	createdAt: Date;
 	updatedAt: Date;
-	version: number;
-	isLatest: boolean;
+	classroomIds: string[];
+	totalStudents: number;
+	totalClassrooms: number;
 };
 
 type CreateProfileData = {
-	uid: string;
+	id: string;
 	role: 'teacher' | 'student';
 	displayName?: string;
 	schoolEmail?: string;
@@ -81,15 +86,19 @@ describe('UserService - API-Only Architecture', () => {
 			const mockApiResponse = {
 				success: true,
 				data: {
-					uid: 'test-user-123',
+					id: 'test-user-123',
 					email: 'test@example.com',
 					displayName: 'Test User',
 					role: 'teacher',
 					schoolEmail: 'test@school.edu',
+					// Google ID field - required by new schema
+					googleUserId: 'google-user-teacher-123',
+					firebaseUid: 'test-user-123',
 					createdAt: new Date('2023-01-01'),
 					updatedAt: new Date('2024-01-01'),
-					version: 1,
-					isLatest: true
+					classroomIds: ['classroom-1', 'classroom-2'],
+					totalStudents: 45,
+					totalClassrooms: 2
 				}
 			};
 
@@ -150,7 +159,7 @@ describe('UserService - API-Only Architecture', () => {
 			const mockApiResponse = {
 				success: true,
 				data: {
-					uid: 'test-user-123',
+					id: 'test-user-123',
 					// Invalid data that will fail schema validation
 					role: 'invalid-role'
 				}
@@ -183,22 +192,26 @@ describe('UserService - API-Only Architecture', () => {
 		it('should create user profile via Firebase Callable successfully', async () => {
 			// Arrange
 			const createData: CreateProfileData = {
-				uid: 'new-user-123',
+				id: 'new-user-123',
 				role: 'teacher',
 				displayName: 'New Teacher',
 				schoolEmail: 'new@school.edu'
 			};
 
 			const expectedProfile: UserProfile = {
-				uid: 'new-user-123',
+				id: 'new-user-123',
 				email: 'new@example.com',
 				displayName: 'New Teacher',
 				role: 'teacher',
 				schoolEmail: 'new@school.edu',
+				// Google ID field - required by new schema
+				googleUserId: 'google-user-teacher-new-123',
+				firebaseUid: 'new-user-123',
 				createdAt: new Date('2024-01-01'),
 				updatedAt: new Date('2024-01-01'),
-				version: 1,
-				isLatest: true
+				classroomIds: [],
+				totalStudents: 0,
+				totalClassrooms: 0
 			};
 
 			const mockCallableResponse = {
@@ -224,7 +237,7 @@ describe('UserService - API-Only Architecture', () => {
 		it('should handle profile creation validation errors', async () => {
 			// Arrange
 			const invalidData = {
-				uid: 'test',
+				id: 'test',
 				role: 'invalid-role'
 			};
 
@@ -241,7 +254,7 @@ describe('UserService - API-Only Architecture', () => {
 		it('should handle invalid callable response format', async () => {
 			// Arrange
 			const createData: CreateProfileData = {
-				uid: 'new-user-123',
+				id: 'new-user-123',
 				role: 'student'
 			};
 
@@ -264,7 +277,7 @@ describe('UserService - API-Only Architecture', () => {
 		it('should handle callable function errors', async () => {
 			// Arrange
 			const createData: CreateProfileData = {
-				uid: 'new-user-123',
+				id: 'new-user-123',
 				role: 'teacher'
 			};
 
@@ -339,14 +352,18 @@ describe('UserService - API-Only Architecture', () => {
 		it('should delegate to getUserProfile (no fallback needed)', async () => {
 			// Arrange
 			const mockProfile = {
-				uid: 'test-user-123',
+				id: 'test-user-123',
 				email: 'test@example.com',
 				displayName: 'Test User',
 				role: 'teacher',
+				// Google ID field - required by new schema
+				googleUserId: 'google-user-teacher-123',
+				firebaseUid: 'test-user-123',
 				createdAt: new Date(),
 				updatedAt: new Date(),
-				version: 1,
-				isLatest: true
+				classroomIds: [],
+				totalStudents: 0,
+				totalClassrooms: 0
 			};
 
 			const mockApiResponse = {
@@ -381,14 +398,18 @@ describe('UserService - API-Only Architecture', () => {
 		it('should handle concurrent profile requests', async () => {
 			// Arrange
 			const mockProfile = {
-				uid: 'concurrent-user',
+				id: 'concurrent-user',
 				email: 'concurrent@example.com',
 				displayName: 'Concurrent User',
 				role: 'student',
+				// Google ID field - required by new schema
+				googleUserId: 'google-user-student-456',
+				firebaseUid: 'concurrent-user',
 				createdAt: new Date(),
 				updatedAt: new Date(),
-				version: 1,
-				isLatest: true
+				classroomIds: [],
+				totalStudents: 0,
+				totalClassrooms: 0
 			};
 
 			const mockApiResponse = {
@@ -431,14 +452,18 @@ describe('UserService - API-Only Architecture', () => {
 		it('should have reasonable performance characteristics', async () => {
 			// Arrange
 			const standardProfile = {
-				uid: 'perf-user',
+				id: 'perf-user',
 				email: 'perf@example.com',
 				displayName: 'Performance User',
 				role: 'student',
+				// Google ID field - required by new schema
+				googleUserId: 'google-user-student-perf',
+				firebaseUid: 'perf-user',
 				createdAt: new Date(),
 				updatedAt: new Date(),
-				version: 1,
-				isLatest: true
+				classroomIds: [],
+				totalStudents: 0,
+				totalClassrooms: 0
 			};
 
 			const mockApiResponse = {

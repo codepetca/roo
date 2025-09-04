@@ -37,7 +37,8 @@
       "WebSearch",
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_click",
-      "Read(/Users/stew/.claude/**)"
+      "Read(/Users/stew/.claude/**)",
+      "Bash(npx playwright test:*)"
     ],
     "deny": []
   },

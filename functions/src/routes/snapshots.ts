@@ -260,8 +260,8 @@ export async function importSnapshot(req: Request, res: Response): Promise<Respo
       // Continue with full processing on error
     }
 
-    // Process the snapshot
-    const processingResult = await snapshotProcessor.processSnapshot(snapshot, user.email);
+    // Process the snapshot with teacher UID for scoped classroom IDs
+    const processingResult = await snapshotProcessor.processSnapshot(snapshot, user.email, user.uid);
     
     if (processingResult.success) {
       logger.info("Snapshot import successful", {
@@ -417,7 +417,7 @@ export async function generateSnapshotDiff(req: Request, res: Response): Promise
     const existingClassrooms = await repository.getClassroomsByTeacher(user.email!);
     
     // Build sets of external IDs for comparison
-    const existingClassroomIds = new Set(existingClassrooms.map(c => c.externalId).filter(id => id));
+    const existingClassroomIds = new Set(existingClassrooms.map(c => c.googleCourseId).filter(id => id));
     const newClassroomIds = new Set((snapshot.classrooms || []).map((c: any) => c.id));
     
     // Get existing assignments for comparison
@@ -426,7 +426,7 @@ export async function generateSnapshotDiff(req: Request, res: Response): Promise
       const classroomAssignments = await repository.getAssignmentsByClassroom(classroom.id);
       existingAssignments.push(...classroomAssignments);
     }
-    const existingAssignmentIds = new Set(existingAssignments.map(a => a.externalId).filter(id => id));
+    const existingAssignmentIds = new Set(existingAssignments.map(a => a.googleCourseWorkId).filter(id => id));
     
     // Collect all assignment IDs from snapshot
     const newAssignmentIds = new Set();

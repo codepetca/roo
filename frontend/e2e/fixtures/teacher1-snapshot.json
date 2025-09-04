@@ -17,7 +17,8 @@
 		"name": "Alice Anderson",
 		"isTeacher": true,
 		"displayName": "Alice Anderson",
-		"email": "teacher1@schoolemail.com"
+		"email": "teacher1@schoolemail.com",
+		"googleUserId": "google-teacher1-user-id"
 	},
 	"classrooms": [
 		{
@@ -39,7 +40,9 @@
 					"points": 100,
 					"workType": "ASSIGNMENT",
 					"alternateLink": "https://classroom.example.com/assignment1",
-					"id": "assign_karel_maze_1",
+					"id": "google-course-cs101-id_google-coursework-karel-maze-id",
+					"googleCourseWorkId": "google-coursework-karel-maze-id",
+					"googleCourseId": "google-course-cs101-id",
 					"state": "PUBLISHED",
 					"submissionStats": {
 						"total": 3,
@@ -73,7 +76,9 @@
 					},
 					"workType": "ASSIGNMENT",
 					"alternateLink": "https://classroom.example.com/quiz1",
-					"id": "assign_prog_quiz_1",
+					"id": "google-course-cs101-id_google-coursework-prog-quiz-id",
+					"googleCourseWorkId": "google-coursework-prog-quiz-id",
+					"googleCourseId": "google-course-cs101-id",
 					"state": "PUBLISHED",
 					"quizData": {
 						"formId": "form_prog_quiz_1",
@@ -139,7 +144,9 @@
 					"points": 100,
 					"workType": "ASSIGNMENT",
 					"alternateLink": "https://classroom.example.com/array-assignment",
-					"id": "assign_array_1",
+					"id": "google-course-cs101-id_google-coursework-array-id",
+					"googleCourseWorkId": "google-coursework-array-id",
+					"googleCourseId": "google-course-cs101-id",
 					"state": "PUBLISHED",
 					"submissionStats": {
 						"total": 3,
@@ -164,13 +171,15 @@
 						},
 						"photoUrl": "https://cdn.example.com/student1.png",
 						"emailAddress": "student1@schoolemail.com",
-						"id": "student_id_001"
+						"id": "student_id_001",
+						"googleUserId": "google-student1-user-id"
 					},
 					"submissionCount": 3,
 					"name": "Alex Smith",
 					"id": "student_id_001",
 					"userId": "student_id_001",
 					"courseId": "teacher1_cs101_classroom",
+					"googleUserId": "google-student1-user-id",
 					"email": "student1@schoolemail.com"
 				},
 				{
@@ -193,6 +202,7 @@
 					"id": "student_id_002",
 					"userId": "student_id_002",
 					"courseId": "teacher1_cs101_classroom",
+					"googleUserId": "google-student2-user-id",
 					"email": "student2@schoolemail.com"
 				},
 				{
@@ -215,6 +225,7 @@
 					"id": "student_id_003",
 					"userId": "student_id_003",
 					"courseId": "teacher1_cs101_classroom",
+					"googleUserId": "google-student3-user-id",
 					"email": "student3@schoolemail.com"
 				}
 			],
@@ -231,7 +242,11 @@
 					"alternateLink": "https://classroom.example.com/submission1",
 					"attachmentCount": 0,
 					"studentWork": "Karel maze solution with proper movement and beeper collection logic.",
-					"id": "submission_1_alex",
+					"id": "google-course-cs101-id_google-coursework-karel-maze-id_google-submission-1-alex-id",
+					"googleSubmissionId": "google-submission-1-alex-id",
+					"googleCourseWorkId": "google-coursework-karel-maze-id",
+					"googleCourseId": "google-course-cs101-id",
+					"googleUserId": "google-student1-user-id",
 					"submissionHistory": [
 						{
 							"stateHistory": {
@@ -316,7 +331,9 @@
 			"alternateLink": "https://classroom.example.com/cs101",
 			"teacherGroupEmail": "teachers-cs101@schoolemail.com",
 			"id": "teacher1_cs101_classroom",
-			"ownerId": "teacher1@schoolemail.com"
+			"ownerId": "teacher1@schoolemail.com",
+			"googleCourseId": "google-course-cs101-id",
+			"googleOwnerId": "google-teacher1-user-id"
 		},
 		{
 			"studentCount": 2,
@@ -337,7 +354,9 @@
 					"points": 150,
 					"workType": "ASSIGNMENT",
 					"alternateLink": "https://classroom.example.com/data-structures",
-					"id": "assign_data_structures_1",
+					"id": "google-course-cs102-id_google-coursework-data-structures-id",
+					"googleCourseWorkId": "google-coursework-data-structures-id",
+					"googleCourseId": "google-course-cs102-id",
 					"state": "PUBLISHED",
 					"submissionStats": {
 						"total": 2,
@@ -371,7 +390,9 @@
 					},
 					"workType": "ASSIGNMENT",
 					"alternateLink": "https://classroom.example.com/complexity-quiz",
-					"id": "assign_complexity_quiz_1",
+					"id": "google-course-cs102-id_google-coursework-complexity-quiz-id",
+					"googleCourseWorkId": "google-coursework-complexity-quiz-id",
+					"googleCourseId": "google-course-cs102-id",
 					"state": "PUBLISHED",
 					"quizData": {
 						"formId": "form_complexity_quiz_1",
@@ -435,6 +456,7 @@
 					"id": "student_id_002",
 					"userId": "student_id_002",
 					"courseId": "teacher1_cs102_classroom",
+					"googleUserId": "google-student2-user-id",
 					"email": "student2@schoolemail.com"
 				},
 				{
@@ -457,6 +479,7 @@
 					"id": "student_id_004",
 					"userId": "student_id_004",
 					"courseId": "teacher1_cs102_classroom",
+					"googleUserId": "google-student4-user-id",
 					"email": "student4@schoolemail.com"
 				}
 			],
@@ -503,7 +526,9 @@
 			"alternateLink": "https://classroom.example.com/cs102",
 			"teacherGroupEmail": "teachers-cs102@schoolemail.com",
 			"id": "teacher1_cs102_classroom",
-			"ownerId": "teacher1@schoolemail.com"
+			"ownerId": "teacher1@schoolemail.com",
+			"googleCourseId": "google-course-cs102-id",
+			"googleOwnerId": "google-teacher1-user-id"
 		}
 	]
 }

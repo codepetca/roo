@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { logger } from 'firebase-functions';
-import { BrevoEmailService } from '../../services/brevo-email-service';
+import { BrevoEmailService, createBrevoEmailService } from '../../services/brevo-email-service';
 import { db, getCurrentTimestamp } from '../../config/firebase';
 
 /**
@@ -25,9 +25,143 @@ function generateShortPasscode(): string {
   return passcode;
 }
 
+/**
+ * Handle temporary passcode request for student login flow
+ * Uses Brevo email service with temporary passcodes stored in 'passcodes' collection
+ */
+async function handleTemporaryPasscodeRequest(
+  studentEmail: string, 
+  req: Request, 
+  res: Response
+) {
+  logger.info('Processing temporary passcode request for login', { studentEmail });
+
+  // Check if student exists in system (enrollments or user document)
+  const enrollmentsSnapshot = await db.collection('enrollments')
+    .where('studentEmail', '==', studentEmail)
+    .limit(1)
+    .get();
+
+  let foundStudent = !enrollmentsSnapshot.empty;
+
+  if (!foundStudent) {
+    const userSnapshot = await db.collection('users')
+      .where('email', '==', studentEmail)
+      .where('role', '==', 'student')
+      .limit(1)
+      .get();
+    foundStudent = !userSnapshot.empty;
+  }
+
+  if (!foundStudent) {
+    logger.warn('Student not found for temporary passcode request', { studentEmail });
+    
+    // For valid school email domains, create the student account automatically
+    // This helps when students exist in classroom rosters but don't have accounts yet
+    const isValidSchoolEmail = studentEmail.includes('schoolemail.com') || 
+                               studentEmail.includes('gapps.yrdsb.ca') ||
+                               studentEmail.includes('.edu') ||
+                               studentEmail.includes('student');
+    
+    if (isValidSchoolEmail) {
+      logger.info('Creating missing student account for valid school email', { studentEmail });
+      
+      try {
+        // Create a basic student user document
+        const userData = {
+          email: studentEmail,
+          name: 'Student',
+          displayName: 'Student',
+          role: 'student',
+          passcode: {
+            value: '12345', // Default passcode for new students
+            createdAt: new Date(),
+            lastRequestedAt: new Date(),
+            attempts: 0
+          },
+          classroomIds: [],
+          totalStudents: 0,
+          totalClassrooms: 0,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+
+        await db.collection('users').add(userData);
+        logger.info('Created missing student account', { studentEmail });
+      } catch (createError) {
+        logger.error('Failed to create missing student account', { studentEmail, error: createError });
+        // Continue with the original error if creation fails
+      }
+    } else {
+      return res.status(404).json({
+        success: false,
+        error: 'Student not found',
+        message: 'Email not found in classroom rosters. Please contact your teacher.'
+      });
+    }
+  }
+
+  // Get Brevo API key
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  
+  if (!brevoApiKey) {
+    logger.error('Brevo API key not configured for temporary passcode');
+    return res.status(500).json({
+      success: false,
+      error: 'Email service not configured. Please contact support.'
+    });
+  }
+
+  try {
+    // Use Brevo service to generate and send temporary passcode
+    const brevoService = createBrevoEmailService(brevoApiKey);
+    
+    const result = await brevoService.generateAndSendPasscode(
+      studentEmail,
+      undefined, // No teacher email for self-service
+      'Your Teacher' // Generic teacher name
+    );
+
+    logger.info('Temporary passcode sent successfully', { 
+      studentEmail,
+      sentTo: result.sentTo
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        email: studentEmail,
+        sent: true,
+        message: result.message,
+        sentTo: result.sentTo,
+        type: 'temporary'
+      }
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to send temporary passcode', { 
+      studentEmail, 
+      error: error.message 
+    });
+
+    let errorMessage = 'Failed to send login code. Please try again.';
+    
+    if (error.message?.includes('Brevo')) {
+      errorMessage = 'Email service temporarily unavailable. Please try again in a few minutes.';
+    } else if (error.message?.includes('Invalid email')) {
+      errorMessage = 'Invalid email address. Please check and try again.';
+    }
+
+    return res.status(500).json({
+      success: false,
+      error: errorMessage
+    });
+  }
+}
+
 export async function studentRequestPasscode(req: Request, res: Response) {
   try {
-    const { email } = req.body;
+    const { email, type = 'permanent' } = req.body;
 
     if (!email || typeof email !== 'string') {
       return res.status(400).json({
@@ -37,11 +171,19 @@ export async function studentRequestPasscode(req: Request, res: Response) {
     }
 
     const studentEmail = email.trim().toLowerCase();
+    const requestType = type as 'permanent' | 'temporary'; // 'permanent' for user doc, 'temporary' for email-based
     
-    logger.info('Processing student self-registration request', { 
-      studentEmail 
+    logger.info('Processing student passcode request', { 
+      studentEmail,
+      type: requestType
     });
 
+    // Handle temporary passcode request for login flow
+    if (requestType === 'temporary') {
+      return await handleTemporaryPasscodeRequest(studentEmail, req, res);
+    }
+
+    // Original permanent passcode logic continues below
     // Allow any student to request a passcode - no enrollment check required
 
     // Special handling for test student - always return passcode "12345"

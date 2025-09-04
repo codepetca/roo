@@ -15,18 +15,25 @@ var SchemaAdapters = {
   adaptTeacherProfile: function(userData) {
     try {
       return {
+        // Google Classroom ID - Required for unique identification
+        googleUserId: userData.googleUserId || '',
+        
+        // Core teacher profile information
         email: userData.email || '',
         name: userData.name || userData.displayName || userData.email.split('@')[0],
         isTeacher: true,
-        displayName: userData.displayName || userData.name || userData.email.split('@')[0]
+        displayName: userData.displayName || userData.name || userData.email.split('@')[0],
+        role: 'teacher'
       };
     } catch (error) {
       console.error('Error adapting teacher profile:', error);
       return {
+        googleUserId: '',
         email: 'unknown@example.com',
         name: 'Unknown Teacher',
         isTeacher: true,
-        displayName: 'Unknown Teacher'
+        displayName: 'Unknown Teacher',
+        role: 'teacher'
       };
     }
   },
@@ -43,7 +50,11 @@ var SchemaAdapters = {
       const now = new Date().toISOString();
       
       return {
-        // Core classroom information
+        // Google Classroom IDs - Required for unique identification
+        googleCourseId: course.id || '',           // Google Course ID (primary key)
+        googleOwnerId: course.ownerId || '',       // Google User ID of course owner
+        
+        // Core classroom information (backward compatibility)
         id: course.id || '',
         name: course.name || 'Untitled Course',
         section: course.section || undefined,
@@ -83,7 +94,7 @@ var SchemaAdapters = {
         // Calendar integration
         calendarId: course.calendarId || undefined,
         
-        // Permissions and ownership
+        // Permissions and ownership (backward compatibility)
         ownerId: course.ownerId || '',
         teacherEmail: teacherEmail || '',
         guardianNotificationSettings: course.guardiansEnabled ? {
@@ -145,7 +156,11 @@ var SchemaAdapters = {
       }
       
       return {
-        // Core assignment data
+        // Google Classroom IDs - Required for unique identification
+        googleCourseWorkId: courseWork.id || '',           // Google CourseWork ID (primary key)
+        googleCourseId: courseWork.courseId || '',         // Google Course ID (for classroom queries)
+        
+        // Core assignment data (backward compatibility)
         id: courseWork.id || '',
         title: courseWork.title || 'Untitled Assignment',
         description: courseWork.description || '',
@@ -218,7 +233,11 @@ var SchemaAdapters = {
   adaptStudent: function(student, courseId) {
     try {
       return {
-        // Core student information
+        // Google Classroom IDs - Required for unique identification
+        googleUserId: student.userId || student.profile?.id || '',  // Google User ID (primary key)
+        googleCourseId: courseId || '',                            // Google Course ID (for enrollment queries)
+        
+        // Core student information (backward compatibility)
         id: student.userId || student.profile?.id || '',
         email: student.profile?.emailAddress || '',
         name: student.profile?.name?.fullName || 'Unknown Student',
@@ -226,7 +245,7 @@ var SchemaAdapters = {
         lastName: student.profile?.name?.familyName || undefined,
         displayName: student.profile?.name?.fullName || student.profile?.emailAddress || 'Unknown Student',
         
-        // Google Classroom specific
+        // Google Classroom specific (backward compatibility)
         userId: student.userId || student.profile?.id || '',
         profile: student.profile ? {
           id: student.profile.id,
@@ -287,7 +306,13 @@ var SchemaAdapters = {
       const status = stateMapping[submission.state] || 'pending';
       
       return {
-        // Core submission information
+        // Google Classroom IDs - Required for unique identification
+        googleSubmissionId: submission.id || '',                    // Google Submission ID (primary key)
+        googleCourseWorkId: submission.courseWorkId || assignment?.id || '',  // Google CourseWork ID
+        googleUserId: submission.userId || '',                      // Google User ID (student)
+        googleCourseId: assignment?.googleCourseId || '',           // Google Course ID (from assignment context)
+        
+        // Core submission information (backward compatibility)
         id: submission.id || '',
         assignmentId: submission.courseWorkId || assignment?.id || '',
         assignmentName: assignment?.title || 'Unknown Assignment',

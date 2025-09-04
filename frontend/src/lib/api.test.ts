@@ -130,6 +130,9 @@ describe('API Client', () => {
 				submissionCount: 0,
 				gradedCount: 0,
 				pendingCount: 0,
+				// Google ID fields - required by new schema
+				googleCourseWorkId: 'google-coursework-assignment-1',
+				googleCourseId: 'google-course-789',
 				createdAt: '2022-01-20T12:00:00.000Z',
 				updatedAt: '2022-01-20T12:00:00.000Z'
 			},
@@ -156,6 +159,9 @@ describe('API Client', () => {
 				submissionCount: 0,
 				gradedCount: 0,
 				pendingCount: 0,
+				// Google ID fields - required by new schema
+				googleCourseWorkId: 'google-coursework-quiz-1',
+				googleCourseId: 'google-course-789',
 				createdAt: '2022-01-20T12:00:00.000Z',
 				updatedAt: '2022-01-20T12:00:00.000Z'
 			}
@@ -191,6 +197,9 @@ describe('API Client', () => {
 				submissionCount: 0,
 				gradedCount: 0,
 				pendingCount: 0,
+				// Google ID fields - required by new schema
+				googleCourseWorkId: 'google-coursework-assignment-1',
+				googleCourseId: 'google-course-789',
 				createdAt: new Date('2022-01-20T12:00:00.000Z'),
 				updatedAt: new Date('2022-01-20T12:00:00.000Z')
 			},
@@ -217,6 +226,9 @@ describe('API Client', () => {
 				submissionCount: 0,
 				gradedCount: 0,
 				pendingCount: 0,
+				// Google ID fields - required by new schema
+				googleCourseWorkId: 'google-coursework-quiz-1',
+				googleCourseId: 'google-course-789',
 				createdAt: new Date('2022-01-20T12:00:00.000Z'),
 				updatedAt: new Date('2022-01-20T12:00:00.000Z')
 			}
@@ -308,7 +320,11 @@ describe('API Client', () => {
 				submittedAt: '2022-01-20T12:00:00.000Z',
 				source: 'roo-direct',
 				late: false,
-				grade: null,
+				// Google ID fields - required by new schema
+				googleSubmissionId: 'google-submission-123',
+				googleCourseWorkId: 'google-coursework-456',
+				googleCourseId: 'google-course-789',
+				googleUserId: 'google-user-student-101',
 				createdAt: '2022-01-20T12:00:00.000Z',
 				updatedAt: '2022-01-20T12:00:00.000Z'
 			}
@@ -331,7 +347,11 @@ describe('API Client', () => {
 				submittedAt: new Date('2022-01-20T12:00:00.000Z'),
 				source: 'roo-direct',
 				late: false,
-				grade: null,
+				// Google ID fields - required by new schema
+				googleSubmissionId: 'google-submission-123',
+				googleCourseWorkId: 'google-coursework-456',
+				googleCourseId: 'google-course-789',
+				googleUserId: 'google-user-student-101',
 				createdAt: new Date('2022-01-20T12:00:00.000Z'),
 				updatedAt: new Date('2022-01-20T12:00:00.000Z')
 			}
@@ -343,7 +363,16 @@ describe('API Client', () => {
 				json: () =>
 					Promise.resolve({
 						success: true,
-						data: mockSubmissionResponse
+						data: {
+							submissions: mockSubmissionResponse,
+							enrollments: [],
+							classroomId: 'classroom-1',
+							stats: {
+								totalSubmissions: 1,
+								totalEnrolled: 5,
+								submissionRate: 0.2
+							}
+						}
 					})
 			});
 
@@ -351,9 +380,15 @@ describe('API Client', () => {
 
 			expect(mockFetch).toHaveBeenCalledWith(
 				'http://localhost:5001/test-project/us-central1/api/submissions/assignment/assignment-1',
-				expect.any(Object)
+				expect.objectContaining({
+					headers: expect.objectContaining({
+						'Content-Type': 'application/json'
+					})
+				})
 			);
-			expect(result).toEqual(expectedSubmissions);
+			expect(result.submissions).toEqual(expectedSubmissions);
+			expect(result.classroomId).toBe('classroom-1');
+			expect(result.stats.totalSubmissions).toBe(1);
 		});
 
 		it('should get individual submission', async () => {
@@ -373,7 +408,11 @@ describe('API Client', () => {
 
 			expect(mockFetch).toHaveBeenCalledWith(
 				'http://localhost:5001/test-project/us-central1/api/submissions/submission-1',
-				expect.any(Object)
+				expect.objectContaining({
+					headers: expect.objectContaining({
+						'Content-Type': 'application/json'
+					})
+				})
 			);
 			expect(result).toEqual(expectedSubmission);
 		});
@@ -521,7 +560,11 @@ describe('API Client', () => {
 
 			expect(mockFetch).toHaveBeenCalledWith(
 				'http://localhost:5001/test-project/us-central1/api/grades/assignment/assignment-1',
-				expect.any(Object)
+				expect.objectContaining({
+					headers: expect.objectContaining({
+						'Content-Type': 'application/json'
+					})
+				})
 			);
 			expect(result).toEqual(expectedGrades);
 		});
@@ -543,7 +586,11 @@ describe('API Client', () => {
 
 			expect(mockFetch).toHaveBeenCalledWith(
 				'http://localhost:5001/test-project/us-central1/api/grades/submission/submission-1',
-				expect.any(Object)
+				expect.objectContaining({
+					headers: expect.objectContaining({
+						'Content-Type': 'application/json'
+					})
+				})
 			);
 			expect(result).toEqual(expectedGrade);
 		});
@@ -638,7 +685,7 @@ describe('API Client', () => {
 			const result = await api.gradeCode(gradingRequest);
 
 			expect(mockFetch).toHaveBeenCalledWith(
-				'http://localhost:5001/test-project/us-central1/api/grade-code',
+				'http://localhost:5001/test-project/us-central1/api/grade-assignment',
 				expect.objectContaining({
 					method: 'POST',
 					body: JSON.stringify(gradingRequest)
@@ -671,7 +718,11 @@ describe('API Client', () => {
 
 			expect(mockFetch).toHaveBeenCalledWith(
 				'http://localhost:5001/test-project/us-central1/api/',
-				expect.any(Object)
+				expect.objectContaining({
+					headers: expect.objectContaining({
+						'Content-Type': 'application/json'
+					})
+				})
 			);
 			expect(result).toEqual(statusResponse);
 		});
@@ -697,12 +748,23 @@ describe('API Client', () => {
 				json: () =>
 					Promise.resolve({
 						success: true,
-						data: null
+						data: {
+							submissions: [],
+							enrollments: [],
+							classroomId: 'assignment-1',
+							stats: {
+								totalSubmissions: 0,
+								totalEnrolled: 0,
+								submissionRate: 0
+							}
+						}
 					})
 			});
 
 			const result = await api.getSubmissionsByAssignment('assignment-1');
-			expect(result).toEqual([]);
+			expect(result.submissions).toEqual([]);
+			expect(result.enrollments).toEqual([]);
+			expect(result.stats.totalSubmissions).toBe(0);
 		});
 	});
 });

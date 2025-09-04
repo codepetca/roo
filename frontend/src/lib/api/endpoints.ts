@@ -596,8 +596,11 @@ export const api = {
 		);
 	},
 
-	// Student self-registration endpoint
-	async studentRequestPasscode(data: { email: string }): Promise<SendPasscodeResponse> {
+	// Student self-registration endpoint (supports both permanent and temporary passcode types)
+	async studentRequestPasscode(data: {
+		email: string;
+		type?: 'permanent' | 'temporary';
+	}): Promise<SendPasscodeResponse> {
 		return typedApiRequest(
 			'/auth/student-request-passcode',
 			{

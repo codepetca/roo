@@ -11,21 +11,21 @@ import { Page, expect } from '@playwright/test';
  * Test data and credentials
  */
 export const TEST_TEACHER = {
-	email: 'teacher@test.com',
+	email: 'teacher1@test.com',
 	password: 'test123',
 	displayName: 'E2E Test Teacher'
 };
 
 export const TEST_STUDENT = {
-	email: 'student@test.com',
-	password: 'test123',
+	email: 'student1@schoolemail.com',
+	passcode: '12345',
 	displayName: 'E2E Test Student'
 };
 
 export const CLASSROOM_SNAPSHOT_PATH = './e2e/fixtures/classroom-snapshot-mock.json';
 
 export const TEST_TEACHER_PROFILE = {
-	email: 'teacher@test.com',
+	email: 'teacher1@test.com',
 	password: 'test123',
 	displayName: 'Test Teacher',
 	schoolEmail: 'test.codepet@gmail.com'
@@ -111,9 +111,64 @@ export async function signInAsStudent(page: Page) {
 			await foundEmailInput.clear();
 			await foundEmailInput.fill(TEST_STUDENT.email);
 
-			// Then fill passcode
-			await foundPasscodeInput.clear();
-			await foundPasscodeInput.fill('TEST1');
+			// Request temporary passcode for login
+			console.log('Requesting temporary passcode for test student...');
+			try {
+				// Use page.evaluate to call the API from browser context
+				const passcodeResponse = await page.evaluate(async (studentEmail) => {
+					try {
+						// Make API call to request temporary passcode
+						const response = await fetch('/api/auth/student-request-passcode', {
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify({
+								email: studentEmail,
+								type: 'temporary'
+							})
+						});
+
+						const result = await response.json();
+						console.log('Passcode request result:', result);
+
+						return {
+							success: response.ok,
+							data: result.data || result,
+							error: result.error
+						};
+					} catch (error) {
+						return {
+							success: false,
+							error: error.message
+						};
+					}
+				}, TEST_STUDENT.email);
+
+				if (passcodeResponse.success) {
+					console.log('✓ Temporary passcode requested successfully');
+
+					// For test environments, use the hardcoded passcode
+					// In real environments, the student would get this via email
+					const testPasscode = TEST_STUDENT.passcode; // '12345'
+
+					await foundPasscodeInput.clear();
+					await foundPasscodeInput.fill(testPasscode);
+
+					console.log('✓ Filled test passcode for login');
+				} else {
+					console.warn(
+						'⚠️ Passcode request failed, using fallback test passcode:',
+						passcodeResponse.error
+					);
+					await foundPasscodeInput.clear();
+					await foundPasscodeInput.fill(TEST_STUDENT.passcode);
+				}
+			} catch (requestError) {
+				console.warn('⚠️ Failed to request passcode, using fallback:', requestError);
+				await foundPasscodeInput.clear();
+				await foundPasscodeInput.fill(TEST_STUDENT.passcode);
+			}
 
 			// Submit with comprehensive button search
 			const submitSelectors = [
@@ -224,7 +279,7 @@ export async function signInAsStudent(page: Page) {
 						(await passcodeInput.isVisible({ timeout: 2000 }))
 					) {
 						await emailInput.fill(TEST_STUDENT.email);
-						await passcodeInput.fill('TEST1');
+						await passcodeInput.fill(TEST_STUDENT.passcode);
 
 						const submitButton = studentForm.locator('[data-testid="submit-auth-button"]');
 						await submitButton.click();

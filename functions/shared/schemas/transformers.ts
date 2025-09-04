@@ -30,14 +30,24 @@ import {
 
 /**
  * Generate stable IDs for entities to ensure consistency across snapshots
+ * Updated to include teacher scoping to prevent ID collisions between different teachers
  */
 export class StableIdGenerator {
-  static classroom(externalId: string): string {
-    return `classroom_${externalId}`;
+  static classroom(googleCourseId: string, teacherUid?: string): string {
+    // Include teacher UID to prevent classroom ID collisions between different teachers
+    // Fallback to old format if teacher UID not available (for migration compatibility)
+    if (teacherUid) {
+      const id = `classroom_${teacherUid}_${googleCourseId}`;
+      console.log(`[ID DEBUG] Generated classroom ID: ${id} (teacherUid: ${teacherUid}, googleCourseId: ${googleCourseId})`);
+      return id;
+    }
+    const fallbackId = `classroom_${googleCourseId}`;
+    console.log(`[ID DEBUG] Generated fallback classroom ID: ${fallbackId} (no teacherUid provided)`);
+    return fallbackId;
   }
 
-  static assignment(classroomId: string, externalId: string): string {
-    return `${classroomId}_assignment_${externalId}`;
+  static assignment(classroomId: string, googleCourseWorkId: string): string {
+    return `${classroomId}_assignment_${googleCourseWorkId}`;
   }
 
   static submission(classroomId: string, assignmentId: string, studentId: string): string {
@@ -64,11 +74,12 @@ export class StableIdGenerator {
 
 /**
  * Transform a ClassroomSnapshot into normalized core entities
- * Now async to support student UID resolution
+ * Now async to support student UID resolution and teacher-scoped classroom IDs
  */
 export async function snapshotToCore(
   snapshot: ClassroomSnapshot,
-  getUserIdByEmail: (email: string) => Promise<string | null>
+  getUserIdByEmail: (email: string) => Promise<string | null>,
+  teacherUid: string
 ): Promise<{
   teacher: DashboardUserInput;
   classrooms: ClassroomInput[];
@@ -76,7 +87,7 @@ export async function snapshotToCore(
   submissions: SubmissionInput[];
   enrollments: StudentEnrollment[];
 }> {
-  const teacher = transformTeacher(snapshot.teacher, snapshot.classrooms);
+  const teacher = transformTeacher(snapshot.teacher, snapshot.classrooms, teacherUid);
   const classrooms: ClassroomInput[] = [];
   const assignments: AssignmentInput[] = [];
   const submissions: SubmissionInput[] = [];
@@ -86,15 +97,16 @@ export async function snapshotToCore(
     console.log(`[TRANSFORM DEBUG] Processing classroom: ${classroomData.name}`);
     console.log(`[TRANSFORM DEBUG] Raw submissions in classroom: ${classroomData.submissions.length}`);
     
-    // Transform classroom
-    const classroom = transformClassroom(classroomData, classroomData.teacherEmail);
+    // Transform classroom with teacher-scoped ID
+    const classroom = transformClassroom(classroomData, classroomData.teacherEmail, teacherUid);
     classrooms.push(classroom);
 
     // Transform assignments for this classroom
+    const classroomId = StableIdGenerator.classroom(classroomData.id, teacherUid);
     for (const assignmentData of classroomData.assignments) {
       const assignment = transformAssignment(
         assignmentData,
-        StableIdGenerator.classroom(classroomData.id)
+        classroomId
       );
       assignments.push(assignment);
     }
@@ -103,7 +115,7 @@ export async function snapshotToCore(
     for (const studentData of classroomData.students) {
       const enrollment = await transformStudentEnrollment(
         studentData,
-        StableIdGenerator.classroom(classroomData.id),
+        classroomId,
         getUserIdByEmail
       );
       enrollments.push(enrollment);
@@ -115,7 +127,7 @@ export async function snapshotToCore(
       try {
         const submission = await transformSubmission(
           submissionData,
-          StableIdGenerator.classroom(classroomData.id),
+          classroomId,
           getUserIdByEmail
         );
         submissions.push(submission);
@@ -142,9 +154,10 @@ export async function snapshotToCore(
  */
 function transformTeacher(
   teacherProfile: ClassroomSnapshot['teacher'],
-  classrooms: ClassroomWithData[]
+  classrooms: ClassroomWithData[],
+  teacherUid: string
 ): DashboardUserInput {
-  const classroomIds = classrooms.map(c => StableIdGenerator.classroom(c.id));
+  const classroomIds = classrooms.map(c => StableIdGenerator.classroom(c.id, teacherUid));
   
   // Extract teacher's school email from classroom data (teacherEmail field)
   // This is the authoritative source for the teacher's school board email
@@ -164,9 +177,10 @@ function transformTeacher(
  */
 function transformClassroom(
   classroom: ClassroomWithData,
-  teacherEmail: string
+  teacherEmail: string,
+  teacherUid: string
 ): ClassroomInput {
-  const classroomId = StableIdGenerator.classroom(classroom.id);
+  const classroomId = StableIdGenerator.classroom(classroom.id, teacherUid);
   const studentIds = classroom.students.map(s => StableIdGenerator.student(s.email));
   const assignmentIds = classroom.assignments.map(a => 
     StableIdGenerator.assignment(classroomId, a.id)
@@ -177,7 +191,7 @@ function transformClassroom(
     name: classroom.name,
     section: classroom.section,
     description: classroom.description,
-    externalId: classroom.id,
+    googleCourseId: classroom.id,
     enrollmentCode: classroom.enrollmentCode,
     alternateLink: classroom.alternateLink,
     courseState: classroom.courseState === 'DECLINED' || classroom.courseState === 'SUSPENDED' 
@@ -349,7 +363,7 @@ function transformAssignment(
       }))
     } : undefined,
     status,
-    externalId: assignment.id,
+    googleCourseWorkId: assignment.id,
     alternateLink: assignment.alternateLink,
     workType: assignment.workType
   };
@@ -370,6 +384,9 @@ async function transformStudentEnrollment(
   const firebaseUid = await getUserIdByEmail(student.email);
   const studentId = firebaseUid || StableIdGenerator.student(student.email);
   const enrollmentId = StableIdGenerator.enrollment(classroomId, studentId);
+  
+  console.log(`[ENROLLMENT DEBUG] Student: ${student.email} -> studentId: ${studentId} (firebaseUid: ${firebaseUid || 'none'})`);
+  console.log(`[ENROLLMENT DEBUG] Enrollment ID: ${enrollmentId} (classroomId: ${classroomId})`);  
 
   return {
     id: enrollmentId,
@@ -385,8 +402,7 @@ async function transformStudentEnrollment(
     submissionCount: student.submissionCount || 0,
     gradedSubmissionCount: student.gradedSubmissionCount || 0,
     averageGrade: student.overallGrade,
-    externalId: student.id,
-    userId: student.userId,
+    googleUserId: student.id,
     createdAt: now,
     updatedAt: now
   };
@@ -456,7 +472,7 @@ async function transformSubmission(
     submittedAt: submission.submittedAt ? new Date(submission.submittedAt) : new Date(),
     importedAt: new Date(),
     source: 'import',
-    externalId: submission.id,
+    googleSubmissionId: submission.id,
     late: submission.late || false,
     
     // Preserve AI processing fields if present (enhanced schema support)
@@ -578,16 +594,16 @@ export function mergeSnapshotWithExisting(
   };
 
   // Create maps for efficient lookups
-  const existingClassrooms = new Map(existing.classrooms.map(c => [c.externalId, c]));
+  const existingClassrooms = new Map(existing.classrooms.map(c => [c.googleCourseId, c]));
   
   console.log(`[MERGE DEBUG] Creating existingAssignments map from ${existing.assignments.length} assignments:`);
   existing.assignments.forEach((a, index) => {
-    console.log(`[MERGE DEBUG]   Assignment ${index}: id=${a.id}, externalId=${a.externalId}, title=${a.title}`);
+    console.log(`[MERGE DEBUG]   Assignment ${index}: id=${a.id}, googleCourseWorkId=${a.googleCourseWorkId}, title=${a.title}`);
   });
-  const existingAssignments = new Map(existing.assignments.map(a => [a.externalId, a]));
+  const existingAssignments = new Map(existing.assignments.map(a => [a.googleCourseWorkId, a]));
   console.log(`[MERGE DEBUG] existingAssignments map created with ${existingAssignments.size} entries`);
   
-  // Create fallback matching maps for assignments with different externalIds
+  // Create fallback matching maps for assignments with different googleCourseWorkIds
   const existingAssignmentsByTitle = new Map(
     existing.assignments.map(a => [`${a.classroomId}_${a.title}`, a])
   );
@@ -599,12 +615,12 @@ export function mergeSnapshotWithExisting(
   );
   console.log(`[MERGE DEBUG] Created fallback title-only matching map with ${existingAssignmentsByTitleOnly.size} entries`);
   
-  // Debug: Check for assignments missing externalId
-  const missingExternalId = existing.assignments.filter(a => !a.externalId);
-  console.log(`[MERGE DEBUG] Assignments missing externalId: ${missingExternalId.length}`);
-  if (missingExternalId.length > 0) {
-    console.log(`[MERGE DEBUG] Sample missing externalId assignments:`, 
-      missingExternalId.slice(0, 3).map(a => ({ id: a.id, title: a.title })));
+  // Debug: Check for assignments missing googleCourseWorkId
+  const missingGoogleCourseWorkId = existing.assignments.filter(a => !a.googleCourseWorkId);
+  console.log(`[MERGE DEBUG] Assignments missing googleCourseWorkId: ${missingGoogleCourseWorkId.length}`);
+  if (missingGoogleCourseWorkId.length > 0) {
+    console.log(`[MERGE DEBUG] Sample missing googleCourseWorkId assignments:`, 
+      missingGoogleCourseWorkId.slice(0, 3).map(a => ({ id: a.id, title: a.title })));
   }
   
   const existingSubmissions = new Map(existing.submissions.map(s => [
@@ -618,7 +634,7 @@ export function mergeSnapshotWithExisting(
 
   // Process classrooms
   for (const classroom of snapshot.classrooms) {
-    const existing = existingClassrooms.get(classroom.externalId!);
+    const existing = existingClassrooms.get(classroom.googleCourseId!);
     if (existing) {
       // Update existing classroom
       result.toUpdate.classrooms.push({
@@ -632,7 +648,7 @@ export function mergeSnapshotWithExisting(
       // Create new classroom
       result.toCreate.classrooms.push({
         ...classroom,
-        id: StableIdGenerator.classroom(classroom.externalId!),
+        id: StableIdGenerator.classroom(classroom.googleCourseId!),
         createdAt: new Date(),
         updatedAt: new Date()
       } as Classroom);
@@ -644,14 +660,14 @@ export function mergeSnapshotWithExisting(
   console.log(`[MERGE DEBUG] Existing assignments map has ${existingAssignments.size} entries`);
   
   for (const assignment of snapshot.assignments) {
-    const externalId = assignment.externalId!;
-    let existingAssignment = existingAssignments.get(externalId);
+    const googleCourseWorkId = assignment.googleCourseWorkId!;
+    let existingAssignment = existingAssignments.get(googleCourseWorkId);
     
     console.log(`[MERGE DEBUG] Assignment ${assignment.title}:`);
-    console.log(`[MERGE DEBUG]   externalId: ${externalId}`);
-    console.log(`[MERGE DEBUG]   existing found by externalId: ${!!existingAssignment}`);
+    console.log(`[MERGE DEBUG]   googleCourseWorkId: ${googleCourseWorkId}`);
+    console.log(`[MERGE DEBUG]   existing found by googleCourseWorkId: ${!!existingAssignment}`);
     
-    // If not found by externalId, try fallback matching strategies
+    // If not found by googleCourseWorkId, try fallback matching strategies
     if (!existingAssignment) {
       // Strategy 1: Match by title + classroom
       const titleKey = `${assignment.classroomId}_${assignment.title}`;
@@ -672,7 +688,7 @@ export function mergeSnapshotWithExisting(
       }
       
       if (existingAssignment) {
-        console.log(`[MERGE DEBUG]   fallback matched assignment externalId: ${existingAssignment.externalId}`);
+        console.log(`[MERGE DEBUG]   fallback matched assignment googleCourseWorkId: ${existingAssignment.googleCourseWorkId}`);
       }
     }
     
@@ -681,16 +697,16 @@ export function mergeSnapshotWithExisting(
       console.log(`[MERGE DEBUG]   -> Updating existing assignment`);
       
       // OPTIMIZATION: If matched by fallback (title), update external ID for future matching
-      const matchedByFallback = existingAssignment.externalId !== externalId;
+      const matchedByFallback = existingAssignment.googleCourseWorkId !== googleCourseWorkId;
       if (matchedByFallback) {
-        console.log(`[MERGE DEBUG]   -> Updating external ID from ${existingAssignment.externalId} to ${externalId}`);
+        console.log(`[MERGE DEBUG]   -> Updating Google Course Work ID from ${existingAssignment.googleCourseWorkId} to ${googleCourseWorkId}`);
       }
       
       result.toUpdate.assignments.push({
         ...existingAssignment,
         ...assignment,
         id: existingAssignment.id,
-        externalId: externalId, // Ensure external ID is updated for future matching
+        googleCourseWorkId: googleCourseWorkId, // Ensure Google Course Work ID is updated for future matching
         createdAt: existingAssignment.createdAt,
         updatedAt: new Date()
       } as Assignment);
@@ -700,7 +716,7 @@ export function mergeSnapshotWithExisting(
       const classroomId = assignment.classroomId;
       result.toCreate.assignments.push({
         ...assignment,
-        id: StableIdGenerator.assignment(classroomId, assignment.externalId!),
+        id: StableIdGenerator.assignment(classroomId, assignment.googleCourseWorkId!),
         createdAt: new Date(),
         updatedAt: new Date()
       } as Assignment);

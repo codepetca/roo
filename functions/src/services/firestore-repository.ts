@@ -16,7 +16,6 @@ import {
   studentEnrollmentSchema
 } from "@shared/schemas/core";
 import { 
-  normalizeWithSchema,
   safeNormalizeWithSchema,
   normalizeTimestamps,
   cleanUndefinedValues,
@@ -120,6 +119,34 @@ export class FirestoreRepository {
   };
 
   // ============================================
+  // Composite ID Helpers for Scoped Google IDs
+  // ============================================
+  
+  /**
+   * Generate composite document ID for assignments
+   * Format: {googleCourseId}_{googleCourseWorkId}
+   */
+  private generateAssignmentDocumentId(googleCourseId: string, googleCourseWorkId: string): string {
+    return `${googleCourseId}_${googleCourseWorkId}`;
+  }
+  
+  /**
+   * Generate composite document ID for submissions
+   * Format: {googleCourseId}_{googleCourseWorkId}_{googleSubmissionId}
+   */
+  private generateSubmissionDocumentId(googleCourseId: string, googleCourseWorkId: string, googleSubmissionId: string): string {
+    return `${googleCourseId}_${googleCourseWorkId}_${googleSubmissionId}`;
+  }
+  
+  /**
+   * Generate composite document ID for enrollments
+   * Format: {googleCourseId}_{googleUserId}
+   */
+  private generateEnrollmentDocumentId(googleCourseId: string, googleUserId: string): string {
+    return `${googleCourseId}_${googleUserId}`;
+  }
+
+  // ============================================
   // User Operations (replacing Teacher operations)
   // ============================================
 
@@ -141,7 +168,7 @@ export class FirestoreRepository {
 
     // Use schema-driven normalization to ensure all expected fields exist
     try {
-      return normalizeWithSchema(rawData, dashboardUserSchema, doc.id);
+      return safeNormalizeWithSchema(normalizeTimestamps(rawData), dashboardUserSchema, doc.id);
     } catch (error) {
       console.error("FirestoreRepository: getUserByEmail normalization failed:", {
         email,
@@ -149,7 +176,7 @@ export class FirestoreRepository {
         rawData
       });
       // Fallback to basic normalization with ID
-      return serializeTimestamps({ ...rawData, id: doc.id });
+      return serializeTimestamps({ ...rawData, id: doc.id }) as any;
     }
   }
 
@@ -167,7 +194,7 @@ export class FirestoreRepository {
 
     // Use schema-driven normalization to ensure all expected fields exist
     try {
-      return normalizeWithSchema(rawData, dashboardUserSchema, doc.id);
+      return safeNormalizeWithSchema(normalizeTimestamps(rawData), dashboardUserSchema, doc.id);
     } catch (error) {
       console.error("FirestoreRepository: getUserById normalization failed:", {
         userId,
@@ -175,7 +202,7 @@ export class FirestoreRepository {
         rawData
       });
       // Fallback to basic normalization with ID
-      return serializeTimestamps({ ...rawData, id: doc.id });
+      return serializeTimestamps({ ...rawData, id: doc.id }) as any;
     }
   }
 
@@ -184,6 +211,431 @@ export class FirestoreRepository {
       ...updates,
       updatedAt: getCurrentTimestamp()
     });
+  }
+
+  // ============================================
+  // Google ID-based Operations (New)
+  // ============================================
+
+  /**
+   * Get user by Google User ID (direct document access)
+   * @param googleUserId - Google User ID from Classroom API
+   * @returns User document or null
+   */
+  async getUserByGoogleId(googleUserId: string): Promise<any | null> {
+    const doc = await db.collection(this.collections.users).doc(googleUserId).get();
+    
+    if (!doc.exists) {
+      return null;
+    }
+
+    const rawData = doc.data();
+    if (!rawData) {
+      return null;
+    }
+
+    try {
+      return safeNormalizeWithSchema(normalizeTimestamps(rawData), dashboardUserSchema, doc.id);
+    } catch (error) {
+      console.error("FirestoreRepository: getUserByGoogleId normalization failed:", {
+        googleUserId,
+        error: error instanceof Error ? error.message : error,
+        rawData
+      });
+      return serializeTimestamps({ ...rawData, id: doc.id }) as any;
+    }
+  }
+
+  /**
+   * Get classroom by Google Course ID (direct document access)
+   * @param googleCourseId - Google Course ID from Classroom API
+   * @returns Classroom document or null
+   */
+  async getClassroomByGoogleId(googleCourseId: string): Promise<Classroom | null> {
+    const doc = await db.collection(this.collections.classrooms).doc(googleCourseId).get();
+    
+    if (!doc.exists) {
+      return null;
+    }
+
+    const rawData = doc.data();
+    if (!rawData) {
+      return null;
+    }
+
+    try {
+      const normalizedTimestamps = normalizeTimestamps(rawData);
+      return safeNormalizeWithSchema(normalizedTimestamps, classroomSchema, doc.id) as any;
+    } catch (error) {
+      console.error("FirestoreRepository: getClassroomByGoogleId normalization failed:", {
+        googleCourseId,
+        error: error instanceof Error ? error.message : error,
+        rawData
+      });
+      return serializeTimestamps({ ...rawData, id: doc.id }) as any;
+    }
+  }
+
+  /**
+   * Get classrooms by Google Owner ID (indexed query)
+   * @param googleOwnerId - Google User ID of course owner
+   * @returns Array of classroom documents
+   */
+  async getClassroomsByGoogleOwnerId(googleOwnerId: string): Promise<Classroom[]> {
+    const snapshot = await db.collection(this.collections.classrooms)
+      .where("googleOwnerId", "==", googleOwnerId)
+      .get();
+
+    if (snapshot.empty) {
+      return [];
+    }
+
+    return snapshot.docs.map(doc => {
+      const rawData = doc.data();
+      try {
+        return safeNormalizeWithSchema(normalizeTimestamps(rawData), classroomSchema, doc.id) as any;
+      } catch (error) {
+        console.error("FirestoreRepository: getClassroomsByGoogleOwnerId normalization failed:", {
+          googleOwnerId,
+          docId: doc.id,
+          error: error instanceof Error ? error.message : error
+        });
+        return serializeTimestamps({ ...rawData, id: doc.id }) as any;
+      }
+    }) as any;
+  }
+
+  /**
+   * Get assignment by Google CourseWork ID (direct document access with composite ID)
+   * @param googleCourseId - Google Course ID from Classroom API
+   * @param googleCourseWorkId - Google CourseWork ID from Classroom API (scoped to course)
+   * @returns Assignment document or null
+   */
+  async getAssignmentByGoogleId(googleCourseId: string, googleCourseWorkId: string): Promise<Assignment | null> {
+    const compositeId = this.generateAssignmentDocumentId(googleCourseId, googleCourseWorkId);
+    const doc = await db.collection(this.collections.assignments).doc(compositeId).get();
+    
+    if (!doc.exists) {
+      return null;
+    }
+
+    const rawData = doc.data();
+    if (!rawData) {
+      return null;
+    }
+
+    try {
+      return safeNormalizeWithSchema(normalizeTimestamps(rawData), assignmentSchema, doc.id) as any;
+    } catch (error) {
+      console.error("FirestoreRepository: getAssignmentByGoogleId normalization failed:", {
+        googleCourseWorkId,
+        error: error instanceof Error ? error.message : error,
+        rawData
+      });
+      return serializeTimestamps({ ...rawData, id: doc.id }) as any;
+    }
+  }
+
+  /**
+   * Get assignments by Google Course ID (indexed query)
+   * @param googleCourseId - Google Course ID
+   * @returns Array of assignment documents
+   */
+  async getAssignmentsByGoogleCourseId(googleCourseId: string): Promise<Assignment[]> {
+    const snapshot = await db.collection(this.collections.assignments)
+      .where("googleCourseId", "==", googleCourseId)
+      .get();
+
+    if (snapshot.empty) {
+      return [];
+    }
+
+    return snapshot.docs.map(doc => {
+      const rawData = doc.data();
+      try {
+        return safeNormalizeWithSchema(normalizeTimestamps(rawData), assignmentSchema, doc.id) as any;
+      } catch (error) {
+        console.error("FirestoreRepository: getAssignmentsByGoogleCourseId normalization failed:", {
+          googleCourseId,
+          docId: doc.id,
+          error: error instanceof Error ? error.message : error
+        });
+        return serializeTimestamps({ ...rawData, id: doc.id }) as any;
+      }
+    }) as any;
+  }
+
+  /**
+   * Get submission by Google Submission ID (direct document access)
+   * @param googleSubmissionId - Google Submission ID from Classroom API
+   * @returns Submission document or null
+   */
+  async getSubmissionByGoogleId(googleSubmissionId: string): Promise<Submission | null> {
+    const doc = await db.collection(this.collections.submissions).doc(googleSubmissionId).get();
+    
+    if (!doc.exists) {
+      return null;
+    }
+
+    const rawData = doc.data();
+    if (!rawData) {
+      return null;
+    }
+
+    try {
+      return safeNormalizeWithSchema(normalizeTimestamps(rawData), submissionSchema, doc.id) as any;
+    } catch (error) {
+      console.error("FirestoreRepository: getSubmissionByGoogleId normalization failed:", {
+        googleSubmissionId,
+        error: error instanceof Error ? error.message : error,
+        rawData
+      });
+      return serializeTimestamps({ ...rawData, id: doc.id }) as any;
+    }
+  }
+
+  /**
+   * Get submissions by Google User ID (indexed query)
+   * @param googleUserId - Google User ID of student
+   * @returns Array of submission documents
+   */
+  async getSubmissionsByGoogleUserId(googleUserId: string): Promise<Submission[]> {
+    const snapshot = await db.collection(this.collections.submissions)
+      .where("googleUserId", "==", googleUserId)
+      .get();
+
+    if (snapshot.empty) {
+      return [];
+    }
+
+    return snapshot.docs.map(doc => {
+      const rawData = doc.data();
+      try {
+        return safeNormalizeWithSchema(normalizeTimestamps(rawData), submissionSchema, doc.id) as any;
+      } catch (error) {
+        console.error("FirestoreRepository: getSubmissionsByGoogleUserId normalization failed:", {
+          googleUserId,
+          docId: doc.id,
+          error: error instanceof Error ? error.message : error
+        });
+        return serializeTimestamps({ ...rawData, id: doc.id }) as any;
+      }
+    }) as any;
+  }
+
+  /**
+   * Get submissions by Google CourseWork ID (indexed query)
+   * @param googleCourseWorkId - Google CourseWork ID
+   * @returns Array of submission documents
+   */
+  async getSubmissionsByGoogleCourseWorkId(googleCourseWorkId: string): Promise<Submission[]> {
+    const snapshot = await db.collection(this.collections.submissions)
+      .where("googleCourseWorkId", "==", googleCourseWorkId)
+      .get();
+
+    if (snapshot.empty) {
+      return [];
+    }
+
+    return snapshot.docs.map(doc => {
+      const rawData = doc.data();
+      try {
+        return safeNormalizeWithSchema(normalizeTimestamps(rawData), submissionSchema, doc.id) as any;
+      } catch (error) {
+        console.error("FirestoreRepository: getSubmissionsByGoogleCourseWorkId normalization failed:", {
+          googleCourseWorkId,
+          docId: doc.id,
+          error: error instanceof Error ? error.message : error
+        });
+        return serializeTimestamps({ ...rawData, id: doc.id }) as any;
+      }
+    }) as any;
+  }
+
+  /**
+   * Get student enrollment by composite ID (courseId_userId)
+   * @param googleCourseId - Google Course ID
+   * @param googleUserId - Google User ID
+   * @returns StudentEnrollment document or null
+   */
+  async getEnrollmentByGoogleIds(googleCourseId: string, googleUserId: string): Promise<StudentEnrollment | null> {
+    const docId = `${googleCourseId}_${googleUserId}`;
+    const doc = await db.collection(this.collections.enrollments).doc(docId).get();
+    
+    if (!doc.exists) {
+      return null;
+    }
+
+    const rawData = doc.data();
+    if (!rawData) {
+      return null;
+    }
+
+    try {
+      return safeNormalizeWithSchema(normalizeTimestamps(rawData), studentEnrollmentSchema, doc.id) as any;
+    } catch (error) {
+      console.error("FirestoreRepository: getEnrollmentByGoogleIds normalization failed:", {
+        googleCourseId,
+        googleUserId,
+        error: error instanceof Error ? error.message : error,
+        rawData
+      });
+      return serializeTimestamps({ ...rawData, id: doc.id }) as any;
+    }
+  }
+
+  /**
+   * Get enrollments by Google Course ID (indexed query)
+   * @param googleCourseId - Google Course ID
+   * @returns Array of StudentEnrollment documents
+   */
+  async getEnrollmentsByGoogleCourseId(googleCourseId: string): Promise<StudentEnrollment[]> {
+    const snapshot = await db.collection(this.collections.enrollments)
+      .where("googleCourseId", "==", googleCourseId)
+      .get();
+
+    if (snapshot.empty) {
+      return [];
+    }
+
+    return snapshot.docs.map(doc => {
+      const rawData = doc.data();
+      try {
+        return safeNormalizeWithSchema(normalizeTimestamps(rawData), studentEnrollmentSchema, doc.id) as any;
+      } catch (error) {
+        console.error("FirestoreRepository: getEnrollmentsByGoogleCourseId normalization failed:", {
+          googleCourseId,
+          docId: doc.id,
+          error: error instanceof Error ? error.message : error
+        });
+        return serializeTimestamps({ ...rawData, id: doc.id }) as any;
+      }
+    }) as any;
+  }
+
+  // ============================================
+  // Google ID-based Creation Methods
+  // ============================================
+
+  /**
+   * Create or update user with Google User ID as document ID
+   * @param googleUserId - Google User ID (becomes document ID)
+   * @param userData - User data
+   * @returns Created/updated user
+   */
+  async createUserWithGoogleId(googleUserId: string, userData: any): Promise<any> {
+    const userRef = db.collection(this.collections.users).doc(googleUserId);
+    
+    const user = {
+      ...userData,
+      googleUserId,
+      id: googleUserId,
+      createdAt: getCurrentTimestamp(),
+      updatedAt: getCurrentTimestamp()
+    };
+
+    await userRef.set(cleanForFirestore(user), { merge: true });
+    return serializeTimestamps(user);
+  }
+
+  /**
+   * Create or update classroom with Google Course ID as document ID
+   * @param googleCourseId - Google Course ID (becomes document ID)
+   * @param classroomData - Classroom data
+   * @returns Created/updated classroom
+   */
+  async createClassroomWithGoogleId(googleCourseId: string, classroomData: any): Promise<Classroom> {
+    const classroomRef = db.collection(this.collections.classrooms).doc(googleCourseId);
+    
+    const classroom = {
+      ...classroomData,
+      googleCourseId,
+      id: googleCourseId,
+      studentCount: classroomData.studentCount || 0,
+      assignmentCount: classroomData.assignmentCount || 0,
+      activeSubmissions: classroomData.activeSubmissions || 0,
+      ungradedSubmissions: classroomData.ungradedSubmissions || 0,
+      createdAt: getCurrentTimestamp(),
+      updatedAt: getCurrentTimestamp()
+    };
+
+    await classroomRef.set(cleanForFirestore(classroom), { merge: true });
+    return serializeTimestamps(classroom);
+  }
+
+  /**
+   * Create or update assignment with Google CourseWork ID as document ID
+   * @param googleCourseWorkId - Google CourseWork ID (becomes document ID)
+   * @param assignmentData - Assignment data
+   * @returns Created/updated assignment
+   */
+  async createAssignmentWithGoogleId(googleCourseWorkId: string, assignmentData: any): Promise<Assignment> {
+    const assignmentRef = db.collection(this.collections.assignments).doc(googleCourseWorkId);
+    
+    const assignment = {
+      ...assignmentData,
+      googleCourseWorkId,
+      id: googleCourseWorkId,
+      submissionCount: assignmentData.submissionCount || 0,
+      gradedCount: assignmentData.gradedCount || 0,
+      pendingCount: assignmentData.pendingCount || 0,
+      createdAt: getCurrentTimestamp(),
+      updatedAt: getCurrentTimestamp()
+    };
+
+    await assignmentRef.set(cleanForFirestore(assignment), { merge: true });
+    return serializeTimestamps(assignment);
+  }
+
+  /**
+   * Create or update submission with Google Submission ID as document ID
+   * @param googleSubmissionId - Google Submission ID (becomes document ID)
+   * @param submissionData - Submission data
+   * @returns Created/updated submission
+   */
+  async createSubmissionWithGoogleId(googleCourseId: string, googleCourseWorkId: string, googleSubmissionId: string, submissionData: any): Promise<Submission> {
+    const compositeId = this.generateSubmissionDocumentId(googleCourseId, googleCourseWorkId, googleSubmissionId);
+    const submissionRef = db.collection(this.collections.submissions).doc(compositeId);
+    
+    const submission = {
+      ...submissionData,
+      googleSubmissionId,
+      id: compositeId,
+      version: submissionData.version || 1,
+      isLatest: submissionData.isLatest !== undefined ? submissionData.isLatest : true,
+      createdAt: getCurrentTimestamp(),
+      updatedAt: getCurrentTimestamp()
+    };
+
+    await submissionRef.set(cleanForFirestore(submission), { merge: true });
+    return serializeTimestamps(submission);
+  }
+
+  /**
+   * Create or update student enrollment with composite ID
+   * @param googleCourseId - Google Course ID
+   * @param googleUserId - Google User ID
+   * @param enrollmentData - Enrollment data
+   * @returns Created/updated enrollment
+   */
+  async createEnrollmentWithGoogleIds(googleCourseId: string, googleUserId: string, enrollmentData: any): Promise<StudentEnrollment> {
+    const docId = `${googleCourseId}_${googleUserId}`;
+    const enrollmentRef = db.collection(this.collections.enrollments).doc(docId);
+    
+    const enrollment = {
+      ...enrollmentData,
+      googleCourseId,
+      googleUserId,
+      id: docId,
+      submissionCount: enrollmentData.submissionCount || 0,
+      gradedSubmissionCount: enrollmentData.gradedSubmissionCount || 0,
+      status: enrollmentData.status || 'active',
+      createdAt: getCurrentTimestamp(),
+      updatedAt: getCurrentTimestamp()
+    };
+
+    await enrollmentRef.set(cleanForFirestore(enrollment), { merge: true });
+    return serializeTimestamps(enrollment);
   }
 
   // Deprecated teacher methods - redirecting to users collection
@@ -207,7 +659,7 @@ export class FirestoreRepository {
   // ============================================
 
   async createClassroom(input: ClassroomInput): Promise<Classroom> {
-    const classroomId = `classroom_${input.externalId}`;
+    const classroomId = `classroom_${input.googleCourseId}`;
     const classroomRef = db.collection(this.collections.classrooms).doc(classroomId);
     
     const classroom: Classroom = {
@@ -306,7 +758,7 @@ export class FirestoreRepository {
   // ============================================
 
   async createAssignment(input: AssignmentInput): Promise<Assignment> {
-    const assignmentId = `${input.classroomId}_assignment_${input.externalId}`;
+    const assignmentId = `${input.classroomId}_assignment_${input.googleCourseWorkId}`;
     const assignmentRef = db.collection(this.collections.assignments).doc(assignmentId);
     
     const assignment: Assignment = {

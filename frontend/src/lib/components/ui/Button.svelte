@@ -41,10 +41,24 @@
 		return `${base} ${variants[variant]} ${sizes[size]} ${className}`;
 	});
 
-	function handleClick() {
-		if (!disabled && !loading && onclick) {
+	function handleClick(event: MouseEvent) {
+		console.log('🔘 Button clicked', { type, disabled, loading, hasOnClick: !!onclick });
+		
+		if (disabled || loading) {
+			console.log('🚫 Button action prevented - disabled or loading');
+			event.preventDefault();
+			return;
+		}
+		
+		// If we have a custom onclick handler, call it
+		if (onclick) {
+			console.log('🎯 Calling custom onclick handler');
 			onclick();
 		}
+		
+		// For submit buttons, allow the natural form submission to occur
+		// Don't prevent default - let the form handle it
+		console.log('✅ Button action completed - allowing form submission');
 	}
 </script>
 

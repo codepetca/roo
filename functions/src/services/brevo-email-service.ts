@@ -67,10 +67,16 @@ export class BrevoEmailService {
   }
 
   /**
-   * Generate a random 6-digit passcode
+   * Generate a random 5-character alphanumeric passcode (e.g., ABC12)
+   * Matches the format expected by the frontend and verification logic
    */
   private generatePasscode(): string {
-    return Math.floor(100000 + Math.random() * 900000).toString();
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 5; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
   }
 
   /**
@@ -320,7 +326,7 @@ export class BrevoEmailService {
             <p><strong>${teacher}</strong> has sent you a login code to access your grades and assignments on Roo.</p>
             
             <div class="passcode-box">
-              <p class="passcode-label">Your 6-digit login code:</p>
+              <p class="passcode-label">Your 5-character login code:</p>
               <div class="passcode-number">${passcode}</div>
             </div>
 
@@ -344,7 +350,7 @@ export class BrevoEmailService {
               
               <div class="step">
                 <span class="step-number">3</span>
-                <span>Enter the 6-digit code: <strong>${passcode}</strong></span>
+                <span>Enter the 5-character code: <strong>${passcode}</strong></span>
               </div>
               
               <div class="step">

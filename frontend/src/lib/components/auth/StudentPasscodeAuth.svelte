@@ -37,14 +37,14 @@
 		success = '';
 
 		try {
-			console.log('Requesting passcode for student:', email);
+			console.log('Requesting temporary passcode for student login:', email);
 
-			await api.studentRequestPasscode({ email });
+			await api.studentRequestPasscode({ email, type: 'temporary' });
 
-			success = `A new login code has been sent to ${email}. Check your email for your permanent 5-character code.`;
+			success = `A new login code has been sent to ${email}. Check your email for your 5-character code (expires in 10 minutes).`;
 			showRequestHelp = false;
 
-			console.log('Passcode request successful');
+			console.log('Temporary passcode request successful');
 		} catch (err: any) {
 			console.error('Passcode request error:', err);
 

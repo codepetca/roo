@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manual Auth Test</title>
+</head>
+<body>
+    <h1>Manual Authentication Test</h1>
+    
+    <form id="test-form" onsubmit="handleSubmit(event)">
+        <div>
+            <label>Email:</label>
+            <input type="email" id="email" value="teacher1@test.com" required />
+        </div>
+        <div>
+            <label>Password:</label>
+            <input type="password" id="password" value="test123" required />
+        </div>
+        <button type="submit" id="submit-btn">Sign In</button>
+    </form>
+    
+    <div id="logs"></div>
+    
+    <script>
+        function log(message) {
+            console.log(message);
+            const logs = document.getElementById('logs');
+            logs.innerHTML += '<div>' + message + '</div>';
+        }
+        
+        function handleSubmit(event) {
+            log('🚀 Form submit handler called');
+            log('Event: ' + JSON.stringify({
+                type: event.type,
+                target: event.target.tagName,
+                defaultPrevented: event.defaultPrevented
+            }));
+            
+            event.preventDefault();
+            log('✅ Default prevented - would submit form here');
+            
+            return false;
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🔧 Page loaded, adding event listeners');
+            
+            const form = document.getElementById('test-form');
+            const button = document.getElementById('submit-btn');
+            
+            // Add multiple event listeners to debug
+            form.addEventListener('submit', function(e) {
+                log('📝 Form submit event listener triggered');
+            });
+            
+            button.addEventListener('click', function(e) {
+                log('🔘 Button click event listener triggered');
+            });
+            
+            log('✅ Event listeners added');
+        });
+    </script>
+</body>
+</html>

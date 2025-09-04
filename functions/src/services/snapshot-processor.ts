@@ -59,7 +59,7 @@ export class SnapshotProcessor {
   /**
    * Process a complete classroom snapshot
    */
-  async processSnapshot(snapshot: ClassroomSnapshot, authenticatedUserEmail?: string): Promise<ProcessingResult> {
+  async processSnapshot(snapshot: ClassroomSnapshot, authenticatedUserEmail?: string, teacherUid?: string): Promise<ProcessingResult> {
     const startTime = Date.now();
     const result: ProcessingResult = {
       success: true,
@@ -99,7 +99,14 @@ export class SnapshotProcessor {
         }
       };
       
-      const transformed = await snapshotToCore(snapshot, getUserIdByEmail);
+      // Get teacher UID - use provided UID or resolve from email
+      let actualTeacherUid = teacherUid;
+      if (!actualTeacherUid && authenticatedUserEmail) {
+        const teacherUser = await this.repository.getUserByEmail(authenticatedUserEmail);
+        actualTeacherUid = teacherUser?.id;
+      }
+      
+      const transformed = await snapshotToCore(snapshot, getUserIdByEmail, actualTeacherUid || 'unknown');
       logger.info("TRANSFORM DEBUG: Core transformation successful", {
         transformedKeys: Object.keys(transformed),
         classroomCount: transformed.classrooms.length,
@@ -116,16 +123,16 @@ export class SnapshotProcessor {
       // Step 3: Get existing data for merge
       console.log(`[SNAPSHOT DEBUG] Starting to fetch existing data for merge`);
       logger.info("Fetching existing data for merge");
-      const existing = await this.getExistingData(transformed);
+      const existing = await this.getExistingData(transformed, actualTeacherUid || 'unknown');
       console.log(`[SNAPSHOT DEBUG] Existing data fetched successfully`);
 
       // Step 4: Merge with existing data
       logger.info("Merging with existing data");
       const mergeResult = mergeSnapshotWithExisting(transformed, existing);
 
-      // Step 5: Process creates
-      logger.info("Creating new entities");
-      await this.processCreates(mergeResult, result);
+      // Step 5: Process creates using Google IDs
+      logger.info("Creating new entities with Google IDs");
+      await this.processCreatesWithGoogleIds(mergeResult, result);
 
       // Step 6: Process updates
       logger.info("Updating existing entities");
@@ -164,32 +171,46 @@ export class SnapshotProcessor {
   }
 
   /**
-   * Process teacher entity
+   * Process teacher entity using Google ID
    */
   private async processTeacher(teacherInput: any, email: string): Promise<void> {
-    // Skip teacher creation - users are now created through authentication flow
-    // Just update existing teacher data if found
-    const existingTeacher = await this.repository.getTeacherByEmail(email);
+    // Extract Google User ID from teacher input
+    const googleUserId = teacherInput.googleUserId || teacherInput.id;
     
-    if (existingTeacher) {
-      await this.repository.updateTeacher(existingTeacher.id, {
-        ...teacherInput,
-        totalClassrooms: teacherInput.classroomIds.length
-      });
-      logger.info("Updated existing teacher profile", { teacherEmail: email });
-    } else {
-      logger.info("Teacher profile not found, skipping teacher processing", { teacherEmail: email });
-      // Teacher profile should already exist from authentication flow
-      // If it doesn't exist, it will be handled by other endpoints
+    if (!googleUserId) {
+      logger.warn("No Google User ID found for teacher", { email });
+      return;
     }
+
+    // Create or update teacher using Google User ID as document ID
+    const teacherData = {
+      email: teacherInput.email || email,
+      displayName: teacherInput.displayName || teacherInput.name || email.split('@')[0],
+      role: 'teacher',
+      schoolEmail: teacherInput.schoolEmail || email,
+      classroomIds: teacherInput.classroomIds || [],
+      totalStudents: teacherInput.totalStudents || 0,
+      totalClassrooms: (teacherInput.classroomIds || []).length
+    };
+
+    await this.repository.createUserWithGoogleId(googleUserId, teacherData);
+    logger.info("Created/updated teacher profile with Google ID", { 
+      googleUserId, 
+      email,
+      documentId: googleUserId
+    });
   }
 
   /**
    * Get existing data for merge comparison
    */
-  private async getExistingData(transformed: Awaited<ReturnType<typeof snapshotToCore>>) {
+  private async getExistingData(
+    transformed: Awaited<ReturnType<typeof snapshotToCore>>,
+    teacherUid: string
+  ) {
+    // Generate classroom IDs from the external IDs and teacher UID  
     const classroomIds = transformed.classrooms.map(c => 
-      StableIdGenerator.classroom(c.externalId!)
+      StableIdGenerator.classroom(c.googleCourseId!, teacherUid)
     );
 
     // Fetch all existing data in parallel
@@ -241,8 +262,8 @@ export class SnapshotProcessor {
     }
 
     console.log(`[SNAPSHOT DEBUG] Total existing assignments loaded: ${assignments.length}`);
-    console.log(`[SNAPSHOT DEBUG] Sample assignment externalIds:`, 
-      assignments.slice(0, 5).map(a => a.externalId));
+    console.log(`[SNAPSHOT DEBUG] Sample assignment googleCourseWorkIds:`, 
+      assignments.slice(0, 5).map(a => a.googleCourseWorkId));
 
     return assignments;
   }
@@ -290,7 +311,130 @@ export class SnapshotProcessor {
   }
 
   /**
-   * Process entity creates using batch operations for performance
+   * Process creates using Google IDs as document IDs
+   */
+  private async processCreatesWithGoogleIds(
+    mergeResult: ReturnType<typeof mergeSnapshotWithExisting>,
+    result: ProcessingResult
+  ): Promise<void> {
+    try {
+      logger.info("Starting Google ID-based entity creation");
+
+      // Process classrooms with Google Course IDs as document IDs
+      for (const classroom of mergeResult.toCreate.classrooms) {
+        try {
+          const googleCourseId = classroom.googleCourseId;
+          if (!googleCourseId) {
+            logger.warn("Skipping classroom without Google Course ID", { classroomId: classroom.id });
+            continue;
+          }
+
+          await this.repository.createClassroomWithGoogleId(googleCourseId, classroom);
+          result.stats.classroomsCreated++;
+          logger.debug("Created classroom with Google ID", { googleCourseId, name: classroom.name });
+        } catch (error) {
+          this.logError(result, "classroom", classroom.id || 'unknown', error);
+        }
+      }
+
+      // Process assignments with Google CourseWork IDs as document IDs  
+      for (const assignment of mergeResult.toCreate.assignments) {
+        try {
+          const googleCourseWorkId = assignment.googleCourseWorkId;
+          if (!googleCourseWorkId) {
+            logger.warn("Skipping assignment without Google CourseWork ID", { assignmentId: assignment.id });
+            continue;
+          }
+
+          await this.repository.createAssignmentWithGoogleId(googleCourseWorkId, assignment);
+          result.stats.assignmentsCreated++;
+          logger.debug("Created assignment with Google ID", { googleCourseWorkId, title: assignment.title });
+        } catch (error) {
+          this.logError(result, "assignment", assignment.id || 'unknown', error);
+        }
+      }
+
+      // Process submissions with Google Submission IDs as document IDs
+      for (const submission of mergeResult.toCreate.submissions) {
+        try {
+          const googleSubmissionId = submission.googleSubmissionId;
+          if (!googleSubmissionId) {
+            logger.warn("Skipping submission without Google Submission ID", { submissionId: submission.id });
+            continue;
+          }
+
+          const googleCourseId = submission.googleCourseId;
+          const googleCourseWorkId = submission.googleCourseWorkId;
+          if (!googleCourseId || !googleCourseWorkId) {
+            logger.warn("Skipping submission without required Google IDs", { 
+              submissionId: submission.id,
+              googleCourseId,
+              googleCourseWorkId,
+              googleSubmissionId
+            });
+            continue;
+          }
+
+          await this.repository.createSubmissionWithGoogleId(googleCourseId, googleCourseWorkId, googleSubmissionId, submission);
+          
+          if (submission.version > 1) {
+            result.stats.submissionsVersioned++;
+          } else {
+            result.stats.submissionsCreated++;
+          }
+          
+          logger.debug("Created submission with Google ID", { 
+            googleSubmissionId, 
+            studentId: submission.studentId,
+            version: submission.version 
+          });
+        } catch (error) {
+          this.logError(result, "submission", submission.id || 'unknown', error);
+        }
+      }
+
+      // Process enrollments with composite Google IDs
+      for (const enrollment of mergeResult.toCreate.enrollments) {
+        try {
+          const googleCourseId = enrollment.googleCourseId;
+          const googleUserId = enrollment.googleUserId;
+          
+          if (!googleCourseId || !googleUserId) {
+            logger.warn("Skipping enrollment without required Google IDs", { 
+              enrollmentId: enrollment.id,
+              googleCourseId,
+              googleUserId
+            });
+            continue;
+          }
+
+          await this.repository.createEnrollmentWithGoogleIds(googleCourseId, googleUserId, enrollment);
+          result.stats.enrollmentsCreated++;
+          logger.debug("Created enrollment with Google IDs", { 
+            googleCourseId, 
+            googleUserId,
+            studentEmail: enrollment.email 
+          });
+        } catch (error) {
+          this.logError(result, "enrollment", enrollment.id || 'unknown', error);
+        }
+      }
+
+      logger.info("Google ID-based entity creation completed", {
+        classrooms: result.stats.classroomsCreated,
+        assignments: result.stats.assignmentsCreated,
+        submissions: result.stats.submissionsCreated + result.stats.submissionsVersioned,
+        enrollments: result.stats.enrollmentsCreated
+      });
+
+    } catch (error) {
+      logger.error("Google ID-based creation failed", error);
+      this.logError(result, "google-id-creation", "batch", error);
+    }
+  }
+
+  /**
+   * Process entity creates using batch operations for performance (Legacy method)
    */
   private async processCreates(
     mergeResult: ReturnType<typeof mergeSnapshotWithExisting>,
@@ -323,7 +467,7 @@ export class SnapshotProcessor {
             console.log(`[STATS DEBUG] Assignments to CREATE: ${mergeResult.toCreate.assignments.length}`);
             console.log(`[STATS DEBUG] Sample assignments being created:`, 
               mergeResult.toCreate.assignments.slice(0, 3).map(a => ({ 
-                externalId: a.externalId, 
+                googleCourseWorkId: a.googleCourseWorkId, 
                 title: a.title 
               })));
             result.stats.assignmentsCreated = mergeResult.toCreate.assignments.length;
@@ -421,7 +565,7 @@ export class SnapshotProcessor {
             console.log(`[STATS DEBUG] Sample assignments being updated:`, 
               assignmentUpdates.slice(0, 3).map(u => ({ 
                 id: u.id, 
-                externalId: u.data.externalId,
+                googleCourseWorkId: u.data.googleCourseWorkId,
                 title: u.data.title 
               })));
             result.stats.assignmentsUpdated = assignmentUpdates.length;
@@ -604,7 +748,7 @@ export class SnapshotProcessor {
       // Update all classroom counts in parallel
       await Promise.all(
         classrooms.map(classroom => {
-          const classroomId = StableIdGenerator.classroom(classroom.externalId!);
+          const classroomId = StableIdGenerator.classroom(classroom.googleCourseId!);
           return this.repository.updateCounts(classroomId)
             .catch(error => {
               logger.error(`Failed to update counts for classroom ${classroomId}`, error);

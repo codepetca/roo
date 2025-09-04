@@ -147,6 +147,7 @@ async function createUserProfile(userConfig: TestUserConfig): Promise<boolean> {
 			email: userConfig.email,
 			displayName: userConfig.displayName,
 			role: userConfig.role,
+			googleUserId: userConfig.googleUserId, // Required: Google User ID from Classroom API
 			createdAt: new Date().toISOString(),
 			isTestUser: true // Mark as test user for cleanup
 		};

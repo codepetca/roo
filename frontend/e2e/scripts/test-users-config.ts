@@ -14,6 +14,7 @@ export interface TestUserConfig {
 	role: 'teacher' | 'student';
 	schoolEmail?: string;
 	snapshotFile?: string;
+	googleUserId: string; // Required: Google User ID from Classroom API
 }
 
 /**
@@ -32,7 +33,8 @@ export const TEST_TEACHERS: Record<string, TestUserConfig> = {
 		displayName: 'Alice Anderson',
 		role: 'teacher',
 		schoolEmail: 'teacher1@schoolemail.com',
-		snapshotFile: 'teacher1-snapshot.json'
+		snapshotFile: 'teacher1-snapshot.json',
+		googleUserId: 'google-teacher1-user-id'
 	},
 	teacher2: {
 		uid: 'teacher2-e2e-uid',
@@ -41,7 +43,8 @@ export const TEST_TEACHERS: Record<string, TestUserConfig> = {
 		displayName: 'Bob Brown',
 		role: 'teacher',
 		schoolEmail: 'teacher2@schoolemail.com',
-		snapshotFile: 'teacher2-snapshot.json'
+		snapshotFile: 'teacher2-snapshot.json',
+		googleUserId: 'google-teacher2-user-id'
 	},
 	teacher3: {
 		uid: 'teacher3-e2e-uid',
@@ -50,7 +53,8 @@ export const TEST_TEACHERS: Record<string, TestUserConfig> = {
 		displayName: 'Carol Chen',
 		role: 'teacher',
 		schoolEmail: 'teacher3@schoolemail.com',
-		snapshotFile: 'teacher3-snapshot.json'
+		snapshotFile: 'teacher3-snapshot.json',
+		googleUserId: 'google-teacher3-user-id'
 	}
 };
 
@@ -64,7 +68,8 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
 		password: TEST_PASSWORD,
 		displayName: 'Alex Smith',
 		role: 'student',
-		schoolEmail: 'student1@schoolemail.com'
+		schoolEmail: 'student1@schoolemail.com',
+		googleUserId: 'google-student1-user-id'
 	},
 	student2: {
 		uid: 'student2-e2e-uid',
@@ -72,7 +77,8 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
 		password: TEST_PASSWORD,
 		displayName: 'Blake Johnson',
 		role: 'student',
-		schoolEmail: 'student2@schoolemail.com'
+		schoolEmail: 'student2@schoolemail.com',
+		googleUserId: 'google-student2-user-id'
 	},
 	student3: {
 		uid: 'student3-e2e-uid',
@@ -80,7 +86,8 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
 		password: TEST_PASSWORD,
 		displayName: 'Casey Williams',
 		role: 'student',
-		schoolEmail: 'student3@schoolemail.com'
+		schoolEmail: 'student3@schoolemail.com',
+		googleUserId: 'google-student3-user-id'
 	},
 	student4: {
 		uid: 'student4-e2e-uid',
@@ -88,7 +95,8 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
 		password: TEST_PASSWORD,
 		displayName: 'Dana Davis',
 		role: 'student',
-		schoolEmail: 'student4@schoolemail.com'
+		schoolEmail: 'student4@schoolemail.com',
+		googleUserId: 'google-student4-user-id'
 	},
 	student5: {
 		uid: 'student5-e2e-uid',
@@ -96,7 +104,8 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
 		password: TEST_PASSWORD,
 		displayName: 'Elliott Evans',
 		role: 'student',
-		schoolEmail: 'student5@schoolemail.com'
+		schoolEmail: 'student5@schoolemail.com',
+		googleUserId: 'google-student5-user-id'
 	},
 	student6: {
 		uid: 'student6-e2e-uid',
@@ -104,7 +113,8 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
 		password: TEST_PASSWORD,
 		displayName: 'Finley Foster',
 		role: 'student',
-		schoolEmail: 'student6@schoolemail.com'
+		schoolEmail: 'student6@schoolemail.com',
+		googleUserId: 'google-student6-user-id'
 	},
 	student7: {
 		uid: 'student7-e2e-uid',
@@ -112,7 +122,8 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
 		password: TEST_PASSWORD,
 		displayName: 'Gray Garcia',
 		role: 'student',
-		schoolEmail: 'student7@schoolemail.com'
+		schoolEmail: 'student7@schoolemail.com',
+		googleUserId: 'google-student7-user-id'
 	},
 	student8: {
 		uid: 'student8-e2e-uid',
@@ -120,7 +131,8 @@ export const TEST_STUDENTS: Record<string, TestUserConfig> = {
 		password: TEST_PASSWORD,
 		displayName: 'Harper Harris',
 		role: 'student',
-		schoolEmail: 'student8@schoolemail.com'
+		schoolEmail: 'student8@schoolemail.com',
+		googleUserId: 'google-student8-user-id'
 	}
 };
 

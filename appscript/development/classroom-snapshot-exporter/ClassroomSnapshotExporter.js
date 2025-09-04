@@ -91,6 +91,7 @@ var ClassroomSnapshotExporter = {
       // Try to get more detailed user info from Google Classroom API
       let displayName = email.split('@')[0]; // Fallback
       let fullName = displayName;
+      let googleUserId = ''; // Google User ID from Classroom API
       
       try {
         const token = ScriptApp.getOAuthToken();
@@ -103,10 +104,13 @@ var ClassroomSnapshotExporter = {
         
         if (response.getResponseCode() === 200) {
           const profile = JSON.parse(response.getContentText());
+          // Capture Google User ID from profile
+          googleUserId = profile.id || '';
           if (profile.name) {
             fullName = profile.name.fullName || fullName;
             displayName = fullName;
           }
+          console.log('Teacher Google User ID captured:', googleUserId);
         }
       } catch (profileError) {
         console.warn('Could not fetch detailed user profile:', profileError.message);
@@ -116,6 +120,7 @@ var ClassroomSnapshotExporter = {
         email: email,
         name: fullName,
         displayName: displayName,
+        googleUserId: googleUserId,
         isTeacher: true
       });
       

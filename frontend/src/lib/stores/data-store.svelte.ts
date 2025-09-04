@@ -133,23 +133,14 @@ class DataStore {
 		return grouped;
 	});
 
-	// Assignments for the selected classroom - use nested classroom data with sorting
+	// Assignments for the selected classroom - filter from assignments array by classroomId
 	selectedClassroomAssignments = $derived.by(() => {
 		if (!this.selectedClassroomId) {
-			console.log('📋 No selectedClassroomId, returning empty array');
 			return [];
 		}
 
-		// Find the selected classroom and return its nested assignments
-		const classroom = this.classrooms.find((c) => c.id === this.selectedClassroomId);
-		const assignments = classroom?.assignments || [];
-
-		console.log('📋 selectedClassroomAssignments debug:', {
-			selectedClassroomId: this.selectedClassroomId,
-			classroom: classroom ? { id: classroom.id, name: classroom.name } : 'not found',
-			assignmentsCount: assignments.length,
-			sortField: this.assignmentSortField
-		});
+		// Filter assignments by classroomId from the assignments array
+		const assignments = this.assignments.filter((a) => a.classroomId === this.selectedClassroomId);
 
 		// Apply sorting
 		return sortAssignments(assignments, this.assignmentSortField, 'asc');
@@ -770,7 +761,10 @@ class DataStore {
 		// Google forms and assignments with auto-grade classification can be auto-graded
 		return (
 			assignment.classification?.platform === 'google_form' ||
-			assignment.classification?.gradingApproach === 'auto_grade'
+			assignment.classification?.gradingApproach === 'auto_grade' ||
+			// Legacy support: quiz and form types are typically auto-gradable
+			assignment.type === 'quiz' ||
+			assignment.type === 'form'
 		);
 	}
 
