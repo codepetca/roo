@@ -1,0 +1,551 @@
+{
+	"snapshotMetadata": {
+		"fetchedAt": "2025-01-01T14:00:00.000Z",
+		"source": "google-classroom",
+		"version": "1.0.0",
+		"expiresAt": "2025-01-01T14:30:00.000Z"
+	},
+	"globalStats": {
+		"ungradedSubmissions": 6,
+		"totalStudents": 4,
+		"averageGrade": 78.2,
+		"totalClassrooms": 2,
+		"totalAssignments": 5,
+		"totalSubmissions": 9
+	},
+	"teacher": {
+		"name": "Bob Brown",
+		"isTeacher": true,
+		"displayName": "Bob Brown",
+		"email": "teacher2@schoolemail.com"
+	},
+	"classrooms": [
+		{
+			"studentCount": 2,
+			"assignmentCount": 2,
+			"totalSubmissions": 0,
+			"ungradedSubmissions": 0,
+			"teacherEmail": "teacher2@schoolemail.com",
+			"courseGroupEmail": "cs201_brown@schoolemail.com",
+			"assignments": [
+				{
+					"creationTime": "2025-01-06T09:00:00.000Z",
+					"dueDate": "2025-01-18T23:59:00.000Z",
+					"description": "Create a responsive webpage using HTML, CSS, and JavaScript.",
+					"updateTime": "2025-01-06T09:00:00.000Z",
+					"title": "Responsive Web Portfolio",
+					"maxScore": 120,
+					"type": "written",
+					"points": 120,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/web-portfolio",
+					"id": "assign_web_portfolio_1",
+					"state": "PUBLISHED",
+					"submissionStats": {
+						"total": 2,
+						"graded": 1,
+						"submitted": 2,
+						"pending": 1
+					},
+					"categoryId": "category_web_dev"
+				},
+				{
+					"creationTime": "2025-01-12T10:00:00.000Z",
+					"dueDate": "2025-01-26T23:59:00.000Z",
+					"description": "Build a dynamic web application using React framework.",
+					"updateTime": "2025-01-12T10:00:00.000Z",
+					"title": "React Todo Application",
+					"maxScore": 150,
+					"type": "written",
+					"points": 150,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/react-todo",
+					"id": "assign_react_todo_1",
+					"state": "PUBLISHED",
+					"submissionStats": {
+						"total": 2,
+						"graded": 0,
+						"submitted": 1,
+						"pending": 1
+					},
+					"categoryId": "category_web_dev"
+				}
+			],
+			"students": [
+				{
+					"lastName": "Evans",
+					"firstName": "Elliott",
+					"gradedSubmissionCount": 0,
+					"displayName": "Elliott Evans",
+					"profile": {
+						"name": {
+							"fullName": "Elliott Evans",
+							"familyName": "Evans",
+							"givenName": "Elliott"
+						},
+						"photoUrl": "https://cdn.example.com/student5.png",
+						"emailAddress": "student5@schoolemail.com",
+						"id": "student_id_005"
+					},
+					"submissionCount": 2,
+					"name": "Elliott Evans",
+					"id": "student_id_005",
+					"userId": "student_id_005",
+					"courseId": "cs201_classroom",
+					"email": "student5@schoolemail.com"
+				},
+				{
+					"lastName": "Smith",
+					"firstName": "Alex",
+					"gradedSubmissionCount": 1,
+					"displayName": "Alex Smith",
+					"profile": {
+						"name": {
+							"fullName": "Alex Smith",
+							"familyName": "Smith",
+							"givenName": "Alex"
+						},
+						"photoUrl": "https://cdn.example.com/student1.png",
+						"emailAddress": "student1@schoolemail.com",
+						"id": "student_id_001"
+					},
+					"submissionCount": 1,
+					"name": "Alex Smith",
+					"id": "student_id_001",
+					"userId": "student_id_001",
+					"courseId": "cs201_classroom",
+					"email": "student1@schoolemail.com"
+				}
+			],
+			"submissions": [
+				{
+					"extractedContent": {
+						"text": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Elliott Evans - Portfolio</title>\n    <style>\n        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }\n        .container { max-width: 1200px; margin: 0 auto; }\n        @media (max-width: 768px) { .container { padding: 10px; } }\n    </style>\n</head>\n<body>\n    <div class=\"container\">\n        <h1>Elliott Evans</h1>\n        <p>Welcome to my portfolio!</p>\n    </div>\n</body>\n</html>",
+						"structuredData": {}
+					},
+					"late": false,
+					"studentId": "student_id_005",
+					"studentEmail": "student5@test.com",
+					"studentName": "Elliott Evans",
+					"alternateLink": "https://classroom.example.com/submission4",
+					"attachmentCount": 1,
+					"studentWork": "Responsive portfolio website with mobile-first design",
+					"id": "submission_4_elliott",
+					"submissionHistory": [
+						{
+							"stateHistory": {
+								"actorUserId": "student_id_005",
+								"stateTimestamp": "2025-01-17T16:30:00.000Z",
+								"state": "TURNED_IN"
+							}
+						}
+					],
+					"submittedAt": "2025-01-17T16:30:00.000Z",
+					"assignmentName": "Responsive Web Portfolio",
+					"assignmentId": "assign_web_portfolio_1",
+					"status": "submitted",
+					"updatedAt": "2025-01-17T16:30:00.000Z",
+					"attachments": [
+						{
+							"type": "driveFile",
+							"id": "attachment_portfolio_1",
+							"title": "portfolio.html",
+							"alternateLink": "https://drive.example.com/portfolio.html",
+							"mimeType": "text/html",
+							"contentType": "document"
+						}
+					]
+				},
+				{
+					"extractedContent": {
+						"text": "<html><body><h1>My Portfolio</h1><p>Basic portfolio page</p><script>console.log('Hello World');</script></body></html>",
+						"structuredData": {}
+					},
+					"late": false,
+					"studentId": "student_id_001",
+					"studentEmail": "student1@schoolemail.com",
+					"studentName": "Alex Smith",
+					"alternateLink": "https://classroom.example.com/submission5",
+					"attachmentCount": 0,
+					"studentWork": "Simple portfolio webpage with JavaScript",
+					"id": "submission_5_alex",
+					"submissionHistory": [
+						{
+							"stateHistory": {
+								"actorUserId": "student_id_001",
+								"stateTimestamp": "2025-01-18T12:00:00.000Z",
+								"state": "TURNED_IN"
+							}
+						}
+					],
+					"submittedAt": "2025-01-18T12:00:00.000Z",
+					"assignmentName": "Responsive Web Portfolio",
+					"assignmentId": "assign_web_portfolio_1",
+					"status": "graded",
+					"updatedAt": "2025-01-19T09:00:00.000Z",
+					"attachments": [],
+					"grade": {
+						"score": 85,
+						"maxScore": 120,
+						"feedback": "Good start but needs more responsive design features and better styling.",
+						"gradedAt": "2025-01-19T09:00:00.000Z",
+						"graderId": "teacher2@schoolemail.com",
+						"gradedBy": "teacher"
+					}
+				}
+			],
+			"name": "CS 201: Web Development",
+			"section": "Section A",
+			"description": "Learn modern web development with HTML, CSS, JavaScript, and React",
+			"descriptionHeading": "Course Overview",
+			"room": "Lab 3A",
+			"enrollmentCode": "cs201a",
+			"courseState": "ACTIVE",
+			"creationTime": "2025-01-01T10:00:00.000Z",
+			"updateTime": "2025-01-01T10:00:00.000Z",
+			"alternateLink": "https://classroom.example.com/cs201",
+			"teacherGroupEmail": "teachers-cs201@schoolemail.com",
+			"id": "cs201_classroom",
+			"ownerId": "teacher2@schoolemail.com"
+		},
+		{
+			"studentCount": 3,
+			"assignmentCount": 3,
+			"totalSubmissions": 0,
+			"ungradedSubmissions": 0,
+			"teacherEmail": "teacher2@schoolemail.com",
+			"courseGroupEmail": "cs202_brown@schoolemail.com",
+			"assignments": [
+				{
+					"creationTime": "2025-01-09T11:00:00.000Z",
+					"dueDate": "2025-01-23T23:59:00.000Z",
+					"description": "Quiz on SQL fundamentals including SELECT, JOIN, and aggregate functions.",
+					"updateTime": "2025-01-09T11:00:00.000Z",
+					"title": "SQL Fundamentals Quiz",
+					"maxScore": 80,
+					"type": "quiz",
+					"points": 80,
+					"materials": {
+						"links": [],
+						"youtubeVideos": [],
+						"driveFiles": [],
+						"forms": [
+							{
+								"formId": "form_sql_quiz_1",
+								"title": "SQL Fundamentals Quiz",
+								"formUrl": "https://forms.example.com/sql-quiz",
+								"thumbnailUrl": "https://cdn.example.com/sql.png"
+							}
+						]
+					},
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/sql-quiz",
+					"id": "assign_sql_quiz_1",
+					"state": "PUBLISHED",
+					"quizData": {
+						"formId": "form_sql_quiz_1",
+						"allowResponseEditing": false,
+						"totalQuestions": 12,
+						"collectEmailAddresses": true,
+						"questions": [
+							{
+								"autoGradable": true,
+								"caseSensitive": false,
+								"index": 0,
+								"description": "",
+								"type": "RADIO",
+								"title": "Which SQL command is used to retrieve data?",
+								"required": true,
+								"points": 5,
+								"options": ["INSERT", "SELECT", "UPDATE", "DELETE"],
+								"id": "sql_q1",
+								"correctAnswers": ["SELECT"]
+							},
+							{
+								"autoGradable": false,
+								"caseSensitive": false,
+								"index": 1,
+								"description": "",
+								"type": "SHORT_ANSWER",
+								"title": "Write a SQL query to find all students with grades above 85",
+								"required": true,
+								"points": 15,
+								"id": "sql_q2",
+								"correctAnswers": []
+							}
+						],
+						"description": "Test your knowledge of SQL database operations",
+						"title": "SQL Fundamentals Quiz",
+						"createdAt": "2025-01-09T11:00:00.000Z",
+						"formUrl": "https://forms.example.com/sql-quiz",
+						"isQuiz": true,
+						"totalPoints": 80,
+						"manualGradingRequired": true,
+						"shuffleQuestions": false,
+						"autoGradableQuestions": 8,
+						"requireSignIn": true,
+						"updatedAt": "2025-01-09T11:00:00.000Z"
+					},
+					"submissionStats": {
+						"total": 3,
+						"graded": 1,
+						"submitted": 3,
+						"pending": 2
+					},
+					"categoryId": "category_database"
+				},
+				{
+					"creationTime": "2025-01-14T12:00:00.000Z",
+					"dueDate": "2025-01-30T23:59:00.000Z",
+					"description": "Advanced SQL concepts quiz covering indexes, transactions, and normalization.",
+					"updateTime": "2025-01-14T12:00:00.000Z",
+					"title": "Advanced SQL Concepts Quiz",
+					"maxScore": 100,
+					"type": "quiz",
+					"points": 100,
+					"materials": {
+						"links": [],
+						"youtubeVideos": [],
+						"driveFiles": [],
+						"forms": [
+							{
+								"formId": "form_advanced_sql_1",
+								"title": "Advanced SQL Concepts Quiz",
+								"formUrl": "https://forms.example.com/advanced-sql",
+								"thumbnailUrl": "https://cdn.example.com/advanced-sql.png"
+							}
+						]
+					},
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/advanced-sql",
+					"id": "assign_advanced_sql_1",
+					"state": "PUBLISHED",
+					"quizData": {
+						"formId": "form_advanced_sql_1",
+						"allowResponseEditing": false,
+						"totalQuestions": 15,
+						"collectEmailAddresses": true,
+						"questions": [
+							{
+								"autoGradable": true,
+								"caseSensitive": false,
+								"index": 0,
+								"description": "",
+								"type": "RADIO",
+								"title": "What is database normalization?",
+								"required": true,
+								"points": 8,
+								"studentId": "student_id_006",
+								"studentEmail": "student6@test.com",
+								"options": [
+									"Data backup process",
+									"Eliminating data redundancy",
+									"Creating indexes",
+									"User authentication"
+								],
+								"id": "adv_sql_q1",
+								"correctAnswers": ["Eliminating data redundancy"]
+							}
+						],
+						"description": "Advanced concepts in database design and SQL optimization",
+						"title": "Advanced SQL Concepts Quiz",
+						"createdAt": "2025-01-14T12:00:00.000Z",
+						"formUrl": "https://forms.example.com/advanced-sql",
+						"isQuiz": true,
+						"totalPoints": 100,
+						"manualGradingRequired": true,
+						"shuffleQuestions": false,
+						"autoGradableQuestions": 10,
+						"requireSignIn": true,
+						"updatedAt": "2025-01-14T12:00:00.000Z"
+					},
+					"submissionStats": {
+						"total": 3,
+						"graded": 0,
+						"submitted": 2,
+						"pending": 2
+					},
+					"categoryId": "category_database"
+				},
+				{
+					"creationTime": "2025-01-16T14:00:00.000Z",
+					"dueDate": "2025-02-05T23:59:00.000Z",
+					"description": "Design and implement a complete database schema for a library management system.",
+					"updateTime": "2025-01-16T14:00:00.000Z",
+					"title": "Database Design Project",
+					"maxScore": 200,
+					"type": "written",
+					"points": 200,
+					"workType": "ASSIGNMENT",
+					"studentId": "student_id_007",
+					"studentEmail": "student7@test.com",
+					"alternateLink": "https://classroom.example.com/db-design",
+					"id": "assign_db_design_1",
+					"state": "PUBLISHED",
+					"submissionStats": {
+						"total": 3,
+						"graded": 0,
+						"submitted": 0,
+						"pending": 0
+					},
+					"categoryId": "category_database"
+				}
+			],
+			"students": [
+				{
+					"lastName": "Foster",
+					"firstName": "Finley",
+					"gradedSubmissionCount": 1,
+					"displayName": "Finley Foster",
+					"profile": {
+						"name": {
+							"fullName": "Finley Foster",
+							"familyName": "Foster",
+							"givenName": "Finley"
+						},
+						"photoUrl": "https://cdn.example.com/student6.png",
+						"emailAddress": "student6@schoolemail.com",
+						"id": "student_id_006"
+					},
+					"submissionCount": 2,
+					"name": "Finley Foster",
+					"id": "student_id_006",
+					"userId": "student_id_006",
+					"courseId": "cs202_classroom",
+					"email": "student6@schoolemail.com"
+				},
+				{
+					"lastName": "Garcia",
+					"firstName": "Gray",
+					"gradedSubmissionCount": 0,
+					"displayName": "Gray Garcia",
+					"profile": {
+						"name": {
+							"fullName": "Gray Garcia",
+							"familyName": "Garcia",
+							"givenName": "Gray"
+						},
+						"photoUrl": "https://cdn.example.com/student7.png",
+						"emailAddress": "student7@schoolemail.com",
+						"id": "student_id_007"
+					},
+					"submissionCount": 2,
+					"name": "Gray Garcia",
+					"id": "student_id_007",
+					"userId": "student_id_007",
+					"courseId": "cs202_classroom",
+					"email": "student7@schoolemail.com"
+				},
+				{
+					"lastName": "Harris",
+					"firstName": "Harper",
+					"gradedSubmissionCount": 0,
+					"displayName": "Harper Harris",
+					"profile": {
+						"name": {
+							"fullName": "Harper Harris",
+							"familyName": "Harris",
+							"givenName": "Harper"
+						},
+						"photoUrl": "https://cdn.example.com/student8.png",
+						"emailAddress": "student8@schoolemail.com",
+						"id": "student_id_008"
+					},
+					"submissionCount": 1,
+					"name": "Harper Harris",
+					"id": "student_id_008",
+					"userId": "student_id_008",
+					"courseId": "cs202_classroom",
+					"email": "student8@schoolemail.com"
+				}
+			],
+			"submissions": [
+				{
+					"extractedContent": {
+						"text": "Quiz Response Data",
+						"structuredData": {
+							"sql_q1": "SELECT",
+							"sql_q2": "SELECT * FROM students WHERE grade > 85;"
+						}
+					},
+					"late": false,
+					"studentId": "student_id_006",
+					"studentEmail": "student6@test.com",
+					"studentName": "Finley Foster",
+					"alternateLink": "https://classroom.example.com/submission6",
+					"attachmentCount": 0,
+					"studentWork": "SQL quiz responses showing good understanding",
+					"id": "submission_6_finley",
+					"submissionHistory": [
+						{
+							"stateHistory": {
+								"actorUserId": "student_id_006",
+								"stateTimestamp": "2025-01-22T15:30:00.000Z",
+								"state": "TURNED_IN"
+							}
+						}
+					],
+					"submittedAt": "2025-01-22T15:30:00.000Z",
+					"assignmentName": "SQL Fundamentals Quiz",
+					"assignmentId": "assign_sql_quiz_1",
+					"status": "graded",
+					"updatedAt": "2025-01-23T10:00:00.000Z",
+					"attachments": [],
+					"grade": {
+						"score": 72,
+						"maxScore": 80,
+						"feedback": "Good SQL syntax knowledge. Minor improvement needed on complex queries.",
+						"gradedAt": "2025-01-23T10:00:00.000Z",
+						"graderId": "teacher2@schoolemail.com",
+						"gradedBy": "teacher"
+					}
+				},
+				{
+					"extractedContent": {
+						"text": "Quiz Response Data",
+						"structuredData": {
+							"sql_q1": "SELECT",
+							"sql_q2": "SELECT students WHERE grade > 85"
+						}
+					},
+					"late": false,
+					"studentId": "student_id_007",
+					"studentEmail": "student7@test.com",
+					"studentName": "Gray Garcia",
+					"alternateLink": "https://classroom.example.com/submission7",
+					"attachmentCount": 0,
+					"studentWork": "SQL quiz responses with some syntax errors",
+					"id": "submission_7_gray",
+					"submissionHistory": [
+						{
+							"stateHistory": {
+								"actorUserId": "student_id_007",
+								"stateTimestamp": "2025-01-22T20:45:00.000Z",
+								"state": "TURNED_IN"
+							}
+						}
+					],
+					"submittedAt": "2025-01-22T20:45:00.000Z",
+					"assignmentName": "SQL Fundamentals Quiz",
+					"assignmentId": "assign_sql_quiz_1",
+					"status": "submitted",
+					"updatedAt": "2025-01-22T20:45:00.000Z",
+					"attachments": []
+				}
+			],
+			"name": "CS 202: Database Systems",
+			"section": "Section B",
+			"description": "Database design, SQL programming, and data management concepts",
+			"descriptionHeading": "Course Overview",
+			"room": "Lab 4B",
+			"enrollmentCode": "cs202b",
+			"courseState": "ACTIVE",
+			"creationTime": "2025-01-01T11:00:00.000Z",
+			"updateTime": "2025-01-01T11:00:00.000Z",
+			"alternateLink": "https://classroom.example.com/cs202",
+			"teacherGroupEmail": "teachers-cs202@schoolemail.com",
+			"id": "cs202_classroom",
+			"ownerId": "teacher2@schoolemail.com"
+		}
+	]
+}

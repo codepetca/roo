@@ -1,0 +1,534 @@
+{
+	"snapshotMetadata": {
+		"fetchedAt": "2025-01-01T12:00:00.000Z",
+		"source": "google-classroom",
+		"version": "1.0.0",
+		"expiresAt": "2025-01-01T12:30:00.000Z"
+	},
+	"globalStats": {
+		"ungradedSubmissions": 8,
+		"totalStudents": 4,
+		"averageGrade": 85.5,
+		"totalClassrooms": 2,
+		"totalAssignments": 5,
+		"totalSubmissions": 12
+	},
+	"teacher": {
+		"name": "Alice Anderson",
+		"isTeacher": true,
+		"displayName": "Alice Anderson",
+		"email": "teacher1@schoolemail.com",
+		"googleUserId": "google-teacher1-user-id"
+	},
+	"classrooms": [
+		{
+			"studentCount": 3,
+			"assignmentCount": 3,
+			"totalSubmissions": 0,
+			"ungradedSubmissions": 0,
+			"teacherEmail": "teacher1@schoolemail.com",
+			"courseGroupEmail": "cs101_anderson@schoolemail.com",
+			"assignments": [
+				{
+					"creationTime": "2025-01-05T10:00:00.000Z",
+					"dueDate": "2025-01-15T23:59:00.000Z",
+					"description": "Write a simple Karel program to navigate through a maze and pick up beepers.",
+					"updateTime": "2025-01-05T10:00:00.000Z",
+					"title": "Karel Maze Navigation",
+					"maxScore": 100,
+					"type": "written",
+					"points": 100,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/assignment1",
+					"id": "google-course-cs101-id_google-coursework-karel-maze-id",
+					"googleCourseWorkId": "google-coursework-karel-maze-id",
+					"googleCourseId": "google-course-cs101-id",
+					"state": "PUBLISHED",
+					"submissionStats": {
+						"total": 3,
+						"graded": 1,
+						"submitted": 3,
+						"pending": 2
+					},
+					"categoryId": "category_programming"
+				},
+				{
+					"creationTime": "2025-01-10T09:00:00.000Z",
+					"dueDate": "2025-01-20T23:59:00.000Z",
+					"description": "Basic programming concepts quiz covering variables, loops, and conditionals.",
+					"updateTime": "2025-01-10T09:00:00.000Z",
+					"title": "Programming Fundamentals Quiz",
+					"maxScore": 50,
+					"type": "quiz",
+					"points": 50,
+					"materials": {
+						"links": [],
+						"youtubeVideos": [],
+						"driveFiles": [],
+						"forms": [
+							{
+								"formId": "form_prog_quiz_1",
+								"title": "Programming Fundamentals Quiz",
+								"formUrl": "https://forms.example.com/prog-quiz",
+								"thumbnailUrl": "https://cdn.example.com/quiz.png"
+							}
+						]
+					},
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/quiz1",
+					"id": "google-course-cs101-id_google-coursework-prog-quiz-id",
+					"googleCourseWorkId": "google-coursework-prog-quiz-id",
+					"googleCourseId": "google-course-cs101-id",
+					"state": "PUBLISHED",
+					"quizData": {
+						"formId": "form_prog_quiz_1",
+						"allowResponseEditing": false,
+						"totalQuestions": 10,
+						"collectEmailAddresses": true,
+						"questions": [
+							{
+								"autoGradable": true,
+								"caseSensitive": false,
+								"index": 0,
+								"description": "",
+								"type": "RADIO",
+								"title": "What is a variable?",
+								"required": true,
+								"points": 5,
+								"options": ["A storage location", "A function", "A loop", "A conditional"],
+								"id": "q1",
+								"correctAnswers": ["A storage location"]
+							},
+							{
+								"autoGradable": true,
+								"caseSensitive": false,
+								"index": 1,
+								"description": "",
+								"type": "RADIO",
+								"title": "Which loop runs at least once?",
+								"required": true,
+								"points": 5,
+								"options": ["for loop", "while loop", "do-while loop", "if statement"],
+								"id": "q2",
+								"correctAnswers": ["do-while loop"]
+							}
+						],
+						"description": "Test your understanding of basic programming concepts",
+						"title": "Programming Fundamentals Quiz",
+						"createdAt": "2025-01-10T09:00:00.000Z",
+						"formUrl": "https://forms.example.com/prog-quiz",
+						"isQuiz": true,
+						"totalPoints": 50,
+						"manualGradingRequired": false,
+						"shuffleQuestions": true,
+						"autoGradableQuestions": 10,
+						"requireSignIn": true,
+						"updatedAt": "2025-01-10T09:00:00.000Z"
+					},
+					"submissionStats": {
+						"total": 3,
+						"graded": 2,
+						"submitted": 3,
+						"pending": 1
+					},
+					"categoryId": "category_quiz"
+				},
+				{
+					"creationTime": "2025-01-12T14:00:00.000Z",
+					"dueDate": "2025-01-25T23:59:00.000Z",
+					"description": "Create a program that uses arrays to store and manipulate student grades.",
+					"updateTime": "2025-01-12T14:00:00.000Z",
+					"title": "Array Processing Assignment",
+					"maxScore": 100,
+					"type": "written",
+					"points": 100,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/array-assignment",
+					"id": "google-course-cs101-id_google-coursework-array-id",
+					"googleCourseWorkId": "google-coursework-array-id",
+					"googleCourseId": "google-course-cs101-id",
+					"state": "PUBLISHED",
+					"submissionStats": {
+						"total": 3,
+						"graded": 0,
+						"submitted": 2,
+						"pending": 2
+					},
+					"categoryId": "category_programming"
+				}
+			],
+			"students": [
+				{
+					"lastName": "Smith",
+					"firstName": "Alex",
+					"gradedSubmissionCount": 2,
+					"displayName": "Alex Smith",
+					"profile": {
+						"name": {
+							"fullName": "Alex Smith",
+							"familyName": "Smith",
+							"givenName": "Alex"
+						},
+						"photoUrl": "https://cdn.example.com/student1.png",
+						"emailAddress": "student1@schoolemail.com",
+						"id": "student_id_001",
+						"googleUserId": "google-student1-user-id"
+					},
+					"submissionCount": 3,
+					"name": "Alex Smith",
+					"id": "student_id_001",
+					"userId": "student_id_001",
+					"courseId": "teacher1_cs101_classroom",
+					"googleUserId": "google-student1-user-id",
+					"email": "student1@schoolemail.com"
+				},
+				{
+					"lastName": "Johnson",
+					"firstName": "Blake",
+					"gradedSubmissionCount": 1,
+					"displayName": "Blake Johnson",
+					"profile": {
+						"name": {
+							"fullName": "Blake Johnson",
+							"familyName": "Johnson",
+							"givenName": "Blake"
+						},
+						"photoUrl": "https://cdn.example.com/student2.png",
+						"emailAddress": "student2@schoolemail.com",
+						"id": "student_id_002"
+					},
+					"submissionCount": 3,
+					"name": "Blake Johnson",
+					"id": "student_id_002",
+					"userId": "student_id_002",
+					"courseId": "teacher1_cs101_classroom",
+					"googleUserId": "google-student2-user-id",
+					"email": "student2@schoolemail.com"
+				},
+				{
+					"lastName": "Williams",
+					"firstName": "Casey",
+					"gradedSubmissionCount": 0,
+					"displayName": "Casey Williams",
+					"profile": {
+						"name": {
+							"fullName": "Casey Williams",
+							"familyName": "Williams",
+							"givenName": "Casey"
+						},
+						"photoUrl": "https://cdn.example.com/student3.png",
+						"emailAddress": "student3@schoolemail.com",
+						"id": "student_id_003"
+					},
+					"submissionCount": 2,
+					"name": "Casey Williams",
+					"id": "student_id_003",
+					"userId": "student_id_003",
+					"courseId": "teacher1_cs101_classroom",
+					"googleUserId": "google-student3-user-id",
+					"email": "student3@schoolemail.com"
+				}
+			],
+			"submissions": [
+				{
+					"extractedContent": {
+						"text": "public void run() {\n    while (frontIsClear()) {\n        move();\n        if (beepersPresent()) {\n            pickBeeper();\n        }\n    }\n}",
+						"structuredData": {}
+					},
+					"late": false,
+					"studentId": "student_id_001",
+					"studentEmail": "student1@schoolemail.com",
+					"studentName": "Alex Smith",
+					"alternateLink": "https://classroom.example.com/submission1",
+					"attachmentCount": 0,
+					"studentWork": "Karel maze solution with proper movement and beeper collection logic.",
+					"id": "google-course-cs101-id_google-coursework-karel-maze-id_google-submission-1-alex-id",
+					"googleSubmissionId": "google-submission-1-alex-id",
+					"googleCourseWorkId": "google-coursework-karel-maze-id",
+					"googleCourseId": "google-course-cs101-id",
+					"googleUserId": "google-student1-user-id",
+					"submissionHistory": [
+						{
+							"stateHistory": {
+								"actorUserId": "student_id_001",
+								"stateTimestamp": "2025-01-14T15:30:00.000Z",
+								"state": "CREATED"
+							}
+						},
+						{
+							"stateHistory": {
+								"actorUserId": "student_id_001",
+								"stateTimestamp": "2025-01-14T16:00:00.000Z",
+								"state": "TURNED_IN"
+							}
+						}
+					],
+					"submittedAt": "2025-01-14T16:00:00.000Z",
+					"assignmentName": "Karel Maze Navigation",
+					"assignmentId": "assign_karel_maze_1",
+					"status": "graded",
+					"updatedAt": "2025-01-15T10:00:00.000Z",
+					"attachments": [],
+					"grade": {
+						"score": 95,
+						"maxScore": 100,
+						"feedback": "Excellent solution! Clean code and proper logic.",
+						"gradedAt": "2025-01-15T10:00:00.000Z",
+						"graderId": "teacher1@schoolemail.com",
+						"gradedBy": "teacher"
+					}
+				},
+				{
+					"extractedContent": {
+						"text": "Quiz Response Data",
+						"structuredData": {
+							"q1": "A storage location",
+							"q2": "do-while loop"
+						}
+					},
+					"late": false,
+					"studentId": "student_id_002",
+					"studentEmail": "student2@schoolemail.com",
+					"studentName": "Blake Johnson",
+					"alternateLink": "https://classroom.example.com/submission2",
+					"attachmentCount": 0,
+					"studentWork": "Quiz responses",
+					"id": "submission_2_blake",
+					"submissionHistory": [
+						{
+							"stateHistory": {
+								"actorUserId": "student_id_002",
+								"stateTimestamp": "2025-01-19T14:00:00.000Z",
+								"state": "TURNED_IN"
+							}
+						}
+					],
+					"submittedAt": "2025-01-19T14:00:00.000Z",
+					"assignmentName": "Programming Fundamentals Quiz",
+					"assignmentId": "assign_prog_quiz_1",
+					"status": "graded",
+					"updatedAt": "2025-01-19T14:30:00.000Z",
+					"attachments": [],
+					"grade": {
+						"score": 45,
+						"maxScore": 50,
+						"feedback": "Good understanding of basic concepts.",
+						"gradedAt": "2025-01-19T14:30:00.000Z",
+						"graderId": "teacher1@schoolemail.com",
+						"gradedBy": "teacher"
+					}
+				}
+			],
+			"name": "CS 101: Introduction to Programming",
+			"section": "Section A",
+			"description": "Learn fundamental programming concepts using Karel the Dog",
+			"descriptionHeading": "Course Overview",
+			"room": "Lab 1A",
+			"enrollmentCode": "cs101a",
+			"courseState": "ACTIVE",
+			"creationTime": "2025-01-01T08:00:00.000Z",
+			"updateTime": "2025-01-01T08:00:00.000Z",
+			"alternateLink": "https://classroom.example.com/cs101",
+			"teacherGroupEmail": "teachers-cs101@schoolemail.com",
+			"id": "teacher1_cs101_classroom",
+			"ownerId": "teacher1@schoolemail.com",
+			"googleCourseId": "google-course-cs101-id",
+			"googleOwnerId": "google-teacher1-user-id"
+		},
+		{
+			"studentCount": 2,
+			"assignmentCount": 2,
+			"totalSubmissions": 0,
+			"ungradedSubmissions": 0,
+			"teacherEmail": "teacher1@schoolemail.com",
+			"courseGroupEmail": "cs102_anderson@schoolemail.com",
+			"assignments": [
+				{
+					"creationTime": "2025-01-08T11:00:00.000Z",
+					"dueDate": "2025-01-22T23:59:00.000Z",
+					"description": "Implement basic data structures: stacks, queues, and linked lists.",
+					"updateTime": "2025-01-08T11:00:00.000Z",
+					"title": "Data Structures Implementation",
+					"maxScore": 150,
+					"type": "written",
+					"points": 150,
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/data-structures",
+					"id": "google-course-cs102-id_google-coursework-data-structures-id",
+					"googleCourseWorkId": "google-coursework-data-structures-id",
+					"googleCourseId": "google-course-cs102-id",
+					"state": "PUBLISHED",
+					"submissionStats": {
+						"total": 2,
+						"graded": 0,
+						"submitted": 1,
+						"pending": 1
+					},
+					"categoryId": "category_programming"
+				},
+				{
+					"creationTime": "2025-01-15T13:00:00.000Z",
+					"dueDate": "2025-01-28T23:59:00.000Z",
+					"description": "Quiz covering algorithm complexity and Big O notation.",
+					"updateTime": "2025-01-15T13:00:00.000Z",
+					"title": "Algorithm Complexity Quiz",
+					"maxScore": 75,
+					"type": "quiz",
+					"points": 75,
+					"materials": {
+						"links": [],
+						"youtubeVideos": [],
+						"driveFiles": [],
+						"forms": [
+							{
+								"formId": "form_complexity_quiz_1",
+								"title": "Algorithm Complexity Quiz",
+								"formUrl": "https://forms.example.com/complexity-quiz",
+								"thumbnailUrl": "https://cdn.example.com/complexity.png"
+							}
+						]
+					},
+					"workType": "ASSIGNMENT",
+					"alternateLink": "https://classroom.example.com/complexity-quiz",
+					"id": "google-course-cs102-id_google-coursework-complexity-quiz-id",
+					"googleCourseWorkId": "google-coursework-complexity-quiz-id",
+					"googleCourseId": "google-course-cs102-id",
+					"state": "PUBLISHED",
+					"quizData": {
+						"formId": "form_complexity_quiz_1",
+						"allowResponseEditing": false,
+						"totalQuestions": 8,
+						"collectEmailAddresses": true,
+						"questions": [
+							{
+								"autoGradable": true,
+								"caseSensitive": false,
+								"index": 0,
+								"description": "",
+								"type": "RADIO",
+								"title": "What is the time complexity of binary search?",
+								"required": true,
+								"points": 10,
+								"options": ["O(1)", "O(log n)", "O(n)", "O(n²)"],
+								"id": "complexity_q1",
+								"correctAnswers": ["O(log n)"]
+							}
+						],
+						"description": "Test your understanding of algorithm complexity",
+						"title": "Algorithm Complexity Quiz",
+						"createdAt": "2025-01-15T13:00:00.000Z",
+						"formUrl": "https://forms.example.com/complexity-quiz",
+						"isQuiz": true,
+						"totalPoints": 75,
+						"manualGradingRequired": false,
+						"shuffleQuestions": true,
+						"autoGradableQuestions": 8,
+						"requireSignIn": true,
+						"updatedAt": "2025-01-15T13:00:00.000Z"
+					},
+					"submissionStats": {
+						"total": 2,
+						"graded": 0,
+						"submitted": 2,
+						"pending": 2
+					},
+					"categoryId": "category_quiz"
+				}
+			],
+			"students": [
+				{
+					"lastName": "Johnson",
+					"firstName": "Blake",
+					"gradedSubmissionCount": 1,
+					"displayName": "Blake Johnson",
+					"profile": {
+						"name": {
+							"fullName": "Blake Johnson",
+							"familyName": "Johnson",
+							"givenName": "Blake"
+						},
+						"photoUrl": "https://cdn.example.com/student2.png",
+						"emailAddress": "student2@schoolemail.com",
+						"id": "student_id_002"
+					},
+					"submissionCount": 2,
+					"name": "Blake Johnson",
+					"id": "student_id_002",
+					"userId": "student_id_002",
+					"courseId": "teacher1_cs102_classroom",
+					"googleUserId": "google-student2-user-id",
+					"email": "student2@schoolemail.com"
+				},
+				{
+					"lastName": "Davis",
+					"firstName": "Dana",
+					"gradedSubmissionCount": 0,
+					"displayName": "Dana Davis",
+					"profile": {
+						"name": {
+							"fullName": "Dana Davis",
+							"familyName": "Davis",
+							"givenName": "Dana"
+						},
+						"photoUrl": "https://cdn.example.com/student4.png",
+						"emailAddress": "student4@schoolemail.com",
+						"id": "student_id_004"
+					},
+					"submissionCount": 1,
+					"name": "Dana Davis",
+					"id": "student_id_004",
+					"userId": "student_id_004",
+					"courseId": "teacher1_cs102_classroom",
+					"googleUserId": "google-student4-user-id",
+					"email": "student4@schoolemail.com"
+				}
+			],
+			"submissions": [
+				{
+					"extractedContent": {
+						"text": "class Stack {\n    private int[] data;\n    private int top;\n    \n    public Stack(int capacity) {\n        data = new int[capacity];\n        top = -1;\n    }\n    \n    public void push(int value) {\n        if (top < data.length - 1) {\n            data[++top] = value;\n        }\n    }\n    \n    public int pop() {\n        return top >= 0 ? data[top--] : -1;\n    }\n}",
+						"structuredData": {}
+					},
+					"late": false,
+					"studentId": "student_id_002",
+					"studentEmail": "student2@schoolemail.com",
+					"studentName": "Blake Johnson",
+					"alternateLink": "https://classroom.example.com/submission3",
+					"attachmentCount": 0,
+					"studentWork": "Stack implementation with basic operations",
+					"id": "submission_3_blake",
+					"submissionHistory": [
+						{
+							"stateHistory": {
+								"actorUserId": "student_id_002",
+								"stateTimestamp": "2025-01-21T18:00:00.000Z",
+								"state": "TURNED_IN"
+							}
+						}
+					],
+					"submittedAt": "2025-01-21T18:00:00.000Z",
+					"assignmentName": "Data Structures Implementation",
+					"assignmentId": "assign_data_structures_1",
+					"status": "submitted",
+					"updatedAt": "2025-01-21T18:00:00.000Z",
+					"attachments": []
+				}
+			],
+			"name": "CS 102: Data Structures",
+			"section": "Section B",
+			"description": "Advanced programming concepts focusing on data structures and algorithms",
+			"descriptionHeading": "Course Overview",
+			"room": "Lab 2B",
+			"enrollmentCode": "cs102b",
+			"courseState": "ACTIVE",
+			"creationTime": "2025-01-01T09:00:00.000Z",
+			"updateTime": "2025-01-01T09:00:00.000Z",
+			"alternateLink": "https://classroom.example.com/cs102",
+			"teacherGroupEmail": "teachers-cs102@schoolemail.com",
+			"id": "teacher1_cs102_classroom",
+			"ownerId": "teacher1@schoolemail.com",
+			"googleCourseId": "google-course-cs102-id",
+			"googleOwnerId": "google-teacher1-user-id"
+		}
+	]
+}

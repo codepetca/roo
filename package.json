@@ -34,6 +34,8 @@
     "test:unit": "npm run test:frontend && npm run test:backend",
     "test:integration": "cd functions && npm run test:integration",
     "test:all": "npm run test:frontend && cd functions && npm run test:all",
+    "test:complete-flow": "cd frontend && npx playwright test complete-user-data-flow.test.ts --headed",
+    "test:complete-flow:ci": "cd frontend && npx playwright test complete-user-data-flow.test.ts",
     "test:manual": "./testing/manual/test-all-endpoints.sh",
     "lint": "npm run lint:frontend && npm run lint:backend",
     "lint:frontend": "cd frontend && npm run lint",

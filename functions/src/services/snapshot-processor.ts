@@ -188,6 +188,7 @@ export class SnapshotProcessor {
       displayName: teacherInput.displayName || teacherInput.name || email.split('@')[0],
       role: 'teacher',
       schoolEmail: teacherInput.schoolEmail || email,
+      googleUserId: googleUserId, // Include the Google User ID in the data
       classroomIds: teacherInput.classroomIds || [],
       totalStudents: teacherInput.totalStudents || 0,
       totalClassrooms: (teacherInput.classroomIds || []).length
@@ -199,6 +200,35 @@ export class SnapshotProcessor {
       email,
       documentId: googleUserId
     });
+
+    // ALSO update existing Firebase Auth user profile with googleUserId if found
+    try {
+      const existingUser = await this.repository.getUserByEmail(email);
+      if (existingUser && !existingUser.googleUserId) {
+        logger.info("Updating existing Firebase Auth user with googleUserId", {
+          firebaseUid: existingUser.id,
+          email: email,
+          googleUserId: googleUserId
+        });
+        
+        await this.repository.updateUser(existingUser.id, {
+          googleUserId: googleUserId,
+          schoolEmail: teacherInput.schoolEmail || email
+        });
+        
+        logger.info("Successfully updated Firebase Auth user profile with googleUserId", {
+          firebaseUid: existingUser.id,
+          googleUserId: googleUserId
+        });
+      }
+    } catch (error) {
+      // Don't fail the whole process if Firebase Auth user update fails
+      logger.warn("Failed to update existing Firebase Auth user with googleUserId", { 
+        email, 
+        googleUserId, 
+        error: error instanceof Error ? error.message : String(error) 
+      });
+    }
   }
 
   /**

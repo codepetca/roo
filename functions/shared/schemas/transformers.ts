@@ -168,6 +168,7 @@ function transformTeacher(
     displayName: teacherProfile.name,
     role: 'teacher' as const,
     schoolEmail,
+    googleUserId: teacherProfile.googleUserId, // Extract Google User ID from snapshot
     classroomIds
   };
 }

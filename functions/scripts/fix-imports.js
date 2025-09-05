@@ -1,70 +1,72 @@
+#!/usr/bin/env node
+
+/**
+ * Fix TypeScript path mappings in compiled JavaScript files
+ * 
+ * This script transforms @shared/* imports to relative paths in the compiled lib directory
+ * since Node.js doesn't understand TypeScript path mappings at runtime.
+ */
+
 const fs = require('fs');
 const path = require('path');
 
+const libDir = path.join(__dirname, '../lib');
+
 function fixImportsInFile(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
-  
-  // Count existing @shared imports for debugging
-  const sharedMatches = content.match(/require\("@shared\/[^"]+"\)/g);
-  if (sharedMatches) {
-    console.log(`Found ${sharedMatches.length} @shared imports in ${filePath}`);
+  if (!fs.existsSync(filePath)) {
+    return;
   }
+
+  let content = fs.readFileSync(filePath, 'utf8');
+  let modified = false;
+
+  // Transform @shared/* imports to relative paths
+  // From: require("@shared/schemas/core")
+  // To:   require("../../shared/schemas/core")
   
-  // Determine relative path depth based on file location
-  const relativePath = path.relative(path.dirname(filePath), path.join(__dirname, '..', 'lib', 'shared'));
-  const normalizedPath = relativePath.replace(/\\/g, '/'); // Convert backslashes to forward slashes for require
-  
-  // Replace all @shared imports with calculated relative paths
-  let fixedContent = content.replace(
-    /require\("@shared\/([^"]+)"\)/g,
-    `require("${normalizedPath}/$1")`
-  );
-  
-  if (content !== fixedContent) {
-    fs.writeFileSync(filePath, fixedContent, 'utf8');
-    console.log(`Fixed imports in ${filePath} using path: ${normalizedPath}`);
+  // Calculate relative path from current file to shared directory
+  const relativePath = path.relative(path.dirname(filePath), path.join(libDir, 'shared'));
+  const normalizedPath = relativePath.split(path.sep).join('/');
+
+  const sharedImportRegex = /require\(["']@shared\/(.*?)["']\)/g;
+  content = content.replace(sharedImportRegex, (match, subPath) => {
+    modified = true;
+    return `require("${normalizedPath}/${subPath}")`;
+  });
+
+  // Also handle dynamic imports
+  const dynamicImportRegex = /import\(["']@shared\/(.*?)["']\)/g;
+  content = content.replace(dynamicImportRegex, (match, subPath) => {
+    modified = true;
+    return `import("${normalizedPath}/${subPath}")`;
+  });
+
+  if (modified) {
+    fs.writeFileSync(filePath, content, 'utf8');
+    console.log(`✅ Fixed imports in: ${path.relative(libDir, filePath)}`);
   }
 }
 
-function walkDir(dir) {
+function walkDirectory(dir) {
   const files = fs.readdirSync(dir);
   
   for (const file of files) {
-    const fullPath = path.join(dir, file);
-    const stat = fs.statSync(fullPath);
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
     
     if (stat.isDirectory()) {
-      walkDir(fullPath);
+      walkDirectory(filePath);
     } else if (file.endsWith('.js')) {
-      fixImportsInFile(fullPath);
+      fixImportsInFile(filePath);
     }
   }
 }
 
-// Fix imports in the compiled lib directory
-const libDir = path.join(__dirname, '..', 'lib');
+console.log('🔧 Fixing TypeScript path mappings in compiled JavaScript files...');
+
 if (fs.existsSync(libDir)) {
-  console.log('Fixing @shared imports in compiled JavaScript files...');
-  walkDir(libDir);
-  console.log('Import fixing complete');
-  
-  // Copy integration files
-  const integrationSrc = path.join(__dirname, '..', 'src', 'integration');
-  const integrationDest = path.join(libDir, 'src', 'integration');
-  
-  if (fs.existsSync(integrationSrc)) {
-    if (!fs.existsSync(integrationDest)) {
-      fs.mkdirSync(integrationDest, { recursive: true });
-    }
-    
-    const integrationFiles = fs.readdirSync(integrationSrc);
-    for (const file of integrationFiles) {
-      const srcFile = path.join(integrationSrc, file);
-      const destFile = path.join(integrationDest, file);
-      fs.copyFileSync(srcFile, destFile);
-    }
-    console.log('Integration files copied');
-  }
+  walkDirectory(libDir);
+  console.log('✅ Import fixing completed');
 } else {
-  console.log('lib directory not found, skipping import fixes');
+  console.log('⚠️  lib directory not found - run tsc first');
 }

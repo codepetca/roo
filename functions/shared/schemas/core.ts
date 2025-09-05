@@ -65,9 +65,9 @@ export const dashboardUserSchema = baseEntitySchema.extend({
   displayName: z.string().min(1),
   role: z.enum(['teacher', 'student', 'admin']),
   
-  // Google User ID - Required for unique identification
-  // This should match the Firestore document ID
-  googleUserId: z.string().min(1), // Required: Google User ID from Classroom API
+  // Google User ID - Optional initially, populated from first classroom snapshot import
+  // This should match the Firestore document ID when available
+  googleUserId: z.string().min(1).optional(), // Optional: Google User ID from Classroom API
   
   // Firebase Auth integration
   firebaseUid: z.string().optional(), // Link to Firebase Auth user (for students)
@@ -90,7 +90,7 @@ export const dashboardUserSchema = baseEntitySchema.extend({
 export const classroomSchema = baseEntitySchema.extend({
   // Google Classroom IDs - Required for unique identification
   googleCourseId: z.string().min(1), // Required: Google Course ID (should match document ID)
-  googleOwnerId: z.string().min(1), // Required: Google User ID of course owner/teacher
+  googleOwnerId: z.string().min(1).optional(), // Optional: Google User ID of course owner/teacher
   
   // Internal reference
   teacherId: z.string(), // Internal Roo teacher ID (for backward compatibility)
@@ -265,7 +265,7 @@ export const submissionSchema = baseEntitySchema.extend({
   googleSubmissionId: z.string().min(1),    // Required: Google Submission ID (scoped to courseWork)
   googleCourseWorkId: z.string().min(1),    // Required: Google CourseWork ID for assignment queries
   googleCourseId: z.string().min(1),        // Required: Google Course ID for classroom queries
-  googleUserId: z.string().min(1),          // Required: Google User ID for student queries
+  googleUserId: z.string().min(1).optional(),          // Optional: Google User ID for student queries
   
   // Internal references (for backward compatibility)
   assignmentId: z.string(),
@@ -393,7 +393,7 @@ export const gradeSchema = baseEntitySchema.extend({
 export const studentEnrollmentSchema = baseEntitySchema.extend({
   // Google Classroom IDs - Required for unique identification
   googleCourseId: z.string().min(1),    // Required: Google Course ID for classroom queries
-  googleUserId: z.string().min(1),      // Required: Google User ID for student queries
+  googleUserId: z.string().min(1).optional(),      // Optional: Google User ID for student queries
   
   // Internal references (for backward compatibility)
   classroomId: z.string(),

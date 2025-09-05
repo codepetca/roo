@@ -31,7 +31,8 @@ export const teacherProfileSchema = z.object({
   email: z.string().email(),
   name: z.string(),
   isTeacher: z.boolean().default(true),
-  displayName: z.string().optional()
+  displayName: z.string().optional(),
+  googleUserId: z.string().optional() // Google User ID from Classroom API
 });
 
 // ============================================

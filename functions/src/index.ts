@@ -433,13 +433,15 @@ export const createProfileForExistingUser = onCall(
       const user = await adminAuth.getUser(uid);
 
       // Create user profile with proper timestamp handling for emulator
-      const now = new Date();
+      const now = getCurrentTimestamp();
       const userDoc = {
         id: user.uid,
         email: user.email || "",
         displayName: displayName || user.displayName || user.email?.split("@")[0] || "User",
         role: role || user.customClaims?.role || "student",
-        schoolEmail: schoolEmail || undefined, // Optional school email for teachers
+        schoolEmail: schoolEmail,
+        // googleUserId is optional - will be populated during first classroom snapshot import
+        // Don't set undefined fields - let them be omitted from Firestore document
         classroomIds: [],
         totalClassrooms: 0,
         totalStudents: 0,
