@@ -38,7 +38,8 @@
       "mcp__playwright__browser_navigate",
       "mcp__playwright__browser_click",
       "Read(/Users/stew/.claude/**)",
-      "Bash(npx playwright test:*)"
+      "Bash(npx playwright test:*)",
+      "WebFetch(domain:codehs.com)"
     ],
     "deny": []
   },

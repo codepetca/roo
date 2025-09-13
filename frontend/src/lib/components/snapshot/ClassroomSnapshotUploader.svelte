@@ -16,6 +16,22 @@
 	// File input reference
 	let fileInput: HTMLInputElement;
 
+	// Handle browse button click
+	function handleBrowseClick() {
+		console.log('📁 Browse button clicked, fileInput:', fileInput);
+		if (fileInput) {
+			console.log('🔍 Triggering file input click');
+			try {
+				fileInput.click();
+				console.log('✅ File input click triggered successfully');
+			} catch (error) {
+				console.error('❌ Error triggering file input click:', error);
+			}
+		} else {
+			console.error('❌ File input element not found');
+		}
+	}
+
 	// Drag and drop state
 	let isDragging = $state(false);
 	let dragCounter = $state(0);
@@ -138,7 +154,10 @@
 				ondragleave={handleDragLeave}
 				ondragover={handleDragOver}
 				ondrop={handleDrop}
-				class="rounded-lg border-2 border-dashed p-8 text-center transition-colors {isDragging
+				onclick={handleBrowseClick}
+				role="button"
+				tabindex="0"
+				class="cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors {isDragging
 					? 'border-blue-400 bg-blue-50'
 					: importFile
 						? 'border-green-300 bg-green-50'
@@ -256,7 +275,7 @@
 						<Button
 							variant="primary"
 							size="sm"
-							onclick={() => fileInput?.click()}
+							onclick={handleBrowseClick}
 							data-testid="browse-button"
 						>
 							{#snippet children()}

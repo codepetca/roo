@@ -895,11 +895,11 @@ export async function signInAsTeacher(page: Page) {
 			console.log('Sign-in may have succeeded despite timeout');
 		}
 
-		// Ensure we're actually on a dashboard page
+		// Ensure we're actually on the teacher dashboard page
 		await waitForPageReady(page);
 		const finalUrl = page.url();
-		if (!finalUrl.includes('/dashboard')) {
-			throw new Error(`Expected to be on dashboard, but at: ${finalUrl}`);
+		if (!finalUrl.includes('/teacher')) {
+			throw new Error(`Expected to be on teacher dashboard (/teacher), but at: ${finalUrl}`);
 		}
 
 		// Update school email to match imported classroom data (optional)

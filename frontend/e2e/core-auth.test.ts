@@ -183,9 +183,9 @@ test.describe('Core Authentication Flow', () => {
 			// Perform complete sign-in
 			await signInAsTeacher(page);
 
-			// Verify we're on dashboard
+			// Verify we're on teacher dashboard
 			const currentUrl = page.url();
-			expect(currentUrl).toContain('/dashboard');
+			expect(currentUrl).toContain('/teacher');
 
 			// Verify page is loaded
 			await waitForPageReady(page);

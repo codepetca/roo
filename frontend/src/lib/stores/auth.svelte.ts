@@ -189,9 +189,9 @@ function initializeAuth() {
 					console.warn('⚠️ Auth state not fully ready, proceeding anyway...');
 				}
 
-				// Get user profile from Firestore (includes role) with retry logic
+				// Get user profile from Firestore (includes role) with optimized retry logic
 				let profile = null;
-				const maxRetries = 5;
+				const maxRetries = 3; // Reduced from 5 for faster failure detection
 
 				for (let attempt = 1; attempt <= maxRetries; attempt++) {
 					try {
@@ -202,12 +202,23 @@ function initializeAuth() {
 						}
 					} catch (profileError) {
 						console.warn(`⚠️ Profile fetch attempt ${attempt} failed:`, profileError);
+						
+						// Differentiate between different error types for better handling
+						const isNetworkError = profileError?.message?.includes('Failed to fetch') || 
+							profileError?.message?.includes('network') ||
+							profileError?.code === 'auth/network-request-failed';
+						
+						if (!isNetworkError && attempt === maxRetries) {
+							console.error('❌ Non-network error, stopping retries:', profileError);
+							break;
+						}
 					}
 
 					if (attempt < maxRetries) {
-						console.log(`⏳ Retrying profile fetch in ${attempt * 500}ms...`);
-						// Wait before retry, with exponential backoff
-						await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+						// Faster initial retry, then exponential backoff
+						const retryDelay = attempt === 1 ? 200 : attempt * 400;
+						console.log(`⏳ Retrying profile fetch in ${retryDelay}ms...`);
+						await new Promise((resolve) => setTimeout(resolve, retryDelay));
 					}
 				}
 
@@ -216,7 +227,9 @@ function initializeAuth() {
 					await setAuthCookie(firebaseUser);
 					console.log('✅ Auth state updated successfully:', {
 						uid: profile.uid,
-						role: profile.role
+						role: profile.role,
+						hasSchoolEmail: !!profile.schoolEmail,
+						loadingComplete: true
 					});
 
 					// Handle navigation after successful authentication and profile loading

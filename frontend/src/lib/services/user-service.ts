@@ -24,6 +24,7 @@ import {
  */
 export class UserService {
 	private static instance: UserService;
+	private profileRequestCache = new Map<string, Promise<UserProfile>>();
 
 	static getInstance(): UserService {
 		if (!UserService.instance) {
@@ -33,15 +34,46 @@ export class UserService {
 	}
 
 	/**
-	 * Get user profile via HTTP API
+	 * Get user profile via HTTP API with request deduplication
 	 * Uses the /api/users/profile endpoint
 	 * @param firebaseUser - Firebase user object for token
 	 * @returns User profile data
 	 */
 	async getUserProfile(firebaseUser: FirebaseUser): Promise<UserProfile> {
-		try {
-			console.debug('📡 UserService: Fetching profile via API for:', firebaseUser.email);
+		const userId = firebaseUser.uid;
+		
+		// Check if we already have a pending request for this user
+		const existingRequest = this.profileRequestCache.get(userId);
+		if (existingRequest) {
+			console.debug('📡 UserService: Using cached profile request for:', firebaseUser.email);
+			return existingRequest;
+		}
 
+		console.debug('📡 UserService: Fetching profile via API for:', firebaseUser.email);
+
+		// Create and cache the request promise
+		const requestPromise = this._fetchProfileFromAPI();
+		this.profileRequestCache.set(userId, requestPromise);
+
+		try {
+			const profile = await requestPromise;
+			// Clear cache after successful completion
+			this.profileRequestCache.delete(userId);
+			return profile;
+		} catch (error) {
+			// Clear cache on error to allow retry
+			this.profileRequestCache.delete(userId);
+			throw error;
+		}
+	}
+
+	/**
+	 * Internal method to fetch profile from API
+	 * @returns User profile data
+	 * @private
+	 */
+	private async _fetchProfileFromAPI(): Promise<UserProfile> {
+		try {
 			// Direct API call - backend now returns normalized data
 			const response = await apiRequest('/users/profile', { method: 'GET' });
 

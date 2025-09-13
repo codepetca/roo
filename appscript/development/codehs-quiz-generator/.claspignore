@@ -1,0 +1,11 @@
+# Files to exclude from clasp push
+deploy-env.js
+package.json
+.env
+.env.*
+.gitignore
+README.md
+node_modules/
+*.backup
+*.log
+.DS_Store

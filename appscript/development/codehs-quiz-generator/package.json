@@ -1,0 +1,51 @@
+{
+  "name": "codehs-quiz-generator",
+  "version": "1.0.0",
+  "description": "AI-powered Google Forms quiz generator for CodeHS programming units",
+  "main": "Code.gs",
+  "scripts": {
+    "setup": "echo 'Setting up CodeHS Quiz Generator...' && npm run setup:env",
+    "setup:env": "echo 'Copy .env.example to .env and add your API keys' && cp .env.example .env",
+    "deploy:env": "node deploy-env.js",
+    "deploy:code": "clasp push --force",
+    "deploy:full": "npm run deploy:env && npm run deploy:code && echo '✅ Deployment complete! Run deployEnvironmentVariables() in Apps Script editor'",
+    "deploy": "clasp deploy",
+    "deploy:new": "clasp deploy --description 'Environment-managed deployment'",
+    "push": "clasp push --force",
+    "pull": "clasp pull",
+    "open": "clasp open",
+    "open:webapp": "clasp open-web-app",
+    "logs": "clasp logs",
+    "status": "clasp status",
+    "list:deployments": "clasp list-deployments",
+    "test:env": "node deploy-env.js",
+    "clean": "rm -f deploy-env-function.gs"
+  },
+  "keywords": [
+    "google-apps-script",
+    "education",
+    "quiz-generator",
+    "ai",
+    "gemini",
+    "codehs",
+    "google-forms"
+  ],
+  "author": "Roo Education Platform",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/roo/tree/main/appscript/development/codehs-quiz-generator"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "files": [
+    "*.gs",
+    "*.html",
+    "*.json",
+    "README.md",
+    "deploy-env.js"
+  ],
+  "devDependencies": {},
+  "dependencies": {}
+}

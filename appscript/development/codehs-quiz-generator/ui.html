@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeHS Quiz Generator</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    .header {
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+
+    .header p {
+      font-size: 1.2em;
+      opacity: 0.9;
+    }
+
+    .main-content {
+      padding: 40px;
+    }
+
+    .form-section {
+      margin-bottom: 35px;
+      padding: 25px;
+      background: #f8fafc;
+      border-radius: 12px;
+      border-left: 5px solid #4f46e5;
+    }
+
+    .form-section h2 {
+      color: #1e293b;
+      margin-bottom: 20px;
+      font-size: 1.3em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .form-group select,
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+
+    .form-group select:focus,
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .unit-info {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .unit-info h4 {
+      color: #1e40af;
+      margin-bottom: 8px;
+    }
+
+    .unit-info p {
+      color: #1e40af;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .concept-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .concept-tag {
+      background: #dbeafe;
+      color: #1e40af;
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .generate-btn {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    .generate-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+    }
+
+    .generate-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .status-section {
+      display: none;
+      padding: 20px;
+      margin-top: 30px;
+      border-radius: 12px;
+      text-align: center;
+    }
+
+    .status-loading {
+      background: #fef3c7;
+      border: 1px solid #fbbf24;
+      color: #92400e;
+    }
+
+    .status-success {
+      background: #d1fae5;
+      border: 1px solid #10b981;
+      color: #065f46;
+    }
+
+    .status-error {
+      background: #fee2e2;
+      border: 1px solid #ef4444;
+      color: #991b1b;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      margin: 10px auto;
+      border: 4px solid #f3f4f6;
+      border-top: 4px solid #4f46e5;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .result-links {
+      margin-top: 20px;
+    }
+
+    .result-links a {
+      display: inline-block;
+      margin: 5px 10px;
+      padding: 10px 20px;
+      background: #4f46e5;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: background 0.3s;
+    }
+
+    .result-links a:hover {
+      background: #4338ca;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 6px;
+      background: #e5e7eb;
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 15px 0;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #059669);
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .header h1 {
+        font-size: 2em;
+      }
+      
+      .main-content {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎓 CodeHS Quiz Generator</h1>
+      <p>AI-Powered Programming Quiz Creation</p>
+    </div>
+
+    <div class="main-content">
+      <!-- Permission Status Section -->
+      <div id="permissionSection" class="form-section" style="display: none;">
+        <h2 id="permissionTitle">🔐 Authorization Required</h2>
+        <div id="permissionContent">
+          <div id="permissionLoading" style="text-align: center; padding: 20px;">
+            <div class="spinner"></div>
+            <p>Checking permissions...</p>
+          </div>
+          <div id="permissionNeeded" class="status-error" style="display: none;">
+            <h3>⚠️ Missing Permissions</h3>
+            <p id="permissionMessage"></p>
+            <ul id="permissionList"></ul>
+            <button onclick="requestPermissions()" style="margin-top: 15px; padding: 12px 24px; border: none; background: #4f46e5; color: white; border-radius: 8px; cursor: pointer; font-weight: 600;">Grant Permissions</button>
+          </div>
+          <div id="permissionGranted" class="status-success" style="display: none;">
+            <h3>✅ All Permissions Granted</h3>
+            <p>You're ready to generate quizzes!</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unit Selection Section -->
+      <div class="form-section">
+        <h2>📚 Select CodeHS Unit</h2>
+        <div class="form-group">
+          <label for="unitSelect">Choose a curriculum unit:</label>
+          <select id="unitSelect" onchange="handleUnitChange()">
+            <option value="">-- Select Unit --</option>
+          </select>
+        </div>
+        <div id="unitInfo" class="unit-info">
+          <h4 id="unitTitle"></h4>
+          <p id="unitDescription"></p>
+          <div id="conceptTags" class="concept-tags"></div>
+        </div>
+      </div>
+
+      <!-- Quiz Configuration Section -->
+      <div class="form-section">
+        <h2>⚙️ Quiz Configuration</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="codingQuestions">Coding Questions:</label>
+            <input type="number" id="codingQuestions" value="3" min="1" max="10">
+          </div>
+          <div class="form-group">
+            <label for="multipleChoiceQuestions">Multiple Choice Questions:</label>
+            <input type="number" id="multipleChoiceQuestions" value="20" min="5" max="50">
+          </div>
+        </div>
+      </div>
+
+      <!-- Customization Section -->
+      <div class="form-section">
+        <h2>🎨 Customization (Optional)</h2>
+        <div class="form-group">
+          <label for="customTitle">Custom Quiz Title:</label>
+          <input type="text" id="customTitle" placeholder="Leave blank for auto-generated title">
+        </div>
+        <div class="form-group">
+          <label for="customDescription">Custom Description:</label>
+          <textarea id="customDescription" rows="3" placeholder="Leave blank for auto-generated description"></textarea>
+        </div>
+      </div>
+
+      <!-- Test and Generate Buttons -->
+      <div style="margin-top: 20px;">
+        <!-- Debug Tests -->
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <button onclick="testMinimalForm()" style="padding: 8px 16px; border: none; background: #6366f1; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            🔬 Minimal
+          </button>
+          <button onclick="testIncrementalFeatures()" style="padding: 8px 16px; border: none; background: #8b5cf6; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            📈 Incremental
+          </button>
+          <button onclick="testSimplifiedQuiz()" style="padding: 8px 16px; border: none; background: #10b981; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            ⚡ Simplified
+          </button>
+          <button onclick="testDiagnostic()" style="padding: 8px 16px; border: none; background: #ef4444; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            🔍 Diagnostic
+          </button>
+        </div>
+        
+        <!-- Ultra Basic Tests -->
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <button onclick="testJustForm()" style="padding: 8px 16px; border: none; background: #dc2626; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            ⚡ Just Form
+          </button>
+          <button onclick="testUltraBasic()" style="padding: 8px 16px; border: none; background: #b91c1c; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            🔬 Ultra Basic
+          </button>
+          <button onclick="testFormsServiceSimple()" style="padding: 8px 16px; border: none; background: #7c2d12; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            🔧 Forms+Simple
+          </button>
+        </div>
+        
+        <!-- Method Isolation Tests -->
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <button onclick="testQuizMethods()" style="padding: 8px 16px; border: none; background: #0369a1; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            🎯 Quiz Config
+          </button>
+          <button onclick="testFeedbackMethods()" style="padding: 8px 16px; border: none; background: #0284c7; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            💬 Feedback
+          </button>
+          <button onclick="testPointsMethods()" style="padding: 8px 16px; border: none; background: #0891b2; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            🏆 Points
+          </button>
+          <button onclick="testSectionMethods()" style="padding: 8px 16px; border: none; background: #0e7490; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+            📋 Sections
+          </button>
+        </div>
+        
+        <!-- Master Method Test -->
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <button onclick="testAllMethods()" style="padding: 12px 24px; border: none; background: #065f46; color: white; border-radius: 6px; cursor: pointer; font-size: 16px; flex: 1; font-weight: bold;">
+            🔍 MASTER METHOD TEST
+          </button>
+        </div>
+
+        <!-- Main Tests -->
+        <div style="display: flex; gap: 10px;">
+          <button id="testBtn" class="generate-btn" onclick="testHardcodedQuiz()" style="background: linear-gradient(135deg, #f59e0b, #d97706); flex: 1;">
+            🧪 Full Test
+          </button>
+          <button id="generateBtn" class="generate-btn" onclick="generateQuiz()" disabled style="flex: 2;">
+            🚀 Generate with AI
+          </button>
+        </div>
+      </div>
+
+      <!-- Status Section -->
+      <div id="statusSection" class="status-section">
+        <div id="loadingStatus" class="status-loading" style="display: none;">
+          <div class="spinner"></div>
+          <h3>Generating Your Quiz...</h3>
+          <p id="progressText">Initializing AI question generation...</p>
+          <div class="progress-bar">
+            <div id="progressFill" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div id="successStatus" class="status-success" style="display: none;">
+          <h3>✅ Quiz Generated Successfully!</h3>
+          <p id="successMessage"></p>
+          <div class="result-links">
+            <a id="viewQuizLink" href="#" target="_blank">📝 View Quiz</a>
+            <a id="editQuizLink" href="#" target="_blank">✏️ Edit Quiz</a>
+          </div>
+        </div>
+
+        <div id="errorStatus" class="status-error" style="display: none;">
+          <h3>❌ Generation Failed</h3>
+          <p id="errorMessage"></p>
+          <div style="margin-top: 15px;">
+            <button onclick="retryWithPermissionCheck()" style="padding: 10px 20px; border: none; background: #10b981; color: white; border-radius: 6px; cursor: pointer; margin-right: 10px;">🔄 Smart Retry</button>
+            <button onclick="resetForm()" style="padding: 10px 20px; border: none; background: #6b7280; color: white; border-radius: 6px; cursor: pointer;">↩️ Reset</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let availableUnits = [];
+    let isGenerating = false;
+    let permissionStatus = null;
+
+    // Initialize the application
+    window.onload = function() {
+      checkPermissionsFirst();
+    };
+
+    // Check permissions before loading the application
+    function checkPermissionsFirst() {
+      document.getElementById('permissionSection').style.display = 'block';
+      document.getElementById('permissionLoading').style.display = 'block';
+      document.getElementById('permissionNeeded').style.display = 'none';
+      document.getElementById('permissionGranted').style.display = 'none';
+      
+      // Add timeout for permission check
+      const timeoutId = setTimeout(() => {
+        showPermissionError('Permission check is taking longer than expected. Please refresh the page and try again.');
+      }, 15000); // 15 second timeout
+      
+      google.script.run
+        .withSuccessHandler(function(status) {
+          clearTimeout(timeoutId);
+          handlePermissionCheck(status);
+        })
+        .withFailureHandler(function(error) {
+          clearTimeout(timeoutId);
+          console.error('Permission check failed:', error);
+          
+          let errorMsg = 'Unable to check permissions.';
+          if (error && error.message) {
+            if (error.message.includes('timeout')) {
+              errorMsg = 'Permission check timed out. This may indicate network issues.';
+            } else if (error.message.includes('script')) {
+              errorMsg = 'Script execution error. The application may need to be redeployed.';
+            }
+          }
+          showPermissionError(errorMsg + ' Please refresh and try again.');
+        })
+        .getPermissionStatus();
+    }
+
+    // Handle permission check result
+    function handlePermissionCheck(status) {
+      document.getElementById('permissionLoading').style.display = 'none';
+      
+      if (status.ready) {
+        // All permissions granted - show success and load app
+        document.getElementById('permissionGranted').style.display = 'block';
+        document.getElementById('permissionTitle').innerHTML = '✅ Ready to Go!';
+        document.getElementById('permissionTitle').style.color = '#065f46';
+        
+        setTimeout(() => {
+          document.getElementById('permissionSection').style.display = 'none';
+          loadAvailableUnits();
+        }, 2000);
+        
+      } else {
+        // Missing permissions - show what's needed
+        document.getElementById('permissionNeeded').style.display = 'block';
+        
+        let message = 'This application needs additional permissions to create Google Forms and generate quizzes.';
+        if (status.needsSetup) {
+          message += ' API configuration is also required.';
+        }
+        document.getElementById('permissionMessage').textContent = message;
+        
+        const permissionList = document.getElementById('permissionList');
+        permissionList.innerHTML = '';
+        status.missing.forEach(permission => {
+          const li = document.createElement('li');
+          li.textContent = permission;
+          li.style.margin = '5px 0';
+          permissionList.appendChild(li);
+        });
+        
+        // Add instructions
+        if (status.instructions.length > 0) {
+          const instructionDiv = document.createElement('div');
+          instructionDiv.style.marginTop = '15px';
+          instructionDiv.style.padding = '10px';
+          instructionDiv.style.background = '#fef3c7';
+          instructionDiv.style.borderRadius = '6px';
+          instructionDiv.innerHTML = '<strong>Instructions:</strong><br>' + status.instructions.join('<br>');
+          document.getElementById('permissionNeeded').appendChild(instructionDiv);
+        }
+      }
+      
+      permissionStatus = status;
+    }
+
+    // Request permissions from user
+    function requestPermissions() {
+      document.getElementById('permissionNeeded').style.display = 'none';
+      document.getElementById('permissionLoading').style.display = 'block';
+      document.getElementById('permissionLoading').innerHTML = '<div class="spinner"></div><p>Requesting permissions...</p>';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            // Recheck permissions after granting
+            setTimeout(checkPermissionsFirst, 1000);
+          } else {
+            showPermissionError(result.message || 'Failed to grant permissions. Please try again.');
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Permission request failed:', error);
+          showPermissionError('Permission request failed. Please refresh the page and try again.');
+        })
+        .requestPermissions();
+    }
+
+    // Show permission error
+    function showPermissionError(message) {
+      document.getElementById('permissionLoading').style.display = 'none';
+      document.getElementById('permissionNeeded').style.display = 'block';
+      document.getElementById('permissionMessage').textContent = message;
+    }
+
+    // Load available CodeHS units
+    function loadAvailableUnits() {
+      google.script.run
+        .withSuccessHandler(function(units) {
+          availableUnits = units;
+          populateUnitDropdown(units);
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to load units:', error);
+          showError('Failed to load curriculum units. Please refresh the page.');
+        })
+        .getAvailableUnits();
+    }
+
+    // Populate the unit dropdown
+    function populateUnitDropdown(units) {
+      const select = document.getElementById('unitSelect');
+      select.innerHTML = '<option value="">-- Select Unit --</option>';
+      
+      units.forEach(unit => {
+        const option = document.createElement('option');
+        option.value = unit.id;
+        option.textContent = unit.title;
+        select.appendChild(option);
+      });
+    }
+
+    // Handle unit selection change
+    function handleUnitChange() {
+      const selectedUnit = document.getElementById('unitSelect').value;
+      const generateBtn = document.getElementById('generateBtn');
+      
+      if (selectedUnit) {
+        generateBtn.disabled = false;
+        loadUnitDetails(selectedUnit);
+      } else {
+        generateBtn.disabled = true;
+        document.getElementById('unitInfo').style.display = 'none';
+      }
+    }
+
+    // Load detailed unit information
+    function loadUnitDetails(unitId) {
+      google.script.run
+        .withSuccessHandler(function(unitDetails) {
+          if (unitDetails) {
+            displayUnitInfo(unitDetails);
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Failed to load unit details:', error);
+        })
+        .getUnitDetails(unitId);
+    }
+
+    // Display unit information
+    function displayUnitInfo(unit) {
+      document.getElementById('unitTitle').textContent = unit.title;
+      document.getElementById('unitDescription').textContent = unit.description;
+      
+      const conceptTags = document.getElementById('conceptTags');
+      conceptTags.innerHTML = '';
+      
+      if (unit.concepts && unit.concepts.length > 0) {
+        unit.concepts.slice(0, 8).forEach(concept => { // Show first 8 concepts
+          const tag = document.createElement('span');
+          tag.className = 'concept-tag';
+          tag.textContent = concept;
+          conceptTags.appendChild(tag);
+        });
+      }
+      
+      document.getElementById('unitInfo').style.display = 'block';
+    }
+
+    // Generate quiz
+    function generateQuiz() {
+      if (isGenerating) return;
+      
+      // Check permissions before proceeding
+      if (permissionStatus && !permissionStatus.ready) {
+        showError('Please grant all required permissions before generating a quiz.');
+        return;
+      }
+      
+      const config = {
+        selectedUnit: document.getElementById('unitSelect').value,
+        codingQuestions: parseInt(document.getElementById('codingQuestions').value),
+        multipleChoiceQuestions: parseInt(document.getElementById('multipleChoiceQuestions').value),
+        customTitle: document.getElementById('customTitle').value.trim(),
+        customDescription: document.getElementById('customDescription').value.trim()
+      };
+
+      // Validation
+      if (!config.selectedUnit) {
+        showError('Please select a CodeHS unit first.');
+        return;
+      }
+
+      isGenerating = true;
+      showLoadingStatus();
+      
+      google.script.run
+        .withSuccessHandler(handleGenerationSuccess)
+        .withFailureHandler(handleGenerationError)
+        .generateQuiz(config);
+    }
+
+    // Show loading status
+    function showLoadingStatus() {
+      document.getElementById('statusSection').style.display = 'block';
+      document.getElementById('loadingStatus').style.display = 'block';
+      document.getElementById('successStatus').style.display = 'none';
+      document.getElementById('errorStatus').style.display = 'none';
+      document.getElementById('generateBtn').disabled = true;
+      
+      // Simulate progress
+      let progress = 0;
+      const progressSteps = [
+        'Analyzing curriculum content...',
+        'Generating questions with AI...',
+        'Creating Google Form structure...',
+        'Configuring quiz settings...',
+        'Finalizing quiz creation...'
+      ];
+      
+      const progressInterval = setInterval(() => {
+        progress += Math.random() * 20;
+        if (progress > 90) progress = 90;
+        
+        const stepIndex = Math.floor(progress / 20);
+        const currentStep = progressSteps[stepIndex] || progressSteps[progressSteps.length - 1];
+        
+        document.getElementById('progressFill').style.width = progress + '%';
+        document.getElementById('progressText').textContent = currentStep;
+        
+        if (progress >= 90) {
+          clearInterval(progressInterval);
+        }
+      }, 1000);
+
+      // Store interval ID to clear it on completion
+      window.progressInterval = progressInterval;
+    }
+
+    // Handle successful generation
+    function handleGenerationSuccess(result) {
+      isGenerating = false;
+      if (window.progressInterval) clearInterval(window.progressInterval);
+      
+      if (result.success) {
+        document.getElementById('loadingStatus').style.display = 'none';
+        document.getElementById('successStatus').style.display = 'block';
+        
+        const message = `Created quiz with ${result.questions.coding} coding questions and ${result.questions.multipleChoice} multiple choice questions for ${result.unit}.`;
+        document.getElementById('successMessage').textContent = message;
+        
+        document.getElementById('viewQuizLink').href = result.form.publishedUrl;
+        document.getElementById('editQuizLink').href = result.form.editUrl;
+        
+        // Show warnings if any
+        if (result.warnings && result.warnings.length > 0) {
+          console.warn('Generation warnings:', result.warnings);
+        }
+        
+      } else {
+        handleGenerationError(result.error || 'Unknown error occurred');
+      }
+    }
+
+    // Handle generation error
+    function handleGenerationError(error) {
+      isGenerating = false;
+      if (window.progressInterval) clearInterval(window.progressInterval);
+      
+      document.getElementById('loadingStatus').style.display = 'none';
+      document.getElementById('errorStatus').style.display = 'block';
+      
+      // Enhanced error handling with specific messages
+      let errorMessage = '';
+      let suggestion = '';
+      
+      if (error && error.message) {
+        const msg = error.message.toLowerCase();
+        
+        if (msg.includes('permission') || msg.includes('auth')) {
+          errorMessage = 'Permission Error: This application needs additional permissions to access Google Forms.';
+          suggestion = 'Click "Try Again" to check permissions, or refresh the page to restart the authorization flow.';
+        } else if (msg.includes('api key') || msg.includes('gemini')) {
+          errorMessage = 'AI Service Error: The Gemini API configuration is missing or invalid.';
+          suggestion = 'Please contact the administrator to configure the API key properly.';
+        } else if (msg.includes('forms') || msg.includes('create')) {
+          errorMessage = 'Google Forms Error: Unable to create the quiz form.';
+          suggestion = 'This may be a temporary Google Services issue. Please try again in a few minutes.';
+        } else if (msg.includes('network') || msg.includes('timeout')) {
+          errorMessage = 'Network Error: Unable to connect to required services.';
+          suggestion = 'Check your internet connection and try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      } else {
+        errorMessage = 'An unexpected error occurred during quiz generation.';
+        suggestion = 'Please try refreshing the page and attempting again.';
+      }
+      
+      document.getElementById('errorMessage').innerHTML = 
+        `<strong>${errorMessage}</strong><br><br><em>${suggestion}</em>`;
+      
+      console.error('Quiz generation error:', error);
+      
+      // If it's a permission error, suggest checking permissions
+      if (errorMessage.includes('Permission Error')) {
+        setTimeout(() => {
+          if (confirm('Would you like to check your permissions now?')) {
+            checkPermissionsFirst();
+          }
+        }, 2000);
+      }
+    }
+
+    // Show error message
+    function showError(message) {
+      document.getElementById('statusSection').style.display = 'block';
+      document.getElementById('loadingStatus').style.display = 'none';
+      document.getElementById('successStatus').style.display = 'none';
+      document.getElementById('errorStatus').style.display = 'block';
+      document.getElementById('errorMessage').textContent = message;
+    }
+
+    // Test minimal form creation (no quiz features)
+    function testMinimalForm() {
+      if (isGenerating) return;
+      
+      console.log('🔬 Starting minimal form test (basic questions only)...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing basic form creation without quiz features...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('Minimal test result:', result);
+          if (result.success) {
+            handleGenerationSuccess({
+              success: true,
+              form: result.formResult,
+              questions: { coding: 1, multipleChoice: 1, total: 2 },
+              unit: 'Minimal Test (No Quiz Features)',
+              generatedAt: new Date().toISOString(),
+              warnings: []
+            });
+          } else {
+            handleGenerationError(result.error || 'Minimal test failed');
+          }
+        })
+        .withFailureHandler(handleGenerationError)
+        .testMinimalFormCreation();
+    }
+
+    // Test incremental quiz features
+    function testIncrementalFeatures() {
+      if (isGenerating) return;
+      
+      console.log('📈 Starting incremental quiz features test...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing quiz features step by step...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('Incremental test result:', result);
+          if (result.success) {
+            handleGenerationSuccess({
+              success: true,
+              form: result.formResult,
+              questions: { coding: 0, multipleChoice: 1, total: 1 },
+              unit: 'Incremental Quiz Features Test',
+              generatedAt: new Date().toISOString(),
+              warnings: []
+            });
+          } else {
+            handleGenerationError(result.error || 'Incremental test failed');
+          }
+        })
+        .withFailureHandler(handleGenerationError)
+        .testIncrementalQuizFeatures();
+    }
+
+    // Test simplified quiz creation (bypassing complex forms service)
+    function testSimplifiedQuiz() {
+      if (isGenerating) return;
+      
+      console.log('⚡ Starting simplified quiz creation test...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Creating quiz with proven working approach...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('Simplified quiz result:', result);
+          if (result.success) {
+            handleGenerationSuccess({
+              success: true,
+              form: result.formResult,
+              questions: { coding: 2, multipleChoice: 2, total: 4 },
+              unit: 'Simplified Working Approach',
+              generatedAt: new Date().toISOString(),
+              warnings: []
+            });
+          } else {
+            handleGenerationError(result.error || 'Simplified test failed');
+          }
+        })
+        .withFailureHandler(handleGenerationError)
+        .testSimplifiedQuizCreation();
+    }
+
+    // Test just basic FormApp.create
+    function testJustForm() {
+      if (isGenerating) return;
+      
+      console.log('⚡ Testing just basic FormApp operations...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing basic FormApp.create only...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('Just form test result:', result);
+          if (result.success) {
+            document.getElementById('loadingStatus').style.display = 'none';
+            document.getElementById('successStatus').style.display = 'block';
+            document.getElementById('successMessage').textContent = 'Basic FormApp operations work! Form created successfully.';
+            isGenerating = false;
+          } else {
+            handleGenerationError(result.error || 'Basic form test failed');
+          }
+        })
+        .withFailureHandler(handleGenerationError)
+        .testJustFormCreation();
+    }
+
+    // Test ultra basic operations
+    function testUltraBasic() {
+      if (isGenerating) return;
+      
+      console.log('🔬 Testing ultra basic operations...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing ultra basic forms service operations...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('Ultra basic test result:', result);
+          if (result.success) {
+            document.getElementById('loadingStatus').style.display = 'none';
+            document.getElementById('successStatus').style.display = 'block';
+            document.getElementById('successMessage').textContent = `Ultra basic operations work! Completed step ${result.step}.`;
+            isGenerating = false;
+          } else {
+            handleGenerationError(`Ultra basic test failed at step ${result.step}: ${result.error}`);
+          }
+        })
+        .withFailureHandler(handleGenerationError)
+        .testUltraBasicOperations();
+    }
+
+    // Test forms service with simple data structure
+    function testFormsServiceSimple() {
+      if (isGenerating) return;
+      
+      console.log('🔧 Testing forms service with simple data...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing forms service with known good data structure...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('Forms service simple data test result:', result);
+          if (result.success) {
+            handleGenerationSuccess({
+              success: true,
+              form: result.formResult,
+              questions: { coding: 1, multipleChoice: 1, total: 2 },
+              unit: 'Forms Service with Simple Data',
+              generatedAt: new Date().toISOString(),
+              warnings: []
+            });
+          } else {
+            handleGenerationError(result.error || 'Forms service simple data test failed');
+          }
+        })
+        .withFailureHandler(handleGenerationError)
+        .testFormsServiceWithSimpleData();
+    }
+
+    // Test forms service components individually for diagnosis
+    function testDiagnostic() {
+      if (isGenerating) return;
+      
+      console.log('🔍 Starting diagnostic test of forms service components...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing each forms service component individually...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('Diagnostic test result:', result);
+          if (result.success) {
+            handleGenerationSuccess({
+              success: true,
+              form: result.formResult,
+              questions: { coding: 1, multipleChoice: 1, total: 2 },
+              unit: 'Forms Service Diagnostic (All Components)',
+              generatedAt: new Date().toISOString(),
+              warnings: []
+            });
+          } else {
+            handleGenerationError(result.error || 'Diagnostic test failed');
+          }
+        })
+        .withFailureHandler(handleGenerationError)
+        .testFormsServiceComponents();
+    }
+
+    // Test hardcoded quiz generation
+    function testHardcodedQuiz() {
+      if (isGenerating) return;
+      
+      console.log('🧪 Starting hardcoded quiz test...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      // Update progress text for test
+      document.getElementById('progressText').textContent = 'Testing Forms API with sample questions...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('Test result:', result);
+          if (result.success) {
+            handleGenerationSuccess({
+              success: true,
+              form: result.formResult,
+              questions: {
+                coding: 2,
+                multipleChoice: 3,
+                total: 5
+              },
+              unit: 'Sample Test Data',
+              generatedAt: new Date().toISOString(),
+              warnings: []
+            });
+          } else {
+            handleGenerationError(result.error || 'Test failed');
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Test failed:', error);
+          handleGenerationError(error);
+        })
+        .testHardcodedQuizGeneration();
+    }
+    
+    // Method-specific test functions
+    function testQuizMethods() {
+      if (isGenerating) return;
+      
+      console.log('🎯 Testing quiz configuration methods...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing quiz configuration methods (setIsQuiz, setShuffleQuestions, etc.)...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            handleGenerationSuccess({
+              success: true,
+              form: { publishedUrl: 'Quiz Config Methods Test Completed' },
+              questions: { total: 'All methods tested' },
+              unit: 'Quiz Configuration Test',
+              generatedAt: new Date().toISOString(),
+              methodResults: result.methods
+            });
+          } else {
+            handleGenerationError('Quiz config method failed: ' + (result.failedMethod || 'Unknown') + ' - ' + (result.error || 'See console'));
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Quiz methods test failed:', error);
+          handleGenerationError('Quiz methods test failed: ' + error);
+        })
+        .testQuizConfigurationMethods();
+    }
+    
+    function testFeedbackMethods() {
+      if (isGenerating) return;
+      
+      console.log('💬 Testing feedback system methods...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing feedback system methods (createFeedback, setFeedbackForCorrect, etc.)...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            handleGenerationSuccess({
+              success: true,
+              form: { publishedUrl: 'Feedback Methods Test Completed' },
+              questions: { total: 'All methods tested' },
+              unit: 'Feedback System Test',
+              generatedAt: new Date().toISOString(),
+              methodResults: result.methods
+            });
+          } else {
+            handleGenerationError('Feedback method failed: ' + (result.failedMethod || 'Unknown') + ' - ' + (result.error || 'See console'));
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Feedback methods test failed:', error);
+          handleGenerationError('Feedback methods test failed: ' + error);
+        })
+        .testFeedbackSystemMethods();
+    }
+    
+    function testPointsMethods() {
+      if (isGenerating) return;
+      
+      console.log('🏆 Testing points assignment methods...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing points assignment methods (setPoints on various question types)...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            handleGenerationSuccess({
+              success: true,
+              form: { publishedUrl: 'Points Methods Test Completed' },
+              questions: { total: 'All methods tested' },
+              unit: 'Points Assignment Test',
+              generatedAt: new Date().toISOString(),
+              methodResults: result.methods
+            });
+          } else {
+            handleGenerationError('Points method failed: ' + (result.failedMethod || 'Unknown') + ' - ' + (result.error || 'See console'));
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Points methods test failed:', error);
+          handleGenerationError('Points methods test failed: ' + error);
+        })
+        .testPointsAssignmentMethods();
+    }
+    
+    function testSectionMethods() {
+      if (isGenerating) return;
+      
+      console.log('📋 Testing section header methods...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing section header methods (addSectionHeaderItem, setTitle, setHelpText)...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            handleGenerationSuccess({
+              success: true,
+              form: { publishedUrl: 'Section Methods Test Completed' },
+              questions: { total: 'All methods tested' },
+              unit: 'Section Header Test',
+              generatedAt: new Date().toISOString(),
+              methodResults: result.methods
+            });
+          } else {
+            handleGenerationError('Section method failed: ' + (result.failedMethod || 'Unknown') + ' - ' + (result.error || 'See console'));
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Section methods test failed:', error);
+          handleGenerationError('Section methods test failed: ' + error);
+        })
+        .testSectionHeaderMethods();
+    }
+    
+    function testAllMethods() {
+      if (isGenerating) return;
+      
+      console.log('🔍 Running MASTER METHOD TEST - testing all Forms API methods...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Running comprehensive Forms API method isolation test...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('Master method test result:', result);
+          
+          if (result.overallSuccess) {
+            handleGenerationSuccess({
+              success: true,
+              form: { publishedUrl: '✅ ALL METHODS PASSED - Issue is in complex interaction' },
+              questions: { total: 'All individual methods work' },
+              unit: 'Master Method Test',
+              generatedAt: new Date().toISOString(),
+              allResults: result.tests
+            });
+          } else {
+            const failure = result.firstFailure;
+            handleGenerationError(`🎯 EXACT FAILURE IDENTIFIED: ${failure.category}.${failure.method} failed with: ${failure.error}`);
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Master method test failed:', error);
+          handleGenerationError('Master method test failed: ' + error);
+        })
+        .testAllFormsMethods();
+    }
+
+    // Reset form to initial state
+    function resetForm() {
+      isGenerating = false;
+      document.getElementById('statusSection').style.display = 'none';
+      document.getElementById('generateBtn').disabled = document.getElementById('unitSelect').value === '';
+      
+      // Reset progress
+      document.getElementById('progressFill').style.width = '0%';
+      document.getElementById('progressText').textContent = 'Initializing AI question generation...';
+      
+      // Recheck permissions when resetting after an error
+      if (permissionStatus && !permissionStatus.ready) {
+        setTimeout(checkPermissionsFirst, 500);
+      }
+    }
+
+    // Enhanced retry function with permission check
+    function retryWithPermissionCheck() {
+      // First check if we still have all permissions
+      google.script.run
+        .withSuccessHandler(function(status) {
+          if (status.ready) {
+            // Permissions are good, just retry the quiz generation
+            resetForm();
+            setTimeout(() => {
+              if (document.getElementById('unitSelect').value) {
+                generateQuiz();
+              }
+            }, 1000);
+          } else {
+            // Permissions are missing, show permission check
+            resetForm();
+            document.getElementById('permissionSection').style.display = 'block';
+            handlePermissionCheck(status);
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('Permission recheck failed:', error);
+          resetForm();
+        })
+        .getPermissionStatus();
+    }
+
+    // Global error handler for unexpected errors
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+      console.error('Global error:', { msg, url, lineNo, columnNo, error });
+      
+      if (isGenerating) {
+        handleGenerationError({
+          message: 'An unexpected JavaScript error occurred: ' + msg,
+          details: `Line ${lineNo}: ${error}`
+        });
+      }
+      
+      return false; // Don't suppress default error handling
+    };
+  </script>
+</body>
+</html>
