@@ -137,6 +137,7 @@ function getUnitDetails(unitId) {
     }
 
     return {
+      id: unitId,  // Ensure the id is included
       ...unitContent,
       concepts: getConceptsForUnit(unitId),
       lessonCount: unitContent.lessons.length,
@@ -145,6 +146,35 @@ function getUnitDetails(unitId) {
   } catch (error) {
     console.error('Error getting unit details:', error);
     return null;
+  }
+}
+
+/**
+ * Get all units with their complete details for frontend caching
+ * This preloads all unit information to make unit selection instant
+ * @returns {Array} Array of units with full details
+ */
+function getAllUnitsWithDetails() {
+  try {
+    console.log('📚 Loading all units with details for caching...');
+    
+    const basicUnits = getAllUnits();
+    const detailedUnits = [];
+    
+    for (const unit of basicUnits) {
+      const details = getUnitDetails(unit.id);
+      if (details) {
+        detailedUnits.push(details);
+      }
+    }
+    
+    console.log(`✅ Loaded ${detailedUnits.length} units with complete details`);
+    return detailedUnits;
+    
+  } catch (error) {
+    console.error('Error getting all units with details:', error);
+    // Fallback to basic units if detailed loading fails
+    return getAllUnits();
   }
 }
 
@@ -173,10 +203,12 @@ function validateQuizConfig(config) {
     errors.push('Multiple choice questions must be between 5 and 50');
   }
 
-  // Unit validation
+  // Unit validation with debugging
   const availableUnits = getAllUnits();
   const validUnit = availableUnits.some(unit => unit.id === config.selectedUnit);
   if (!validUnit) {
+    console.error(`Unit validation failed for: "${config.selectedUnit}"`);
+    console.error('Available units:', availableUnits.map(u => u.id));
     errors.push('Selected unit is not available');
   }
 

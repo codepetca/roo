@@ -170,7 +170,9 @@ function parseAIResponse(apiResponse) {
     }
 
     const questionText = content.parts[0].text;
-    const questions = JSON.parse(questionText);
+    console.log('Raw AI response text (first 500 chars):', questionText.substring(0, 500));
+    
+    const questions = extractAndParseJSON(questionText);
     
     // Validate required structure
     if (!questions.codingQuestions || !questions.multipleChoiceQuestions) {
@@ -194,6 +196,94 @@ function parseAIResponse(apiResponse) {
     console.error('Raw response:', apiResponse);
     throw new Error(`Failed to parse AI response: ${error.message}`);
   }
+}
+
+/**
+ * Robustly extract and parse JSON from AI response text
+ * Handles markdown code blocks, extra text, and malformed responses
+ * @param {string} responseText - Raw AI response text
+ * @returns {Object} Parsed JSON object
+ */
+function extractAndParseJSON(responseText) {
+  if (!responseText || typeof responseText !== 'string') {
+    throw new Error('Invalid response text provided');
+  }
+
+  // Try direct parsing first (fastest path)
+  try {
+    return JSON.parse(responseText);
+  } catch (directParseError) {
+    console.log('Direct JSON parse failed, attempting extraction...');
+  }
+
+  // Method 1: Extract from markdown code blocks
+  const codeBlockPatterns = [
+    /```json\s*([\s\S]*?)\s*```/i,
+    /```\s*([\s\S]*?)\s*```/i,
+    /`([\s\S]*?)`/i
+  ];
+
+  for (const pattern of codeBlockPatterns) {
+    const match = responseText.match(pattern);
+    if (match && match[1]) {
+      try {
+        const extracted = match[1].trim();
+        console.log('Extracted from code block:', extracted.substring(0, 200) + '...');
+        return JSON.parse(extracted);
+      } catch (codeBlockError) {
+        console.log('Code block extraction failed:', codeBlockError.message);
+        continue;
+      }
+    }
+  }
+
+  // Method 2: Find JSON-like structure by looking for braces
+  const jsonStart = responseText.indexOf('{');
+  const jsonEnd = responseText.lastIndexOf('}');
+  
+  if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+    try {
+      const extracted = responseText.substring(jsonStart, jsonEnd + 1);
+      console.log('Extracted JSON structure:', extracted.substring(0, 200) + '...');
+      return JSON.parse(extracted);
+    } catch (bracesError) {
+      console.log('Braces extraction failed:', bracesError.message);
+    }
+  }
+
+  // Method 3: Try to clean up common formatting issues
+  let cleanedText = responseText
+    .replace(/^\s*Here's the JSON.*?:\s*/i, '')  // Remove intro text
+    .replace(/^\s*```[a-z]*\s*/i, '')           // Remove opening code block
+    .replace(/\s*```\s*$/i, '')                  // Remove closing code block
+    .replace(/[\u201C\u201D]/g, '"')            // Replace smart quotes
+    .replace(/[\u2018\u2019]/g, "'")            // Replace smart apostrophes
+    .trim();
+
+  try {
+    console.log('Cleaned text attempt:', cleanedText.substring(0, 200) + '...');
+    return JSON.parse(cleanedText);
+  } catch (cleanError) {
+    console.log('Cleaned text parsing failed:', cleanError.message);
+  }
+
+  // Method 4: Last resort - try to fix common JSON issues
+  try {
+    // Fix common issues like trailing commas, unquoted keys
+    let fixedText = cleanedText
+      .replace(/,\s*}/g, '}')                    // Remove trailing commas before }
+      .replace(/,\s*]/g, ']')                    // Remove trailing commas before ]
+      .replace(/([{,]\s*)(\w+):/g, '$1"$2":')   // Quote unquoted keys
+      .replace(/'([^']*)':/g, '"$1":');         // Convert single quotes to double quotes
+    
+    console.log('Fixed text attempt:', fixedText.substring(0, 200) + '...');
+    return JSON.parse(fixedText);
+  } catch (fixError) {
+    console.log('Fixed text parsing failed:', fixError.message);
+  }
+
+  // If all methods fail, throw a detailed error
+  throw new Error(`Unable to extract valid JSON from AI response. Response starts with: "${responseText.substring(0, 100)}..."`);
 }
 
 /**
