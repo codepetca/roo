@@ -485,12 +485,14 @@ function testSimplifiedQuizCreation() {
       {
         title: "Make Karel Move Forward",
         description: "Write a program to make Karel move forward 3 steps and then turn left.",
-        pointValue: 10
+        pointValue: 10,
+        solution: "function run() {\n    move();\n    move();\n    move();\n    turnLeft();\n}"
       },
       {
         title: "Karel Function Practice", 
         description: "Create a function called 'moveAndTurn' that makes Karel move forward twice and turn left. Then call this function 2 times.",
-        pointValue: 15
+        pointValue: 15,
+        solution: "function moveAndTurn() {\n    move();\n    move();\n    turnLeft();\n}\n\nfunction run() {\n    moveAndTurn();\n    moveAndTurn();\n}"
       }
     ];
     
@@ -1090,7 +1092,8 @@ function testFormCreationWithSampleQuestions() {
           description: "Write a program to make Karel move forward 3 steps and then turn left.",
           concepts: ["move()", "turnLeft()", "basic commands"],
           sampleApproach: "Use the move() command three times, then use turnLeft() once.",
-          pointValue: 10
+          pointValue: 10,
+          solution: "function run() {\n    move();\n    move();\n    move();\n    turnLeft();\n}"
         },
         {
           id: 2,
@@ -1099,7 +1102,8 @@ function testFormCreationWithSampleQuestions() {
           description: "Create a function called 'moveAndTurn' that makes Karel move forward twice and turn left. Then call this function 2 times.",
           concepts: ["functions", "function definition", "function calls"],
           sampleApproach: "Define the function with proper syntax, then call it in main().",
-          pointValue: 15
+          pointValue: 15,
+          solution: "function moveAndTurn() {\n    move();\n    move();\n    turnLeft();\n}\n\nfunction run() {\n    moveAndTurn();\n    moveAndTurn();\n}"
         }
       ],
       multipleChoiceQuestions: [
@@ -1417,6 +1421,116 @@ function testSectionHeaderMethods() {
     console.error('❌ Section header test failed:', error);
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * ISOLATED TEST: Test setRequireLogin() method under different conditions
+ * This method was previously failing but research suggests it should work
+ */
+function testSetRequireLoginIsolated() {
+  console.log('🔍 Testing setRequireLogin() method in isolation...');
+  
+  const testResults = {
+    timestamp: new Date().toISOString(),
+    tests: {}
+  };
+  
+  // Test 1: Basic form with setRequireLogin() only
+  try {
+    console.log('Test 1: Basic form with setRequireLogin() only');
+    const form1 = FormApp.create('TEST 1: Basic + setRequireLogin');
+    form1.setRequireLogin(true);
+    console.log('✅ Test 1 SUCCESS: setRequireLogin() on basic form');
+    testResults.tests.basicForm = { success: true, formUrl: form1.getPublishedUrl() };
+    DriveApp.getFileById(form1.getId()).setTrashed(true); // Clean up
+  } catch (error) {
+    console.error('❌ Test 1 FAILED:', error.message);
+    testResults.tests.basicForm = { success: false, error: error.message };
+  }
+  
+  // Test 2: setCollectEmail first, then setRequireLogin
+  try {
+    console.log('Test 2: setCollectEmail + setRequireLogin');
+    const form2 = FormApp.create('TEST 2: Email + Login');
+    form2.setCollectEmail(true);
+    form2.setRequireLogin(true);
+    console.log('✅ Test 2 SUCCESS: setCollectEmail then setRequireLogin');
+    testResults.tests.emailThenLogin = { success: true, formUrl: form2.getPublishedUrl() };
+    DriveApp.getFileById(form2.getId()).setTrashed(true);
+  } catch (error) {
+    console.error('❌ Test 2 FAILED:', error.message);
+    testResults.tests.emailThenLogin = { success: false, error: error.message };
+  }
+  
+  // Test 3: setRequireLogin first, then setCollectEmail
+  try {
+    console.log('Test 3: setRequireLogin + setCollectEmail');
+    const form3 = FormApp.create('TEST 3: Login + Email');
+    form3.setRequireLogin(true);
+    form3.setCollectEmail(true);
+    console.log('✅ Test 3 SUCCESS: setRequireLogin then setCollectEmail');
+    testResults.tests.loginThenEmail = { success: true, formUrl: form3.getPublishedUrl() };
+    DriveApp.getFileById(form3.getId()).setTrashed(true);
+  } catch (error) {
+    console.error('❌ Test 3 FAILED:', error.message);
+    testResults.tests.loginThenEmail = { success: false, error: error.message };
+  }
+  
+  // Test 4: Full quiz setup with setRequireLogin at the end
+  try {
+    console.log('Test 4: Full quiz setup + setRequireLogin at end');
+    const form4 = FormApp.create('TEST 4: Quiz + Login End');
+    form4.setCollectEmail(true);
+    form4.setIsQuiz(true);
+    form4.setLimitOneResponsePerUser(true);
+    form4.setRequireLogin(true); // Last
+    console.log('✅ Test 4 SUCCESS: Full quiz setup with login at end');
+    testResults.tests.quizLoginEnd = { success: true, formUrl: form4.getPublishedUrl() };
+    DriveApp.getFileById(form4.getId()).setTrashed(true);
+  } catch (error) {
+    console.error('❌ Test 4 FAILED:', error.message);
+    testResults.tests.quizLoginEnd = { success: false, error: error.message };
+  }
+  
+  // Test 5: setRequireLogin early in quiz setup
+  try {
+    console.log('Test 5: setRequireLogin early in quiz setup');
+    const form5 = FormApp.create('TEST 5: Login Early Quiz');
+    form5.setRequireLogin(true); // First
+    form5.setCollectEmail(true);
+    form5.setIsQuiz(true);
+    form5.setLimitOneResponsePerUser(true);
+    console.log('✅ Test 5 SUCCESS: setRequireLogin early in quiz setup');
+    testResults.tests.loginEarlyQuiz = { success: true, formUrl: form5.getPublishedUrl() };
+    DriveApp.getFileById(form5.getId()).setTrashed(true);
+  } catch (error) {
+    console.error('❌ Test 5 FAILED:', error.message);
+    testResults.tests.loginEarlyQuiz = { success: false, error: error.message };
+  }
+  
+  // Analyze results
+  const successfulTests = Object.keys(testResults.tests).filter(test => testResults.tests[test].success);
+  const failedTests = Object.keys(testResults.tests).filter(test => !testResults.tests[test].success);
+  
+  testResults.summary = {
+    total: Object.keys(testResults.tests).length,
+    successful: successfulTests.length,
+    failed: failedTests.length,
+    successfulTests: successfulTests,
+    failedTests: failedTests
+  };
+  
+  if (successfulTests.length > 0) {
+    console.log(`🎉 SUCCESS: ${successfulTests.length} test(s) worked: ${successfulTests.join(', ')}`);
+    testResults.overallSuccess = true;
+    testResults.workingApproach = successfulTests[0]; // First working approach
+  } else {
+    console.log(`❌ ALL TESTS FAILED: setRequireLogin() not supported in current environment`);
+    testResults.overallSuccess = false;
+    testResults.conclusion = 'setRequireLogin() appears to be unsupported';
+  }
+  
+  return testResults;
 }
 
 /**

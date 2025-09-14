@@ -22,13 +22,16 @@ function createGoogleFormQuiz(quizData) {
     // Step 2: Configure as quiz with settings
     configureAsQuiz(form);
     
-    // Step 3: Add coding questions (paragraph text responses)
+    // Step 3: Add student name fields (First Name, Last Name)
+    addStudentNameFields(form);
+    
+    // Step 4: Add coding questions (paragraph text responses)
     addCodingQuestions(form, quizData.questions.codingQuestions);
     
-    // Step 4: Add multiple choice questions
+    // Step 5: Add multiple choice questions
     addMultipleChoiceQuestions(form, quizData.questions.multipleChoiceQuestions);
     
-    // Step 5: Finalize quiz settings
+    // Step 6: Finalize quiz settings
     finalizeQuizSettings(form, quizData.questions);
     
     const formUrl = form.getPublishedUrl();
@@ -62,13 +65,40 @@ function createGoogleFormQuiz(quizData) {
  */
 function createBaseForm(title, description) {
   const form = FormApp.create(title);
-  form.setDescription(description);
+  form.setDescription(description + '\n\nNote: Instructors can manually enable "Collect email addresses" and "Require sign-in" in Form settings for automatic email collection.');
   form.setAcceptingResponses(true);
   form.setAllowResponseEdits(false);
-  form.setCollectEmail(true);
+  // Removed form.setCollectEmail(true) - will be set manually in Google Forms UI if needed
   form.setShowLinkToRespondAgain(false);
   
   return form;
+}
+
+/**
+ * Add student name fields at the beginning of the form
+ * @param {GoogleAppsScript.Forms.Form} form - Target form
+ */
+function addStudentNameFields(form) {
+  try {
+    console.log('📝 Adding student name fields...');
+    
+    // Add First Name field
+    const firstNameItem = form.addTextItem();
+    firstNameItem.setTitle('First Name')
+              .setRequired(true);
+    console.log('✅ Added First Name field');
+    
+    // Add Last Name field  
+    const lastNameItem = form.addTextItem();
+    lastNameItem.setTitle('Last Name')
+              .setRequired(true);
+    console.log('✅ Added Last Name field');
+    
+    console.log('✅ Student name fields added successfully');
+  } catch (error) {
+    console.error('❌ Error adding student name fields:', error);
+    throw error;
+  }
 }
 
 /**
@@ -126,12 +156,19 @@ function addCodingQuestions(form, codingQuestions) {
         }
         
         const item = form.addParagraphTextItem();
-        item.setTitle(`${index + 1}. ${question.title} (${question.pointValue || 10} points)`)
+        item.setTitle(`${index + 1}. ${question.title} (5 points)`)
             .setHelpText(buildCodingQuestionHelp(question))
             .setRequired(true);
         
-        // Note: Removed text validation as it may cause "This operation is not supported" error
-        // Coding questions will be manually reviewed by instructors
+        // Add coding solution as general feedback
+        if (question.solution) {
+          const solutionFeedback = FormApp.createFeedback()
+            .setText(`Solution:\n\n${question.solution}`)
+            .build();
+          item.setGeneralFeedback(solutionFeedback);
+          console.log(`   ✅ Added solution feedback for coding question ${index + 1}`);
+        }
+        
         console.log(`   ✅ Successfully added coding question ${index + 1}`);
         
       } catch (questionError) {
@@ -153,14 +190,10 @@ function addCodingQuestions(form, codingQuestions) {
  * @returns {string} Formatted help text
  */
 function buildCodingQuestionHelp(question) {
-  let helpText = question.description + '\n\n';
-  
-  if (question.concepts && question.concepts.length > 0) {
-    helpText += `Key Concepts: ${question.concepts.join(', ')}\n`;
-  }
+  let helpText = question.description;
   
   if (question.sampleApproach) {
-    helpText += `\nApproach: ${question.sampleApproach}`;
+    helpText += `\n\nApproach: ${question.sampleApproach}`;
   }
   
   // Safely handle difficulty property
@@ -230,7 +263,7 @@ function addMultipleChoiceQuestions(form, mcQuestions) {
         item.setChoices(choices);
         
         // Set points directly on the multiple choice item
-        const points = question.pointValue || 5;
+        const points = 1;
         item.setPoints(points);
         console.log(`      Points: ${points}`);
         
@@ -269,14 +302,14 @@ function addMultipleChoiceQuestions(form, mcQuestions) {
  */
 function finalizeQuizSettings(form, questions) {
   // Calculate total possible points
-  const codingPoints = questions.codingQuestions.reduce((sum, q) => sum + (q.pointValue || 10), 0);
-  const mcPoints = questions.multipleChoiceQuestions.reduce((sum, q) => sum + (q.pointValue || 5), 0);
+  const codingPoints = questions.codingQuestions.reduce((sum, q) => sum + 5, 0);
+  const mcPoints = questions.multipleChoiceQuestions.reduce((sum, q) => sum + 1, 0);
   const totalPoints = codingPoints + mcPoints;
   
   // Add final section with submission info
   const submissionItem = form.addSectionHeaderItem();
   submissionItem.setTitle('📋 Submission Complete')
-                .setHelpText(`Total Points Available: ${totalPoints}\n\nCoding questions will be manually reviewed by your instructor. Multiple choice questions are automatically graded.`);
+                .setHelpText(`Total Points Available: ${totalPoints}\n\nCoding questions (5 points each) and multiple choice questions (1 point each) will be automatically graded.`);
   
   console.log(`Quiz configured with ${totalPoints} total points`);
 }

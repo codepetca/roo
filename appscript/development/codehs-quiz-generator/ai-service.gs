@@ -61,11 +61,11 @@ Generate exactly ${config.codingQuestions} coding questions and ${config.multipl
 
 CODING QUESTIONS REQUIREMENTS:
 - Focus on Karel the Dog programming
-- Progressive difficulty: Easy (1-${Math.ceil(config.codingQuestions/3)}) → Medium (${Math.ceil(config.codingQuestions/3)+1}-${Math.ceil(config.codingQuestions*2/3)}) → Hard (${Math.ceil(config.codingQuestions*2/3)+1}-${config.codingQuestions})
-- Include specific Karel commands: move(), turnLeft(), putBeeper(), takeBeeper()
-- For intermediate/advanced: include functions, loops (for/while), conditionals (if/else)
+- Include specific Karel commands: move(), turnLeft(), putBall(), takeBall()
+- For advanced questions: include functions, loops (for/while), conditionals (if/else)
 - Each question should have a clear problem statement and expected outcome
-- Include sample solution approach (not full code)
+- Use coordinate system format: (column, row) when specifying positions
+- Keep questions direct and clean - no hints or difficulty labels
 
 MULTIPLE CHOICE REQUIREMENTS:
 - Cover conceptual understanding of programming fundamentals
@@ -81,12 +81,11 @@ Return ONLY valid JSON in this exact structure:
   "codingQuestions": [
     {
       "id": 1,
-      "difficulty": "easy|medium|hard",
       "title": "Question Title",
       "description": "Clear problem statement for Karel",
       "concepts": ["concept1", "concept2"],
-      "sampleApproach": "Brief explanation of solution approach",
-      "pointValue": 10
+      "solution": "Complete Karel program solution",
+      "pointValue": 5
     }
   ],
   "multipleChoiceQuestions": [
@@ -102,7 +101,7 @@ Return ONLY valid JSON in this exact structure:
       "correctAnswer": "A",
       "explanation": "Why this answer is correct",
       "concepts": ["concept1"],
-      "pointValue": 5
+      "pointValue": 1
     }
   ]
 }
@@ -181,12 +180,12 @@ function parseAIResponse(apiResponse) {
     // Add IDs if missing and validate data
     questions.codingQuestions.forEach((q, index) => {
       q.id = q.id || (index + 1);
-      q.pointValue = q.pointValue || 10;
+      q.pointValue = q.pointValue || 5;
     });
 
     questions.multipleChoiceQuestions.forEach((q, index) => {
       q.id = q.id || (index + 1);
-      q.pointValue = q.pointValue || 5;
+      q.pointValue = q.pointValue || 1;
     });
 
     return questions;
@@ -212,9 +211,6 @@ function validateGeneratedQuestions(questions) {
     }
     if (!q.concepts || q.concepts.length === 0) {
       issues.push(`Coding question ${index + 1}: No concepts specified`);
-    }
-    if (!['easy', 'medium', 'hard'].includes(q.difficulty)) {
-      issues.push(`Coding question ${index + 1}: Invalid difficulty level`);
     }
   });
 

@@ -384,6 +384,13 @@
             🔍 MASTER METHOD TEST
           </button>
         </div>
+        
+        <!-- setRequireLogin Investigation -->
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <button onclick="testRequireLoginIsolated()" style="padding: 12px 24px; border: none; background: #1e40af; color: white; border-radius: 6px; cursor: pointer; font-size: 16px; flex: 1; font-weight: bold;">
+            🔐 TEST setRequireLogin()
+          </button>
+        </div>
 
         <!-- Main Tests -->
         <div style="display: flex; gap: 10px;">
@@ -1176,6 +1183,41 @@
           handleGenerationError('Master method test failed: ' + error);
         })
         .testAllFormsMethods();
+    }
+    
+    // Test setRequireLogin() method isolation
+    function testRequireLoginIsolated() {
+      if (isGenerating) return;
+      
+      console.log('🔐 Testing setRequireLogin() method in isolation...');
+      isGenerating = true;
+      showLoadingStatus();
+      
+      document.getElementById('progressText').textContent = 'Testing setRequireLogin() under different conditions...';
+      
+      google.script.run
+        .withSuccessHandler(function(result) {
+          console.log('setRequireLogin test result:', result);
+          
+          if (result.overallSuccess) {
+            handleGenerationSuccess({
+              success: true,
+              form: { publishedUrl: `✅ setRequireLogin() WORKS! Working approach: ${result.workingApproach}` },
+              questions: { total: `${result.summary.successful}/${result.summary.total} tests passed` },
+              unit: 'setRequireLogin() Investigation',
+              generatedAt: new Date().toISOString(),
+              testResults: result
+            });
+          } else {
+            const failedTests = result.summary.failedTests.join(', ');
+            handleGenerationError(`❌ setRequireLogin() failed in all ${result.summary.total} test conditions. Failed tests: ${failedTests}. See console for details.`);
+          }
+        })
+        .withFailureHandler(function(error) {
+          console.error('setRequireLogin test failed:', error);
+          handleGenerationError('setRequireLogin test failed: ' + error);
+        })
+        .testSetRequireLoginIsolated();
     }
 
     // Reset form to initial state

@@ -17,7 +17,7 @@ const CODEHS_CURRICULUM = {
       {
         id: "intro-programming-karel",
         title: "Introduction to Programming with Karel",
-        concepts: ["basic programming", "Karel commands", "move()", "turnLeft()", "putBeeper()", "takeBeeper()"],
+        concepts: ["basic programming", "Karel commands", "move()", "turnLeft()", "putBall()", "takeBall()"],
         difficulty: "beginner",
         topics: [
           "What is programming?",
@@ -29,11 +29,11 @@ const CODEHS_CURRICULUM = {
       {
         id: "more-about-karel",
         title: "More About Karel",
-        concepts: ["Karel's world", "beepers", "walls", "conditions"],
+        concepts: ["Karel's world", "balls", "walls", "conditions"],
         difficulty: "beginner",
         topics: [
           "Karel's environment and constraints",
-          "Understanding beepers and walls",
+          "Understanding balls and walls",
           "Karel's directional system",
           "Basic problem-solving strategies"
         ]
@@ -169,7 +169,7 @@ const QUESTION_TEMPLATES = {
   coding: {
     beginner: {
       karel_movement: "Write a Karel program to make Karel move {steps} steps forward and then turn left.",
-      beeper_collection: "Write a program to make Karel collect all beepers from a {pattern} pattern.",
+      ball_collection: "Write a program to make Karel collect all balls from a {pattern} pattern.",
       simple_navigation: "Create a program to make Karel navigate from point A to point B avoiding walls."
     },
     intermediate: {
@@ -178,7 +178,7 @@ const QUESTION_TEMPLATES = {
       conditional_logic: "Write a program that checks if Karel {condition} and then {action}."
     },
     advanced: {
-      complex_navigation: "Create a program that uses while loops and conditionals to make Karel navigate a maze and collect all beepers.",
+      complex_navigation: "Create a program that uses while loops and conditionals to make Karel navigate a maze and collect all balls.",
       nested_structures: "Write a program using nested loops and conditionals to make Karel {complexTask}.",
       problem_solving: "Design a complete solution for Karel to {complexProblem} using functions, loops, and conditionals."
     }
@@ -190,7 +190,7 @@ const QUESTION_TEMPLATES = {
         questions: [
           "Which command makes Karel move forward one space?",
           "What happens when Karel tries to move through a wall?",
-          "Which command makes Karel pick up a beeper?"
+          "Which command makes Karel pick up a ball?"
         ]
       },
       {
