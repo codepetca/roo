@@ -306,12 +306,101 @@ function finalizeQuizSettings(form, questions) {
   const mcPoints = questions.multipleChoiceQuestions.reduce((sum, q) => sum + 1, 0);
   const totalPoints = codingPoints + mcPoints;
   
+  // Add Karel Docs section for reference
+  addKarelDocsSection(form);
+  
   // Add final section with submission info
   const submissionItem = form.addSectionHeaderItem();
   submissionItem.setTitle('📋 Submission Complete')
                 .setHelpText(`Total Points Available: ${totalPoints}\n\nCoding questions (5 points each) and multiple choice questions (1 point each) will be automatically graded.`);
   
   console.log(`Quiz configured with ${totalPoints} total points`);
+}
+
+/**
+ * Add Karel documentation section with commands and conditions reference
+ * @param {GoogleAppsScript.Forms.Form} form - Target form
+ */
+function addKarelDocsSection(form) {
+  try {
+    console.log('📚 Adding Karel Docs section...');
+    
+    // SuperJava Karel's Built in Commands
+    const karelCommands = [
+      'move();',
+      'turnLeft();', 
+      'turnRight();',
+      'turnAround();',
+      'putBall();',
+      'takeBall();'
+    ];
+    
+    // Karel Conditions (Don't forget the () at the end)
+    const karelConditions = [
+      // Clear/Blocked conditions
+      'frontIsClear()',
+      'leftIsClear()',
+      'rightIsClear()',
+      'frontIsBlocked()',
+      'leftIsBlocked()',
+      'rightIsBlocked()',
+      // Direction conditions
+      'facingNorth()',
+      'facingSouth()',
+      'facingEast()',
+      'facingWest()',
+      'notFacingNorth()',
+      'notFacingSouth()',
+      'notFacingEast()',
+      'notFacingWest()',
+      // Ball conditions
+      'ballsPresent()',
+      'noBallsPresent()'
+    ];
+    
+    // Build the documentation text
+    const docsText = buildKarelDocsText(karelCommands, karelConditions);
+    
+    // Add the documentation section
+    const docsSection = form.addSectionHeaderItem();
+    docsSection.setTitle('📚 Karel Docs')
+              .setHelpText(docsText);
+    
+    console.log('✅ Karel Docs section added successfully');
+    
+  } catch (error) {
+    console.error('❌ Error adding Karel Docs section:', error);
+    // Don't throw error - this is supplementary content
+  }
+}
+
+/**
+ * Build the formatted Karel documentation text
+ * @param {Array} commands - Array of Karel commands
+ * @param {Array} conditions - Array of Karel conditions  
+ * @returns {string} Formatted documentation text
+ */
+function buildKarelDocsText(commands, conditions) {
+  let docsText = 'SuperJava Karel\'s Built in Commands:\n\n';
+  
+  // Add commands in a grid-like format (2 columns)
+  for (let i = 0; i < commands.length; i += 2) {
+    const leftCommand = commands[i] || '';
+    const rightCommand = commands[i + 1] || '';
+    docsText += `${leftCommand.padEnd(20)} ${rightCommand}\n`;
+  }
+  
+  docsText += '\n\nKarel Conditions:\n';
+  docsText += 'Don\'t forget the () at the end\n\n';
+  
+  // Add conditions in a grid-like format (2 columns)
+  for (let i = 0; i < conditions.length; i += 2) {
+    const leftCondition = conditions[i] || '';
+    const rightCondition = conditions[i + 1] || '';
+    docsText += `${leftCondition.padEnd(20)} ${rightCondition}\n`;
+  }
+  
+  return docsText;
 }
 
 /**

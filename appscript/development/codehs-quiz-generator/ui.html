@@ -266,34 +266,23 @@
     </div>
 
     <div class="main-content">
-      <!-- Permission Status Section -->
-      <div id="permissionSection" class="form-section" style="display: none;">
-        <h2 id="permissionTitle">🔐 Authorization Required</h2>
-        <div id="permissionContent">
-          <div id="permissionLoading" style="text-align: center; padding: 20px;">
-            <div class="spinner"></div>
-            <p>Checking permissions...</p>
-          </div>
-          <div id="permissionNeeded" class="status-error" style="display: none;">
-            <h3>⚠️ Missing Permissions</h3>
-            <p id="permissionMessage"></p>
-            <ul id="permissionList"></ul>
-            <button onclick="requestPermissions()" style="margin-top: 15px; padding: 12px 24px; border: none; background: #4f46e5; color: white; border-radius: 8px; cursor: pointer; font-weight: 600;">Grant Permissions</button>
-          </div>
-          <div id="permissionGranted" class="status-success" style="display: none;">
-            <h3>✅ All Permissions Granted</h3>
-            <p>You're ready to generate quizzes!</p>
-          </div>
+      <!-- Unified Loading Section -->
+      <div id="loadingSection" class="form-section" style="text-align: center; padding: 30px;">
+        <div class="spinner"></div>
+        <h3 id="loadingTitle">🚀 Initializing Quiz Generator...</h3>
+        <p id="loadingMessage">Checking permissions and loading curriculum...</p>
+        <div class="progress-bar" style="margin-top: 20px;">
+          <div id="initProgressFill" class="progress-fill" style="width: 0%;"></div>
         </div>
       </div>
 
       <!-- Unit Selection Section -->
-      <div class="form-section">
+      <div class="form-section" id="unitSection" style="opacity: 0.5;">
         <h2>📚 Select CodeHS Unit</h2>
         <div class="form-group">
           <label for="unitSelect">Choose a curriculum unit:</label>
-          <select id="unitSelect" onchange="handleUnitChange()">
-            <option value="">-- Select Unit --</option>
+          <select id="unitSelect" onchange="handleUnitChange()" disabled>
+            <option value="">-- Loading curriculum units --</option>
           </select>
         </div>
         <div id="unitInfo" class="unit-info">
@@ -304,97 +293,97 @@
       </div>
 
       <!-- Quiz Configuration Section -->
-      <div class="form-section">
+      <div class="form-section" id="configSection" style="opacity: 0.5;">
         <h2>⚙️ Quiz Configuration</h2>
         <div class="form-row">
           <div class="form-group">
             <label for="codingQuestions">Coding Questions:</label>
-            <input type="number" id="codingQuestions" value="3" min="1" max="10">
+            <input type="number" id="codingQuestions" value="3" min="1" max="10" disabled>
           </div>
           <div class="form-group">
             <label for="multipleChoiceQuestions">Multiple Choice Questions:</label>
-            <input type="number" id="multipleChoiceQuestions" value="20" min="5" max="50">
+            <input type="number" id="multipleChoiceQuestions" value="20" min="5" max="50" disabled>
           </div>
         </div>
       </div>
 
       <!-- Customization Section -->
-      <div class="form-section">
+      <div class="form-section" id="customizationSection" style="opacity: 0.5;">
         <h2>🎨 Customization (Optional)</h2>
         <div class="form-group">
           <label for="customTitle">Custom Quiz Title:</label>
-          <input type="text" id="customTitle" placeholder="Leave blank for auto-generated title">
+          <input type="text" id="customTitle" placeholder="Leave blank for auto-generated title" disabled>
         </div>
         <div class="form-group">
           <label for="customDescription">Custom Description:</label>
-          <textarea id="customDescription" rows="3" placeholder="Leave blank for auto-generated description"></textarea>
+          <textarea id="customDescription" rows="3" placeholder="Leave blank for auto-generated description" disabled></textarea>
         </div>
       </div>
 
       <!-- Test and Generate Buttons -->
-      <div style="margin-top: 20px;">
+      <div id="buttonsSection" style="margin-top: 20px; opacity: 0.5;">
         <!-- Debug Tests -->
         <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-          <button onclick="testMinimalForm()" style="padding: 8px 16px; border: none; background: #6366f1; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testMinimalForm()" style="padding: 8px 16px; border: none; background: #6366f1; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             🔬 Minimal
           </button>
-          <button onclick="testIncrementalFeatures()" style="padding: 8px 16px; border: none; background: #8b5cf6; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testIncrementalFeatures()" style="padding: 8px 16px; border: none; background: #8b5cf6; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             📈 Incremental
           </button>
-          <button onclick="testSimplifiedQuiz()" style="padding: 8px 16px; border: none; background: #10b981; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testSimplifiedQuiz()" style="padding: 8px 16px; border: none; background: #10b981; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             ⚡ Simplified
           </button>
-          <button onclick="testDiagnostic()" style="padding: 8px 16px; border: none; background: #ef4444; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testDiagnostic()" style="padding: 8px 16px; border: none; background: #ef4444; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             🔍 Diagnostic
           </button>
         </div>
         
         <!-- Ultra Basic Tests -->
         <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-          <button onclick="testJustForm()" style="padding: 8px 16px; border: none; background: #dc2626; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testJustForm()" style="padding: 8px 16px; border: none; background: #dc2626; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             ⚡ Just Form
           </button>
-          <button onclick="testUltraBasic()" style="padding: 8px 16px; border: none; background: #b91c1c; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testUltraBasic()" style="padding: 8px 16px; border: none; background: #b91c1c; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             🔬 Ultra Basic
           </button>
-          <button onclick="testFormsServiceSimple()" style="padding: 8px 16px; border: none; background: #7c2d12; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testFormsServiceSimple()" style="padding: 8px 16px; border: none; background: #7c2d12; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             🔧 Forms+Simple
           </button>
         </div>
         
         <!-- Method Isolation Tests -->
         <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-          <button onclick="testQuizMethods()" style="padding: 8px 16px; border: none; background: #0369a1; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testQuizMethods()" style="padding: 8px 16px; border: none; background: #0369a1; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             🎯 Quiz Config
           </button>
-          <button onclick="testFeedbackMethods()" style="padding: 8px 16px; border: none; background: #0284c7; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testFeedbackMethods()" style="padding: 8px 16px; border: none; background: #0284c7; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             💬 Feedback
           </button>
-          <button onclick="testPointsMethods()" style="padding: 8px 16px; border: none; background: #0891b2; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testPointsMethods()" style="padding: 8px 16px; border: none; background: #0891b2; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             🏆 Points
           </button>
-          <button onclick="testSectionMethods()" style="padding: 8px 16px; border: none; background: #0e7490; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;">
+          <button onclick="testSectionMethods()" style="padding: 8px 16px; border: none; background: #0e7490; color: white; border-radius: 6px; cursor: pointer; font-size: 14px; flex: 1;" disabled>
             📋 Sections
           </button>
         </div>
         
         <!-- Master Method Test -->
         <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-          <button onclick="testAllMethods()" style="padding: 12px 24px; border: none; background: #065f46; color: white; border-radius: 6px; cursor: pointer; font-size: 16px; flex: 1; font-weight: bold;">
+          <button onclick="testAllMethods()" style="padding: 12px 24px; border: none; background: #065f46; color: white; border-radius: 6px; cursor: pointer; font-size: 16px; flex: 1; font-weight: bold;" disabled>
             🔍 MASTER METHOD TEST
           </button>
         </div>
         
         <!-- setRequireLogin Investigation -->
         <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-          <button onclick="testRequireLoginIsolated()" style="padding: 12px 24px; border: none; background: #1e40af; color: white; border-radius: 6px; cursor: pointer; font-size: 16px; flex: 1; font-weight: bold;">
+          <button onclick="testRequireLoginIsolated()" style="padding: 12px 24px; border: none; background: #1e40af; color: white; border-radius: 6px; cursor: pointer; font-size: 16px; flex: 1; font-weight: bold;" disabled>
             🔐 TEST setRequireLogin()
           </button>
         </div>
 
         <!-- Main Tests -->
         <div style="display: flex; gap: 10px;">
-          <button id="testBtn" class="generate-btn" onclick="testHardcodedQuiz()" style="background: linear-gradient(135deg, #f59e0b, #d97706); flex: 1;">
+          <button id="testBtn" class="generate-btn" onclick="testHardcodedQuiz()" style="background: linear-gradient(135deg, #f59e0b, #d97706); flex: 1;" disabled>
             🧪 Full Test
           </button>
           <button id="generateBtn" class="generate-btn" onclick="generateQuiz()" disabled style="flex: 2;">
@@ -442,147 +431,165 @@
 
     // Initialize the application
     window.onload = function() {
-      checkPermissionsFirst();
+      initializeQuizGenerator();
     };
 
-    // Check permissions before loading the application
-    function checkPermissionsFirst() {
-      document.getElementById('permissionSection').style.display = 'block';
-      document.getElementById('permissionLoading').style.display = 'block';
-      document.getElementById('permissionNeeded').style.display = 'none';
-      document.getElementById('permissionGranted').style.display = 'none';
+    // Unified initialization process
+    function initializeQuizGenerator() {
+      console.log('🚀 Initializing CodeHS Quiz Generator...');
       
-      // Add timeout for permission check
-      const timeoutId = setTimeout(() => {
-        showPermissionError('Permission check is taking longer than expected. Please refresh the page and try again.');
-      }, 15000); // 15 second timeout
+      // Show loading section
+      document.getElementById('loadingSection').style.display = 'block';
       
+      // Start the initialization process
+      updateInitializationProgress(0, '🔐 Checking permissions...');
+      
+      // Add timeout for the entire initialization
+      const initTimeoutId = setTimeout(() => {
+        showInitializationError('Initialization is taking longer than expected. Please refresh the page and try again.');
+      }, 30000); // 30 second timeout for entire process
+      
+      // Step 1: Check permissions
       google.script.run
         .withSuccessHandler(function(status) {
-          clearTimeout(timeoutId);
-          handlePermissionCheck(status);
+          handlePermissionResult(status, initTimeoutId);
         })
         .withFailureHandler(function(error) {
-          clearTimeout(timeoutId);
+          clearTimeout(initTimeoutId);
           console.error('Permission check failed:', error);
-          
-          let errorMsg = 'Unable to check permissions.';
-          if (error && error.message) {
-            if (error.message.includes('timeout')) {
-              errorMsg = 'Permission check timed out. This may indicate network issues.';
-            } else if (error.message.includes('script')) {
-              errorMsg = 'Script execution error. The application may need to be redeployed.';
-            }
-          }
-          showPermissionError(errorMsg + ' Please refresh and try again.');
+          showInitializationError('Unable to check permissions. Please refresh and try again.');
         })
         .getPermissionStatus();
     }
 
-    // Handle permission check result
-    function handlePermissionCheck(status) {
-      document.getElementById('permissionLoading').style.display = 'none';
+    // Handle permission result and continue initialization
+    function handlePermissionResult(status, timeoutId) {
+      permissionStatus = status;
       
       if (status.ready) {
-        // All permissions granted - show success and load app
-        document.getElementById('permissionGranted').style.display = 'block';
-        document.getElementById('permissionTitle').innerHTML = '✅ Ready to Go!';
-        document.getElementById('permissionTitle').style.color = '#065f46';
+        // Permissions OK, continue with unit loading
+        updateInitializationProgress(50, '📚 Loading curriculum units...');
         
-        setTimeout(() => {
-          document.getElementById('permissionSection').style.display = 'none';
-          loadAvailableUnits();
-        }, 2000);
-        
+        google.script.run
+          .withSuccessHandler(function(units) {
+            clearTimeout(timeoutId);
+            handleUnitsLoaded(units);
+          })
+          .withFailureHandler(function(error) {
+            clearTimeout(timeoutId);
+            console.error('Failed to load units:', error);
+            showInitializationError('Failed to load curriculum units. Please refresh and try again.');
+          })
+          .getAvailableUnits();
+          
       } else {
-        // Missing permissions - show what's needed
-        document.getElementById('permissionNeeded').style.display = 'block';
-        
-        let message = 'This application needs additional permissions to create Google Forms and generate quizzes.';
-        if (status.needsSetup) {
-          message += ' API configuration is also required.';
-        }
-        document.getElementById('permissionMessage').textContent = message;
-        
-        const permissionList = document.getElementById('permissionList');
-        permissionList.innerHTML = '';
-        status.missing.forEach(permission => {
-          const li = document.createElement('li');
-          li.textContent = permission;
-          li.style.margin = '5px 0';
-          permissionList.appendChild(li);
-        });
-        
-        // Add instructions
-        if (status.instructions.length > 0) {
-          const instructionDiv = document.createElement('div');
-          instructionDiv.style.marginTop = '15px';
-          instructionDiv.style.padding = '10px';
-          instructionDiv.style.background = '#fef3c7';
-          instructionDiv.style.borderRadius = '6px';
-          instructionDiv.innerHTML = '<strong>Instructions:</strong><br>' + status.instructions.join('<br>');
-          document.getElementById('permissionNeeded').appendChild(instructionDiv);
-        }
+        // Permissions needed - show permission grant UI
+        clearTimeout(timeoutId);
+        showPermissionRequired(status);
       }
-      
-      permissionStatus = status;
     }
 
-    // Request permissions from user
+    // Update initialization progress
+    function updateInitializationProgress(percent, message) {
+      document.getElementById('initProgressFill').style.width = percent + '%';
+      document.getElementById('loadingMessage').textContent = message;
+    }
+
+    // Show permission required state
+    function showPermissionRequired(status) {
+      document.getElementById('loadingTitle').textContent = '🔐 Permissions Required';
+      document.getElementById('loadingMessage').innerHTML = 
+        'This application needs additional permissions to create Google Forms and generate quizzes.<br><br>' +
+        '<button onclick="requestPermissions()" style="padding: 12px 24px; border: none; background: #4f46e5; color: white; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 10px;">Grant Permissions</button>';
+      document.getElementById('initProgressFill').style.width = '25%';
+    }
+
+    // Handle successful unit loading
+    function handleUnitsLoaded(units) {
+      updateInitializationProgress(100, '✅ Ready to create quizzes!');
+      
+      // Store units for use by enableFormControls
+      availableUnits = units;
+      
+      // Enable all form controls (this also populates the unit dropdown)
+      enableFormControls();
+      
+      // Hide loading section with a brief success message
+      setTimeout(() => {
+        document.getElementById('loadingSection').style.display = 'none';
+      }, 1500);
+    }
+
+    // Enable all form controls after successful initialization
+    function enableFormControls() {
+      // Enable unit selection
+      const unitSelect = document.getElementById('unitSelect');
+      unitSelect.disabled = false;
+      unitSelect.innerHTML = '<option value="">-- Select Unit --</option>';
+      document.getElementById('unitSection').style.opacity = '1';
+      
+      // Enable configuration inputs
+      document.getElementById('codingQuestions').disabled = false;
+      document.getElementById('multipleChoiceQuestions').disabled = false;
+      document.getElementById('configSection').style.opacity = '1';
+      
+      // Enable customization inputs
+      document.getElementById('customTitle').disabled = false;
+      document.getElementById('customDescription').disabled = false;
+      document.getElementById('customizationSection').style.opacity = '1';
+      
+      // Enable all test buttons and generate button
+      const buttons = document.getElementById('buttonsSection');
+      buttons.style.opacity = '1';
+      const allButtons = buttons.querySelectorAll('button');
+      allButtons.forEach(button => {
+        button.disabled = false;
+      });
+      
+      // Keep generate button disabled until unit is selected
+      document.getElementById('generateBtn').disabled = true;
+      
+      // Populate unit dropdown
+      availableUnits.forEach(unit => {
+        const option = document.createElement('option');
+        option.value = unit.id;
+        option.textContent = unit.title;
+        unitSelect.appendChild(option);
+      });
+    }
+
+    // Show initialization error
+    function showInitializationError(message) {
+      document.getElementById('loadingTitle').textContent = '❌ Initialization Failed';
+      document.getElementById('loadingMessage').innerHTML = 
+        message + '<br><br>' +
+        '<button onclick="location.reload()" style="padding: 10px 20px; border: none; background: #10b981; color: white; border-radius: 6px; cursor: pointer;">🔄 Refresh Page</button>';
+      document.getElementById('initProgressFill').style.background = '#ef4444';
+    }
+
+    // Request permissions (updated for unified flow)
     function requestPermissions() {
-      document.getElementById('permissionNeeded').style.display = 'none';
-      document.getElementById('permissionLoading').style.display = 'block';
-      document.getElementById('permissionLoading').innerHTML = '<div class="spinner"></div><p>Requesting permissions...</p>';
+      updateInitializationProgress(25, '🔄 Requesting permissions...');
       
       google.script.run
         .withSuccessHandler(function(result) {
           if (result.success) {
-            // Recheck permissions after granting
-            setTimeout(checkPermissionsFirst, 1000);
+            // Restart the initialization process
+            setTimeout(() => {
+              initializeQuizGenerator();
+            }, 1000);
           } else {
-            showPermissionError(result.message || 'Failed to grant permissions. Please try again.');
+            showInitializationError(result.message || 'Failed to grant permissions. Please try again.');
           }
         })
         .withFailureHandler(function(error) {
           console.error('Permission request failed:', error);
-          showPermissionError('Permission request failed. Please refresh the page and try again.');
+          showInitializationError('Permission request failed. Please refresh the page and try again.');
         })
         .requestPermissions();
     }
 
-    // Show permission error
-    function showPermissionError(message) {
-      document.getElementById('permissionLoading').style.display = 'none';
-      document.getElementById('permissionNeeded').style.display = 'block';
-      document.getElementById('permissionMessage').textContent = message;
-    }
 
-    // Load available CodeHS units
-    function loadAvailableUnits() {
-      google.script.run
-        .withSuccessHandler(function(units) {
-          availableUnits = units;
-          populateUnitDropdown(units);
-        })
-        .withFailureHandler(function(error) {
-          console.error('Failed to load units:', error);
-          showError('Failed to load curriculum units. Please refresh the page.');
-        })
-        .getAvailableUnits();
-    }
-
-    // Populate the unit dropdown
-    function populateUnitDropdown(units) {
-      const select = document.getElementById('unitSelect');
-      select.innerHTML = '<option value="">-- Select Unit --</option>';
-      
-      units.forEach(unit => {
-        const option = document.createElement('option');
-        option.value = unit.id;
-        option.textContent = unit.title;
-        select.appendChild(option);
-      });
-    }
 
     // Handle unit selection change
     function handleUnitChange() {
@@ -771,7 +778,7 @@
       if (errorMessage.includes('Permission Error')) {
         setTimeout(() => {
           if (confirm('Would you like to check your permissions now?')) {
-            checkPermissionsFirst();
+            initializeQuizGenerator();
           }
         }, 2000);
       }
@@ -1232,7 +1239,7 @@
       
       // Recheck permissions when resetting after an error
       if (permissionStatus && !permissionStatus.ready) {
-        setTimeout(checkPermissionsFirst, 500);
+        setTimeout(initializeQuizGenerator, 500);
       }
     }
 
@@ -1250,10 +1257,9 @@
               }
             }, 1000);
           } else {
-            // Permissions are missing, show permission check
+            // Permissions are missing, restart initialization
             resetForm();
-            document.getElementById('permissionSection').style.display = 'block';
-            handlePermissionCheck(status);
+            initializeQuizGenerator();
           }
         })
         .withFailureHandler(function(error) {
