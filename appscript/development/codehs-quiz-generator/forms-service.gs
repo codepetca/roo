@@ -156,7 +156,7 @@ function addCodingQuestions(form, codingQuestions) {
         }
         
         const item = form.addParagraphTextItem();
-        item.setTitle(`${index + 1}. ${question.title} (5 points)`)
+        item.setTitle(`${index + 1}. ${question.title} (7 points: 5 for functionality + 2 for communication)`)
             .setHelpText(buildCodingQuestionHelp(question))
             .setRequired(true);
         
@@ -302,7 +302,7 @@ function addMultipleChoiceQuestions(form, mcQuestions) {
  */
 function finalizeQuizSettings(form, questions) {
   // Calculate total possible points
-  const codingPoints = questions.codingQuestions.reduce((sum, q) => sum + 5, 0);
+  const codingPoints = questions.codingQuestions.reduce((sum, q) => sum + 7, 0);
   const mcPoints = questions.multipleChoiceQuestions.reduce((sum, q) => sum + 1, 0);
   const totalPoints = codingPoints + mcPoints;
   
@@ -312,7 +312,7 @@ function finalizeQuizSettings(form, questions) {
   // Add final section with submission info
   const submissionItem = form.addSectionHeaderItem();
   submissionItem.setTitle('📋 Submission Complete')
-                .setHelpText(`Total Points Available: ${totalPoints}\n\nCoding questions (5 points each) and multiple choice questions (1 point each) will be automatically graded.`);
+                .setHelpText(`Total Points Available: ${totalPoints}\n\nCoding questions (7 points each: 5 functionality + 2 communication/format) and multiple choice questions (1 point each) will be automatically graded.`);
   
   console.log(`Quiz configured with ${totalPoints} total points`);
 }
@@ -390,8 +390,7 @@ function buildKarelDocsText(commands, conditions) {
     docsText += `${leftCommand.padEnd(20)} ${rightCommand}\n`;
   }
   
-  docsText += '\n\nKarel Conditions:\n';
-  docsText += 'Don\'t forget the () at the end\n\n';
+  docsText += '\n\nKarel Conditions:\n\n';
   
   // Add conditions in a grid-like format (2 columns)
   for (let i = 0; i < conditions.length; i += 2) {

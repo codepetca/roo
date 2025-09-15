@@ -15,147 +15,87 @@ const CODEHS_CURRICULUM = {
     description: "Introduction to programming fundamentals using Karel the Dog robot",
     lessons: [
       {
-        id: "intro-programming-karel",
-        title: "Introduction to Programming with Karel",
-        concepts: ["basic programming", "Karel commands", "move()", "turnLeft()", "putBall()", "takeBall()"],
+        id: "introduction-to-karel",
+        title: "Introduction to Karel",
+        concepts: ["basic programming", "Karel robot", "commands", "world", "programming basics"],
         difficulty: "beginner",
         topics: [
-          "What is programming?",
-          "Karel's world and basic commands",
-          "Sequential execution of commands",
-          "Understanding program flow"
+          "What is Karel?",
+          "Karel's world and environment",
+          "Basic programming concepts",
+          "Understanding robot programming"
         ]
       },
       {
-        id: "more-about-karel",
-        title: "More About Karel",
-        concepts: ["Karel's world", "balls", "walls", "conditions"],
+        id: "karel-commands-and-movement",
+        title: "Karel Commands and Movement",
+        concepts: ["move()", "turnLeft()", "putBall()", "takeBall()", "basic commands"],
         difficulty: "beginner",
         topics: [
-          "Karel's environment and constraints",
-          "Understanding balls and walls",
-          "Karel's directional system",
-          "Basic problem-solving strategies"
+          "Basic Karel commands",
+          "Movement in Karel's world",
+          "Manipulating balls",
+          "Sequential command execution"
         ]
       },
       {
-        id: "functions-in-karel",
-        title: "Functions in Karel",
-        concepts: ["functions", "function definition", "function calls", "code reusability"],
+        id: "defining-new-methods",
+        title: "Defining New Methods",
+        concepts: ["methods", "functions", "method definition", "code organization", "reusability"],
         difficulty: "intermediate",
         topics: [
-          "What are functions?",
-          "Creating custom functions",
-          "Function naming conventions",
-          "Benefits of using functions"
+          "Creating custom methods",
+          "Method syntax and structure",
+          "Code reusability",
+          "Organizing code with methods"
         ]
       },
       {
-        id: "main-function",
-        title: "The Main Function",
-        concepts: ["main function", "program entry point", "function organization"],
+        id: "loops",
+        title: "Loops",
+        concepts: ["for loops", "while loops", "iteration", "repetition", "loop control"],
         difficulty: "intermediate",
         topics: [
-          "Understanding the main() function",
-          "Program execution flow",
-          "Organizing code with functions",
-          "Function hierarchy"
+          "Understanding repetition",
+          "For loop syntax and usage",
+          "While loop concepts",
+          "Loop control and termination"
         ]
       },
       {
-        id: "top-down-design",
-        title: "Top Down Design and Decomposition",
-        concepts: ["top-down design", "decomposition", "problem solving", "modular programming"],
-        difficulty: "intermediate",
-        topics: [
-          "Breaking down complex problems",
-          "Creating sub-problems",
-          "Modular approach to programming",
-          "Design strategies"
-        ]
-      },
-      {
-        id: "commenting-code",
-        title: "Commenting Your Code",
-        concepts: ["comments", "code documentation", "readability"],
-        difficulty: "beginner",
-        topics: [
-          "Why comment code?",
-          "Single-line and multi-line comments",
-          "Best practices for commenting",
-          "Documentation strategies"
-        ]
-      },
-      {
-        id: "super-karel",
-        title: "Super Karel",
-        concepts: ["Super Karel", "turnRight()", "turnAround()", "extended commands"],
-        difficulty: "beginner",
-        topics: [
-          "Super Karel's additional commands",
-          "turnRight() and turnAround()",
-          "When to use Super Karel vs regular Karel",
-          "Command efficiency"
-        ]
-      },
-      {
-        id: "for-loops",
-        title: "For Loops",
-        concepts: ["for loops", "iteration", "repetition", "loop syntax"],
-        difficulty: "intermediate",
-        topics: [
-          "Understanding repetition in programming",
-          "for loop syntax and structure",
-          "Loop counters and iteration",
-          "When to use for loops"
-        ]
-      },
-      {
-        id: "if-statements",
-        title: "If Statements and Conditionals",
-        concepts: ["if statements", "conditionals", "boolean logic", "decision making"],
+        id: "conditional-statements",
+        title: "Conditional Statements",
+        concepts: ["if statements", "conditionals", "boolean logic", "decision making", "conditions"],
         difficulty: "intermediate",
         topics: [
           "Making decisions in programs",
-          "Boolean conditions and logic",
-          "if statement syntax",
+          "If statement syntax",
+          "Boolean conditions",
           "Conditional program flow"
         ]
       },
       {
-        id: "if-else-statements",
-        title: "If/Else Statements",
-        concepts: ["if-else", "conditional logic", "alternative execution paths"],
+        id: "decomposition-and-problem-solving",
+        title: "Decomposition and Problem Solving",
+        concepts: ["decomposition", "problem solving", "top-down design", "modular programming"],
         difficulty: "intermediate",
         topics: [
-          "Alternative execution paths",
-          "if-else syntax and structure",
-          "Handling multiple conditions",
-          "Decision trees in programming"
+          "Breaking down complex problems",
+          "Problem-solving strategies",
+          "Modular programming approach",
+          "Design and planning"
         ]
       },
       {
-        id: "while-loops",
-        title: "While Loops",
-        concepts: ["while loops", "conditional repetition", "loop conditions"],
+        id: "more-complex-karel-problems",
+        title: "More Complex Karel Problems",
+        concepts: ["complex problems", "advanced techniques", "combining concepts", "problem solving"],
         difficulty: "advanced",
         topics: [
-          "Conditional repetition",
-          "while loop syntax and logic",
-          "Loop conditions and termination",
-          "Avoiding infinite loops"
-        ]
-      },
-      {
-        id: "control-structures",
-        title: "Control Structures Example",
-        concepts: ["control structures", "loops", "conditionals", "complex programs"],
-        difficulty: "advanced",
-        topics: [
-          "Combining loops and conditionals",
-          "Complex program structure",
-          "Nested control structures",
-          "Program flow control"
+          "Combining multiple programming concepts",
+          "Advanced problem-solving techniques",
+          "Complex Karel challenges",
+          "Integration of all learned concepts"
         ]
       }
     ]

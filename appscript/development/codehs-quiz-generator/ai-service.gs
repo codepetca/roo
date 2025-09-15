@@ -66,6 +66,8 @@ CODING QUESTIONS REQUIREMENTS:
 - Each question should have a clear problem statement and expected outcome
 - Use coordinate system format: (column, row) when specifying positions
 - Keep questions direct and clean - no hints or difficulty labels
+- Solutions should demonstrate proper coding format: good indentation, meaningful function names, clear structure
+- Code will be assessed for both functionality (5 points) and communication/format (2 points: -1 for improper indentation, -1 for poor naming/structure)
 
 MULTIPLE CHOICE REQUIREMENTS:
 - Cover conceptual understanding of programming fundamentals
@@ -85,7 +87,7 @@ Return ONLY valid JSON in this exact structure:
       "description": "Clear problem statement for Karel",
       "concepts": ["concept1", "concept2"],
       "solution": "Complete Karel program solution",
-      "pointValue": 5
+      "pointValue": 7
     }
   ],
   "multipleChoiceQuestions": [
@@ -182,7 +184,7 @@ function parseAIResponse(apiResponse) {
     // Add IDs if missing and validate data
     questions.codingQuestions.forEach((q, index) => {
       q.id = q.id || (index + 1);
-      q.pointValue = q.pointValue || 5;
+      q.pointValue = q.pointValue || 7;
     });
 
     questions.multipleChoiceQuestions.forEach((q, index) => {
